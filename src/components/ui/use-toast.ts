@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-type ToastInput = {
+export type ToastInput = {
   id?: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
@@ -16,7 +16,7 @@ type ToasterToast = Required<Pick<ToastInput, "id">> &
 
 const listeners = new Set<(toast: ToasterToast) => void>();
 
-export function toast(toast: Toast) {
+export function toast(toast: ToastInput) {
   const id = toast.id ?? crypto.randomUUID();
   listeners.forEach((listener) => listener({ ...toast, id }));
   return id;
