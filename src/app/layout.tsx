@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OffRoad Hub",
+  title: "Need4Trip",
   description: "Организация оффроуд-ивентов и регистрация участников",
 };
 
@@ -33,7 +33,7 @@ export default function RootLayout({
           <MainHeader />
           <main className="container flex-1 py-10">{children}</main>
           <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-            OffRoad Hub · MVP каркас
+            Need4Trip · MVP каркас
           </footer>
           <Toaster />
         </div>

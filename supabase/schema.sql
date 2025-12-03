@@ -1,4 +1,4 @@
--- OffRoad Hub base schema for Supabase/Postgres
+-- Need4Trip base schema for Supabase/Postgres
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   name text not null,

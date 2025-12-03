@@ -14,7 +14,7 @@ export default async function Home() {
       <section className="grid gap-8 rounded-2xl border bg-card p-8 shadow-sm md:grid-cols-[2fr,1.2fr]">
         <div className="space-y-4">
           <div className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary-foreground">
-            OffRoad Hub
+            Need4Trip
           </div>
           <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
             Организация покатушек и регистрация экипажей в пару кликов
@@ -24,9 +24,9 @@ export default async function Home() {
             всю информацию об оффроуд-клубе в одном месте.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href="/events/create">Создать ивент</Link>
-            </Button>
+          <Button asChild>
+            <Link href="/events/create">Создать ивент</Link>
+          </Button>
             <Button asChild variant="ghost">
               <Link href="/events">Смотреть ивенты</Link>
             </Button>

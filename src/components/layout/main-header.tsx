@@ -19,7 +19,7 @@ export async function MainHeader() {
     <header className="sticky top-0 z-30 border-b bg-white/80 backdrop-blur">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="text-lg font-semibold tracking-tight">
-          OffRoad Hub
+          Need4Trip
         </Link>
         <div className="flex items-center gap-4">
           <nav className="hidden sm:flex items-center gap-2 text-sm">
