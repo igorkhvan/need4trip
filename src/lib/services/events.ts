@@ -9,7 +9,6 @@ import { countParticipants, listParticipants } from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
 import {
-  EventCreateInput,
   EventUpdateInput,
   eventCreateSchema,
   eventUpdateSchema,
@@ -52,10 +51,8 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
   const db = await createEventRecord({
     ...parsed,
-    dateTime:
-      parsed.dateTime instanceof Date ? parsed.dateTime.toISOString() : parsed.dateTime,
     createdByUserId: currentUser.id,
-  } as EventCreateInput);
+  });
   return mapDbEventToDomain(db);
 }
 
