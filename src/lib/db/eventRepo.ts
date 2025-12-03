@@ -15,8 +15,8 @@ function ensureClient() {
 export async function listEvents(): Promise<DbEvent[]> {
   const client = ensureClient();
   const { data, error } = await client
-    .from<DbEvent>(table)
-    .select("*")
+    .from(table)
+    .select<DbEvent>("*")
     .order("date_time", { ascending: true });
 
   if (error) {
@@ -35,8 +35,8 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
   }
 
   const { data, error } = await client
-    .from<DbEvent>(table)
-    .select("*")
+    .from(table)
+    .select<DbEvent>("*")
     .eq("id", id)
     .maybeSingle();
 
@@ -71,9 +71,9 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
   };
 
   const { data, error } = await client
-    .from<DbEvent>(table)
+    .from(table)
     .insert(insertPayload)
-    .select()
+    .select<DbEvent>("*")
     .single();
 
   if (error) {
@@ -117,10 +117,10 @@ export async function updateEvent(
   };
 
   const { data, error } = await client
-    .from<DbEvent>(table)
+    .from(table)
     .update(patch)
     .eq("id", id)
-    .select()
+    .select<DbEvent>("*")
     .maybeSingle();
 
   if (error) {

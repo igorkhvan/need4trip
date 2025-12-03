@@ -17,8 +17,8 @@ export async function listParticipants(
 ): Promise<DbParticipant[]> {
   const client = ensureClient();
   const { data, error } = await client
-    .from<DbParticipant>(table)
-    .select("*")
+    .from(table)
+    .select<DbParticipant>("*")
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
 
@@ -45,9 +45,9 @@ export async function createParticipant(
   };
 
   const { data, error } = await client
-    .from<DbParticipant>(table)
+    .from(table)
     .insert(insertPayload)
-    .select()
+    .select<DbParticipant>("*")
     .single();
 
   if (error) {
@@ -64,10 +64,10 @@ export async function updateParticipantRole(
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
   const { data, error } = await client
-    .from<DbParticipant>(table)
+    .from(table)
     .update({ role })
     .eq("id", id)
-    .select()
+    .select<DbParticipant>("*")
     .maybeSingle();
 
   if (error) {
@@ -84,7 +84,7 @@ export const registerParticipant = createParticipant;
 export async function countParticipants(eventId: string): Promise<number> {
   const client = ensureClient();
   const { count, error } = await client
-    .from<DbParticipant>(table)
+    .from(table)
     .select("id", { count: "exact", head: true })
     .eq("event_id", eventId);
 
@@ -102,7 +102,7 @@ export async function countParticipantsByRole(
 ): Promise<number> {
   const client = ensureClient();
   const { count, error } = await client
-    .from<DbParticipant>(table)
+    .from(table)
     .select("id", { count: "exact", head: true })
     .eq("event_id", eventId)
     .eq("role", role);
@@ -124,8 +124,8 @@ export async function findParticipantByUser(
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
   const { data, error } = await client
-    .from<DbParticipant>(table)
-    .select("*")
+    .from(table)
+    .select<DbParticipant>("*")
     .eq("event_id", eventId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -144,8 +144,8 @@ export async function findParticipantByDisplayName(
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
   const { data, error } = await client
-    .from<DbParticipant>(table)
-    .select("*")
+    .from(table)
+    .select<DbParticipant>("*")
     .eq("event_id", eventId)
     .ilike("display_name", displayName)
     .maybeSingle();
@@ -160,7 +160,11 @@ export async function findParticipantByDisplayName(
 
 export async function findParticipantById(id: string): Promise<DbParticipant | null> {
   const client = ensureClient();
-  const { data, error } = await client.from<DbParticipant>(table).select("*").eq("id", id).maybeSingle();
+  const { data, error } = await client
+    .from(table)
+    .select<DbParticipant>("*")
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) {
     console.error(`Failed to find participant ${id}`, error);
@@ -183,10 +187,10 @@ export async function updateParticipant(
   };
 
   const { data, error } = await client
-    .from<DbParticipant>(table)
+    .from(table)
     .update(updatePayload)
     .eq("id", id)
-    .select()
+    .select<DbParticipant>("*")
     .maybeSingle();
 
   if (error) {
@@ -200,7 +204,7 @@ export async function updateParticipant(
 export async function deleteParticipant(id: string): Promise<boolean> {
   const client = ensureClient();
   const { error, count } = await client
-    .from<DbParticipant>(table)
+    .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
 
