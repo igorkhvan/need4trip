@@ -57,7 +57,8 @@ function verifyJwt(token: string, secret: string): Record<string, unknown> | nul
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const secret = process.env.AUTH_JWT_SECRET;
   if (!secret) return null;
-  const token = cookies().get("auth_token")?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
   if (!token) return null;
   const payload = verifyJwt(token, secret);
   if (!payload?.userId) return null;
