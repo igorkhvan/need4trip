@@ -2,16 +2,17 @@
 
 import * as React from "react";
 
-type Toast = {
-  id: string;
+type ToastInput = {
+  id?: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
 };
 
-type ToasterToast = Toast & {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-};
+type ToasterToast = Required<Pick<ToastInput, "id">> &
+  Omit<ToastInput, "id"> & {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  };
 
 const listeners = new Set<(toast: ToasterToast) => void>();
 
