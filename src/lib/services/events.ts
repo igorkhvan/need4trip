@@ -49,7 +49,7 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     throw new AuthError("Авторизация обязательна для создания ивента", undefined, 401);
   }
   const parsed = eventCreateSchema.parse(input);
-  await ensureUserExists(currentUser.id, currentUser.name);
+  await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
   const db = await createEventRecord({
     ...parsed,
     dateTime:
