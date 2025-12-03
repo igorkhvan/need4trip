@@ -15,7 +15,7 @@ function ensureClient() {
 export async function listEvents(): Promise<DbEvent[]> {
   const client = ensureClient();
   const { data, error } = await client
-    .from<DbEvent>(table)
+    .from<DbEvent, DbEvent>(table)
     .select("*")
     .order("date_time", { ascending: true });
 
@@ -35,7 +35,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
   }
 
   const { data, error } = await client
-    .from<DbEvent>(table)
+    .from<DbEvent, DbEvent>(table)
     .select("*")
     .eq("id", id)
     .maybeSingle();
