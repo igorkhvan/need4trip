@@ -109,8 +109,10 @@ export async function updateEvent(
       eventHasPassed && parsed.dateTime
         ? undefined
         : parsed.dateTime instanceof Date
-          ? parsed.dateTime.toISOString()
-          : parsed.dateTime,
+          ? parsed.dateTime
+          : parsed.dateTime
+            ? new Date(parsed.dateTime)
+            : undefined,
   };
 
   const updated = await updateEventRecord(id, patch);
