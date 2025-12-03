@@ -145,7 +145,7 @@ export async function registerParticipant(
   const resolvedUserId = currentUser?.id ?? null;
 
   if (resolvedUserId) {
-    await ensureUserExists(resolvedUserId, currentUser?.name);
+    await ensureUserExists(resolvedUserId, currentUser?.name ?? undefined);
     const existingByUser = await findParticipantByUser(eventId, resolvedUserId);
     if (existingByUser) {
       throw new ConflictError("User already registered for this event", {
