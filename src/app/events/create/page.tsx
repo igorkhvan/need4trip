@@ -149,8 +149,9 @@ export default function CreateEventPage() {
         const rawIssues = body?.details?.issues || body?.issues;
         if (Array.isArray(rawIssues)) {
           rawIssues.forEach((issue: unknown) => {
-            const path = Array.isArray(issue?.path) ? issue.path.join(".") : "";
-            if (path) issues[path] = issue.message || "Ошибка валидации";
+            const it = issue as { path?: unknown; message?: string };
+            const path = Array.isArray(it?.path) ? (it.path as string[]).join(".") : "";
+            if (path) issues[path] = it?.message || "Ошибка валидации";
           });
         }
         const fe = body?.details?.fieldErrors;
