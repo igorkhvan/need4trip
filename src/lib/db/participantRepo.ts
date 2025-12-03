@@ -18,7 +18,7 @@ export async function listParticipants(
   const client = ensureClient();
   const { data, error } = await client
     .from(table)
-    .select<DbParticipant>("*")
+    .select("*")
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
 
@@ -27,7 +27,7 @@ export async function listParticipants(
     throw new InternalError("Failed to list participants", error);
   }
 
-  return data ?? [];
+  return (data ?? []) as DbParticipant[];
 }
 
 export async function createParticipant(
@@ -47,7 +47,7 @@ export async function createParticipant(
   const { data, error } = await client
     .from(table)
     .insert(insertPayload)
-    .select<DbParticipant>("*")
+    .select("*")
     .single();
 
   if (error) {
@@ -55,7 +55,7 @@ export async function createParticipant(
     throw new InternalError("Failed to create participant", error);
   }
 
-  return data;
+  return data as DbParticipant;
 }
 
 export async function updateParticipantRole(
@@ -67,7 +67,7 @@ export async function updateParticipantRole(
     .from(table)
     .update({ role })
     .eq("id", id)
-    .select<DbParticipant>("*")
+    .select("*")
     .maybeSingle();
 
   if (error) {
@@ -75,7 +75,7 @@ export async function updateParticipantRole(
     throw new InternalError("Failed to update participant", error);
   }
 
-  return data ?? null;
+  return data ? (data as DbParticipant) : null;
 }
 
 // Backward compatibility with existing service import name
@@ -125,7 +125,7 @@ export async function findParticipantByUser(
   const client = ensureClient();
   const { data, error } = await client
     .from(table)
-    .select<DbParticipant>("*")
+    .select("*")
     .eq("event_id", eventId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -135,7 +135,7 @@ export async function findParticipantByUser(
     throw new InternalError("Failed to find participant by user", error);
   }
 
-  return data ?? null;
+  return data ? (data as DbParticipant) : null;
 }
 
 export async function findParticipantByDisplayName(
@@ -145,7 +145,7 @@ export async function findParticipantByDisplayName(
   const client = ensureClient();
   const { data, error } = await client
     .from(table)
-    .select<DbParticipant>("*")
+    .select("*")
     .eq("event_id", eventId)
     .ilike("display_name", displayName)
     .maybeSingle();
@@ -155,14 +155,14 @@ export async function findParticipantByDisplayName(
     throw new InternalError("Failed to find participant by displayName", error);
   }
 
-  return data ?? null;
+  return data ? (data as DbParticipant) : null;
 }
 
 export async function findParticipantById(id: string): Promise<DbParticipant | null> {
   const client = ensureClient();
   const { data, error } = await client
     .from(table)
-    .select<DbParticipant>("*")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
 
@@ -171,7 +171,7 @@ export async function findParticipantById(id: string): Promise<DbParticipant | n
     throw new InternalError("Failed to find participant", error);
   }
 
-  return data ?? null;
+  return data ? (data as DbParticipant) : null;
 }
 
 export async function updateParticipant(
@@ -190,7 +190,7 @@ export async function updateParticipant(
     .from(table)
     .update(updatePayload)
     .eq("id", id)
-    .select<DbParticipant>("*")
+    .select("*")
     .maybeSingle();
 
   if (error) {
@@ -198,7 +198,7 @@ export async function updateParticipant(
     throw new InternalError("Failed to update participant", error);
   }
 
-  return data ?? null;
+  return data ? (data as DbParticipant) : null;
 }
 
 export async function deleteParticipant(id: string): Promise<boolean> {

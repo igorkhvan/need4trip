@@ -42,7 +42,7 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
   const { data, error } = await client
     .from(table)
     .upsert(payload, { onConflict: "id" })
-    .select<DbUser>("*")
+    .select("*")
     .maybeSingle();
 
   if (error) {
@@ -55,7 +55,7 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
 
 export async function getUserById(id: string): Promise<User | null> {
   const client = ensureClient();
-  const { data, error } = await client.from(table).select<DbUser>("*").eq("id", id).maybeSingle();
+  const { data, error } = await client.from(table).select("*").eq("id", id).maybeSingle();
   if (error) {
     console.error("Failed to fetch user", error);
     throw new InternalError("Failed to fetch user", error);
@@ -80,7 +80,7 @@ export async function findUserByTelegramId(telegramId: string): Promise<User | n
   const client = ensureClient();
   const { data, error } = await client
     .from(table)
-    .select<DbUser>("*")
+    .select("*")
     .eq("telegram_id", telegramId)
     .maybeSingle();
 
@@ -122,7 +122,7 @@ export async function upsertTelegramUser(payload: {
   const { data, error } = await client
     .from(table)
     .upsert(insertPayload, { onConflict: "telegram_id" })
-    .select<DbUser>("*")
+    .select("*")
     .single();
 
   if (error) {

@@ -16,7 +16,7 @@ export async function listEvents(): Promise<DbEvent[]> {
   const client = ensureClient();
   const { data, error } = await client
     .from(table)
-    .select<DbEvent>("*")
+    .select("*")
     .order("date_time", { ascending: true });
 
   if (error) {
@@ -24,7 +24,7 @@ export async function listEvents(): Promise<DbEvent[]> {
     throw new InternalError("Failed to list events", error);
   }
 
-  return data ?? [];
+  return (data ?? []) as DbEvent[];
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {
@@ -36,7 +36,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
 
   const { data, error } = await client
     .from(table)
-    .select<DbEvent>("*")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
 
@@ -45,7 +45,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
     throw new InternalError("Failed to get event", error);
   }
 
-  return data ? data : null;
+  return data ? (data as DbEvent) : null;
 }
 
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
@@ -73,7 +73,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
   const { data, error } = await client
     .from(table)
     .insert(insertPayload)
-    .select<DbEvent>("*")
+    .select("*")
     .single();
 
   if (error) {
@@ -81,7 +81,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     throw new InternalError("Failed to create event", error);
   }
 
-  return data;
+  return data as DbEvent;
 }
 
 export async function updateEvent(
@@ -120,7 +120,7 @@ export async function updateEvent(
     .from(table)
     .update(patch)
     .eq("id", id)
-    .select<DbEvent>("*")
+    .select("*")
     .maybeSingle();
 
   if (error) {
@@ -128,7 +128,7 @@ export async function updateEvent(
     throw new InternalError("Failed to update event", error);
   }
 
-  return data ?? null;
+  return data ? (data as DbEvent) : null;
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
