@@ -113,9 +113,15 @@ export function EditParticipationForm({
             {commonLabel}
             <Input
               type="number"
-              value={value ?? ""}
+              value={
+                typeof value === "number"
+                  ? value
+                  : typeof value === "string" && value.trim() !== ""
+                    ? Number(value)
+                    : ""
+              }
               required={field.required}
-              onChange={(e) => updateValue(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => updateValue(e.target.value === "" ? null : Number(e.target.value))}
             />
           </div>
         );
