@@ -6,7 +6,8 @@ const table = "users";
 
 function ensureClient() {
   if (!supabase) {
-    throw new InternalError("Supabase client is not configured");
+    console.warn("Supabase client is not configured");
+    return null;
   }
   return supabase;
 }
@@ -27,6 +28,9 @@ interface DbUser {
 
 export async function ensureUserExists(id: string, name?: string): Promise<DbUser> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const payload = {
     id,
     name: name?.trim() || "Dev User",
@@ -55,6 +59,7 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
 
 export async function getUserById(id: string): Promise<User | null> {
   const client = ensureClient();
+  if (!client) return null;
   const { data, error } = await client.from(table).select("*").eq("id", id).maybeSingle();
   if (error) {
     console.error("Failed to fetch user", error);
@@ -78,6 +83,7 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function findUserByTelegramId(telegramId: string): Promise<User | null> {
   const client = ensureClient();
+  if (!client) return null;
   const { data, error } = await client
     .from(table)
     .select("*")
@@ -112,6 +118,9 @@ export async function upsertTelegramUser(payload: {
   avatarUrl?: string | null;
 }): Promise<User> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const insertPayload = {
     name: payload.name,
     telegram_id: payload.telegramId,

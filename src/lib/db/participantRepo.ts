@@ -7,7 +7,8 @@ const table = "event_participants";
 
 function ensureClient() {
   if (!supabase) {
-    throw new InternalError("Supabase client is not configured");
+    console.warn("Supabase client is not configured");
+    return null;
   }
   return supabase;
 }
@@ -16,6 +17,7 @@ export async function listParticipants(
   eventId: string
 ): Promise<DbParticipant[]> {
   const client = ensureClient();
+  if (!client) return [];
   const { data, error } = await client
     .from(table)
     .select("*")
@@ -34,6 +36,9 @@ export async function createParticipant(
   payload: RegisterParticipantPayload
 ): Promise<DbParticipant> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const now = new Date().toISOString();
   const insertPayload = {
     event_id: payload.eventId,
@@ -63,6 +68,9 @@ export async function updateParticipantRole(
   role: ParticipantRole
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const { data, error } = await client
     .from(table)
     .update({ role })
@@ -83,6 +91,7 @@ export const registerParticipant = createParticipant;
 
 export async function countParticipants(eventId: string): Promise<number> {
   const client = ensureClient();
+  if (!client) return 0;
   const { count, error } = await client
     .from(table)
     .select("id", { count: "exact", head: true })
@@ -101,6 +110,7 @@ export async function countParticipantsByRole(
   role: ParticipantRole
 ): Promise<number> {
   const client = ensureClient();
+  if (!client) return 0;
   const { count, error } = await client
     .from(table)
     .select("id", { count: "exact", head: true })
@@ -123,6 +133,7 @@ export async function findParticipantByUser(
   userId: string
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
+  if (!client) return null;
   const { data, error } = await client
     .from(table)
     .select("*")
@@ -143,6 +154,7 @@ export async function findParticipantByDisplayName(
   displayName: string
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
+  if (!client) return null;
   const { data, error } = await client
     .from(table)
     .select("*")
@@ -160,6 +172,7 @@ export async function findParticipantByDisplayName(
 
 export async function findParticipantById(id: string): Promise<DbParticipant | null> {
   const client = ensureClient();
+  if (!client) return null;
   const { data, error } = await client
     .from(table)
     .select("*")
@@ -179,6 +192,9 @@ export async function updateParticipant(
   patch: Partial<Pick<RegisterParticipantPayload, "displayName" | "customFieldValues">>
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const updatePayload = {
     ...(patch.displayName !== undefined ? { display_name: patch.displayName } : {}),
     ...(patch.customFieldValues !== undefined
@@ -203,6 +219,9 @@ export async function updateParticipant(
 
 export async function deleteParticipant(id: string): Promise<boolean> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const { error, count } = await client
     .from(table)
     .delete({ count: "exact" })

@@ -7,13 +7,15 @@ const table = "events";
 
 function ensureClient() {
   if (!supabase) {
-    throw new InternalError("Supabase client is not configured");
+    console.warn("Supabase client is not configured");
+    return null;
   }
   return supabase;
 }
 
 export async function listEvents(): Promise<DbEvent[]> {
   const client = ensureClient();
+  if (!client) return [];
   const { data, error } = await client
     .from(table)
     .select("*")
@@ -29,6 +31,7 @@ export async function listEvents(): Promise<DbEvent[]> {
 
 export async function getEventById(id: string): Promise<DbEvent | null> {
   const client = ensureClient();
+  if (!client) return null;
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
     console.warn("Invalid event id provided", id);
     return null;
@@ -50,6 +53,9 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
 
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const now = new Date().toISOString();
 
   const insertPayload = {
@@ -89,6 +95,9 @@ export async function updateEvent(
   payload: EventUpdateInput
 ): Promise<DbEvent | null> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const patch = {
     ...(payload.title !== undefined ? { title: payload.title } : {}),
     ...(payload.description !== undefined ? { description: payload.description } : {}),
@@ -133,6 +142,9 @@ export async function updateEvent(
 
 export async function deleteEvent(id: string): Promise<boolean> {
   const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
   const { error, count } = await client
     .from(table)
     .delete({ count: "exact" })
