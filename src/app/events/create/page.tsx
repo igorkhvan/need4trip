@@ -336,23 +336,7 @@ export default function CreateEventPage() {
               </div>
               <div className="space-y-1">
                 <Label>Тип</Label>
-                <Select
-                  value={field.type}
-                  onValueChange={(value) =>
-                    updateField(field.id, { type: value as EventCustomFieldType })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FIELD_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input value={FIELD_TYPE_OPTIONS.find((o) => o.value === field.type)?.label ?? ""} disabled />
               </div>
               <div className="space-y-1">
                 <Label>Обязательное</Label>
