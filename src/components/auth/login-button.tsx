@@ -24,25 +24,21 @@ declare global {
 }
 
 function resolveAuthUrl(): string | null {
-  const build = (raw: string | null) => {
-    if (!raw) return null;
-    const withScheme = raw.startsWith("http") ? raw : `https://${raw}`;
+  const raw = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL ?? null;
+  const build = (source: string) => {
+    const withScheme = source.startsWith("http") ? source : `https://${source}`;
     const url = new URL(withScheme);
     if (url.pathname === "/" || url.pathname === "") {
       url.pathname = "/api/auth/telegram";
     }
-    return url;
+    return url.toString();
   };
 
-  const envUrl = build(process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL ?? null);
+  if (raw) return build(raw);
   if (typeof window !== "undefined") {
-    const current = new URL(window.location.origin);
-    const preferred = envUrl && envUrl.host === current.host ? envUrl : null;
-    const url = preferred ?? build(current.origin);
-    return url?.toString() ?? null;
+    return build(window.location.origin);
   }
-
-  return envUrl?.toString() ?? null;
+  return null;
 }
 
 export function LoginButton({ isAuthenticated }: LoginButtonProps) {
