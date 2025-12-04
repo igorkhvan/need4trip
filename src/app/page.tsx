@@ -142,7 +142,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
   );
 }
 
-export default async function HomePage(): Promise<JSX.Element> {
+export default async function HomePage() {
   const eventsData = await listEvents();
   const events: EventSummary[] = eventsData.slice(0, 3).map((e) => ({
     id: e.id,
