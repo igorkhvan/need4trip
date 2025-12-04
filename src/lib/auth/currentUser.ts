@@ -75,7 +75,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!token) return null;
   const payload = verifyJwt(token, secret);
   if (!payload?.userId) return null;
-  const user = await getUserById(String(payload.userId));
+  let user: Awaited<ReturnType<typeof getUserById>> = null;
+  try {
+    user = await getUserById(String(payload.userId));
+  } catch (err) {
+    console.error("[getCurrentUser] Failed to load user from DB", err);
+    return null;
+  }
   if (!user) {
     try {
       if (typeof cookieStore.delete === "function") {

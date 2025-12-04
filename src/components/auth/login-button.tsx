@@ -55,33 +55,16 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const authUrl = useMemo(() => resolveAuthUrl(), []);
-  const handleAuth = useCallback(
-    async (user: TelegramAuthPayload) => {
-      try {
-        const res = await fetch("/api/auth/telegram", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const message = body?.message || body?.error || "Telegram auth failed";
-          throw new Error(message);
-        }
-        setHasAuthed(true);
-        const container = containerRef.current;
-        if (container) container.innerHTML = "";
-        router.refresh();
-      } catch (err) {
-        console.error("Telegram auth failed", err);
-      }
-    },
-    [router]
-  );
+  const handleAuth = useCallback(() => {
+    setHasAuthed(true);
+    const container = containerRef.current;
+    if (container) container.innerHTML = "";
+    router.refresh();
+  }, [router]);
 
   useEffect(() => {
-    window.onTelegramAuth = (user: TelegramAuthPayload) => {
-      handleAuth(user);
+    window.onTelegramAuth = () => {
+      handleAuth();
     };
     return () => {
       delete window.onTelegramAuth;
@@ -99,7 +82,9 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     script.async = true;
     script.setAttribute("data-telegram-login", username);
     script.setAttribute("data-size", "large");
-    script.setAttribute("data-auth-url", authUrl);
+    if (authUrl) {
+      script.setAttribute("data-auth-url", authUrl);
+    }
     script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuth");
     container.appendChild(script);
