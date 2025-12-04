@@ -1,15 +1,9 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,18 +15,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  EventCategory,
-  EventCustomFieldSchema,
-  EventCustomFieldType,
-} from "@/lib/types/event";
+import { EventCategory, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 
 const CATEGORY_OPTIONS: { value: EventCategory; label: string }[] = [
   { value: "weekend_trip", label: "Выезд на выходные" },
@@ -77,6 +62,7 @@ export default function CreateEventPage() {
     event.preventDefault();
     setErrorMessage(null);
     setFieldErrors({});
+
     const formData = new FormData(event.currentTarget);
     const dateTime = formData.get("dateTime") as string;
     const maxParticipants = formData.get("maxParticipants") as string;
@@ -145,24 +131,25 @@ export default function CreateEventPage() {
           setErrorMessage("Лимит участников достигнут");
           return;
         }
-        const issues: Record<string, string> = {};
+        const collected: Record<string, string> = {};
         const rawIssues = body?.details?.issues || body?.issues;
         if (Array.isArray(rawIssues)) {
           rawIssues.forEach((issue: unknown) => {
             const it = issue as { path?: unknown; message?: string };
             const path = Array.isArray(it?.path) ? (it.path as string[]).join(".") : "";
-            if (path) issues[path] = it?.message || "Ошибка валидации";
+            if (path) collected[path] = it?.message || "Ошибка валидации";
           });
         }
         const fe = body?.details?.fieldErrors;
         if (fe && typeof fe === "object") {
           Object.entries(fe as Record<string, string[]>).forEach(([k, v]) => {
-            if (v && v.length) issues[k] = v.join(", ");
+            if (v && v.length) collected[k] = v.join(", ");
           });
         }
-        if (Object.keys(issues).length) {
-          setFieldErrors(issues);
+        if (Object.keys(collected).length) {
+          setFieldErrors(collected);
           setErrorMessage(null);
+          return;
         }
         const stringifyDetails = (d: unknown) => {
           if (!d) return "";
@@ -184,18 +171,10 @@ export default function CreateEventPage() {
           stringifyDetails(body?.details) ||
           stringifyDetails(body?.message) ||
           stringifyDetails(body);
-        if (!Object.keys(issues).length) {
-          throw new Error(
-            body?.error
-              ? `${body.error}${details ? `: ${details}` : ""}`
-              : details || "Не удалось создать ивент"
-          );
-        }
-        return;
+        throw new Error(body?.error ? `${body.error}${details ? `: ${details}` : ""}` : details);
       }
       router.push("/events");
     } catch (error) {
-      console.error("Error creating event", error);
       setErrorMessage(
         error instanceof Error
           ? error.message || "Не удалось создать ивент"
@@ -206,13 +185,8 @@ export default function CreateEventPage() {
     }
   };
 
-  const updateField = (
-    id: string,
-    patch: Partial<EventCustomFieldSchema>
-  ) => {
-    setCustomFields((prev) =>
-      prev.map((field) => (field.id === id ? { ...field, ...patch } : field))
-    );
+  const updateField = (id: string, patch: Partial<EventCustomFieldSchema>) => {
+    setCustomFields((prev) => prev.map((field) => (field.id === id ? { ...field, ...patch } : field)));
   };
 
   const addField = () => {
@@ -226,286 +200,213 @@ export default function CreateEventPage() {
   const fieldError = (path: string) => fieldErrors[path];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold">Создание ивента</h1>
-          <p className="text-muted-foreground">
-            Опишите покатушку, добавьте кастомные поля для регистрации экипажей.
-          </p>
+    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Ивент</p>
+        <h1 className="text-3xl font-bold tracking-tight">Создание ивента</h1>
+        <p className="text-sm text-muted-foreground">
+          Опишите покатушку, добавьте кастомные поля для регистрации экипажей.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/events">← Назад к списку</Link>
+          </Button>
         </div>
       </div>
 
-      <TooltipProvider>
-        <Card>
+      <Card>
+        <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle>Основные данные</CardTitle>
-            <CardDescription>На этом шаге поля не валидируются строго.</CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Название</Label>
-                  <Tooltip open={Boolean(fieldError("title"))} disableHoverableContent>
-                    <TooltipTrigger asChild>
-                      <Input
-                        id="title"
-                        name="title"
-                        placeholder="Выезд в Лахта"
-                        required
-                        className={
-                          fieldError("title") ? "border-red-500 focus-visible:ring-red-500" : ""
-                        }
-                        onChange={() => {
-                          if (fieldError("title")) {
-                            setFieldErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.title;
-                              return next;
-                            });
-                          }
-                          setErrorMessage(null);
-                        }}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent side="top">{fieldError("title")}</TooltipContent>
-                  </Tooltip>
-                  {fieldError("title") && (
-                    <div className="text-xs text-red-600">{fieldError("title")}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Категория</Label>
-                  <Select name="category" defaultValue="weekend_trip">
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Выберите категорию" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dateTime">Дата и время</Label>
-                  <Input id="dateTime" name="dateTime" type="datetime-local" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxParticipants">Макс. экипажей</Label>
-                  <Input
-                    id="maxParticipants"
-                    name="maxParticipants"
-                    type="number"
-                    min={1}
-                    placeholder="Необязательное поле"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="locationText">Локация (текстом)</Label>
-                <Tooltip open={Boolean(fieldError("locationText"))} disableHoverableContent>
-                  <TooltipTrigger asChild>
-                    <Input
-                      id="locationText"
-                      name="locationText"
-                      placeholder="Например: карьер у реки, GPS точку добавим позже"
-                      required
-                      className={
-                        fieldError("locationText")
-                          ? "border-red-500 focus-visible:ring-red-500"
-                          : ""
-                      }
-                      onChange={() => {
-                        if (fieldError("locationText")) {
-                          setFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.locationText;
-                            return next;
-                          });
-                        }
-                        setErrorMessage(null);
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{fieldError("locationText")}</TooltipContent>
-                </Tooltip>
-                {fieldError("locationText") && (
-                  <div className="text-xs text-red-600">{fieldError("locationText")}</div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Описание ивента</Label>
-                <Tooltip open={Boolean(fieldError("description"))} disableHoverableContent>
-                  <TooltipTrigger asChild>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      placeholder="Кратко опишите маршрут, требования к технике и прочее"
-                      rows={4}
-                      className={
-                        fieldError("description")
-                          ? "border-red-500 focus-visible:ring-red-500"
-                          : ""
-                      }
-                      onChange={() => {
-                        if (fieldError("description")) {
-                          setFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.description;
-                            return next;
-                          });
-                        }
-                        setErrorMessage(null);
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{fieldError("description")}</TooltipContent>
-                </Tooltip>
-                {fieldError("description") && (
-                  <div className="text-xs text-red-600">{fieldError("description")}</div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex items-center justify-end gap-2 border-t bg-muted/30">
-              {errorMessage && (
-                <div className="mr-auto text-sm text-red-600">{errorMessage}</div>
-              )}
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Создаём..." : "Сохранить ивент"}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Card>
-          <CardHeader>
-            <CardTitle>Кастомные поля регистрации</CardTitle>
-            <CardDescription>
-              Моковый конструктор: добавьте чекбоксы, числа или списки для участников.
-            </CardDescription>
+            <CardTitle className="text-xl font-semibold text-foreground">Основные данные</CardTitle>
+            <CardDescription>Обновите название, дату, лимиты и описание ивента.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {sortedFields.map((field, index) => (
-              <div
-                key={field.id}
-                className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
-              >
-                <div className="space-y-1 md:col-span-2">
-                  <Label>Метка</Label>
-                  <Tooltip
-                    open={Boolean(fieldError(`customFieldsSchema.${index}.label`))}
-                    disableHoverableContent
-                  >
-                    <TooltipTrigger asChild>
-                      <Input
-                        value={field.label}
-                        placeholder="Название поля"
-                        className={
-                          fieldError(`customFieldsSchema.${index}.label`)
-                            ? "border-red-500 focus-visible:ring-red-500"
-                            : ""
-                        }
-                        onChange={(e) => {
-                          updateField(field.id, { label: e.target.value });
-                          if (fieldError(`customFieldsSchema.${index}.label`)) {
-                            setFieldErrors((prev) => {
-                              const next = { ...prev };
-                              delete next[`customFieldsSchema.${index}.label`];
-                              return next;
-                            });
-                          }
-                        }}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {fieldError(`customFieldsSchema.${index}.label`)}
-                    </TooltipContent>
-                  </Tooltip>
-                  {fieldError(`customFieldsSchema.${index}.label`) && (
-                    <div className="text-xs text-red-600">
-                      {fieldError(`customFieldsSchema.${index}.label`)}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <Label>Тип</Label>
-                  <Select
-                    value={field.type}
-                    onValueChange={(value) =>
-                      updateField(field.id, { type: value as EventCustomFieldType })
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="title">Название</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  required
+                  className={
+                    fieldError("title") ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }
+                />
+                {fieldError("title") && <p className="text-xs text-red-600">{fieldError("title")}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="category">Категория</Label>
+                <Select name="category" defaultValue="weekend_trip">
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Выберите категорию" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="dateTime">Дата и время</Label>
+                <Input id="dateTime" name="dateTime" type="datetime-local" required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="maxParticipants">Максимум экипажей</Label>
+                <Input
+                  id="maxParticipants"
+                  name="maxParticipants"
+                  type="number"
+                  min={1}
+                  placeholder="Необязательное поле"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="locationText">Локация (текстом)</Label>
+              <Input
+                id="locationText"
+                name="locationText"
+                required
+                className={
+                  fieldError("locationText") ? "border-red-500 focus-visible:ring-red-500" : ""
+                }
+              />
+              {fieldError("locationText") && (
+                <p className="text-xs text-red-600">{fieldError("locationText")}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="description">Описание ивента</Label>
+              <Textarea
+                id="description"
+                name="description"
+                rows={4}
+                className={
+                  fieldError("description") ? "border-red-500 focus-visible:ring-red-500" : ""
+                }
+              />
+              {fieldError("description") && (
+                <p className="text-xs text-red-600">{fieldError("description")}</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
+            {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Создаём..." : "Сохранить ивент"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold text-foreground">
+            Кастомные поля регистрации
+          </CardTitle>
+          <CardDescription>
+            Поля, которые участники заполняют при регистрации.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {sortedFields.map((field, index) => (
+            <div
+              key={field.id}
+              className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
+            >
+              <div className="space-y-1 md:col-span-2">
+                <Label>Метка</Label>
+                <Input
+                  value={field.label}
+                  placeholder="Название поля"
+                  className={
+                    fieldError(`customFieldsSchema.${index}.label`)
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : ""
+                  }
+                  onChange={(e) => {
+                    updateField(field.id, { label: e.target.value });
+                    if (fieldError(`customFieldsSchema.${index}.label`)) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next[`customFieldsSchema.${index}.label`];
+                        return next;
+                      });
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FIELD_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Обязательное</Label>
-                  <div className="flex items-center gap-2 rounded-md border px-3 py-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-primary"
-                      checked={field.required}
-                      onChange={(e) =>
-                        updateField(field.id, { required: e.target.checked })
-                      }
-                    />
-                    <span className="text-sm text-muted-foreground">Да</span>
-                  </div>
-                </div>
-                {field.type === "enum" && (
-                  <div className="md:col-span-4">
-                    <Label>Варианты (через запятую)</Label>
-                    <Input
-                      value={field.options?.join(", ") ?? ""}
-                      onChange={(e) =>
-                        updateField(field.id, {
-                          options: e.target.value
-                            .split(",")
-                            .map((opt) => opt.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                    />
+                  }}
+                />
+                {fieldError(`customFieldsSchema.${index}.label`) && (
+                  <div className="text-xs text-red-600">
+                    {fieldError(`customFieldsSchema.${index}.label`)}
                   </div>
                 )}
-                <div className="flex items-center justify-between md:col-span-4">
-                  <span className="text-xs text-muted-foreground">
-                    Порядок: {index + 1}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeField(field.id)}
-                  >
-                    Удалить
-                  </Button>
+              </div>
+              <div className="space-y-1">
+                <Label>Тип</Label>
+                <Select
+                  value={field.type}
+                  onValueChange={(value) =>
+                    updateField(field.id, { type: value as EventCustomFieldType })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FIELD_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Обязательное</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={field.required}
+                    onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                  />
+                  <span className="text-sm text-muted-foreground">Да</span>
                 </div>
               </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addField}>
-              Добавить поле
-            </Button>
-          </CardContent>
-        </Card>
-      </TooltipProvider>
+              {field.type === "enum" && (
+                <div className="md:col-span-4 space-y-1">
+                  <Label>Опции (через запятую)</Label>
+                  <Input
+                    value={(field.options || []).join(", ")}
+                    placeholder="Например: бензин, дизель, электричество"
+                    onChange={(e) =>
+                      updateField(field.id, {
+                        options: e.target.value
+                          .split(",")
+                          .map((item) => item.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </div>
+              )}
+              <div className="flex items-center justify-end md:col-span-4">
+                <Button variant="ghost" size="sm" type="button" onClick={() => removeField(field.id)}>
+                  Удалить поле
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button variant="outline" type="button" onClick={addField}>
+            Добавить поле
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
