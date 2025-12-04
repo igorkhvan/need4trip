@@ -79,9 +79,6 @@ export default async function EventDetails({
           {isOwner && <Badge variant="outline">Владелец</Badge>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button className="px-5" asChild>
-            <Link href={`/events/${event.id}#register`}>Регистрация</Link>
-          </Button>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/events">← Назад к списку</Link>
           </Button>
