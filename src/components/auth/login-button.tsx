@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-
-import { Button } from "@/components/ui/button";
 
 interface LoginButtonProps {
   botUsername?: string;
+  isAuthenticated?: boolean;
 }
 
 type TelegramAuthPayload = {
@@ -57,11 +56,9 @@ function resolveAuthUrl(): string | null {
   return null;
 }
 
-export function LoginButton({ botUsername }: LoginButtonProps) {
+export function LoginButton({ botUsername, isAuthenticated }: LoginButtonProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
   const authUrl = useMemo(() => resolveAuthUrl(), []);
   const resolvedUsername =
     sanitizeBotUsername(botUsername) ||
@@ -70,25 +67,17 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
 
   const handleAuth = useCallback(
     async (user: TelegramAuthPayload) => {
-      try {
-        setError(null);
-        const res = await fetch("/api/auth/telegram", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const message =
-            body?.message || body?.error || "Не удалось авторизоваться через Telegram";
-          setError(message);
-          return;
-        }
-        startTransition(() => router.refresh());
-      } catch (err) {
-        console.error("Telegram auth failed", err);
-        setError("Не удалось авторизоваться через Telegram");
+      const res = await fetch("/api/auth/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const message = body?.message || body?.error || "Telegram auth failed";
+        throw new Error(message);
       }
+      router.refresh();
     },
     [router]
   );
@@ -104,7 +93,7 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !resolvedUsername || !authUrl) return;
+    if (!container || !resolvedUsername || !authUrl || isAuthenticated) return;
     // Avoid duplicating the widget on re-render.
     if (container.querySelector("iframe")) return;
 
@@ -121,26 +110,9 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
     return () => {
       container.innerHTML = "";
     };
-  }, [authUrl, resolvedUsername]);
+  }, [authUrl, resolvedUsername, isAuthenticated]);
 
-  if (!resolvedUsername) {
-    return (
-      <div className="flex flex-col items-start gap-1">
-        <Button variant="default" size="sm" disabled title="Telegram недоступен">
-          Войти через Telegram
-        </Button>
-        <div className="text-xs text-muted-foreground">Авторизация временно недоступна</div>
-      </div>
-    );
-  }
+  if (isAuthenticated || !resolvedUsername) return null;
 
-  return (
-    <div className="flex flex-col items-start gap-1">
-      <div ref={containerRef} aria-label="Telegram Login" />
-      <div className="text-xs text-muted-foreground">
-        {isPending ? "Завершаем вход..." : "Войти через Telegram"}
-      </div>
-      {error && <div className="text-xs text-red-600">{error}</div>}
-    </div>
-  );
+  return <div ref={containerRef} aria-label="Telegram Login" />;
 }
