@@ -279,7 +279,7 @@ export function EditEventForm({
               />
             </div>
           </CardContent>
-          <CardFooter className="flex items-center justify-end gap-2 border-t bg-muted/30">
+          <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
             {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}
             <Button type="submit" disabled={isSubmitting || authMissing || !isOwner}>
               {isSubmitting ? "Сохранение..." : "Сохранить"}
