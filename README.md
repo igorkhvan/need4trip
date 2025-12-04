@@ -23,6 +23,7 @@ npm run dev
 - `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` — username бота для виджета логина
 - `NEXT_PUBLIC_TELEGRAM_AUTH_URL` — опциональный полный URL, если виджет должен слать запросы на внешний домен; по умолчанию текущий origin + `/api/auth/telegram`
 - `AUTH_JWT_SECRET` — секрет подписи JWT (cookie `auth_token`)
+> На проде (Vercel) все эти переменные уже заведены во всех окружениях: `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_TELEGRAM_AUTH_URL`, `AUTH_JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`.
 
 ## Структура
 - `src/app`

@@ -47,6 +47,8 @@ function resolveAuthUrl(): string | null {
 
 export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   const [hasAuthed, setHasAuthed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const username = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
     if (!raw) return null;
@@ -55,16 +57,38 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const authUrl = useMemo(() => resolveAuthUrl(), []);
-  const handleAuth = useCallback(() => {
-    setHasAuthed(true);
-    const container = containerRef.current;
-    if (container) container.innerHTML = "";
-    router.refresh();
-  }, [router]);
+  const handleAuth = useCallback(
+    async (payload: TelegramAuthPayload) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/auth/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+          throw new Error(data.message || data.error || "Auth failed");
+        }
+        setHasAuthed(true);
+        const container = containerRef.current;
+        if (container) container.innerHTML = "";
+        router.refresh();
+      } catch (err) {
+        console.error("Telegram auth failed", err);
+        setError("Не удалось войти через Telegram. Попробуйте еще раз.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [isSubmitting, router]
+  );
 
   useEffect(() => {
-    window.onTelegramAuth = () => {
-      handleAuth();
+    window.onTelegramAuth = (user) => {
+      void handleAuth(user);
     };
     return () => {
       delete window.onTelegramAuth;
@@ -96,5 +120,14 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
 
   if (isAuthenticated || hasAuthed || !username) return null;
 
-  return <div ref={containerRef} aria-label="Telegram Login" />;
+  return (
+    <div className="flex flex-col gap-2">
+      <div ref={containerRef} aria-label="Telegram Login" />
+      {error && (
+        <div className="text-xs text-red-500" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
+  );
 }
