@@ -90,18 +90,35 @@ async function upsertTelegramUser(
   payload: TelegramPayload,
   name: string
 ) {
+  const telegramId = String(payload.id);
+
+  const { data: existing, error: findError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("telegram_id", telegramId)
+    .maybeSingle();
+
+  if (findError) {
+    console.error("[auth/telegram] Supabase error on find user:", findError);
+    return { error: findError };
+  }
+
   const upsertPayload = {
-    telegram_id: String(payload.id),
+    telegram_id: telegramId,
     telegram_handle: payload.username ?? null,
     name,
     avatar_url: payload.photo_url ?? null,
   };
 
-  const { data, error } = await supabase
-    .from("users")
-    .upsert(upsertPayload, { onConflict: "telegram_id" })
-    .select("*")
-    .single();
+  const query = supabase.from("users");
+
+  const { data, error } = existing
+    ? await query
+        .update(upsertPayload)
+        .eq("id", existing.id)
+        .select("*")
+        .maybeSingle()
+    : await query.insert(upsertPayload).select("*").maybeSingle();
 
   if (error) {
     console.error("[auth/telegram] Supabase error on upsert user:", error);

@@ -93,7 +93,7 @@ UI (avatar + LogoutButton) / LoginButton
 - `created_at`, `updated_at` (timestamptz)
 
 ### Приведение продовой БД к схеме
-В проде должны быть колонки `telegram_id`, `telegram_handle`, `avatar_url`. Если база старее, примените миграцию:
+В проде должны быть колонки `telegram_id`, `telegram_handle`, `avatar_url` **и уникальный индекс/констрейнт по `telegram_id`**. Без уникального индекса каждый вход создаст новую строку, и пользователь потеряет право на свои ивенты. Если база старее, примените миграцию:
 ```
 supabase/migrations/20241204_add_telegram_columns.sql
 ```
