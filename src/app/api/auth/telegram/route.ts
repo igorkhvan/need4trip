@@ -6,6 +6,8 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { setAuthCookie } from "@/lib/auth/cookies";
 import { createAuthToken } from "@/lib/auth/currentUser";
 
+export const dynamic = "force-dynamic";
+
 type TelegramPayload = {
   id: number | string;
   first_name?: string;
@@ -22,16 +24,6 @@ type AuthEnv = {
   supabaseServiceKey: string;
   jwtSecret: string;
 };
-
-function buildDbErrorResponse() {
-  return NextResponse.json(
-    {
-      error: "db_error",
-      message: "Failed to access the database while processing Telegram login.",
-    },
-    { status: 503 }
-  );
-}
 
 function buildDataCheckString(payload: Omit<TelegramPayload, "hash">) {
   const entries = Object.entries(payload).filter(
@@ -175,12 +167,26 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
       name
     );
     if (upsertError || !upserted) {
-      return buildDbErrorResponse();
+      return NextResponse.json(
+        {
+          error: "db_error",
+          message: "Failed to upsert user in database.",
+          detail: upsertError?.message ?? null,
+        },
+        { status: 503 }
+      );
     }
 
     const { data: verified, error: verifyError } = await verifyUserExists(supabase, upserted.id);
     if (verifyError) {
-      return buildDbErrorResponse();
+      return NextResponse.json(
+        {
+          error: "db_error",
+          message: "Failed to verify user in database.",
+          detail: verifyError?.message ?? null,
+        },
+        { status: 503 }
+      );
     }
     if (!verified) {
       return NextResponse.json(
@@ -205,7 +211,14 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
     return response;
   } catch (err) {
     console.error("[auth/telegram] Unexpected error during Supabase operations", err);
-    return buildDbErrorResponse();
+    return NextResponse.json(
+      {
+        error: "db_error",
+        message: "Unexpected database error during Telegram login.",
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      { status: 503 }
+    );
   }
 }
 
