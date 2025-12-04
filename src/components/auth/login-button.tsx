@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [authUrl] = useState<string | null>(() => {
+  const authUrl = useMemo(() => {
     if (process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL) {
       return process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL;
     }
@@ -47,7 +47,7 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
       return `${window.location.origin}/api/auth/telegram`;
     }
     return null;
-  });
+  }, []);
   const resolvedUsername =
     sanitizeBotUsername(botUsername) ||
     sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
