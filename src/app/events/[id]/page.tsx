@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,38 +113,11 @@ export default async function EventDetails({
               <Users className="h-4 w-4" />
               <span>Максимум участников: {event.maxParticipants ?? "не ограничено"}</span>
             </div>
-          </div>
-          {event.customFieldsSchema.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground">
-                Данные для регистрации
-              </h3>
-              <div className="overflow-hidden rounded-xl border bg-background">
-                <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow>
-                      <TableHead className="font-semibold">Поле</TableHead>
-                      <TableHead className="font-semibold">Тип</TableHead>
-                      <TableHead className="font-semibold">Обязательное</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {event.customFieldsSchema.map((field) => (
-                      <TableRow key={field.id} className="hover:bg-muted/30">
-                        <TableCell className="font-medium">{field.label}</TableCell>
-                        <TableCell className="capitalize text-muted-foreground">
-                          {field.type}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {field.required ? "да" : "нет"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+              <MapPin className="h-4 w-4" />
+              <span>{event.locationText}</span>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
