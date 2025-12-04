@@ -28,7 +28,9 @@ declare global {
 function sanitizeBotUsername(raw?: string | null): string | null {
   if (!raw) return null;
   const cleaned = raw.trim().replace(/^@+/, "");
-  if (!cleaned) return null;
+  const isValidLength = cleaned.length >= 5 && cleaned.length <= 32;
+  const pattern = /^[a-zA-Z][a-zA-Z0-9_]*bot$/i;
+  if (!cleaned || !isValidLength || !pattern.test(cleaned)) return null;
   return cleaned;
 }
 
@@ -40,7 +42,9 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
   const resolvedUsername =
     sanitizeBotUsername(botUsername) ||
     sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
-    (process.env.NODE_ENV === "production" ? "Need4TripBot" : null);
+    (process.env.NODE_ENV === "production"
+      ? sanitizeBotUsername("Need4TripBot")
+      : null);
   const authUrl = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL || "/api/auth/telegram";
 
   const handleAuth = useCallback(
