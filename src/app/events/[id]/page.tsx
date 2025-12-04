@@ -17,6 +17,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RegisterParticipantForm } from "@/components/events/register-participant-form";
 import { ParticipantActions } from "@/components/events/participant-actions";
+import { OwnerActions } from "@/components/events/owner-actions";
 import { getEventWithParticipants } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -82,9 +83,7 @@ export default async function EventDetails({
             <Link href="/events">← Назад к списку</Link>
           </Button>
           {isOwner && (
-            <Button variant="secondary" size="sm" asChild>
-              <Link href={`/events/${event.id}/edit`}>Редактировать</Link>
-            </Button>
+            <OwnerActions eventId={event.id} isOwner authMissing={!currentUser} />
           )}
         </div>
       </div>
@@ -174,13 +173,6 @@ export default async function EventDetails({
             <CardTitle className="text-xl font-semibold text-foreground">Участники</CardTitle>
             <CardDescription>{participantsCountLabel}</CardDescription>
           </div>
-          {(isOwner || currentUser) && (
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" asChild>
-                <Link href="#register">+ Добавить участника</Link>
-              </Button>
-            </div>
-          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {participants.length ? (

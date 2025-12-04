@@ -226,7 +226,7 @@ export function RegisterParticipantForm({
       {error && <div className="text-sm text-red-600">{error}</div>}
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Сохраняем..." : "Добавить участника"}
+          {isSubmitting ? "Сохраняем..." : "+ Добавить участника"}
         </Button>
       </div>
     </form>
