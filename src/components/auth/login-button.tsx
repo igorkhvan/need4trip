@@ -42,9 +42,7 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
   const resolvedUsername =
     sanitizeBotUsername(botUsername) ||
     sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
-    (process.env.NODE_ENV === "production"
-      ? sanitizeBotUsername("Need4TripBot")
-      : null);
+    null;
   const authUrl = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL || "/api/auth/telegram";
 
   const handleAuth = useCallback(
@@ -104,9 +102,12 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
 
   if (!resolvedUsername) {
     return (
-      <Button variant="default" size="sm" disabled title="Telegram недоступен в этой среде">
-        Войти через Telegram
-      </Button>
+      <div className="flex flex-col items-start gap-1">
+        <Button variant="default" size="sm" disabled title="Telegram недоступен">
+          Войти через Telegram
+        </Button>
+        <div className="text-xs text-muted-foreground">Авторизация временно недоступна</div>
+      </div>
     );
   }
 
