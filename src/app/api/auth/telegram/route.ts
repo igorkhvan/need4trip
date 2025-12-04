@@ -92,7 +92,7 @@ async function upsertTelegramUser(
 ) {
   const telegramId = String(payload.id);
 
-  const { data: existing, error: findError } = await supabase
+  const { data: existingById, error: findError } = await supabase
     .from("users")
     .select("*")
     .eq("telegram_id", telegramId)
@@ -103,6 +103,33 @@ async function upsertTelegramUser(
   if (findError) {
     console.error("[auth/telegram] Supabase error on find user:", findError);
     return { error: findError };
+  }
+
+  let existing = existingById;
+
+  // Fallback: reclaim first user with empty telegram_id but matching handle/name.
+  if (!existing) {
+    const { data: existingFallback, error: findFallbackError } = await supabase
+      .from("users")
+      .select("*")
+      .is("telegram_id", null)
+      .or(
+        [
+          payload.username ? `telegram_handle.eq.${payload.username}` : "",
+          name ? `name.eq.${name}` : "",
+        ]
+          .filter(Boolean)
+          .join(",")
+      )
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (findFallbackError) {
+      console.error("[auth/telegram] Supabase error on fallback find user:", findFallbackError);
+      return { error: findFallbackError };
+    }
+    existing = existingFallback ?? null;
   }
 
   const upsertPayload = {
