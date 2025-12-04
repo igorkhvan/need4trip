@@ -34,20 +34,35 @@ function sanitizeBotUsername(raw?: string | null): string | null {
   return cleaned;
 }
 
+function resolveAuthUrl(): string | null {
+  const buildUrl = (base: string | null) => {
+    if (!base) return null;
+    const withScheme = base.startsWith("http") ? base : `https://${base}`;
+    try {
+      const url = new URL(withScheme);
+      if (url.pathname === "/" || url.pathname === "") {
+        url.pathname = "/api/auth/telegram";
+      }
+      return url.toString();
+    } catch {
+      return null;
+    }
+  };
+
+  const fromEnv = buildUrl(process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL ?? null);
+  if (fromEnv) return fromEnv;
+  if (typeof window !== "undefined") {
+    return buildUrl(window.location.origin);
+  }
+  return null;
+}
+
 export function LoginButton({ botUsername }: LoginButtonProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const authUrl = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL) {
-      return process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL;
-    }
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/api/auth/telegram`;
-    }
-    return null;
-  }, []);
+  const authUrl = useMemo(() => resolveAuthUrl(), []);
   const resolvedUsername =
     sanitizeBotUsername(botUsername) ||
     sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
