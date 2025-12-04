@@ -94,7 +94,6 @@ async function upsertTelegramUser(
     telegram_id: String(payload.id),
     telegram_handle: payload.username ?? null,
     name,
-    avatar_url: payload.photo_url ?? null,
   };
 
   const { data, error } = await supabase
@@ -203,7 +202,7 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
       id: verified.id,
       name: verified.name,
       telegramHandle: verified.telegram_handle,
-      avatarUrl: verified.avatar_url,
+      avatarUrl: verified.avatar_url ?? null,
     };
 
     const response = NextResponse.json({ ok: true, user });
