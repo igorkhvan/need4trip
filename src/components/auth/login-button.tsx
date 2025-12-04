@@ -8,12 +8,12 @@ interface LoginButtonProps {
 }
 
 type TelegramAuthPayload = {
-  id: number;
+  id: number | string;
   first_name?: string;
   last_name?: string;
   username?: string;
   photo_url?: string;
-  auth_date: number;
+  auth_date: number | string;
   hash: string;
 };
 
@@ -21,6 +21,28 @@ declare global {
   interface Window {
     onTelegramAuth?: (user: TelegramAuthPayload) => void;
   }
+}
+
+function resolveAuthUrl(): string | null {
+  const build = (raw: string | null) => {
+    if (!raw) return null;
+    const withScheme = raw.startsWith("http") ? raw : `https://${raw}`;
+    const url = new URL(withScheme);
+    if (url.pathname === "/" || url.pathname === "") {
+      url.pathname = "/api/auth/telegram";
+    }
+    return url;
+  };
+
+  const envUrl = build(process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL ?? null);
+  if (typeof window !== "undefined") {
+    const current = new URL(window.location.origin);
+    const preferred = envUrl && envUrl.host === current.host ? envUrl : null;
+    const url = preferred ?? build(current.origin);
+    return url?.toString() ?? null;
+  }
+
+  return envUrl?.toString() ?? null;
 }
 
 export function LoginButton({ isAuthenticated }: LoginButtonProps) {
@@ -34,6 +56,7 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   }, []);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const authUrl = useMemo(() => resolveAuthUrl(), []);
   const handleAuth = useCallback(
     async (payload: TelegramAuthPayload) => {
       if (isSubmitting) return;
@@ -84,6 +107,9 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     script.async = true;
     script.setAttribute("data-telegram-login", username);
     script.setAttribute("data-size", "large");
+    if (authUrl) {
+      script.setAttribute("data-auth-url", authUrl);
+    }
     script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuth");
     container.appendChild(script);
@@ -91,7 +117,7 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     return () => {
       container.innerHTML = "";
     };
-  }, [username, isAuthenticated, hasAuthed]);
+  }, [authUrl, username, isAuthenticated, hasAuthed]);
 
   if (isAuthenticated || hasAuthed || !username) return null;
 
