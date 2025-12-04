@@ -63,10 +63,10 @@ function Hero() {
         </p>
       </div>
       <div className="flex flex-wrap gap-3">
-        <Button size="md" asChild>
+        <Button asChild>
           <Link href="/events/create">Создать ивент</Link>
         </Button>
-        <Button size="md" variant="outline" asChild>
+        <Button variant="outline" asChild>
           <Link href="/events">Смотреть ивенты</Link>
         </Button>
       </div>
