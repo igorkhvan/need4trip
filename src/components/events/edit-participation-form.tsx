@@ -177,21 +177,22 @@ export function EditParticipationForm({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Редактирование регистрации</h1>
-          <p className="text-muted-foreground">
-            Можно изменить имя экипажа и ответы на кастомные поля.
-          </p>
+    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Регистрация</p>
+        <h1 className="text-3xl font-bold tracking-tight">Редактирование регистрации</h1>
+        <p className="text-sm text-muted-foreground">
+          Обновите имя экипажа и ответы на кастомные поля.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/events/${eventId}#register`}>← Назад к участникам</Link>
+          </Button>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/events/${eventId}#register`}>Назад</Link>
-        </Button>
       </div>
 
       {authMissing && (
-        <Alert variant="destructive">
+        <Alert>
           <AlertTitle>Требуется авторизация</AlertTitle>
           <AlertDescription>Войдите через Telegram, чтобы редактировать регистрацию.</AlertDescription>
         </Alert>
@@ -206,7 +207,7 @@ export function EditParticipationForm({
       <Card>
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle>Данные экипажа</CardTitle>
+            <CardTitle className="text-xl font-semibold text-foreground">Данные экипажа</CardTitle>
             <CardDescription>Обновите отображаемое имя и ответы.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -226,7 +227,7 @@ export function EditParticipationForm({
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex items-center justify-end gap-2 border-t bg-muted/30">
+          <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
             {error && <div className="mr-auto text-sm text-red-600">{error}</div>}
             <Button type="submit" disabled={isSubmitting || authMissing || !isSelf}>
               {isSubmitting ? "Сохраняем..." : "Сохранить"}
