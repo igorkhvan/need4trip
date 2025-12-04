@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -48,10 +48,6 @@ export default async function EventDetails({
     (a, b) => a.order - b.order
   );
 
-  const subtitle =
-    event.description?.split(".")[0]?.trim() && event.description.length > 0
-      ? `${event.description.split(".")[0].trim()}.`
-      : null;
   const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : null;
   const formattedDateTime = new Date(event.dateTime).toLocaleString("ru-RU");
   const participantsCountLabel = `${participants.length} / ${
@@ -76,11 +72,10 @@ export default async function EventDetails({
           {formattedDateTime} • {categoryLabel ?? "Выезд на выходные"}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          {subtitle && <Badge variant="secondary">{subtitle}</Badge>}
           {isOwner && <Badge variant="outline">Владелец</Badge>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button className="px-5" asChild>
+          <Button className="px-5" size="md" asChild>
             <Link href={`/events/${event.id}#register`}>Регистрация</Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
@@ -105,7 +100,7 @@ export default async function EventDetails({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Описание</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">Описание</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="prose prose-sm text-muted-foreground leading-relaxed">
@@ -153,10 +148,10 @@ export default async function EventDetails({
 
       <Card id="register">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Регистрация</CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <CardTitle className="text-xl font-semibold text-foreground">Регистрация</CardTitle>
+          <CardDescription>
             Укажите информацию, чтобы мы могли добавить вас в колонну.
-          </p>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isFull ? (
@@ -176,9 +171,16 @@ export default async function EventDetails({
       <Card>
         <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle className="text-xl font-semibold">Участники</CardTitle>
-            <p className="text-sm text-muted-foreground">{participantsCountLabel}</p>
+            <CardTitle className="text-xl font-semibold text-foreground">Участники</CardTitle>
+            <CardDescription>{participantsCountLabel}</CardDescription>
           </div>
+          {(isOwner || currentUser) && (
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" asChild>
+                <Link href="#register">+ Добавить участника</Link>
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {participants.length ? (

@@ -114,11 +114,11 @@ export function RegisterParticipantForm({
   };
 
   const renderField = (field: EventCustomFieldSchema) => {
-    const commonLabel = (
-      <Label className="flex items-center gap-2">
+    const labelContent = (
+      <>
         {field.label}
-        {field.required && <span className="text-red-600">*</span>}
-      </Label>
+        {field.required && <span className="ml-0.5 text-red-600">*</span>}
+      </>
     );
 
     const required = field.required;
@@ -128,7 +128,7 @@ export function RegisterParticipantForm({
       case "number":
         return (
           <div className="space-y-2" key={field.id}>
-            {commonLabel}
+            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
             <Input
               type="number"
               value={value as number}
@@ -149,13 +149,13 @@ export function RegisterParticipantForm({
               checked={Boolean(value)}
               onChange={(e) => handleChange(field.id, e.target.checked)}
             />
-            <Label className="text-sm">{field.label}</Label>
+            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
           </div>
         );
       case "enum":
         return (
           <div className="space-y-2" key={field.id}>
-            {commonLabel}
+            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
             <Select
               value={(value as string) ?? ""}
               onValueChange={(val) => handleChange(field.id, val)}
@@ -177,7 +177,7 @@ export function RegisterParticipantForm({
       default:
         return (
           <div className="space-y-2" key={field.id}>
-            {commonLabel}
+            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
             <Input
               value={(value as string) ?? ""}
               required={required}
