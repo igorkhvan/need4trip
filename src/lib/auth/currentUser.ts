@@ -76,7 +76,18 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const payload = verifyJwt(token, secret);
   if (!payload?.userId) return null;
   const user = await getUserById(String(payload.userId));
-  if (!user) return null;
+  if (!user) {
+    try {
+      if (typeof cookieStore.delete === "function") {
+        cookieStore.delete("auth_token");
+      } else if (typeof cookieStore.set === "function") {
+        cookieStore.set("auth_token", "", { path: "/", maxAge: 0 });
+      }
+    } catch (err) {
+      console.warn("Failed to clear auth cookie after missing user", err);
+    }
+    return null;
+  }
   return {
     id: user.id,
     name: user.name,

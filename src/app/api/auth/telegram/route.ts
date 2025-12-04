@@ -121,10 +121,17 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     .select("*")
     .single();
 
-  if (upsertError || !upserted) {
-    console.error("Failed to upsert telegram user", upsertError);
+  if (upsertError || !upserted || !upserted.id) {
+    console.error("Failed to upsert telegram user", {
+      error: upsertError,
+      telegramId: payload.id,
+      hasData: Boolean(upserted),
+    });
     return NextResponse.json(
-      { error: "InternalError", message: "Не удалось создать пользователя" },
+      {
+        error: "user_not_created",
+        message: "Failed to create or load user after Telegram auth",
+      },
       { status: 500 }
     );
   }
