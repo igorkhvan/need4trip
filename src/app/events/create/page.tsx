@@ -35,7 +35,9 @@ const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
   { value: "enum", label: "Список значений" },
 ];
 
-function buildEmptyField(order: number): EventCustomFieldSchema {
+type EditableField = EventCustomFieldSchema & { optionsText?: string };
+
+function buildEmptyField(order: number): EditableField {
   return {
     id: `field-${crypto.randomUUID().slice(0, 8)}`,
     label: "",
@@ -43,6 +45,7 @@ function buildEmptyField(order: number): EventCustomFieldSchema {
     required: false,
     order,
     options: [],
+    optionsText: "",
   };
 }
 
@@ -51,7 +54,7 @@ export default function CreateEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [customFields, setCustomFields] = useState<EventCustomFieldSchema[]>([]);
+  const [customFields, setCustomFields] = useState<EditableField[]>([]);
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
@@ -111,7 +114,11 @@ export default function CreateEventPage() {
       locationLat: null,
       locationLng: null,
       maxParticipants: maxParticipants ? Number(maxParticipants) : null,
-      customFieldsSchema: sortedFields,
+      customFieldsSchema: sortedFields.map((field) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { optionsText, ...rest } = field;
+        return rest;
+      }),
     };
 
     try {
@@ -185,7 +192,7 @@ export default function CreateEventPage() {
     }
   };
 
-  const updateField = (id: string, patch: Partial<EventCustomFieldSchema>) => {
+  const updateField = (id: string, patch: Partial<EditableField>) => {
     setCustomFields((prev) => prev.map((field) => (field.id === id ? { ...field, ...patch } : field)));
   };
 
@@ -314,32 +321,32 @@ export default function CreateEventPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {sortedFields.map((field, index) => (
-            <div
-              key={field.id}
-              className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
-            >
+            {sortedFields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
+              >
               <div className="space-y-1 md:col-span-2">
                 <Label>Метка</Label>
-                <Input
-                  value={field.label}
-                  placeholder="Название поля"
-                  className={
-                    fieldError(`customFieldsSchema.${index}.label`)
-                      ? "border-red-500 focus-visible:ring-red-500"
-                      : ""
-                  }
-                  onChange={(e) => {
-                    updateField(field.id, { label: e.target.value });
-                    if (fieldError(`customFieldsSchema.${index}.label`)) {
-                      setFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next[`customFieldsSchema.${index}.label`];
-                        return next;
-                      });
+                  <Input
+                    value={field.label}
+                    placeholder="Название поля"
+                    className={
+                      fieldError(`customFieldsSchema.${index}.label`)
+                        ? "border-red-500 focus-visible:ring-red-500"
+                        : ""
                     }
-                  }}
-                />
+                    onChange={(e) => {
+                      updateField(field.id, { label: e.target.value });
+                      if (fieldError(`customFieldsSchema.${index}.label`)) {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next[`customFieldsSchema.${index}.label`];
+                          return next;
+                        });
+                      }
+                    }}
+                  />
                 {fieldError(`customFieldsSchema.${index}.label`) && (
                   <div className="text-xs text-red-600">
                     {fieldError(`customFieldsSchema.${index}.label`)}
@@ -382,10 +389,11 @@ export default function CreateEventPage() {
                 <div className="md:col-span-4 space-y-1">
                   <Label>Опции (через запятую)</Label>
                   <Input
-                    value={(field.options || []).join(", ")}
+                    value={field.optionsText ?? (field.options || []).join(", ")}
                     placeholder="Например: бензин, дизель, электричество"
                     onChange={(e) =>
                       updateField(field.id, {
+                        optionsText: e.target.value,
                         options: e.target.value
                           .split(",")
                           .map((item) => item.trim())
