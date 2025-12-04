@@ -70,8 +70,9 @@ export function LoginButton({ botUsername, isAuthenticated }: LoginButtonProps) 
   }, [router]);
 
   useEffect(() => {
-    window.onTelegramAuth = (user: TelegramAuthPayload) => {
-      handleAuth(user);
+    window.onTelegramAuth = (_user: TelegramAuthPayload) => {
+      void _user;
+      handleAuth();
     };
     return () => {
       delete window.onTelegramAuth;
