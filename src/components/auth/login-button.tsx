@@ -25,14 +25,21 @@ declare global {
   }
 }
 
+function sanitizeBotUsername(raw?: string | null): string | null {
+  if (!raw) return null;
+  const cleaned = raw.trim().replace(/^@+/, "");
+  if (!cleaned) return null;
+  return cleaned;
+}
+
 export function LoginButton({ botUsername }: LoginButtonProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const username =
-    botUsername ||
-    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ||
+  const resolvedUsername =
+    sanitizeBotUsername(botUsername) ||
+    sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
     (process.env.NODE_ENV === "production" ? "Need4TripBot" : null);
   const authUrl = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL || "/api/auth/telegram";
 
@@ -72,14 +79,14 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !username) return;
+    if (!container || !resolvedUsername) return;
     // Avoid duplicating the widget on re-render.
     if (container.querySelector("iframe")) return;
 
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
-    script.setAttribute("data-telegram-login", username);
+    script.setAttribute("data-telegram-login", resolvedUsername);
     script.setAttribute("data-size", "large");
     script.setAttribute("data-auth-url", authUrl);
     script.setAttribute("data-request-access", "write");
@@ -89,9 +96,9 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
     return () => {
       container.innerHTML = "";
     };
-  }, [authUrl, username]);
+  }, [authUrl, resolvedUsername]);
 
-  if (!username) {
+  if (!resolvedUsername) {
     return (
       <Button variant="default" size="sm" disabled title="Telegram недоступен в этой среде">
         Войти через Telegram
