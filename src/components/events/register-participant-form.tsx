@@ -87,7 +87,11 @@ export function RegisterParticipantForm({
           throw new Error("Недостаточно прав / войдите через Telegram");
         }
         if (res.status === 409) {
-          throw new Error("Лимит участников достигнут");
+          throw new Error(
+            body?.message ||
+              body?.error ||
+              "Конфликт: вы уже зарегистрированы, достигнут лимит или роль занята"
+          );
         }
         if (res.status === 400) {
           throw new Error(body?.message || "Ошибка валидации");
