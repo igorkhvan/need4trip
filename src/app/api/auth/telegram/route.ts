@@ -94,74 +94,97 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: existing, error: findError } = await supabase
-    .from("users")
-    .select("*")
-    .eq("telegram_id", String(payload.id))
-    .maybeSingle();
+  try {
+    const { data: existing, error: findError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("telegram_id", String(payload.id))
+      .maybeSingle();
 
-  if (findError) {
-    console.error("Failed to find user by telegram id", findError);
-    return NextResponse.json(
-      { error: "InternalError", message: "Ошибка поиска пользователя" },
-      { status: 500 }
-    );
-  }
+    if (findError) {
+      console.error("[auth/telegram] Supabase error on find:", findError);
+      return NextResponse.json(
+        {
+          error: "db_error",
+          message: "Failed to access the database while processing Telegram login.",
+        },
+        { status: 503 }
+      );
+    }
 
-  const { data: upserted, error: upsertError } = await supabase
-    .from("users")
-    .upsert(
-      existing ?? {
-        telegram_id: String(payload.id),
-        telegram_handle: payload.username ?? null,
-        name,
-        avatar_url: payload.photo_url ?? null,
-      },
-      { onConflict: "telegram_id" }
-    )
-    .select("*")
-    .single();
+    const { data: upserted, error: upsertError } = await supabase
+      .from("users")
+      .upsert(
+        existing ?? {
+          telegram_id: String(payload.id),
+          telegram_handle: payload.username ?? null,
+          name,
+          avatar_url: payload.photo_url ?? null,
+        },
+        { onConflict: "telegram_id" }
+      )
+      .select("*")
+      .single();
 
-  if (upsertError || !upserted || !upserted.id) {
-    console.error("Failed to upsert telegram user", {
-      error: upsertError,
+    if (upsertError) {
+      console.error("[auth/telegram] Supabase error on upsert user:", upsertError);
+      return NextResponse.json(
+        {
+          error: "db_error",
+          message: "Failed to access the database while processing Telegram login.",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (!upserted || !upserted.id) {
+      console.error("[auth/telegram] User not created or returned after upsert.", {
+        telegramId: payload.id,
+      });
+      return NextResponse.json(
+        {
+          error: "user_not_created",
+          message: "Failed to create or load user after Telegram login.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const user = {
+      id: upserted.id,
+      name: upserted.name,
+      telegramHandle: upserted.telegram_handle,
+      avatarUrl: upserted.avatar_url,
+    };
+
+    const token = createAuthToken({
+      userId: user.id,
       telegramId: payload.id,
-      hasData: Boolean(upserted),
+      username: payload.username,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      telegramHandle: user.telegramHandle,
     });
+
+    const response = NextResponse.json({ ok: true, user });
+    response.cookies.set("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+    return response;
+  } catch (err) {
+    console.error("[auth/telegram] Unexpected error during Supabase operations", err);
     return NextResponse.json(
       {
-        error: "user_not_created",
-        message: "Failed to create or load user after Telegram auth",
+        error: "db_error",
+        message: "Failed to access the database while processing Telegram login.",
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
-
-  const user = {
-    id: upserted.id,
-    name: upserted.name,
-    telegramHandle: upserted.telegram_handle,
-    avatarUrl: upserted.avatar_url,
-  };
-
-  const token = createAuthToken({
-    userId: user.id,
-    telegramId: payload.id,
-    username: payload.username,
-    name: user.name,
-    avatarUrl: user.avatarUrl,
-    telegramHandle: user.telegramHandle,
-  });
-
-  const response = NextResponse.json({ ok: true, user });
-  response.cookies.set("auth_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60,
-  });
-  return response;
 }
 
 export async function POST(request: Request) {
