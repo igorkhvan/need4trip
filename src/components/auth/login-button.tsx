@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface LoginButtonProps {
@@ -39,6 +39,7 @@ function resolveAuthUrl(): string | null {
 }
 
 export function LoginButton({ isAuthenticated }: LoginButtonProps) {
+  const [hasAuthed, setHasAuthed] = useState(false);
   const username = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
     if (!raw) return null;
@@ -47,13 +48,33 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const authUrl = useMemo(() => resolveAuthUrl(), []);
-  const handleAuth = useCallback(() => {
-    router.refresh();
-  }, [router]);
+  const handleAuth = useCallback(
+    async (user: TelegramAuthPayload) => {
+      try {
+        const res = await fetch("/api/auth/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(user),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const message = body?.message || body?.error || "Telegram auth failed";
+          throw new Error(message);
+        }
+        setHasAuthed(true);
+        const container = containerRef.current;
+        if (container) container.innerHTML = "";
+        router.refresh();
+      } catch (err) {
+        console.error("Telegram auth failed", err);
+      }
+    },
+    [router]
+  );
 
   useEffect(() => {
-    window.onTelegramAuth = () => {
-      handleAuth();
+    window.onTelegramAuth = (user: TelegramAuthPayload) => {
+      handleAuth(user);
     };
     return () => {
       delete window.onTelegramAuth;
@@ -62,7 +83,7 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !username || !authUrl || isAuthenticated) return;
+    if (!container || !username || !authUrl || isAuthenticated || hasAuthed) return;
 
     container.innerHTML = "";
 
@@ -79,9 +100,9 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     return () => {
       container.innerHTML = "";
     };
-  }, [authUrl, username, isAuthenticated]);
+  }, [authUrl, username, isAuthenticated, hasAuthed]);
 
-  if (isAuthenticated || !username) return null;
+  if (isAuthenticated || hasAuthed || !username) return null;
 
   return <div ref={containerRef} aria-label="Telegram Login" />;
 }
