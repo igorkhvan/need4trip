@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface LoginButtonProps {
-  botUsername?: string;
   isAuthenticated?: boolean;
 }
 
@@ -24,54 +23,36 @@ declare global {
   }
 }
 
-function sanitizeBotUsername(raw?: string | null): string | null {
-  if (!raw) return null;
-  const cleaned = raw.trim().replace(/^@+/, "");
-  const isValidLength = cleaned.length >= 5 && cleaned.length <= 32;
-  const pattern = /^[a-zA-Z][a-zA-Z0-9_]*bot$/i;
-  if (!cleaned || !isValidLength || !pattern.test(cleaned)) return null;
-  return cleaned;
-}
-
 function resolveAuthUrl(): string | null {
-  const buildUrl = (base: string | null) => {
-    if (!base) return null;
-    const withScheme = base.startsWith("http") ? base : `https://${base}`;
-    try {
-      const url = new URL(withScheme);
-      if (url.pathname === "/" || url.pathname === "") {
-        url.pathname = "/api/auth/telegram";
-      }
-      return url.toString();
-    } catch {
-      return null;
+  const base = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL;
+  if (!base) return null;
+  const withScheme = base.startsWith("http") ? base : `https://${base}`;
+  try {
+    const url = new URL(withScheme);
+    if (url.pathname === "/" || url.pathname === "") {
+      url.pathname = "/api/auth/telegram";
     }
-  };
-
-  const fromEnv = buildUrl(process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL ?? null);
-  if (fromEnv) return fromEnv;
-  if (typeof window !== "undefined") {
-    return buildUrl(window.location.origin);
+    return url.toString();
+  } catch {
+    return null;
   }
-  return null;
 }
 
-export function LoginButton({ botUsername, isAuthenticated }: LoginButtonProps) {
+export function LoginButton({ isAuthenticated }: LoginButtonProps) {
+  const username = useMemo(() => {
+    const raw = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+    if (!raw) return null;
+    return raw.trim().replace(/^@+/, "") || null;
+  }, []);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const authUrl = useMemo(() => resolveAuthUrl(), []);
-  const resolvedUsername =
-    sanitizeBotUsername(botUsername) ||
-    sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
-    null;
-
   const handleAuth = useCallback(() => {
     router.refresh();
   }, [router]);
 
   useEffect(() => {
-    window.onTelegramAuth = (_user: TelegramAuthPayload) => {
-      void _user;
+    window.onTelegramAuth = () => {
       handleAuth();
     };
     return () => {
@@ -81,14 +62,14 @@ export function LoginButton({ botUsername, isAuthenticated }: LoginButtonProps) 
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !resolvedUsername || !authUrl || isAuthenticated) return;
-    // Avoid duplicating the widget on re-render.
-    if (container.querySelector("iframe")) return;
+    if (!container || !username || !authUrl || isAuthenticated) return;
+
+    container.innerHTML = "";
 
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
-    script.setAttribute("data-telegram-login", resolvedUsername);
+    script.setAttribute("data-telegram-login", username);
     script.setAttribute("data-size", "large");
     script.setAttribute("data-auth-url", authUrl);
     script.setAttribute("data-request-access", "write");
@@ -98,9 +79,9 @@ export function LoginButton({ botUsername, isAuthenticated }: LoginButtonProps) 
     return () => {
       container.innerHTML = "";
     };
-  }, [authUrl, resolvedUsername, isAuthenticated]);
+  }, [authUrl, username, isAuthenticated]);
 
-  if (isAuthenticated || !resolvedUsername) return null;
+  if (isAuthenticated || !username) return null;
 
   return <div ref={containerRef} aria-label="Telegram Login" />;
 }

@@ -59,7 +59,7 @@ export async function MainHeader() {
               <LogoutButton />
             </div>
           ) : (
-            <LoginButton isAuthenticated={false} />
+            <LoginButton isAuthenticated={Boolean(currentUser)} />
           )}
         </div>
       </div>
