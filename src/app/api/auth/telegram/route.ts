@@ -96,6 +96,8 @@ async function upsertTelegramUser(
     .from("users")
     .select("*")
     .eq("telegram_id", telegramId)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (findError) {

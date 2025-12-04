@@ -117,6 +117,12 @@ end
 $$;
 ```
 
+Если в базе уже успели появиться дубликаты по `telegram_id`, сначала прогоните дедупликацию, чтобы вернуть права на ивенты/участников:
+```
+supabase/migrations/20241204_fix_telegram_duplicates.sql
+```
+Скрипт оставляет самую раннюю запись на каждый `telegram_id`, переназначает `events.created_by_user_id` и `event_participants.user_id` на неё и удаляет дубликаты, затем снова включает уникальный констрейнт.
+
 ### API
 - **`POST/GET /api/auth/telegram`**  
   Вход: Telegram payload (`id`, `hash`, `auth_date`, optional `first_name`, `last_name`, `username`, `photo_url`).  
