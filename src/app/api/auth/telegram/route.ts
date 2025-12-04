@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 
+import { createClient } from "@supabase/supabase-js";
+
 import { createAuthToken } from "@/lib/auth/currentUser";
-import { findUserByTelegramId, upsertTelegramUser } from "@/lib/db/userRepo";
 
 type TelegramPayload = {
   id: number | string;
@@ -55,9 +56,17 @@ function parsePayloadFromSearchParams(url: URL): TelegramPayload | null {
 async function handleTelegramAuth(payload: TelegramPayload) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const jwtSecret = process.env.AUTH_JWT_SECRET;
-  if (!botToken || !jwtSecret) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!botToken || !jwtSecret || !supabaseUrl || !supabaseServiceKey) {
     return NextResponse.json(
-      { error: "AuthNotConfigured", message: "Отсутствует TELEGRAM_BOT_TOKEN или AUTH_JWT_SECRET" },
+      {
+        error: "AuthNotConfigured",
+        message:
+          "Отсутствует TELEGRAM_BOT_TOKEN, AUTH_JWT_SECRET или Supabase env (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY/NEXT_PUBLIC_SUPABASE_ANON_KEY)",
+      },
       { status: 500 }
     );
   }
@@ -82,15 +91,50 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     payload.username ||
     "Пользователь";
 
-  const existing = await findUserByTelegramId(String(payload.id));
-  const user =
-    existing ??
-    (await upsertTelegramUser({
-      telegramId: String(payload.id),
-      name,
-      telegramHandle: payload.username,
-      avatarUrl: payload.photo_url,
-    }));
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data: existing, error: findError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("telegram_id", String(payload.id))
+    .maybeSingle();
+
+  if (findError) {
+    console.error("Failed to find user by telegram id", findError);
+    return NextResponse.json(
+      { error: "InternalError", message: "Ошибка поиска пользователя" },
+      { status: 500 }
+    );
+  }
+
+  const { data: upserted, error: upsertError } = await supabase
+    .from("users")
+    .upsert(
+      existing ?? {
+        telegram_id: String(payload.id),
+        telegram_handle: payload.username ?? null,
+        name,
+        avatar_url: payload.photo_url ?? null,
+      },
+      { onConflict: "telegram_id" }
+    )
+    .select("*")
+    .single();
+
+  if (upsertError || !upserted) {
+    console.error("Failed to upsert telegram user", upsertError);
+    return NextResponse.json(
+      { error: "InternalError", message: "Не удалось создать пользователя" },
+      { status: 500 }
+    );
+  }
+
+  const user = {
+    id: upserted.id,
+    name: upserted.name,
+    telegramHandle: upserted.telegram_handle,
+    avatarUrl: upserted.avatar_url,
+  };
 
   const token = createAuthToken({
     userId: user.id,
