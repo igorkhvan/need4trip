@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { EditEventForm } from "@/components/events/edit-event-form";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getEventWithParticipants } from "@/lib/services/events";
-import { formatEventDateTime } from "@/lib/utils";
 
 export default async function EditEventPage({
   params,
@@ -16,7 +15,6 @@ export default async function EditEventPage({
   const currentUser = await getCurrentUser();
   const isOwner = currentUser?.id === event.createdByUserId;
   const hasParticipants = participants.length > 0;
-  const formattedDateTime = formatEventDateTime(event.dateTime);
 
   return (
     <EditEventForm
@@ -24,7 +22,7 @@ export default async function EditEventPage({
       hasParticipants={hasParticipants}
       isOwner={isOwner}
       authMissing={!currentUser}
-      formattedDateTime={formattedDateTime}
+      formattedDateTime={new Date(event.dateTime).toLocaleString("ru-RU")}
     />
   );
 }
