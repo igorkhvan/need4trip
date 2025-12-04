@@ -39,7 +39,6 @@ const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
   { value: "number", label: "Число" },
   { value: "boolean", label: "Да / Нет" },
-  { value: "enum", label: "Список значений" },
 ];
 
 function buildEmptyField(order: number): EventCustomFieldSchema {
@@ -345,24 +344,28 @@ export function EditEventForm({
                   </div>
                   <div className="space-y-1">
                     <Label>Тип</Label>
-                    <Select
-                      value={field.type}
-                      disabled={authMissing || !isOwner}
-                      onValueChange={(value) =>
-                        updateField(field.id, { type: value as EventCustomFieldType, options: [] })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FIELD_TYPE_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? (
+                      <Select
+                        value={field.type}
+                        disabled={authMissing || !isOwner}
+                        onValueChange={(value) =>
+                          updateField(field.id, { type: value as EventCustomFieldType, options: [] })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FIELD_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={field.type} disabled />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label>Порядок</Label>
@@ -387,25 +390,6 @@ export function EditEventForm({
                       <span className="text-sm text-muted-foreground">Да</span>
                     </div>
                   </div>
-
-                  {field.type === "enum" && (
-                    <div className="space-y-1 md:col-span-4">
-                      <Label>Опции (через запятую)</Label>
-                      <Input
-                        value={(field.options || []).join(", ")}
-                        placeholder="Например: бензин, дизель, электричество"
-                        disabled={authMissing || !isOwner}
-                        onChange={(e) =>
-                          updateField(field.id, {
-                            options: e.target.value
-                              .split(",")
-                              .map((item) => item.trim())
-                              .filter(Boolean),
-                          })
-                        }
-                      />
-                    </div>
-                  )}
 
                   <div className="flex justify-end gap-2 md:col-span-4">
                     <Button
