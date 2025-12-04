@@ -45,6 +45,9 @@ export default async function EventDetails({
     event.maxParticipants !== null &&
     event.maxParticipants !== undefined &&
     participants.length >= event.maxParticipants;
+  const isRegistered = currentUser
+    ? participants.some((p) => p.userId === currentUser.id)
+    : false;
   const sortedCustomFields = [...(event.customFieldsSchema || [])].sort(
     (a, b) => a.order - b.order
   );
@@ -158,6 +161,14 @@ export default async function EventDetails({
               Регистрация закрыта: достигнуто максимальное количество участников (
               {event.maxParticipants}).
             </div>
+          ) : isRegistered ? (
+            <Alert>
+              <AlertTitle>Вы уже зарегистрированы</AlertTitle>
+              <AlertDescription>
+                Ваш профиль уже есть в списке участников этого ивента. Отредактируйте запись внизу,
+                если нужно обновить данные.
+              </AlertDescription>
+            </Alert>
           ) : (
             <RegisterParticipantForm
               eventId={event.id}
