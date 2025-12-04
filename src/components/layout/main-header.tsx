@@ -36,7 +36,10 @@ export async function MainHeader() {
           {currentUser ? (
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9 border">
-                <AvatarImage src={currentUser.avatarUrl ?? undefined} alt={currentUser.name ?? "Пользователь"} />
+                <AvatarImage
+                  src={currentUser.avatarUrl ?? undefined}
+                  alt={currentUser.name ?? "Пользователь"}
+                />
                 <AvatarFallback>
                   {currentUser.name?.slice(0, 2).toUpperCase() ??
                     currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
@@ -48,13 +51,15 @@ export async function MainHeader() {
                   {currentUser.name || currentUser.telegramHandle || "Пользователь"}
                 </span>
                 {currentUser.telegramHandle && (
-                  <span className="text-xs text-muted-foreground">@{currentUser.telegramHandle}</span>
+                  <span className="text-xs text-muted-foreground">
+                    @{currentUser.telegramHandle}
+                  </span>
                 )}
               </div>
               <LogoutButton />
             </div>
           ) : (
-            <LoginButton />
+            <LoginButton isAuthenticated={false} />
           )}
         </div>
       </div>

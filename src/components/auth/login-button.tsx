@@ -65,22 +65,9 @@ export function LoginButton({ botUsername, isAuthenticated }: LoginButtonProps) 
     sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
     null;
 
-  const handleAuth = useCallback(
-    async (user: TelegramAuthPayload) => {
-      const res = await fetch("/api/auth/telegram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        const message = body?.message || body?.error || "Telegram auth failed";
-        throw new Error(message);
-      }
-      router.refresh();
-    },
-    [router]
-  );
+  const handleAuth = useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   useEffect(() => {
     window.onTelegramAuth = (user: TelegramAuthPayload) => {
