@@ -57,15 +57,14 @@ async function handleTelegramAuth(payload: TelegramPayload) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const jwtSecret = process.env.AUTH_JWT_SECRET;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!botToken || !jwtSecret || !supabaseUrl || !supabaseServiceKey) {
     return NextResponse.json(
       {
         error: "AuthNotConfigured",
         message:
-          "Отсутствует TELEGRAM_BOT_TOKEN, AUTH_JWT_SECRET или Supabase env (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY/NEXT_PUBLIC_SUPABASE_ANON_KEY)",
+          "Отсутствует TELEGRAM_BOT_TOKEN, AUTH_JWT_SECRET или Supabase env (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)",
       },
       { status: 500 }
     );
@@ -91,7 +90,9 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     payload.username ||
     "Пользователь";
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
   const { data: existing, error: findError } = await supabase
     .from("users")
