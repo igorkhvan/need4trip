@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import Script from "next/script";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
 
 interface LoginButtonProps {
   botUsername?: string;
@@ -26,10 +27,13 @@ declare global {
 
 export function LoginButton({ botUsername }: LoginButtonProps) {
   const router = useRouter();
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const username =
-    botUsername || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Need4TripBot";
+    botUsername ||
+    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ||
+    (process.env.NODE_ENV === "production" ? "Need4TripBot" : null);
   const authUrl = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL || "/api/auth/telegram";
 
   const handleAuth = useCallback(
@@ -66,17 +70,38 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
     };
   }, [handleAuth]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !username) return;
+    // Avoid duplicating the widget on re-render.
+    if (container.querySelector("iframe")) return;
+
+    const script = document.createElement("script");
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.async = true;
+    script.setAttribute("data-telegram-login", username);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-auth-url", authUrl);
+    script.setAttribute("data-request-access", "write");
+    script.setAttribute("data-onauth", "onTelegramAuth");
+    container.appendChild(script);
+
+    return () => {
+      container.innerHTML = "";
+    };
+  }, [authUrl, username]);
+
+  if (!username) {
+    return (
+      <Button variant="default" size="sm" disabled title="Telegram недоступен в этой среде">
+        Войти через Telegram
+      </Button>
+    );
+  }
+
   return (
     <div className="flex flex-col items-start gap-1">
-      <Script
-        src="https://telegram.org/js/telegram-widget.js?22"
-        data-telegram-login={username}
-        data-size="large"
-        data-auth-url={authUrl}
-        data-request-access="write"
-        data-onauth="onTelegramAuth"
-        strategy="afterInteractive"
-      />
+      <div ref={containerRef} aria-label="Telegram Login" />
       <div className="text-xs text-muted-foreground">
         {isPending ? "Завершаем вход..." : "Войти через Telegram"}
       </div>
