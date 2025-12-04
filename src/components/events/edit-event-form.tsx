@@ -67,6 +67,7 @@ interface EditEventFormProps {
   hasParticipants: boolean;
   isOwner: boolean;
   authMissing: boolean;
+  formattedDateTime: string;
 }
 
 export function EditEventForm({
@@ -74,6 +75,7 @@ export function EditEventForm({
   hasParticipants,
   isOwner,
   authMissing,
+  formattedDateTime,
 }: EditEventFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState(event.title ?? "");
@@ -157,23 +159,25 @@ export function EditEventForm({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Редактирование ивента</h1>
-          <p className="text-muted-foreground">
-            {hasParticipants
-              ? "Есть участники — схема кастомных полей заблокирована."
-              : "Можно обновить данные и схему кастомных полей."}
-          </p>
+    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Ивент</p>
+        <h1 className="text-3xl font-bold tracking-tight">Редактирование: {event.title}</h1>
+        <p className="text-sm text-muted-foreground">
+          {formattedDateTime} •{" "}
+          {category
+            ? CATEGORY_OPTIONS.find((c) => c.value === category)?.label
+            : "Выезд на выходные"}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/events/${event.id}`}>← Назад к событию</Link>
+          </Button>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/events/${event.id}`}>Назад</Link>
-        </Button>
       </div>
 
       {authMissing && (
-        <Alert variant="destructive">
+        <Alert>
           <AlertTitle>Требуется авторизация</AlertTitle>
           <AlertDescription>Войдите через Telegram, чтобы редактировать ивент.</AlertDescription>
         </Alert>
@@ -181,19 +185,23 @@ export function EditEventForm({
       {!isOwner && (
         <Alert variant="destructive">
           <AlertTitle>Нет прав</AlertTitle>
-          <AlertDescription>Только владелец может редактировать ивент.</AlertDescription>
+          <AlertDescription>Только владелец может редактировать этот ивент.</AlertDescription>
         </Alert>
       )}
 
       <Card>
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle>Основные данные</CardTitle>
-            <CardDescription>Обновите описание, дату и лимиты.</CardDescription>
+            <CardTitle className="text-xl font-semibold text-foreground">
+              Основные данные
+            </CardTitle>
+            <CardDescription>
+              Обновите название, дату, лимиты и описание ивента.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="title">Название</Label>
                 <Input
                   id="title"
@@ -203,7 +211,7 @@ export function EditEventForm({
                   disabled={authMissing || !isOwner}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="category">Категория</Label>
                 <Select
                   value={category ?? undefined}
@@ -222,7 +230,7 @@ export function EditEventForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="dateTime">Дата и время</Label>
                 <Input
                   id="dateTime"
@@ -233,8 +241,8 @@ export function EditEventForm({
                   disabled={authMissing || !isOwner}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxParticipants">Макс. экипажей</Label>
+              <div className="space-y-1">
+                <Label htmlFor="maxParticipants">Максимум экипажей</Label>
                 <Input
                   id="maxParticipants"
                   type="number"
@@ -249,7 +257,7 @@ export function EditEventForm({
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="locationText">Локация (текстом)</Label>
               <Input
                 id="locationText"
@@ -260,7 +268,7 @@ export function EditEventForm({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="description">Описание ивента</Label>
               <Textarea
                 id="description"
@@ -274,7 +282,7 @@ export function EditEventForm({
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-muted/30">
             {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}
             <Button type="submit" disabled={isSubmitting || authMissing || !isOwner}>
-              {isSubmitting ? "Сохраняем..." : "Сохранить"}
+              {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>
           </CardFooter>
         </form>
@@ -282,107 +290,145 @@ export function EditEventForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Кастомные поля регистрации</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">
+            Кастомные поля регистрации
+          </CardTitle>
           <CardDescription>
-            {hasParticipants
-              ? "Редактирование запрещено: есть зарегистрированные участники."
-              : "Можно менять схему кастомных полей."}
+            Поля, которые участники заполняют при регистрации.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {sortedFields.map((field, index) => (
-            <div
-              key={field.id}
-              className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
-            >
-              <div className="space-y-1 md:col-span-2">
-                <Label>Метка</Label>
-                <Input
-                  value={field.label}
-                  placeholder="Название поля"
-                  disabled={hasParticipants || authMissing || !isOwner}
-                  onChange={(e) => updateField(field.id, { label: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Тип</Label>
-                <Select
-                  value={field.type}
-                  disabled={hasParticipants || authMissing || !isOwner}
-                  onValueChange={(value) =>
-                    updateField(field.id, { type: value as EventCustomFieldType, options: [] })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FIELD_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Обязательное</Label>
-                <div className="flex items-center gap-2 rounded-md border px-3 py-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    checked={field.required}
-                    disabled={hasParticipants || authMissing || !isOwner}
-                    onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                  />
-                  <span className="text-sm text-muted-foreground">Да</span>
-                </div>
-              </div>
-              {field.type === "enum" && (
-                <div className="md:col-span-4">
-                  <Label>Варианты (через запятую)</Label>
-                  <Input
-                    value={field.options?.join(", ") ?? ""}
-                    disabled={hasParticipants || authMissing || !isOwner}
-                    onChange={(e) =>
-                      updateField(field.id, {
-                        options: e.target.value
-                          .split(",")
-                          .map((opt) => opt.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </div>
-              )}
-              <div className="flex items-center justify-between md:col-span-4">
-                <span className="text-xs text-muted-foreground">Порядок: {index + 1}</span>
-                {!hasParticipants && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeField(field.id)}
-                    disabled={authMissing || !isOwner}
-                  >
-                    Удалить
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-          {!hasParticipants && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addField}
-              disabled={authMissing || !isOwner}
-            >
-              Добавить поле
-            </Button>
+          {hasParticipants && (
+            <Alert>
+              <AlertTitle>Редактирование заблокировано</AlertTitle>
+              <AlertDescription>
+                Уже есть зарегистрированные участники, поэтому схему кастомных полей нельзя изменить.
+              </AlertDescription>
+            </Alert>
           )}
-          {hasParticipants && sortedFields.length === 0 && (
-            <p className="text-sm text-muted-foreground">Кастомные поля не заданы.</p>
+
+          {hasParticipants ? (
+            <div className="space-y-3">
+              {sortedFields.map((field) => (
+                <div
+                  key={field.id}
+                  className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/50 px-3 py-2 text-sm"
+                >
+                  <span className="font-medium">{field.label}</span>
+                  <span className="text-muted-foreground">
+                    · Тип: {FIELD_TYPE_OPTIONS.find((o) => o.value === field.type)?.label}
+                  </span>
+                  {field.required && (
+                    <span className="text-xs uppercase tracking-wide text-red-500">
+                      Обязательное
+                    </span>
+                  )}
+                  <span className="ml-auto text-xs text-muted-foreground">Порядок: {field.order}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {sortedFields.map((field) => (
+                <div
+                  key={field.id}
+                  className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
+                >
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Метка</Label>
+                    <Input
+                      value={field.label}
+                      placeholder="Название поля"
+                      disabled={authMissing || !isOwner}
+                      onChange={(e) => updateField(field.id, { label: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Тип</Label>
+                    <Select
+                      value={field.type}
+                      disabled={authMissing || !isOwner}
+                      onValueChange={(value) =>
+                        updateField(field.id, { type: value as EventCustomFieldType, options: [] })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELD_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Порядок</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={field.order}
+                      disabled={authMissing || !isOwner}
+                      onChange={(e) => updateField(field.id, { order: Number(e.target.value) || 1 })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Обязательное</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={field.required}
+                        disabled={authMissing || !isOwner}
+                        onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                      />
+                      <span className="text-sm text-muted-foreground">Да</span>
+                    </div>
+                  </div>
+
+                  {field.type === "enum" && (
+                    <div className="space-y-1 md:col-span-4">
+                      <Label>Опции (через запятую)</Label>
+                      <Input
+                        value={(field.options || []).join(", ")}
+                        placeholder="Например: бензин, дизель, электричество"
+                        disabled={authMissing || !isOwner}
+                        onChange={(e) =>
+                          updateField(field.id, {
+                            options: e.target.value
+                              .split(",")
+                              .map((item) => item.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 md:col-span-4">
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      disabled={authMissing || !isOwner}
+                      onClick={() => removeField(field.id)}
+                    >
+                      Удалить поле
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                variant="outline"
+                type="button"
+                onClick={addField}
+                disabled={authMissing || !isOwner}
+              >
+                Добавить поле
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
