@@ -52,6 +52,7 @@ export default async function EventDetails({
     event.description?.split(".")[0]?.trim() && event.description.length > 0
       ? `${event.description.split(".")[0].trim()}.`
       : null;
+  const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : null;
 
   const formatCustomValue = (
     value: unknown,
@@ -69,9 +70,11 @@ export default async function EventDetails({
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-sm text-slate-200/80">
-                <Badge variant="secondary" className="bg-white/10 text-white">
-                  {CATEGORY_LABELS[event.category]}
-                </Badge>
+                {categoryLabel && (
+                  <Badge variant="secondary" className="bg-white/10 text-white">
+                    {categoryLabel}
+                  </Badge>
+                )}
                 {isOwner && (
                   <Badge variant="outline" className="border-white/30 text-white">
                     Владелец
