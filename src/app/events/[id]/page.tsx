@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Calendar, MapPin, Users, Clock3 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { RegisterParticipantForm } from "@/components/events/register-participant-form";
 import { OwnerActions } from "@/components/events/owner-actions";
 import { ParticipantActions } from "@/components/events/participant-actions";
@@ -44,6 +48,11 @@ export default async function EventDetails({
     (a, b) => a.order - b.order
   );
 
+  const subtitle =
+    event.description?.split(".")[0]?.trim() && event.description.length > 0
+      ? `${event.description.split(".")[0].trim()}.`
+      : null;
+
   const formatCustomValue = (
     value: unknown,
     type: (typeof event.customFieldsSchema)[number]["type"]
@@ -55,31 +64,65 @@ export default async function EventDetails({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase text-muted-foreground">Ивент</p>
-          <h1 className="text-3xl font-semibold">{event.title}</h1>
-          <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
-            <span>🗓 {new Date(event.dateTime).toLocaleString("ru-RU")}</span>
-            <span>📍 {event.locationText}</span>
-            {event.category && (
-              <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
-                {CATEGORY_LABELS[event.category]}
-              </span>
-            )}
-            {isOwner && <Badge variant="outline">Владелец события</Badge>}
+      <Card className="overflow-hidden border-none bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-200/80">
+                <Badge variant="secondary" className="bg-white/10 text-white">
+                  {CATEGORY_LABELS[event.category]}
+                </Badge>
+                {isOwner && (
+                  <Badge variant="outline" className="border-white/30 text-white">
+                    Владелец
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/60">Ивент</p>
+                <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
+                  {event.title}
+                </h1>
+                {subtitle && <p className="text-base text-white/80">{subtitle}</p>}
+              </div>
+              <div className="grid gap-3 text-sm text-white/80 sm:grid-cols-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>{new Date(event.dateTime).toLocaleString("ru-RU")}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span>{event.locationText}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>
+                    {participants.length} участников
+                    {event.maxParticipants ? ` / лимит ${event.maxParticipants}` : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-stretch gap-3 md:items-end">
+              <div className="flex flex-wrap gap-2">
+                <Button size="lg" variant="secondary" asChild className="px-6">
+                  <Link href="/events">Назад</Link>
+                </Button>
+                {isOwner ? (
+                  <Button size="lg" className="px-6" asChild>
+                    <Link href={`/events/${event.id}/edit`}>Редактировать событие</Link>
+                  </Button>
+                ) : (
+                  <Button size="lg" className="px-6" asChild>
+                    <Link href={`/events/${event.id}#register`}>Записаться</Link>
+                  </Button>
+                )}
+              </div>
+              <OwnerActions eventId={event.id} isOwner={isOwner} authMissing={!currentUser} />
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/events">Назад к списку</Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/events/${event.id}#register`}>Регистрация</Link>
-          </Button>
-          <OwnerActions eventId={event.id} isOwner={isOwner} authMissing={!currentUser} />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {!currentUser && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -90,40 +133,46 @@ export default async function EventDetails({
 
       <Card>
         <CardHeader>
-          <CardTitle>Описание</CardTitle>
-          <CardDescription>Детали ивента из Supabase.</CardDescription>
+          <CardTitle className="text-xl font-semibold">Описание</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-muted-foreground">{event.description}</p>
-          <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-            Максимум участников: {event.maxParticipants ?? "не ограничено"}
+          <div className="prose prose-sm text-muted-foreground leading-relaxed">
+            {event.description}
+          </div>
+          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+              <Users className="h-4 w-4" />
+              <span>Максимум участников: {event.maxParticipants ?? "не ограничено"}</span>
+            </div>
           </div>
           {event.customFieldsSchema.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h3 className="text-sm font-semibold uppercase text-muted-foreground">
                 Необходимая информация при регистрации
               </h3>
               <div className="overflow-hidden rounded-xl border bg-background">
-                <table className="min-w-full divide-y text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr className="text-left">
-                      <th className="px-4 py-2 font-semibold">Поле</th>
-                      <th className="px-4 py-2 font-semibold">Тип</th>
-                      <th className="px-4 py-2 font-semibold">Обязательное</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                <Table>
+                  <TableHeader className="bg-muted/40">
+                    <TableRow>
+                      <TableHead className="font-semibold">Поле</TableHead>
+                      <TableHead className="font-semibold">Тип</TableHead>
+                      <TableHead className="font-semibold">Обязательное</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {event.customFieldsSchema.map((field) => (
-                      <tr key={field.id} className="hover:bg-muted/30">
-                        <td className="px-4 py-3 font-medium">{field.label}</td>
-                        <td className="px-4 py-3 capitalize text-muted-foreground">{field.type}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                      <TableRow key={field.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium">{field.label}</TableCell>
+                        <TableCell className="capitalize text-muted-foreground">
+                          {field.type}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           {field.required ? "да" : "нет"}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}
@@ -132,97 +181,101 @@ export default async function EventDetails({
 
       <Card id="register">
         <CardHeader>
-          <CardTitle>Участники</CardTitle>
-          <CardDescription>Регистрация участников хранится в Supabase.</CardDescription>
+          <CardTitle className="text-xl font-semibold">Регистрация и участники</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {participants.length ? null : (
-            <div className="rounded-lg border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-              Пока нет участников.
-            </div>
-          )}
+        <CardContent className="space-y-4">
           {participants.length ? (
             <div className="overflow-x-auto rounded-lg border">
-              <table className="min-w-full divide-y text-sm">
-                <thead className="bg-muted/50">
-                  <tr className="text-left">
-                    <th className="px-4 py-2 font-semibold">Экипаж</th>
-                    <th className="px-4 py-2 font-semibold">Роль</th>
-                    <th className="px-4 py-2 font-semibold">Пользователь</th>
-                    {(isOwner || currentUser) && (
-                      <th className="px-4 py-2 font-semibold">Действия</th>
-                    )}
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="w-[22%]">Имя участника</TableHead>
+                    <TableHead className="w-[18%]">Телеграм</TableHead>
+                    <TableHead className="w-[12%]">Роль</TableHead>
+                    <TableHead className="w-[18%]">Время регистрации</TableHead>
                     {sortedCustomFields.map((field) => (
-                      <th key={field.id} className="px-4 py-2 font-semibold">
-                        {field.label}
-                      </th>
+                      <TableHead key={field.id}>{field.label}</TableHead>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+                    {(isOwner || currentUser) && (
+                      <TableHead className="text-right">Действия</TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {participants.map((participant) => (
-                    <tr key={participant.id} className="hover:bg-muted/30">
-                      <td className="px-4 py-2 font-medium">
+                    <TableRow key={participant.id} className="hover:bg-muted/30">
+                      <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
                           <span>{participant.displayName}</span>
                           <div className="flex flex-wrap gap-1">
-                            <Badge className="bg-slate-100 text-slate-800" variant="outline">
-                              {participant.userId ? "Пользователь" : "Гость"}
-                            </Badge>
+                            {participant.userId ? (
+                              <Badge className="bg-slate-100 text-slate-800" variant="outline">
+                                Пользователь
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-slate-100 text-slate-800" variant="outline">
+                                Гость
+                              </Badge>
+                            )}
                             {participant.userId === event.createdByUserId && (
                               <Badge variant="secondary">Владелец</Badge>
                             )}
-                            {participant.role === "leader" && (
-                              <Badge className="bg-emerald-100 text-emerald-800" variant="outline">
-                                Лидер
-                              </Badge>
-                            )}
-                            {participant.role === "tail" && (
-                              <Badge className="bg-amber-100 text-amber-800" variant="outline">
-                                Замыкающий
-                              </Badge>
-                            )}
-                            {participant.role === "participant" && (
-                              <Badge className="bg-slate-100 text-slate-800" variant="outline">
-                                Участник
-                              </Badge>
-                            )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-2 capitalize">{participant.role}</td>
-                      <td className="px-4 py-2 text-muted-foreground">
-                        {participant.userId ?? "гость"}
-                      </td>
-                      {(isOwner || currentUser) && (
-                        <td className="px-4 py-2 text-muted-foreground">
-                          <ParticipantActions
-                            eventId={event.id}
-                            participantId={participant.id}
-                            canEdit={Boolean(currentUser && participant.userId === currentUser.id)}
-                            canRemove={
-                              Boolean(isOwner) ||
-                              Boolean(currentUser && participant.userId === currentUser.id)
-                            }
-                            isOwner={Boolean(isOwner)}
-                            authMissing={!currentUser}
-                          />
-                        </td>
-                      )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {participant.user?.telegramHandle ??
+                          participant.userId ??
+                          "—"}
+                      </TableCell>
+                      <TableCell className="capitalize text-muted-foreground">
+                        {participant.role === "leader"
+                          ? "Лидер"
+                          : participant.role === "tail"
+                            ? "Замыкающий"
+                            : "Участник"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Clock3 className="h-4 w-4 text-muted-foreground" />
+                          {new Date(participant.createdAt).toLocaleString("ru-RU")}
+                        </div>
+                      </TableCell>
                       {sortedCustomFields.map((field) => (
-                        <td key={field.id} className="px-4 py-2 text-muted-foreground">
+                        <TableCell key={field.id} className="text-muted-foreground">
                           {formatCustomValue(
                             participant.customFieldValues?.[field.id],
                             field.type
                           )}
-                        </td>
+                        </TableCell>
                       ))}
-                    </tr>
+                      {(isOwner || currentUser) && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end">
+                            <ParticipantActions
+                              eventId={event.id}
+                              participantId={participant.id}
+                              canEdit={Boolean(currentUser && participant.userId === currentUser.id)}
+                              canRemove={
+                                Boolean(isOwner) ||
+                                Boolean(currentUser && participant.userId === currentUser.id)
+                              }
+                              isOwner={Boolean(isOwner)}
+                              authMissing={!currentUser}
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-lg border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+              Пока нет участников.
+            </div>
+          )}
           {isFull ? (
             <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
               Регистрация закрыта: достигнуто максимальное количество участников (

@@ -127,7 +127,7 @@ export function RegisterParticipantForm({
     switch (field.type) {
       case "number":
         return (
-          <div className="space-y-1" key={field.id}>
+          <div className="space-y-2" key={field.id}>
             {commonLabel}
             <Input
               type="number"
@@ -154,7 +154,7 @@ export function RegisterParticipantForm({
         );
       case "enum":
         return (
-          <div className="space-y-1" key={field.id}>
+          <div className="space-y-2" key={field.id}>
             {commonLabel}
             <Select
               value={(value as string) ?? ""}
@@ -176,7 +176,7 @@ export function RegisterParticipantForm({
       case "text":
       default:
         return (
-          <div className="space-y-1" key={field.id}>
+          <div className="space-y-2" key={field.id}>
             {commonLabel}
             <Input
               value={(value as string) ?? ""}
@@ -190,10 +190,12 @@ export function RegisterParticipantForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border bg-muted/10 p-4">
-      <div className="grid gap-3 md:grid-cols-[2fr,1fr] md:items-end">
-        <div className="space-y-1">
-          <Label htmlFor="displayName">Имя экипажа</Label>
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-muted/10 p-4">
+      <div className="grid gap-4 md:grid-cols-[2fr,1fr] md:items-end">
+        <div className="space-y-2">
+          <Label htmlFor="displayName" className="text-sm font-medium">
+            Имя экипажа
+          </Label>
           <Input
             id="displayName"
             placeholder="Ник или имя"
@@ -202,8 +204,8 @@ export function RegisterParticipantForm({
             required
           />
         </div>
-        <div className="space-y-1">
-          <Label>Роль</Label>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Роль</Label>
           <Select value={role} onValueChange={(value) => setRole(value as ParticipantRole)}>
             <SelectTrigger>
               <SelectValue />
@@ -217,7 +219,7 @@ export function RegisterParticipantForm({
         </div>
       </div>
       {sortedFields.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-4">
           {sortedFields.map((field) => renderField(field))}
         </div>
       )}
