@@ -140,6 +140,28 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     if (!upserted || !upserted.id) {
       console.error("[auth/telegram] User not created or returned after upsert.", {
         telegramId: payload.id,
+        upserted,
+      });
+      return NextResponse.json(
+        {
+          error: "user_not_created",
+          message: "Failed to create or load user after Telegram login.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // дополнительная проверка, что запись действительно читается
+    const { data: verified, error: verifyError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", upserted.id)
+      .maybeSingle();
+
+    if (verifyError || !verified) {
+      console.error("[auth/telegram] Unable to verify created user", {
+        verifyError,
+        userId: upserted.id,
       });
       return NextResponse.json(
         {
@@ -151,10 +173,10 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     }
 
     const user = {
-      id: upserted.id,
-      name: upserted.name,
-      telegramHandle: upserted.telegram_handle,
-      avatarUrl: upserted.avatar_url,
+      id: verified.id,
+      name: verified.name,
+      telegramHandle: verified.telegram_handle,
+      avatarUrl: verified.avatar_url,
     };
 
     const token = createAuthToken({
