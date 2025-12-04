@@ -84,7 +84,7 @@ export function RegisterParticipantForm({
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         if (res.status === 401 || res.status === 403) {
-          throw new Error("Недостаточно прав / требуется DEV_USER_ID");
+          throw new Error("Недостаточно прав / войдите через Telegram");
         }
         if (res.status === 409) {
           throw new Error("Лимит участников достигнут");

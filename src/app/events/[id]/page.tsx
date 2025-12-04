@@ -83,8 +83,8 @@ export default async function EventDetails({
 
       {!currentUser && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <div className="font-semibold">DEV_USER_ID не установлен</div>
-          <div>Авторизация выключена. Установите DEV_USER_ID в .env.local и перезапустите dev.</div>
+          <div className="font-semibold">Вы не авторизованы</div>
+          <div>Войдите через Telegram, чтобы управлять ивентом и регистрациями.</div>
         </div>
       )}
 

@@ -138,7 +138,7 @@ export default function CreateEventPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         if (res.status === 401 || res.status === 403) {
-          setErrorMessage("Недостаточно прав / требуется DEV_USER_ID");
+          setErrorMessage("Недостаточно прав / войдите через Telegram");
           return;
         }
         if (res.status === 409) {

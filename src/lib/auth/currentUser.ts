@@ -2,12 +2,20 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 
 import { getUserById } from "@/lib/db/userRepo";
+import { ExperienceLevel } from "@/lib/types/user";
 
 export interface CurrentUser {
   id: string;
   name?: string | null;
   telegramHandle?: string | null;
+  telegramId?: string | null;
   avatarUrl?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  carModel?: string | null;
+  experienceLevel?: ExperienceLevel | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 function base64url(input: Buffer | string) {
@@ -44,11 +52,16 @@ function verifyJwt(token: string, secret: string): Record<string, unknown> | nul
     .replace(/\//g, "_")
     .replace(/=+$/, "");
   if (expected !== encodedSignature) return null;
-  const payloadStr = Buffer.from(
-    encodedPayload.replace(/-/g, "+").replace(/_/g, "/"),
-    "base64"
-  ).toString();
-  const payload = JSON.parse(payloadStr) as Record<string, unknown>;
+  let payload: Record<string, unknown>;
+  try {
+    const payloadStr = Buffer.from(
+      encodedPayload.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64"
+    ).toString();
+    payload = JSON.parse(payloadStr) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
   const exp = payload.exp as number | undefined;
   if (exp && Date.now() / 1000 > exp) return null;
   return payload;
@@ -57,7 +70,7 @@ function verifyJwt(token: string, secret: string): Record<string, unknown> | nul
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const secret = process.env.AUTH_JWT_SECRET;
   if (!secret) return null;
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const token = cookieStore.get("auth_token")?.value;
   if (!token) return null;
   const payload = verifyJwt(token, secret);
@@ -68,7 +81,14 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     id: user.id,
     name: user.name,
     telegramHandle: user.telegramHandle,
+    telegramId: user.telegramId ?? null,
     avatarUrl: user.avatarUrl,
+    phone: user.phone ?? null,
+    email: user.email ?? null,
+    carModel: user.carModel ?? null,
+    experienceLevel: user.experienceLevel ?? null,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   };
 }
 

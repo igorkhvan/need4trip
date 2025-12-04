@@ -1,11 +1,11 @@
 import Link from "next/link";
-import Image from "next/image";
 
+import { LoginButton } from "@/components/auth/login-button";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { LoginButton } from "@/components/auth/login-button";
-import { LogoutButton } from "@/components/auth/logout-button";
 
 const navItems = [
   { href: "/events", label: "Ивенты" },
@@ -35,19 +35,14 @@ export async function MainHeader() {
           </nav>
           {currentUser ? (
             <div className="flex items-center gap-3">
-              {currentUser.avatarUrl ? (
-                <Image
-                  src={currentUser.avatarUrl}
-                  alt={currentUser.name ?? "Пользователь"}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full border object-cover"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border bg-muted text-xs font-semibold">
-                  {currentUser.name?.slice(0, 2).toUpperCase() ?? "TG"}
-                </div>
-              )}
+              <Avatar className="h-9 w-9 border">
+                <AvatarImage src={currentUser.avatarUrl ?? undefined} alt={currentUser.name ?? "Пользователь"} />
+                <AvatarFallback>
+                  {currentUser.name?.slice(0, 2).toUpperCase() ??
+                    currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
+                    "TG"}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex flex-col leading-tight">
                 <span className="text-sm font-semibold">
                   {currentUser.name || currentUser.telegramHandle || "Пользователь"}

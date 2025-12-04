@@ -21,7 +21,7 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
 
   const handleDelete = async () => {
     if (authMissing) {
-      setError("Недостаточно прав / требуется DEV_USER_ID");
+      setError("Недостаточно прав / войдите через Telegram");
       return;
     }
     setError(null);
@@ -34,7 +34,7 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
       const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          setError("Недостаточно прав / требуется DEV_USER_ID");
+          setError("Недостаточно прав / войдите через Telegram");
         } else {
           const body = await res.json().catch(() => ({}));
           setError(body?.message || "Не удалось удалить событие");
@@ -55,7 +55,7 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
         asChild
         variant="secondary"
         disabled={authMissing}
-        title={authMissing ? "Требуется DEV_USER_ID" : undefined}
+        title={authMissing ? "Требуется авторизация через Telegram" : undefined}
       >
         <Link href={`/events/${eventId}/edit`}>Редактировать</Link>
       </Button>
@@ -63,7 +63,7 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
         variant="destructive"
         onClick={handleDelete}
         disabled={isDeleting || authMissing}
-        title={authMissing ? "Требуется DEV_USER_ID" : undefined}
+        title={authMissing ? "Требуется авторизация через Telegram" : undefined}
       >
         {isDeleting ? "Удаляем..." : "Удалить событие"}
       </Button>

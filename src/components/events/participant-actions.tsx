@@ -30,7 +30,7 @@ export function ParticipantActions({
 
   const handleDelete = async () => {
     if (!canRemove || authMissing) {
-      setError("Недостаточно прав / требуется DEV_USER_ID");
+      setError("Недостаточно прав / войдите через Telegram");
       return;
     }
     if (!confirm("Удалить участника?")) {
@@ -45,7 +45,7 @@ export function ParticipantActions({
       );
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          setError("Недостаточно прав / требуется DEV_USER_ID");
+          setError("Недостаточно прав / войдите через Telegram");
         } else if (res.status === 409) {
           setError("Достигнут лимит участников");
         } else {
@@ -85,7 +85,7 @@ export function ParticipantActions({
           size="sm"
           disabled={isDeleting || authMissing}
           onClick={handleDelete}
-          title={authMissing ? "Требуется DEV_USER_ID" : undefined}
+          title={authMissing ? "Требуется авторизация через Telegram" : undefined}
         >
           {isDeleting ? "Удаляем..." : isOwner ? "Удалить" : "Отменить участие"}
         </Button>

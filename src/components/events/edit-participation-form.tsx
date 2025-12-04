@@ -54,7 +54,7 @@ export function EditParticipationForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSelf || authMissing) {
-      setError("Недостаточно прав / требуется DEV_USER_ID");
+      setError("Недостаточно прав / войдите через Telegram");
       return;
     }
     setError(null);
@@ -67,7 +67,7 @@ export function EditParticipationForm({
       });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          setError("Недостаточно прав / требуется DEV_USER_ID");
+          setError("Недостаточно прав / войдите через Telegram");
         } else if (res.status === 400) {
           const body = await res.json().catch(() => ({}));
           setError(body?.message || "Ошибка валидации");
@@ -192,8 +192,8 @@ export function EditParticipationForm({
 
       {authMissing && (
         <Alert variant="destructive">
-          <AlertTitle>DEV_USER_ID не установлен</AlertTitle>
-          <AlertDescription>Авторизация выключена — сохранение будет недоступно.</AlertDescription>
+          <AlertTitle>Требуется авторизация</AlertTitle>
+          <AlertDescription>Войдите через Telegram, чтобы редактировать регистрацию.</AlertDescription>
         </Alert>
       )}
       {!isSelf && (

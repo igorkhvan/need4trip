@@ -116,7 +116,7 @@ export function EditEventForm({
     setIsSubmitting(true);
     try {
       if (!isOwner || authMissing) {
-        setErrorMessage("Недостаточно прав / требуется DEV_USER_ID");
+        setErrorMessage("Недостаточно прав / войдите через Telegram");
         return;
       }
       const payload = {
@@ -135,7 +135,7 @@ export function EditEventForm({
       });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          setErrorMessage("Недостаточно прав / требуется DEV_USER_ID");
+          setErrorMessage("Недостаточно прав / войдите через Telegram");
         } else if (res.status === 409) {
           setErrorMessage("Лимит участников достигнут");
         } else if (res.status === 400) {
@@ -174,8 +174,8 @@ export function EditEventForm({
 
       {authMissing && (
         <Alert variant="destructive">
-          <AlertTitle>DEV_USER_ID не установлен</AlertTitle>
-          <AlertDescription>Авторизация выключена — сохранение будет недоступно.</AlertDescription>
+          <AlertTitle>Требуется авторизация</AlertTitle>
+          <AlertDescription>Войдите через Telegram, чтобы редактировать ивент.</AlertDescription>
         </Alert>
       )}
       {!isOwner && (
