@@ -94,7 +94,7 @@ export function createAuthToken(userId: string) {
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const secret = process.env.AUTH_JWT_SECRET;
   if (!secret) return null;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!token) return null;
   const payload = verifyJwt(token, secret);
