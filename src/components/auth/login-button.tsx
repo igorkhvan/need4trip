@@ -107,7 +107,7 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
       script.setAttribute("data-auth-url", authUrl);
     }
     script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-onauth", "onTelegramAuth");
+    script.setAttribute("data-onauth", "onTelegramAuth(user)");
     container.appendChild(script);
 
     return () => {
