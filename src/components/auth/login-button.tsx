@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-
 interface LoginButtonProps {
   botUsername?: string;
 }
@@ -30,7 +28,8 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const username = botUsername || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+  const username =
+    botUsername || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "Need4TripBot";
   const authUrl = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL || "/api/auth/telegram";
 
   const handleAuth = useCallback(
@@ -66,14 +65,6 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
       delete window.onTelegramAuth;
     };
   }, [handleAuth]);
-
-  if (!username) {
-    return (
-      <Button variant="default" size="sm" disabled>
-        Укажите NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
-      </Button>
-    );
-  }
 
   return (
     <div className="flex flex-col items-start gap-1">
