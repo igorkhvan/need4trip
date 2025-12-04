@@ -23,28 +23,6 @@ declare global {
   }
 }
 
-function resolveAuthUrl(): string | null {
-  const build = (raw: string | null) => {
-    if (!raw) return null;
-    const withScheme = raw.startsWith("http") ? raw : `https://${raw}`;
-    const url = new URL(withScheme);
-    if (url.pathname === "/" || url.pathname === "") {
-      url.pathname = "/api/auth/telegram";
-    }
-    return url;
-  };
-
-  const envUrl = build(process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL ?? null);
-  if (typeof window !== "undefined") {
-    const current = new URL(window.location.origin);
-    const preferred = envUrl && envUrl.host === current.host ? envUrl : null;
-    const url = preferred ?? build(current.origin);
-    return url?.toString() ?? null;
-  }
-
-  return envUrl?.toString() ?? null;
-}
-
 export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   const [hasAuthed, setHasAuthed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,13 +34,13 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
   }, []);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const authUrl = useMemo(() => resolveAuthUrl(), []);
   const handleAuth = useCallback(
     async (payload: TelegramAuthPayload) => {
       if (isSubmitting) return;
       setIsSubmitting(true);
       setError(null);
       try {
+        console.info("[telegram-login] onAuth received", payload?.id);
         const res = await fetch("/api/auth/telegram", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -97,7 +75,7 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !username || !authUrl || isAuthenticated || hasAuthed) return;
+    if (!container || !username || isAuthenticated || hasAuthed) return;
 
     container.innerHTML = "";
 
@@ -106,9 +84,6 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     script.async = true;
     script.setAttribute("data-telegram-login", username);
     script.setAttribute("data-size", "large");
-    if (authUrl) {
-      script.setAttribute("data-auth-url", authUrl);
-    }
     script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuth");
     container.appendChild(script);
@@ -116,7 +91,7 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     return () => {
       container.innerHTML = "";
     };
-  }, [authUrl, username, isAuthenticated, hasAuthed]);
+  }, [username, isAuthenticated, hasAuthed]);
 
   if (isAuthenticated || hasAuthed || !username) return null;
 
