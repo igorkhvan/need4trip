@@ -92,6 +92,31 @@ UI (avatar + LogoutButton) / LoginButton
 - `experience_level` (`beginner` | `intermediate` | `pro`)
 - `created_at`, `updated_at` (timestamptz)
 
+### Приведение продовой БД к схеме
+В проде должны быть колонки `telegram_id`, `telegram_handle`, `avatar_url`. Если база старее, примените миграцию:
+```
+supabase/migrations/20241204_add_telegram_columns.sql
+```
+или выполните SQL в Supabase SQL Editor/psql:
+```sql
+alter table if exists public.users
+  add column if not exists telegram_id text,
+  add column if not exists telegram_handle text,
+  add column if not exists avatar_url text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'users_telegram_id_key'
+      and conrelid = 'public.users'::regclass
+  ) then
+    alter table public.users add constraint users_telegram_id_key unique (telegram_id);
+  end if;
+end
+$$;
+```
+
 ### API
 - **`POST/GET /api/auth/telegram`**  
   Вход: Telegram payload (`id`, `hash`, `auth_date`, optional `first_name`, `last_name`, `username`, `photo_url`).  

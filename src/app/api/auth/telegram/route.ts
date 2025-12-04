@@ -94,6 +94,7 @@ async function upsertTelegramUser(
     telegram_id: String(payload.id),
     telegram_handle: payload.username ?? null,
     name,
+    avatar_url: payload.photo_url ?? null,
   };
 
   const { data, error } = await supabase
