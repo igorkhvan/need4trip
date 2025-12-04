@@ -32,12 +32,9 @@ const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
   { value: "number", label: "Число" },
   { value: "boolean", label: "Да / Нет" },
-  { value: "enum", label: "Список значений" },
 ];
 
-type EditableField = EventCustomFieldSchema & { optionsText?: string };
-
-function buildEmptyField(order: number): EditableField {
+function buildEmptyField(order: number): EventCustomFieldSchema {
   return {
     id: `field-${crypto.randomUUID().slice(0, 8)}`,
     label: "",
@@ -45,7 +42,6 @@ function buildEmptyField(order: number): EditableField {
     required: false,
     order,
     options: [],
-    optionsText: "",
   };
 }
 
@@ -54,7 +50,7 @@ export default function CreateEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [customFields, setCustomFields] = useState<EditableField[]>([]);
+  const [customFields, setCustomFields] = useState<EventCustomFieldSchema[]>([]);
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
@@ -74,14 +70,6 @@ export default function CreateEventPage() {
 
     const issues: Record<string, string> = {};
 
-    const hasEmptyEnumOptions = sortedFields.some(
-      (field) => field.type === "enum" && (!field.options || field.options.length === 0)
-    );
-    if (hasEmptyEnumOptions) {
-      setErrorMessage("Для полей типа список нужно указать варианты через запятую.");
-      return;
-    }
-
     if (title.length < 3) {
       setErrorMessage("Название должно быть от 3 символов.");
       return;
@@ -94,9 +82,6 @@ export default function CreateEventPage() {
     sortedFields.forEach((field, idx) => {
       if (!field.label.trim()) {
         issues[`customFieldsSchema.${idx}.label`] = "Введите название поля";
-      }
-      if (field.type === "enum" && (!field.options || field.options.length === 0)) {
-        issues[`customFieldsSchema.${idx}.options`] = "Укажите варианты для списка";
       }
     });
 
@@ -114,11 +99,7 @@ export default function CreateEventPage() {
       locationLat: null,
       locationLng: null,
       maxParticipants: maxParticipants ? Number(maxParticipants) : null,
-      customFieldsSchema: sortedFields.map((field) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { optionsText, ...rest } = field;
-        return rest;
-      }),
+      customFieldsSchema: sortedFields,
     };
 
     try {
@@ -192,7 +173,7 @@ export default function CreateEventPage() {
     }
   };
 
-  const updateField = (id: string, patch: Partial<EditableField>) => {
+  const updateField = (id: string, patch: Partial<EventCustomFieldSchema>) => {
     setCustomFields((prev) => prev.map((field) => (field.id === id ? { ...field, ...patch } : field)));
   };
 
@@ -385,24 +366,6 @@ export default function CreateEventPage() {
                   <span className="text-sm text-muted-foreground">Да</span>
                 </div>
               </div>
-              {field.type === "enum" && (
-                <div className="md:col-span-4 space-y-1">
-                  <Label>Опции (через запятую)</Label>
-                  <Input
-                    value={field.optionsText ?? (field.options || []).join(", ")}
-                    placeholder="Например: бензин, дизель, электричество"
-                    onChange={(e) =>
-                      updateField(field.id, {
-                        optionsText: e.target.value,
-                        options: e.target.value
-                          .split(",")
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </div>
-              )}
               <div className="flex items-center justify-end md:col-span-4">
                 <Button variant="ghost" size="sm" type="button" onClick={() => removeField(field.id)}>
                   Удалить поле
