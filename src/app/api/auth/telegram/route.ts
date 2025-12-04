@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
+import { setAuthCookie } from "@/lib/auth/cookies";
 import { createAuthToken } from "@/lib/auth/currentUser";
 
 type TelegramPayload = {
@@ -14,6 +15,23 @@ type TelegramPayload = {
   auth_date: number | string;
   hash: string;
 };
+
+type AuthEnv = {
+  botToken: string;
+  supabaseUrl: string;
+  supabaseServiceKey: string;
+  jwtSecret: string;
+};
+
+function buildDbErrorResponse() {
+  return NextResponse.json(
+    {
+      error: "db_error",
+      message: "Failed to access the database while processing Telegram login.",
+    },
+    { status: 503 }
+  );
+}
 
 function buildDataCheckString(payload: Omit<TelegramPayload, "hash">) {
   const entries = Object.entries(payload).filter(
@@ -53,31 +71,87 @@ function parsePayloadFromSearchParams(url: URL): TelegramPayload | null {
   };
 }
 
-async function handleTelegramAuth(payload: TelegramPayload) {
+function ensureEnv(): { env?: AuthEnv; error?: NextResponse } {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const jwtSecret = process.env.AUTH_JWT_SECRET;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const jwtSecret = process.env.AUTH_JWT_SECRET;
 
-  if (!botToken || !jwtSecret || !supabaseUrl || !supabaseServiceKey) {
-    return NextResponse.json(
-      {
-        error: "AuthNotConfigured",
-        message:
-          "Отсутствует TELEGRAM_BOT_TOKEN, AUTH_JWT_SECRET или Supabase env (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)",
-      },
-      { status: 500 }
-    );
+  if (!botToken || !supabaseUrl || !supabaseServiceKey || !jwtSecret) {
+    return {
+      error: NextResponse.json(
+        {
+          error: "AuthNotConfigured",
+          message:
+            "Отсутствует TELEGRAM_BOT_TOKEN, AUTH_JWT_SECRET или Supabase env (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)",
+        },
+        { status: 500 }
+      ),
+    };
   }
 
-  if (!payload || !payload.hash || !payload.id) {
+  return { env: { botToken, supabaseUrl, supabaseServiceKey, jwtSecret } };
+}
+
+async function upsertTelegramUser(
+  supabase: SupabaseClient,
+  payload: TelegramPayload,
+  name: string
+) {
+  const upsertPayload = {
+    telegram_id: String(payload.id),
+    telegram_handle: payload.username ?? null,
+    name,
+    avatar_url: payload.photo_url ?? null,
+  };
+
+  const { data, error } = await supabase
+    .from("users")
+    .upsert(upsertPayload, { onConflict: "telegram_id" })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[auth/telegram] Supabase error on upsert user:", error);
+    return { error };
+  }
+
+  return { data };
+}
+
+async function verifyUserExists(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[auth/telegram] Supabase error on verify user:", error);
+    return { error };
+  }
+
+  if (!data) {
+    console.error("[auth/telegram] User not created or returned after upsert.", { userId });
+    return { data: null };
+  }
+
+  return { data };
+}
+
+async function handleTelegramAuth(payload: TelegramPayload | null) {
+  const envResult = ensureEnv();
+  if (envResult.error) return envResult.error;
+  const env = envResult.env!;
+
+  if (!payload || !payload.hash || !payload.id || !payload.auth_date) {
     return NextResponse.json(
       { error: "BadRequest", message: "Некорректные данные Telegram" },
       { status: 400 }
     );
   }
 
-  const isValid = verifyTelegram(payload, botToken);
+  const isValid = verifyTelegram(payload, env.botToken);
   if (!isValid) {
     return NextResponse.json(
       { error: "Forbidden", message: "Не удалось проверить подпись Telegram" },
@@ -90,58 +164,25 @@ async function handleTelegramAuth(payload: TelegramPayload) {
     payload.username ||
     "Пользователь";
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  const supabase = createClient(env.supabaseUrl, env.supabaseServiceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   try {
-    const { data: existing, error: findError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("telegram_id", String(payload.id))
-      .maybeSingle();
-
-    if (findError) {
-      console.error("[auth/telegram] Supabase error on find:", findError);
-      return NextResponse.json(
-        {
-          error: "db_error",
-          message: "Failed to access the database while processing Telegram login.",
-        },
-        { status: 503 }
-      );
+    const { data: upserted, error: upsertError } = await upsertTelegramUser(
+      supabase,
+      payload,
+      name
+    );
+    if (upsertError || !upserted) {
+      return buildDbErrorResponse();
     }
 
-    const { data: upserted, error: upsertError } = await supabase
-      .from("users")
-      .upsert(
-        existing ?? {
-          telegram_id: String(payload.id),
-          telegram_handle: payload.username ?? null,
-          name,
-          avatar_url: payload.photo_url ?? null,
-        },
-        { onConflict: "telegram_id" }
-      )
-      .select("*")
-      .single();
-
-    if (upsertError) {
-      console.error("[auth/telegram] Supabase error on upsert user:", upsertError);
-      return NextResponse.json(
-        {
-          error: "db_error",
-          message: "Failed to access the database while processing Telegram login.",
-        },
-        { status: 503 }
-      );
+    const { data: verified, error: verifyError } = await verifyUserExists(supabase, upserted.id);
+    if (verifyError) {
+      return buildDbErrorResponse();
     }
-
-    if (!upserted || !upserted.id) {
-      console.error("[auth/telegram] User not created or returned after upsert.", {
-        telegramId: payload.id,
-        upserted,
-      });
+    if (!verified) {
       return NextResponse.json(
         {
           error: "user_not_created",
@@ -151,27 +192,7 @@ async function handleTelegramAuth(payload: TelegramPayload) {
       );
     }
 
-    // дополнительная проверка, что запись действительно читается
-    const { data: verified, error: verifyError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", upserted.id)
-      .maybeSingle();
-
-    if (verifyError || !verified) {
-      console.error("[auth/telegram] Unable to verify created user", {
-        verifyError,
-        userId: upserted.id,
-      });
-      return NextResponse.json(
-        {
-          error: "user_not_created",
-          message: "Failed to create or load user after Telegram login.",
-        },
-        { status: 500 }
-      );
-    }
-
+    const token = createAuthToken(verified.id);
     const user = {
       id: verified.id,
       name: verified.name,
@@ -179,33 +200,12 @@ async function handleTelegramAuth(payload: TelegramPayload) {
       avatarUrl: verified.avatar_url,
     };
 
-    const token = createAuthToken({
-      userId: user.id,
-      telegramId: payload.id,
-      username: payload.username,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      telegramHandle: user.telegramHandle,
-    });
-
     const response = NextResponse.json({ ok: true, user });
-    response.cookies.set("auth_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 30 * 24 * 60 * 60,
-    });
+    setAuthCookie(response, token);
     return response;
   } catch (err) {
     console.error("[auth/telegram] Unexpected error during Supabase operations", err);
-    return NextResponse.json(
-      {
-        error: "db_error",
-        message: "Failed to access the database while processing Telegram login.",
-      },
-      { status: 503 }
-    );
+    return buildDbErrorResponse();
   }
 }
 
@@ -226,12 +226,6 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const payload = parsePayloadFromSearchParams(url);
-    if (!payload) {
-      return NextResponse.json(
-        { error: "BadRequest", message: "Некорректные данные Telegram" },
-        { status: 400 }
-      );
-    }
     return await handleTelegramAuth(payload);
   } catch (err) {
     console.error("Telegram auth error", err);

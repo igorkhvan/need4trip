@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
+import { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getUserById } from "@/lib/db/userRepo";
 import { ExperienceLevel } from "@/lib/types/user";
 
@@ -18,6 +19,13 @@ export interface CurrentUser {
   updatedAt?: string;
 }
 
+type AuthPayload = {
+  userId: string;
+  exp: number;
+};
+
+const TOKEN_TTL_SECONDS = AUTH_COOKIE_MAX_AGE;
+
 function base64url(input: Buffer | string) {
   return Buffer.from(input)
     .toString("base64")
@@ -26,7 +34,7 @@ function base64url(input: Buffer | string) {
     .replace(/=+$/, "");
 }
 
-function signJwt(payload: Record<string, unknown>, secret: string) {
+function signJwt(payload: AuthPayload, secret: string) {
   const header = { alg: "HS256", typ: "JWT" };
   const encodedHeader = base64url(JSON.stringify(header));
   const encodedPayload = base64url(JSON.stringify(payload));
@@ -39,7 +47,7 @@ function signJwt(payload: Record<string, unknown>, secret: string) {
   return `${data}.${encodedSignature}`;
 }
 
-function verifyJwt(token: string, secret: string): Record<string, unknown> | null {
+function verifyJwt(token: string, secret: string): AuthPayload | null {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [encodedHeader, encodedPayload, encodedSignature] = parts;
@@ -52,29 +60,46 @@ function verifyJwt(token: string, secret: string): Record<string, unknown> | nul
     .replace(/\//g, "_")
     .replace(/=+$/, "");
   if (expected !== encodedSignature) return null;
-  let payload: Record<string, unknown>;
+  let payload: AuthPayload;
   try {
     const payloadStr = Buffer.from(
       encodedPayload.replace(/-/g, "+").replace(/_/g, "/"),
       "base64"
     ).toString();
-    payload = JSON.parse(payloadStr) as Record<string, unknown>;
+    payload = JSON.parse(payloadStr) as AuthPayload;
   } catch {
     return null;
   }
-  const exp = payload.exp as number | undefined;
-  if (exp && Date.now() / 1000 > exp) return null;
+  if (!payload.userId) return null;
+  if (payload.exp && Date.now() / 1000 > payload.exp) return null;
   return payload;
+}
+
+export function decodeAuthToken(token: string): AuthPayload | null {
+  const secret = process.env.AUTH_JWT_SECRET;
+  if (!secret) return null;
+  return verifyJwt(token, secret);
+}
+
+export function createAuthToken(userId: string) {
+  const secret = process.env.AUTH_JWT_SECRET;
+  if (!secret) throw new Error("AUTH_JWT_SECRET is not configured");
+  const payload: AuthPayload = {
+    userId,
+    exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
+  };
+  return signJwt(payload, secret);
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const secret = process.env.AUTH_JWT_SECRET;
   if (!secret) return null;
-  const cookieStore = await cookies();
-  const token = cookieStore.get("auth_token")?.value;
+  const cookieStore = cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!token) return null;
   const payload = verifyJwt(token, secret);
   if (!payload?.userId) return null;
+
   let user: Awaited<ReturnType<typeof getUserById>> = null;
   try {
     user = await getUserById(String(payload.userId));
@@ -82,18 +107,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     console.error("[getCurrentUser] Failed to load user from DB", err);
     return null;
   }
-  if (!user) {
-    try {
-      if (typeof cookieStore.delete === "function") {
-        cookieStore.delete("auth_token");
-      } else if (typeof cookieStore.set === "function") {
-        cookieStore.set("auth_token", "", { path: "/", maxAge: 0 });
-      }
-    } catch (err) {
-      console.warn("Failed to clear auth cookie after missing user", err);
-    }
-    return null;
-  }
+
+  if (!user) return null;
+
   return {
     id: user.id,
     name: user.name,
@@ -107,26 +123,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
-}
-
-export function createAuthToken(input: {
-  userId: string;
-  telegramId: number | string;
-  username?: string | null;
-  name?: string | null;
-  avatarUrl?: string | null;
-  telegramHandle?: string | null;
-}) {
-  const secret = process.env.AUTH_JWT_SECRET;
-  if (!secret) throw new Error("AUTH_JWT_SECRET is not configured");
-  const payload = {
-    userId: input.userId,
-    telegramId: input.telegramId,
-    username: input.username,
-    name: input.name,
-    avatarUrl: input.avatarUrl,
-    telegramHandle: input.telegramHandle,
-    exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-  };
-  return signJwt(payload, secret);
 }
