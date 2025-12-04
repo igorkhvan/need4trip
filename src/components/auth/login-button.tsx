@@ -39,11 +39,19 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [authUrl] = useState<string | null>(() => {
+    if (process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL) {
+      return process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL;
+    }
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}/api/auth/telegram`;
+    }
+    return null;
+  });
   const resolvedUsername =
     sanitizeBotUsername(botUsername) ||
     sanitizeBotUsername(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME) ||
     null;
-  const authUrl = process.env.NEXT_PUBLIC_TELEGRAM_AUTH_URL || "/api/auth/telegram";
 
   const handleAuth = useCallback(
     async (user: TelegramAuthPayload) => {
@@ -81,7 +89,7 @@ export function LoginButton({ botUsername }: LoginButtonProps) {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !resolvedUsername) return;
+    if (!container || !resolvedUsername || !authUrl) return;
     // Avoid duplicating the widget on re-render.
     if (container.querySelector("iframe")) return;
 
