@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MapPin, Users, ShieldCheck, BadgeDollarSign } from "lucide-react";
+import { Users, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,19 +82,23 @@ export default async function EventDetails({
     return String(value);
   };
 
+  const currentParticipant = currentUser
+    ? participants.find((p) => p.userId === currentUser.id)
+    : undefined;
+
   return (
     <div className="container mx-auto max-w-5xl space-y-8 py-8 px-4">
       <div className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-              <span>{categoryLabel ?? "Ивент"}</span>
-              <span>· {formattedDateTime}</span>
-              <span>· {participantsCountLabel}</span>
-            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/events">← Назад к списку</Link>
+            </Button>
             <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
+            <p className="text-sm text-muted-foreground">
+              {categoryLabel ?? "Ивент"} • {formattedDateTime} • {participantsCountLabel}
+            </p>
             <div className="flex flex-wrap items-center gap-2">
-              {isOwner && <Badge variant="outline">Владелец</Badge>}
               {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
               <Badge variant={event.isPaid ? "default" : "outline"}>
                 {event.isPaid ? "Платное" : "Бесплатное"}
@@ -103,24 +107,20 @@ export default async function EventDetails({
             </div>
             <p className="text-sm text-muted-foreground">Локация: {event.locationText}</p>
           </div>
-          <div className="flex flex-col items-start gap-2">
-            <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2">
+            {isRegistered ? (
+              <Badge variant="secondary" className="w-fit">
+                Вы зарегистрированы
+              </Badge>
+            ) : (
               <Button
                 asChild
-                disabled={isFull || isRegistered}
+                disabled={isFull}
                 title={isFull ? "Достигнут лимит участников" : undefined}
               >
-                <Link href="#register">
-                  {isFull ? "Регистрация закрыта" : isRegistered ? "Вы зарегистрированы" : "Присоединиться"}
-                </Link>
+                <Link href="#register">Присоединиться</Link>
               </Button>
-              <Button variant="ghost" asChild>
-                <Link href="/events">← Назад к списку</Link>
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Авторизация и регистрация проходят через Telegram. Это займёт 1–2 минуты.
-            </p>
+            )}
           </div>
         </div>
       </div>
@@ -151,53 +151,41 @@ export default async function EventDetails({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-base leading-relaxed text-foreground">{event.description}</p>
-          <ul className="space-y-3 text-sm">
-            <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-              <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-muted-foreground">Максимум участников</p>
-                <p className="font-medium text-foreground">
-                  {event.maxParticipants ?? "не ограничено"}
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-              <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-muted-foreground">Локация</p>
-                <p className="font-medium text-foreground">{event.locationText}</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold text-foreground">Параметры выезда</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
+            <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-muted-foreground">Максимум участников</p>
+              <p className="font-medium text-foreground">
+                {event.maxParticipants ?? "не ограничено"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
+            <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-muted-foreground">Тип машины</p>
+              <p className="font-medium text-foreground">{vehicleTypeLabel}</p>
+            </div>
+          </div>
+          {event.allowedBrands.length > 0 && (
+            <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-muted-foreground">Тип машины</p>
-                <p className="font-medium text-foreground">{vehicleTypeLabel}</p>
+                <p className="text-muted-foreground">Рекомендуемые марки</p>
+                <p className="font-medium text-foreground">
+                  {event.allowedBrands.map((b) => b.name).join(", ")}
+                </p>
               </div>
-            </li>
-            {event.isPaid && (
-              <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-                <BadgeDollarSign className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Участие</p>
-                  <p className="font-medium text-foreground">
-                    {event.price ? `${event.price} ${event.currency ?? ""}` : "Платное"}
-                  </p>
-                </div>
-              </li>
-            )}
-            {event.allowedBrands.length > 0 && (
-              <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-                <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground">Рекомендуемые марки</p>
-                  <p className="font-medium text-foreground">
-                    {event.allowedBrands.map((b) => b.name).join(", ")}
-                  </p>
-                </div>
-              </li>
-            )}
-          </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -230,19 +218,27 @@ export default async function EventDetails({
               Регистрация закрыта: достигнуто максимальное количество участников (
               {event.maxParticipants}).
             </div>
-          ) : isRegistered ? (
+          ) : isRegistered && currentParticipant ? (
             <Alert>
               <AlertTitle>Вы уже зарегистрированы</AlertTitle>
               <AlertDescription>
-                Ваш профиль уже есть в списке участников этого ивента. Отредактируйте запись внизу,
-                если нужно обновить данные.
+                Ваш профиль уже есть в списке участников этого ивента.
               </AlertDescription>
+              <div className="mt-3">
+                <Button size="sm" variant="secondary" asChild>
+                  <Link
+                    href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}
+                  >
+                    Редактировать данные экипажа
+                  </Link>
+                </Button>
+              </div>
             </Alert>
           ) : isLinkProtected && !currentUser ? (
             <Alert>
               <AlertTitle>Приватный ивент</AlertTitle>
               <AlertDescription>
-                Регистрация доступна только авторизованным пользователям. Войдите через Telegram.
+                Регистрация доступна только авторизованным пользователям.
               </AlertDescription>
             </Alert>
           ) : (
@@ -251,11 +247,6 @@ export default async function EventDetails({
               customFieldsSchema={event.customFieldsSchema}
               event={event}
             />
-          )}
-          {!currentUser && (
-            <p className="text-xs text-muted-foreground">
-              Авторизация занимает до 2 минут. Никаких паролей — только Telegram.
-            </p>
           )}
         </CardContent>
       </Card>
