@@ -58,7 +58,12 @@ export default async function EventDetails({
   );
 
   const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : null;
-  const formattedDateTime = new Date(event.dateTime).toLocaleString("ru-RU");
+  const formattedDateTime = new Date(event.dateTime).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const participantsCountLabel = `${participants.length} / ${event.maxParticipants ?? "∞"} участников`;
   const vehicleTypeLabelMap: Record<string, string> = {
     any: "Не важно",
@@ -79,26 +84,44 @@ export default async function EventDetails({
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 py-8 px-4">
-      <div className="space-y-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Ивент</p>
-        <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          {formattedDateTime} • {categoryLabel ?? "Выезд на выходные"}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          {isOwner && <Badge variant="outline">Владелец</Badge>}
-          {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
-          <Badge variant={event.isPaid ? "default" : "outline"}>
-            {event.isPaid ? "Платное" : "Бесплатное"}
-          </Badge>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/events">← Назад к списку</Link>
-          </Button>
-          {isOwner && (
-            <OwnerActions eventId={event.id} isOwner authMissing={!currentUser} />
-          )}
+      <div className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+              <span>{categoryLabel ?? "Ивент"}</span>
+              <span>· {formattedDateTime}</span>
+              <span>· {participantsCountLabel}</span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              {isOwner && <Badge variant="outline">Владелец</Badge>}
+              {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
+              <Badge variant={event.isPaid ? "default" : "outline"}>
+                {event.isPaid ? "Платное" : "Бесплатное"}
+              </Badge>
+              <Badge variant="outline">{vehicleTypeLabel}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">Локация: {event.locationText}</p>
+          </div>
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                asChild
+                disabled={isFull || isRegistered}
+                title={isFull ? "Достигнут лимит участников" : undefined}
+              >
+                <Link href="#register">
+                  {isFull ? "Регистрация закрыта" : isRegistered ? "Вы зарегистрированы" : "Присоединиться"}
+                </Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="/events">← Назад к списку</Link>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Авторизация и регистрация проходят через Telegram. Это займёт 1–2 минуты.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -106,16 +129,16 @@ export default async function EventDetails({
         <Alert>
           {!currentUser ? (
             <>
-              <AlertTitle>Вы не авторизованы</AlertTitle>
+              <AlertTitle>Нужна авторизация</AlertTitle>
               <AlertDescription>
-                Войдите через Telegram, чтобы управлять событием и регистрациями.
+                Войдите через Telegram, чтобы зарегистрировать свой экипаж и получать обновления по событию.
               </AlertDescription>
             </>
           ) : isLinkProtected ? (
             <>
-              <AlertTitle>Приватный ивент</AlertTitle>
+              <AlertTitle>Приватный ивент по ссылке</AlertTitle>
               <AlertDescription>
-                Это приватный ивент по ссылке. Вы авторизованы и получили доступ.
+                Вы авторизованы и получили доступ. Продолжайте к регистрации.
               </AlertDescription>
             </>
           ) : null}
@@ -162,24 +185,49 @@ export default async function EventDetails({
         </CardContent>
       </Card>
 
-      {event.rules && event.rules.trim().length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">Правила и регламент</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-              {event.rules}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold text-foreground">Что нужно для участия</CardTitle>
+          <CardDescription>
+            Требования и поля, которые заполняются при регистрации экипажа.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {sortedCustomFields.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Дополнительных требований нет — заполните имя экипажа и отправьте форму.
             </p>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <ul className="grid gap-2 md:grid-cols-2">
+              {sortedCustomFields.map((field) => (
+                <li
+                  key={field.id}
+                  className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <span className="font-medium text-foreground">{field.label}</span>
+                  <span className="ml-2 text-xs uppercase tracking-wide">
+                    {field.required ? "обязательно" : "необязательно"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {event.rules && event.rules.trim().length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Правила и регламент</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+                {event.rules}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card id="register">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-foreground">Регистрация</CardTitle>
           <CardDescription>
-            Укажите информацию, чтобы мы могли добавить вас в колонну.
+            Заполните данные экипажа — это займёт 1–2 минуты. После отправки вы появитесь в списке участников.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -210,8 +258,27 @@ export default async function EventDetails({
               event={event}
             />
           )}
+          {!currentUser && (
+            <p className="text-xs text-muted-foreground">
+              Авторизация занимает до 2 минут. Никаких паролей — только Telegram.
+            </p>
+          )}
         </CardContent>
       </Card>
+
+      {isOwner && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-foreground">Управление событием</CardTitle>
+            <CardDescription>
+              Редактируйте карточку события или удалите его при необходимости.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <OwnerActions eventId={event.id} isOwner authMissing={!currentUser} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
@@ -301,7 +368,7 @@ export default async function EventDetails({
             </div>
           ) : (
             <div className="rounded-lg border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-              Пока нет участников.
+              Пока никто не зарегистрировался. Будьте первым!
             </div>
           )}
         </CardContent>

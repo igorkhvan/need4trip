@@ -197,6 +197,9 @@ export function RegisterParticipantForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-muted/10 p-4">
+      <p className="text-sm text-muted-foreground">
+        Заполните данные экипажа. Это займёт 1–2 минуты.
+      </p>
       {event?.isPaid && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
@@ -241,6 +244,9 @@ export function RegisterParticipantForm({
         </div>
       )}
       {error && <div className="text-sm text-red-600">{error}</div>}
+      <p className="text-xs text-muted-foreground">
+        После отправки вы появитесь в списке участников, а организатор получит ваши данные.
+      </p>
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Сохраняем..." : "Зарегистрироваться"}

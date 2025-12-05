@@ -226,6 +226,9 @@ export function EditEventForm({
             ? CATEGORY_OPTIONS.find((c) => c.value === category)?.label
             : "Выезд на выходные"}
         </p>
+        <p className="text-sm text-muted-foreground">
+          Обновите ключевые параметры ивента. Изменения сразу будут видны участникам.
+        </p>
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/events/${event.id}`}>← Назад к событию</Link>
@@ -373,6 +376,9 @@ export function EditEventForm({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
                 <Label>Тип участия</Label>
+                <p className="text-xs text-muted-foreground">
+                  Эта информация показывается в карточке события и при регистрации.
+                </p>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 text-sm text-muted-foreground">
                     <input
@@ -438,6 +444,9 @@ export function EditEventForm({
 
             <div className="space-y-1">
               <Label htmlFor="rules">Правила поведения в колонне и на маршруте (опционально)</Label>
+              <p className="text-xs text-muted-foreground">
+                Кратко опишите порядок движения, связь по рации и ключевые ограничения.
+              </p>
               <Textarea
                 id="rules"
                 rows={4}
@@ -448,17 +457,25 @@ export function EditEventForm({
               />
             </div>
 
-            <MultiBrandSelect
-              label="Допустимые марки авто (опционально)"
-              placeholder="Выберите марку..."
-              options={brands}
-              value={allowedBrandIds}
-              onChange={setAllowedBrandIds}
-              disabled={authMissing || !isOwner}
-            />
+            <div className="space-y-2">
+              <MultiBrandSelect
+                label="Допустимые марки авто (опционально)"
+                placeholder="Выберите марку..."
+                options={brands}
+                value={allowedBrandIds}
+                onChange={setAllowedBrandIds}
+                disabled={authMissing || !isOwner}
+              />
+              <p className="text-xs text-muted-foreground">
+                Если не выбрано ни одной марки, участвовать могут любые автомобили.
+              </p>
+            </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
             {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}
+            <Button variant="ghost" type="button" asChild disabled={isSubmitting}>
+              <Link href={`/events/${event.id}`}>Отменить</Link>
+            </Button>
             <Button type="submit" disabled={isSubmitting || authMissing || !isOwner}>
               {isSubmitting ? "Сохранение..." : "Сохранить"}
             </Button>

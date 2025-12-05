@@ -20,7 +20,10 @@ export default function RootLayout({
           <MainHeader />
           <main className="container flex-1 py-10">{children}</main>
           <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-            Need4Trip · MVP каркас
+            Need4Trip · бета-версия ·{" "}
+            <a className="underline-offset-4 hover:underline" href="mailto:hello@need4trip.app">
+              Связаться с нами
+            </a>
           </footer>
           <Toaster />
         </div>

@@ -438,6 +438,9 @@ export default function CreateEventPage() {
                 onChange={setAllowedBrandIds}
                 error={fieldError("allowedBrandIds")}
               />
+              <p className="text-xs text-muted-foreground">
+                Если не выбрано ни одной марки, участвовать могут любые автомобили.
+              </p>
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">

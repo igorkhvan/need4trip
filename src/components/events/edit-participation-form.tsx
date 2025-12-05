@@ -184,6 +184,9 @@ export function EditParticipationForm({
         <p className="text-sm text-muted-foreground">
           Обновите имя экипажа и ответы на кастомные поля.
         </p>
+        <p className="text-sm text-muted-foreground">
+          Обновите имя экипажа и данные для организатора.
+        </p>
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/events/${eventId}#register`}>← Назад к участникам</Link>

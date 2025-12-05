@@ -54,21 +54,69 @@ const features: { title: string; description: string }[] = [
 function Hero() {
   return (
     <section className="space-y-6">
-      <div className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          Организация покатушек и регистрация экипажей в пару кликов
-        </h1>
-        <p className="text-base text-muted-foreground max-w-2xl">
-          Создавайте выезды, собирайте участников с нужными параметрами и управляйте оффроуд-ивентами вашего клуба в одном удобном месте.
-        </p>
+      <div className="space-y-2">
+        <span className="inline-flex w-auto items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary-foreground">
+          Для оффроад-клубов и организаторов 4x4 выездов
+        </span>
+        <div className="space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            Организация оффроад-покатушек и учет экипажей в пару кликов
+          </h1>
+          <p className="text-base text-muted-foreground max-w-2xl">
+            Need4Trip помогает лидерам клубов и организаторам выездов собирать экипажи, настраивать поля регистрации и управлять колонной в одном удобном интерфейсе.
+          </p>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
         <Button asChild>
-          <Link href="/events/create">Создать ивент</Link>
+          <Link href="/events/create">Создать первый ивент</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href="/events">Смотреть ивенты</Link>
         </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Бесплатно · авторизация через Telegram · 2 минуты
+      </p>
+    </section>
+  );
+}
+
+function HowItWorksSection() {
+  const items = [
+    {
+      title: "Создаёте ивент",
+      description: "Указываете название, дату, тип выезда и требования к машине.",
+    },
+    {
+      title: "Настраиваете регистрацию",
+      description:
+        "Добавляете свои поля: рация, резина, опыт, количество людей в экипаже.",
+    },
+    {
+      title: "Собираете экипажи",
+      description:
+        "Участники регистрируются через удобную форму, вы видите колонну и роли.",
+    },
+  ];
+
+  return (
+    <section className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight">Как это работает</h2>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Простой процесс для организаторов и экипажей: от создания события до управления колонной.
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {items.map((item) => (
+          <Card key={item.title} className="h-full">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">{item.title}</CardTitle>
+              <CardDescription>{item.description}</CardDescription>
+            </CardHeader>
+          </Card>
+        ))}
       </div>
     </section>
   );
@@ -155,6 +203,7 @@ export default async function HomePage() {
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
       <Hero />
+      <HowItWorksSection />
       <Features />
       <UpcomingEventsSection events={events} />
       <footer className="pt-8">

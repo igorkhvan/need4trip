@@ -9,8 +9,10 @@ function PageHeader() {
   return (
     <header className="flex items-center justify-between gap-3">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Ивенты</h1>
-        <p className="text-sm text-muted-foreground">Список выездов, тренировок и встреч клуба.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Ивенты клуба</h1>
+        <p className="text-sm text-muted-foreground">
+          Список выездов, тренировок и встреч. Выберите ближайший и зарегистрируйтесь или создайте свой ивент.
+        </p>
       </div>
       <Button size="sm" asChild>
         <Link href="/events/create">Создать ивент</Link>
