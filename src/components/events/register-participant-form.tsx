@@ -59,6 +59,12 @@ export function RegisterParticipantForm({
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
+    const trimmedName = displayName.trim();
+    if (!trimmedName || trimmedName.length > 100) {
+      setError("Введите имя экипажа (до 100 символов).");
+      setIsSubmitting(false);
+      return;
+    }
     const preparedValues: Record<string, unknown> = {};
     sortedFields.forEach((field) => {
       const value = customValues[field.id];

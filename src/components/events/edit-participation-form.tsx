@@ -57,13 +57,18 @@ export function EditParticipationForm({
       setError("Недостаточно прав / войдите через Telegram");
       return;
     }
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName.length > 100) {
+      setError("Введите имя экипажа (до 100 символов).");
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: name.trim(), customFieldValues: values }),
+        body: JSON.stringify({ displayName: trimmedName, customFieldValues: values }),
       });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {

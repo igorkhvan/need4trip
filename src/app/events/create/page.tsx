@@ -104,6 +104,8 @@ export default function CreateEventPage() {
     const maxParticipants = formData.get("maxParticipants") as string;
     const title = (formData.get("title") as string)?.trim() ?? "";
     const description = (formData.get("description") as string)?.trim() ?? "";
+    const locationText = (formData.get("locationText") as string)?.trim() ?? "";
+    const parsedDate = dateTime ? new Date(dateTime) : null;
 
     const issues: Record<string, string> = {};
 
@@ -114,6 +116,14 @@ export default function CreateEventPage() {
     if (description.length < 1) {
       setErrorMessage("Описание не может быть пустым.");
       return;
+    }
+    if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+      issues.dateTime = "Укажите корректную дату и время";
+    } else if (parsedDate <= new Date()) {
+      issues.dateTime = "Дата должна быть в будущем";
+    }
+    if (!locationText) {
+      issues.locationText = "Укажите локацию";
     }
 
     sortedFields.forEach((field, idx) => {
@@ -131,8 +141,8 @@ export default function CreateEventPage() {
       title,
       description,
       category: (formData.get("category") as EventCategory | null) ?? null,
-      dateTime: dateTime ? new Date(dateTime).toISOString() : new Date().toISOString(),
-      locationText: (formData.get("locationText") as string) ?? "",
+      dateTime: parsedDate?.toISOString() ?? new Date().toISOString(),
+      locationText,
       locationLat: null,
       locationLng: null,
       maxParticipants: maxParticipants ? Number(maxParticipants) : null,
@@ -284,7 +294,18 @@ export default function CreateEventPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="dateTime">Дата и время</Label>
-                <Input id="dateTime" name="dateTime" type="datetime-local" required />
+                <Input
+                  id="dateTime"
+                  name="dateTime"
+                  type="datetime-local"
+                  required
+                  className={
+                    fieldError("dateTime") ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }
+                />
+                {fieldError("dateTime") && (
+                  <p className="text-xs text-red-600">{fieldError("dateTime")}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="maxParticipants">Максимум экипажей</Label>
