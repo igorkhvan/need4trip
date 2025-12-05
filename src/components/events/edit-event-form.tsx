@@ -201,7 +201,7 @@ export function EditEventForm({
         title: title.trim(),
         description: description.trim(),
         category,
-        dateTime: parsedDate.toISOString(),
+        dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
         locationText: locationText.trim(),
         maxParticipants,
         ...(hasParticipants ? {} : { customFieldsSchema: sortedFields }),
