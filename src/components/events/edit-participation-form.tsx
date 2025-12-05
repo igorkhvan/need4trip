@@ -252,13 +252,16 @@ export function EditParticipationForm({
             <CardDescription>Обновите отображаемое имя и ответы.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
+        <div className="space-y-1">
           <Label htmlFor="displayName">Имя экипажа</Label>
           <Input
             id="displayName"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={authMissing || !isSelf}
+            className={
+              fieldErrors.displayName ? "border-red-500 focus-visible:ring-red-500" : ""
+            }
           />
           <div className="min-h-[16px] text-xs text-red-600">
             {fieldErrors.displayName ?? ""}
