@@ -50,6 +50,7 @@ export function EditParticipationForm({
   const [name, setName] = useState(displayName);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,9 +58,31 @@ export function EditParticipationForm({
       setError("Недостаточно прав / войдите через Telegram");
       return;
     }
+    setFieldErrors({});
     const trimmedName = name.trim();
+    const issues: Record<string, string> = {};
     if (!trimmedName || trimmedName.length > 100) {
-      setError("Введите имя экипажа (до 100 символов).");
+        issues.displayName = "Введите имя экипажа (до 100 символов).";
+    }
+    customFields.forEach((field) => {
+      if (!field.required) return;
+      const val = values[field.id];
+      if (field.type === "number") {
+        if (val === "" || val === null || val === undefined || Number.isNaN(Number(val))) {
+          issues[field.id] = "Укажите значение";
+        }
+      } else if (field.type === "enum" || field.type === "text") {
+        if (!val || String(val).trim().length === 0) {
+          issues[field.id] = "Заполните поле";
+        }
+      } else if (field.type === "boolean") {
+        if (val === undefined || val === null) {
+          issues[field.id] = "Укажите значение";
+        }
+      }
+    });
+    if (Object.keys(issues).length) {
+      setFieldErrors(issues);
       return;
     }
     setError(null);
@@ -104,12 +127,20 @@ export function EditParticipationForm({
       </Label>
     );
     const value = values[field.id];
+    const errorText = fieldErrors[field.id];
 
-    const updateValue = (val: unknown) =>
+    const updateValue = (val: unknown) => {
       setValues((prev) => ({
         ...prev,
         [field.id]: val,
       }));
+      setFieldErrors((prev) => {
+        if (!prev[field.id]) return prev;
+        const next = { ...prev };
+        delete next[field.id];
+        return next;
+      });
+    };
 
     switch (field.type) {
       case "number":
@@ -125,9 +156,10 @@ export function EditParticipationForm({
                     ? Number(value)
                     : ""
               }
-              required={field.required}
+              className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => updateValue(e.target.value === "" ? null : Number(e.target.value))}
             />
+            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "boolean":
@@ -152,7 +184,6 @@ export function EditParticipationForm({
             <Select
               value={(value as string) ?? ""}
               onValueChange={(val) => updateValue(val)}
-              required={field.required}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Выберите значение" />
@@ -165,6 +196,7 @@ export function EditParticipationForm({
                 ))}
               </SelectContent>
             </Select>
+            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
           </div>
         );
       default:
@@ -173,9 +205,10 @@ export function EditParticipationForm({
             {commonLabel}
             <Input
               value={(value as string) ?? ""}
-              required={field.required}
+              className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => updateValue(e.target.value)}
             />
+            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
           </div>
         );
     }
@@ -220,15 +253,17 @@ export function EditParticipationForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="displayName">Имя экипажа</Label>
-              <Input
-                id="displayName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={authMissing || !isSelf}
-              />
-            </div>
+          <Label htmlFor="displayName">Имя экипажа</Label>
+          <Input
+            id="displayName"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={authMissing || !isSelf}
+          />
+          <div className="min-h-[16px] text-xs text-red-600">
+            {fieldErrors.displayName ?? ""}
+          </div>
+        </div>
             {customFields.length > 0 && (
               <div className="grid gap-3 md:grid-cols-2">
                 {customFields.map((field) => renderField(field))}

@@ -121,6 +121,7 @@ export function EditEventForm({
   const [price, setPrice] = useState<string>(event.price ? String(event.price) : "");
   const [currency, setCurrency] = useState<string>(event.currency ?? "KZT");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sortedFields = useMemo(
@@ -164,18 +165,44 @@ export function EditEventForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setFieldErrors({});
     setIsSubmitting(true);
+    if (!isOwner || authMissing) {
+      setErrorMessage("Недостаточно прав / войдите через Telegram");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const issues: Record<string, string> = {};
+    const parsedDate = dateTime ? new Date(dateTime) : null;
+    if (title.trim().length < 3) {
+      issues.title = "Название должно быть от 3 символов.";
+    }
+    if (description.trim().length < 1) {
+      issues.description = "Описание не может быть пустым.";
+    }
+    if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+      issues.dateTime = "Укажите корректную дату и время";
+    } else if (parsedDate <= new Date()) {
+      issues.dateTime = "Дата должна быть в будущем";
+    }
+    if (!locationText.trim()) {
+      issues.locationText = "Укажите локацию";
+    }
+
+    if (Object.keys(issues).length) {
+      setFieldErrors(issues);
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      if (!isOwner || authMissing) {
-        setErrorMessage("Недостаточно прав / войдите через Telegram");
-        return;
-      }
       const payload = {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         category,
-        dateTime: new Date(dateTime).toISOString(),
-        locationText,
+        dateTime: parsedDate.toISOString(),
+        locationText: locationText.trim(),
         maxParticipants,
         ...(hasParticipants ? {} : { customFieldsSchema: sortedFields }),
         visibility,
@@ -269,6 +296,9 @@ export function EditEventForm({
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={authMissing || !isOwner}
                 />
+                <div className="min-h-[16px] text-xs text-red-600">
+                  {fieldErrors.title ?? ""}
+                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="category">Категория</Label>
@@ -298,6 +328,9 @@ export function EditEventForm({
                   onChange={(e) => setDateTime(e.target.value)}
                   disabled={authMissing || !isOwner}
                 />
+                <div className="min-h-[16px] text-xs text-red-600">
+                  {fieldErrors.dateTime ?? ""}
+                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="maxParticipants">Максимум экипажей</Label>
@@ -349,26 +382,32 @@ export function EditEventForm({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="locationText">Локация (текстом)</Label>
-              <Input
-                id="locationText"
-                value={locationText}
-                onChange={(e) => setLocationText(e.target.value)}
-                disabled={authMissing || !isOwner}
-              />
-            </div>
+              <div className="space-y-1">
+                <Label htmlFor="locationText">Локация (текстом)</Label>
+                <Input
+                  id="locationText"
+                  value={locationText}
+                  onChange={(e) => setLocationText(e.target.value)}
+                  disabled={authMissing || !isOwner}
+                />
+                <div className="min-h-[16px] text-xs text-red-600">
+                  {fieldErrors.locationText ?? ""}
+                </div>
+              </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="description">Описание ивента</Label>
-              <Textarea
+              <div className="space-y-1">
+                <Label htmlFor="description">Описание ивента</Label>
+                <Textarea
                 id="description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                disabled={authMissing || !isOwner}
-              />
-            </div>
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  disabled={authMissing || !isOwner}
+                />
+                <div className="min-h-[16px] text-xs text-red-600">
+                  {fieldErrors.description ?? ""}
+                </div>
+              </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
