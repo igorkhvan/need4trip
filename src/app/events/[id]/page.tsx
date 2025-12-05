@@ -185,43 +185,21 @@ export default async function EventDetails({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">Что нужно для участия</CardTitle>
-          <CardDescription>
-            Требования и поля, которые заполняются при регистрации экипажа.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {sortedCustomFields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Дополнительных требований нет — заполните имя экипажа и отправьте форму.
+      {event.rules && event.rules.trim().length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-foreground">Правила и регламент</CardTitle>
+            <CardDescription>
+              Ознакомьтесь с регламентом, это обязательная информация для участников.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
+              {event.rules}
             </p>
-          ) : (
-            <ul className="grid gap-2 md:grid-cols-2">
-              {sortedCustomFields.map((field) => (
-                <li
-                  key={field.id}
-                  className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground"
-                >
-                  <span className="font-medium text-foreground">{field.label}</span>
-                  <span className="ml-2 text-xs uppercase tracking-wide">
-                    {field.required ? "обязательно" : "необязательно"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {event.rules && event.rules.trim().length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold">Правила и регламент</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-                {event.rules}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card id="register">
         <CardHeader>
@@ -265,20 +243,6 @@ export default async function EventDetails({
           )}
         </CardContent>
       </Card>
-
-      {isOwner && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">Управление событием</CardTitle>
-            <CardDescription>
-              Редактируйте карточку события или удалите его при необходимости.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <OwnerActions eventId={event.id} isOwner authMissing={!currentUser} />
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
@@ -373,6 +337,20 @@ export default async function EventDetails({
           )}
         </CardContent>
       </Card>
+
+      {isOwner && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-foreground">Управление событием</CardTitle>
+            <CardDescription>
+              Редактируйте карточку события или удалите его при необходимости.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <OwnerActions eventId={event.id} isOwner authMissing={!currentUser} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
