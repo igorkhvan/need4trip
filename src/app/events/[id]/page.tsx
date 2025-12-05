@@ -20,7 +20,7 @@ import { ParticipantActions } from "@/components/events/participant-actions";
 import { OwnerActions } from "@/components/events/owner-actions";
 import { getEventWithParticipants } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
   weekend_trip: "Выезд на выходные",
@@ -39,7 +39,7 @@ export default async function EventDetails({
   const { id } = await params;
   const { event, participants } = await getEventWithParticipants(id);
   if (!event) return notFound();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserSafe();
   const isOwner = currentUser?.id === event.createdByUserId;
   const isFull =
     event.maxParticipants !== null &&

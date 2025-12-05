@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { listEvents } from "@/lib/services/events";
+import { listEventsSafe } from "@/lib/services/events";
 
 type EventSummary = {
   id: string;
@@ -143,7 +143,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
 }
 
 export default async function HomePage() {
-  const eventsData = await listEvents();
+  const eventsData = await listEventsSafe();
   const events: EventSummary[] = eventsData.slice(0, 3).map((e) => ({
     id: e.id,
     title: e.title,

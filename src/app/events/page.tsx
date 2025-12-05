@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { EventsTable } from "@/components/events/events-table";
 import { Button } from "@/components/ui/button";
-import { listEvents } from "@/lib/services/events";
+import { listEventsSafe } from "@/lib/services/events";
 
 function PageHeader() {
   return (
@@ -19,7 +19,7 @@ function PageHeader() {
 }
 
 export default async function EventsPage() {
-  const events = await listEvents();
+  const events = await listEventsSafe();
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">

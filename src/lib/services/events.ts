@@ -23,6 +23,16 @@ export async function listEvents(): Promise<Event[]> {
   return events.map(mapDbEventToDomain);
 }
 
+export async function listEventsSafe(): Promise<Event[]> {
+  try {
+    const events = await listEventsFromRepo();
+    return events.map(mapDbEventToDomain);
+  } catch (err) {
+    console.error("[listEventsSafe] Failed to list events", err);
+    return [];
+  }
+}
+
 export async function getEvent(id: string): Promise<Event> {
   const dbEvent = await getEventById(id);
   if (!dbEvent) {

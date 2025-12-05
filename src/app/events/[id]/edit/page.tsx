@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { EditEventForm } from "@/components/events/edit-event-form";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getEventWithParticipants } from "@/lib/services/events";
 
 export default async function EditEventPage({
@@ -12,7 +12,7 @@ export default async function EditEventPage({
   const { id } = await params;
   const { event, participants } = await getEventWithParticipants(id);
   if (!event) return notFound();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUserSafe();
   const isOwner = currentUser?.id === event.createdByUserId;
   const hasParticipants = participants.length > 0;
 

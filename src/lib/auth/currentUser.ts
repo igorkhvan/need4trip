@@ -124,3 +124,12 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     updatedAt: user.updatedAt,
   };
 }
+
+export async function getCurrentUserSafe(): Promise<CurrentUser | null> {
+  try {
+    return await getCurrentUser();
+  } catch (err) {
+    console.error("[getCurrentUserSafe] Failed to resolve current user", err);
+    return null;
+  }
+}
