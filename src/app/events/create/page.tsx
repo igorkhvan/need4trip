@@ -270,7 +270,6 @@ export default function CreateEventPage() {
                 <Input
                   id="title"
                   name="title"
-                  required
                   className={
                     fieldError("title") ? "border-red-500 focus-visible:ring-red-500" : ""
                   }
@@ -298,7 +297,6 @@ export default function CreateEventPage() {
                   id="dateTime"
                   name="dateTime"
                   type="datetime-local"
-                  required
                   className={
                     fieldError("dateTime") ? "border-red-500 focus-visible:ring-red-500" : ""
                   }
@@ -348,34 +346,36 @@ export default function CreateEventPage() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="locationText">Локация (текстом)</Label>
-              <Input
-                id="locationText"
-                name="locationText"
-                required
-                className={
-                  fieldError("locationText") ? "border-red-500 focus-visible:ring-red-500" : ""
-                }
-              />
+              <div className="space-y-1">
+                <Label htmlFor="locationText">Локация (текстом)</Label>
+                <Input
+                  id="locationText"
+                  name="locationText"
+                  className={
+                    fieldError("locationText") ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }
+                />
+                {fieldError("locationText") && (
+                  <p className="text-xs text-red-600">{fieldError("locationText")}</p>
+                )}
               {fieldError("locationText") && (
                 <p className="text-xs text-red-600">{fieldError("locationText")}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="description">Описание ивента</Label>
-              <Textarea
-                id="description"
-                name="description"
-                rows={4}
-                className={
-                  fieldError("description") ? "border-red-500 focus-visible:ring-red-500" : ""
-                }
-              />
-              {fieldError("description") && (
-                <p className="text-xs text-red-600">{fieldError("description")}</p>
-              )}
+                <Label htmlFor="description">Описание ивента</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  rows={4}
+                  className={
+                    fieldError("description") ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }
+                />
+                {fieldError("description") && (
+                  <p className="text-xs text-red-600">{fieldError("description")}</p>
+                )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

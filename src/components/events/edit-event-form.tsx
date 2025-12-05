@@ -267,7 +267,6 @@ export function EditEventForm({
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  required
                   disabled={authMissing || !isOwner}
                 />
               </div>
@@ -297,7 +296,6 @@ export function EditEventForm({
                   type="datetime-local"
                   value={dateTime}
                   onChange={(e) => setDateTime(e.target.value)}
-                  required
                   disabled={authMissing || !isOwner}
                 />
               </div>
@@ -357,7 +355,6 @@ export function EditEventForm({
                 id="locationText"
                 value={locationText}
                 onChange={(e) => setLocationText(e.target.value)}
-                required
                 disabled={authMissing || !isOwner}
               />
             </div>
