@@ -469,7 +469,7 @@ export function EditEventForm({
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
-            {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}
+            <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
             <Button variant="ghost" type="button" asChild disabled={isSubmitting}>
               <Link href={`/events/${event.id}`}>Отменить</Link>
             </Button>

@@ -236,7 +236,7 @@ export function EditParticipationForm({
             )}
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
-            {error && <div className="mr-auto text-sm text-red-600">{error}</div>}
+            <div className="mr-auto min-h-[20px] text-sm text-red-600">{error ?? ""}</div>
             <Button type="submit" disabled={isSubmitting || authMissing || !isSelf}>
               {isSubmitting ? "Сохраняем..." : "Сохранить"}
             </Button>

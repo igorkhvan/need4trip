@@ -273,7 +273,7 @@ export default function CreateEventPage() {
                     fieldError("title") ? "border-red-500 focus-visible:ring-red-500" : ""
                   }
                 />
-                {fieldError("title") && <p className="text-xs text-red-600">{fieldError("title")}</p>}
+                <p className="min-h-[16px] text-xs text-red-600">{fieldError("title") ?? ""}</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="category">Категория</Label>
@@ -300,9 +300,7 @@ export default function CreateEventPage() {
                     fieldError("dateTime") ? "border-red-500 focus-visible:ring-red-500" : ""
                   }
                 />
-                {fieldError("dateTime") && (
-                  <p className="text-xs text-red-600">{fieldError("dateTime")}</p>
-                )}
+                <p className="min-h-[16px] text-xs text-red-600">{fieldError("dateTime") ?? ""}</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="maxParticipants">Максимум экипажей</Label>
@@ -345,36 +343,33 @@ export default function CreateEventPage() {
               </div>
             </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="locationText">Локация (текстом)</Label>
-                <Input
-                  id="locationText"
-                  name="locationText"
-                  className={
-                    fieldError("locationText") ? "border-red-500 focus-visible:ring-red-500" : ""
-                  }
-                />
-                {fieldError("locationText") && (
-                  <p className="text-xs text-red-600">{fieldError("locationText")}</p>
-                )}
-              {fieldError("locationText") && (
-                <p className="text-xs text-red-600">{fieldError("locationText")}</p>
-              )}
+            <div className="space-y-1">
+              <Label htmlFor="locationText">Локация (текстом)</Label>
+              <Input
+                id="locationText"
+                name="locationText"
+                className={
+                  fieldError("locationText") ? "border-red-500 focus-visible:ring-red-500" : ""
+                }
+              />
+              <p className="min-h-[16px] text-xs text-red-600">
+                {fieldError("locationText") ?? ""}
+              </p>
             </div>
 
             <div className="space-y-1">
-                <Label htmlFor="description">Описание ивента</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  rows={4}
-                  className={
-                    fieldError("description") ? "border-red-500 focus-visible:ring-red-500" : ""
-                  }
-                />
-                {fieldError("description") && (
-                  <p className="text-xs text-red-600">{fieldError("description")}</p>
-                )}
+              <Label htmlFor="description">Описание ивента</Label>
+              <Textarea
+                id="description"
+                name="description"
+                rows={4}
+                className={
+                  fieldError("description") ? "border-red-500 focus-visible:ring-red-500" : ""
+                }
+              />
+              <p className="min-h-[16px] text-xs text-red-600">
+                {fieldError("description") ?? ""}
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -464,7 +459,9 @@ export default function CreateEventPage() {
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
-            {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}
+            <div className="mr-auto min-h-[20px] text-sm text-red-600">
+              {errorMessage ?? ""}
+            </div>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Создаём..." : "Сохранить ивент"}
             </Button>
@@ -482,24 +479,22 @@ export default function CreateEventPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            {sortedFields.map((field, index) => (
+          {sortedFields.map((field, index) => {
+            const errorText = fieldError(`customFieldsSchema.${index}.label`);
+            return (
               <div
                 key={field.id}
                 className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
               >
-              <div className="space-y-1 md:col-span-2">
-                <Label>Метка</Label>
+                <div className="space-y-1 md:col-span-2">
+                  <Label>Метка</Label>
                   <Input
                     value={field.label}
                     placeholder="Название поля"
-                    className={
-                      fieldError(`customFieldsSchema.${index}.label`)
-                        ? "border-red-500 focus-visible:ring-red-500"
-                        : ""
-                    }
+                    className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
                     onChange={(e) => {
                       updateField(field.id, { label: e.target.value });
-                      if (fieldError(`customFieldsSchema.${index}.label`)) {
+                      if (errorText) {
                         setFieldErrors((prev) => {
                           const next = { ...prev };
                           delete next[`customFieldsSchema.${index}.label`];
@@ -508,55 +503,52 @@ export default function CreateEventPage() {
                       }
                     }}
                   />
-                {fieldError(`customFieldsSchema.${index}.label`) && (
-                  <div className="text-xs text-red-600">
-                    {fieldError(`customFieldsSchema.${index}.label`)}
+                  <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label>Тип</Label>
+                  {FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? (
+                    <Select
+                      value={field.type}
+                      onValueChange={(value) =>
+                        updateField(field.id, { type: value as EventCustomFieldType })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELD_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={field.type} disabled />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label>Обязательное</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={field.required}
+                      onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                    />
+                    <span className="text-sm text-muted-foreground">Да</span>
                   </div>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label>Тип</Label>
-                {FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? (
-                  <Select
-                    value={field.type}
-                    onValueChange={(value) =>
-                      updateField(field.id, { type: value as EventCustomFieldType })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FIELD_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={field.type} disabled />
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label>Обязательное</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    checked={field.required}
-                    onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                  />
-                  <span className="text-sm text-muted-foreground">Да</span>
+                </div>
+                <div className="flex items-center justify-end md:col-span-4">
+                  <Button variant="ghost" size="sm" type="button" onClick={() => removeField(field.id)}>
+                    Удалить поле
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center justify-end md:col-span-4">
-                <Button variant="ghost" size="sm" type="button" onClick={() => removeField(field.id)}>
-                  Удалить поле
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <Button variant="outline" type="button" onClick={addField}>
             Добавить поле
           </Button>

@@ -249,7 +249,7 @@ export function RegisterParticipantForm({
           {sortedFields.map((field) => renderField(field))}
         </div>
       )}
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      <div className="min-h-[20px] text-sm text-red-600">{error ?? ""}</div>
       <p className="text-xs text-muted-foreground">
         После отправки вы появитесь в списке участников, а организатор получит ваши данные.
       </p>
