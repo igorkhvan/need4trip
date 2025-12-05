@@ -174,11 +174,14 @@ export function EditEventForm({
     }
 
     const issues: Record<string, string> = {};
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+    const trimmedLocation = locationText.trim();
     const parsedDate = dateTime ? new Date(dateTime) : null;
-    if (title.trim().length < 3) {
+    if (trimmedTitle.length < 3) {
       issues.title = "Название должно быть от 3 символов.";
     }
-    if (description.trim().length < 1) {
+    if (trimmedDescription.length < 1) {
       issues.description = "Описание не может быть пустым.";
     }
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
@@ -186,7 +189,7 @@ export function EditEventForm({
     } else if (parsedDate <= new Date()) {
       issues.dateTime = "Дата должна быть в будущем";
     }
-    if (!locationText.trim()) {
+    if (!trimmedLocation) {
       issues.locationText = "Укажите локацию";
     }
 
@@ -198,11 +201,11 @@ export function EditEventForm({
 
     try {
       const payload = {
-        title: title.trim(),
-        description: description.trim(),
+        title: trimmedTitle,
+        description: trimmedDescription,
         category,
         dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
-        locationText: locationText.trim(),
+        locationText: trimmedLocation,
         maxParticipants,
         ...(hasParticipants ? {} : { customFieldsSchema: sortedFields }),
         visibility,
@@ -293,8 +296,18 @@ export function EditEventForm({
                 <Input
                   id="title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (fieldErrors.title) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.title;
+                        return next;
+                      });
+                    }
+                  }}
                   disabled={authMissing || !isOwner}
+                  className={fieldErrors.title ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
                 <div className="min-h-[16px] text-xs text-red-600">
                   {fieldErrors.title ?? ""}
@@ -325,8 +338,18 @@ export function EditEventForm({
                   id="dateTime"
                   type="datetime-local"
                   value={dateTime}
-                  onChange={(e) => setDateTime(e.target.value)}
+                  onChange={(e) => {
+                    setDateTime(e.target.value);
+                    if (fieldErrors.dateTime) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.dateTime;
+                        return next;
+                      });
+                    }
+                  }}
                   disabled={authMissing || !isOwner}
+                  className={fieldErrors.dateTime ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
                 <div className="min-h-[16px] text-xs text-red-600">
                   {fieldErrors.dateTime ?? ""}
@@ -387,8 +410,20 @@ export function EditEventForm({
                 <Input
                   id="locationText"
                   value={locationText}
-                  onChange={(e) => setLocationText(e.target.value)}
+                  onChange={(e) => {
+                    setLocationText(e.target.value);
+                    if (fieldErrors.locationText) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.locationText;
+                        return next;
+                      });
+                    }
+                  }}
                   disabled={authMissing || !isOwner}
+                  className={
+                    fieldErrors.locationText ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }
                 />
                 <div className="min-h-[16px] text-xs text-red-600">
                   {fieldErrors.locationText ?? ""}
@@ -398,11 +433,23 @@ export function EditEventForm({
               <div className="space-y-1">
                 <Label htmlFor="description">Описание ивента</Label>
                 <Textarea
-                id="description"
-                value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  id="description"
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    if (fieldErrors.description) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.description;
+                        return next;
+                      });
+                    }
+                  }}
                   rows={4}
                   disabled={authMissing || !isOwner}
+                  className={
+                    fieldErrors.description ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }
                 />
                 <div className="min-h-[16px] text-xs text-red-600">
                   {fieldErrors.description ?? ""}
