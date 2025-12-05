@@ -52,16 +52,39 @@ export function RegisterParticipantForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const sortedFields = [...(customFieldsSchema || [])].sort((a, b) => a.order - b.order);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setIsSubmitting(true);
     const trimmedName = displayName.trim();
+    const issues: Record<string, string> = {};
     if (!trimmedName || trimmedName.length > 100) {
-      setError("Введите имя экипажа (до 100 символов).");
+      issues.displayName = "Введите имя экипажа (до 100 символов).";
+    }
+    sortedFields.forEach((field) => {
+      const value = customValues[field.id];
+      if (!field.required) return;
+      if (field.type === "number") {
+        if (value === "" || value === null || Number.isNaN(Number(value))) {
+          issues[field.id] = "Укажите значение";
+        }
+      } else if (field.type === "enum" || field.type === "text") {
+        if (!value || String(value).trim().length === 0) {
+          issues[field.id] = "Заполните поле";
+        }
+      } else if (field.type === "boolean") {
+        if (value === undefined || value === null) {
+          issues[field.id] = "Укажите значение";
+        }
+      }
+    });
+    if (Object.keys(issues).length) {
+      setFieldErrors(issues);
       setIsSubmitting(false);
       return;
     }
@@ -113,6 +136,7 @@ export function RegisterParticipantForm({
           sortedFields.map((field) => [field.id, getDefaultValue(field.type)])
         )
       );
+      setFieldErrors({});
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка. Повторите попытку.");
@@ -123,17 +147,22 @@ export function RegisterParticipantForm({
 
   const handleChange = (id: string, value: string | number | boolean) => {
     setCustomValues((prev) => ({ ...prev, [id]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const renderField = (field: EventCustomFieldSchema) => {
+    const errorText = fieldErrors[field.id];
     const labelContent = (
       <>
         {field.label}
         {field.required && <span className="ml-0.5 text-red-600">*</span>}
       </>
     );
-
-    const required = field.required;
     const value = customValues[field.id];
 
     switch (field.type) {
@@ -144,9 +173,10 @@ export function RegisterParticipantForm({
             <Input
               type="number"
               value={value as number}
-              required={required}
+              className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => handleChange(field.id, e.target.value)}
             />
+            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "boolean":
@@ -183,6 +213,7 @@ export function RegisterParticipantForm({
                 ))}
               </SelectContent>
             </Select>
+            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "text":
@@ -192,10 +223,11 @@ export function RegisterParticipantForm({
             <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
             <Input
               value={(value as string) ?? ""}
-              required={required}
+              className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => handleChange(field.id, e.target.value)}
               placeholder=""
             />
+            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
           </div>
         );
     }
@@ -227,8 +259,11 @@ export function RegisterParticipantForm({
             placeholder="Ник или имя"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            required
+            className={fieldErrors.displayName ? "border-red-500 focus-visible:ring-red-500" : ""}
           />
+          <div className="min-h-[16px] text-xs text-red-600">
+            {fieldErrors.displayName ?? ""}
+          </div>
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium">Роль</Label>

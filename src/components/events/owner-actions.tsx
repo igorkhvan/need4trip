@@ -54,8 +54,6 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
       <Button
         asChild
         variant="secondary"
-        disabled={authMissing}
-        title={authMissing ? "Требуется авторизация через Telegram" : undefined}
       >
         <Link href={`/events/${eventId}/edit`}>Редактировать</Link>
       </Button>
