@@ -132,7 +132,6 @@ export default function CreateEventPage() {
 
     if (Object.keys(issues).length) {
       setFieldErrors(issues);
-      setErrorMessage(Object.values(issues)[0] ?? null);
       return;
     }
 
@@ -484,9 +483,9 @@ export default function CreateEventPage() {
             return (
               <div
                 key={field.id}
-                className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-4 md:items-center"
+                className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-[1.5fr,1fr,0.7fr,auto] md:items-start"
               >
-                <div className="space-y-1 md:col-span-2">
+                <div className="space-y-1">
                   <Label>Метка</Label>
                   <Input
                     value={field.label}
