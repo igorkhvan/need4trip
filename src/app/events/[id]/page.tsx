@@ -151,50 +151,53 @@ export default async function EventDetails({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-base leading-relaxed text-foreground">{event.description}</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col text-sm">
-                <span className="text-muted-foreground">Максимум участников</span>
-                <span className="font-medium text-foreground">
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+              <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-muted-foreground">Максимум участников</p>
+                <p className="font-medium text-foreground">
                   {event.maxParticipants ?? "не ограничено"}
-                </span>
+                </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col text-sm">
-                <span className="text-muted-foreground">Локация</span>
-                <span className="font-medium text-foreground">{event.locationText}</span>
+            </li>
+            <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+              <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-muted-foreground">Локация</p>
+                <p className="font-medium text-foreground">{event.locationText}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col text-sm">
-                <span className="text-muted-foreground">Тип машины</span>
-                <span className="font-medium text-foreground">{vehicleTypeLabel}</span>
+            </li>
+            <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-muted-foreground">Тип машины</p>
+                <p className="font-medium text-foreground">{vehicleTypeLabel}</p>
               </div>
-            </div>
+            </li>
             {event.isPaid && (
-              <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-                <BadgeDollarSign className="h-4 w-4 text-muted-foreground" />
-                <div className="flex flex-col text-sm">
-                  <span className="text-muted-foreground">Участие</span>
-                  <span className="font-medium text-foreground">
+              <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+                <BadgeDollarSign className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Участие</p>
+                  <p className="font-medium text-foreground">
                     {event.price ? `${event.price} ${event.currency ?? ""}` : "Платное"}
-                  </span>
+                  </p>
                 </div>
-              </div>
+              </li>
             )}
-          </div>
-          {event.allowedBrands.length > 0 && (
-            <div className="rounded-lg border bg-background px-3 py-2 text-sm">
-              <span className="font-medium text-foreground">Рекомендуемые марки:</span>{" "}
-              <span className="text-foreground">
-                {event.allowedBrands.map((b) => b.name).join(", ")}
-              </span>
-            </div>
-          )}
+            {event.allowedBrands.length > 0 && (
+              <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+                <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Рекомендуемые марки</p>
+                  <p className="font-medium text-foreground">
+                    {event.allowedBrands.map((b) => b.name).join(", ")}
+                  </p>
+                </div>
+              </li>
+            )}
+          </ul>
         </CardContent>
       </Card>
 
