@@ -32,6 +32,7 @@ import {
   VehicleTypeRequirement,
   Visibility,
 } from "@/lib/types/event";
+import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 
 const CATEGORY_OPTIONS: { value: EventCategory; label: string }[] = [
   { value: "weekend_trip", label: "Выезд на выходные" },
@@ -113,7 +114,7 @@ export function EditEventForm({
   const [allowedBrandIds, setAllowedBrandIds] = useState<string[]>(
     (event.allowedBrands ?? []).map((b) => b.id)
   );
-  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
   const [rules, setRules] = useState<string>(event.rules ?? "");
   const [isClubEvent, setIsClubEvent] = useState<boolean>(event.isClubEvent ?? false);
   const [isPaid, setIsPaid] = useState<boolean>(event.isPaid ?? false);
@@ -144,18 +145,21 @@ export function EditEventForm({
       try {
         const res = await fetch("/api/car-brands");
         if (!res.ok) return;
-        const data = (await res.json()) as { brands?: CarBrand[] };
-        setBrands(data.brands ?? []);
+        const data = (await res.json()) as {
+          brands?: { id: string; name: string; slug?: string | null }[];
+        };
+        setBrands(
+          (data.brands ?? []).map((brand) => ({
+            id: brand.id,
+            name: brand.name,
+          }))
+        );
       } catch (err) {
         console.error("Failed to load car brands", err);
       }
     };
     loadBrands();
   }, []);
-
-  const toggleBrand = (id: string) => {
-    setAllowedBrandIds((prev) => (prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -444,29 +448,14 @@ export function EditEventForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Допустимые марки авто (опционально)</Label>
-              <div className="flex flex-wrap gap-2 text-sm">
-                {brands.length === 0 ? (
-                  <span className="text-muted-foreground">Нет справочника марок или загрузка...</span>
-                ) : (
-                  brands.map((brand) => (
-                    <label
-                      key={brand.id}
-                      className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={allowedBrandIds.includes(brand.id)}
-                        onChange={() => toggleBrand(brand.id)}
-                        disabled={authMissing || !isOwner}
-                      />
-                      {brand.name}
-                    </label>
-                  ))
-                )}
-              </div>
-            </div>
+            <MultiBrandSelect
+              label="Допустимые марки авто (опционально)"
+              placeholder="Выберите марку..."
+              options={brands}
+              value={allowedBrandIds}
+              onChange={setAllowedBrandIds}
+              disabled={authMissing || !isOwner}
+            />
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
             {errorMessage && <div className="mr-auto text-sm text-red-600">{errorMessage}</div>}

@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 import {
-  CarBrand,
   EventCategory,
   EventCustomFieldSchema,
   EventCustomFieldType,
@@ -58,7 +58,7 @@ export default function CreateEventPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<EventCustomFieldSchema[]>([]);
-  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
   const [allowedBrandIds, setAllowedBrandIds] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [vehicleType, setVehicleType] = useState<VehicleTypeRequirement>("any");
@@ -78,8 +78,15 @@ export default function CreateEventPage() {
       try {
         const res = await fetch("/api/car-brands");
         if (!res.ok) return;
-        const data = (await res.json()) as { brands?: CarBrand[] };
-        setBrands(data.brands ?? []);
+        const data = (await res.json()) as {
+          brands?: { id: string; name: string; slug?: string | null }[];
+        };
+        setBrands(
+          (data.brands ?? []).map((brand) => ({
+            id: brand.id,
+            name: brand.name,
+          }))
+        );
       } catch (err) {
         console.error("Failed to load car brands", err);
       }
@@ -224,12 +231,6 @@ export default function CreateEventPage() {
   };
 
   const fieldError = (path: string) => fieldErrors[path];
-
-  const toggleBrand = (id: string) => {
-    setAllowedBrandIds((prev) =>
-      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
-    );
-  };
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
@@ -429,26 +430,14 @@ export default function CreateEventPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Допустимые марки авто (опционально)</Label>
-              <div className="flex flex-wrap gap-2 text-sm">
-                {brands.length === 0 ? (
-                  <span className="text-muted-foreground">Нет справочника марок или загрузка...</span>
-                ) : (
-                  brands.map((brand) => (
-                    <label
-                      key={brand.id}
-                      className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={allowedBrandIds.includes(brand.id)}
-                        onChange={() => toggleBrand(brand.id)}
-                      />
-                      {brand.name}
-                    </label>
-                  ))
-                )}
-              </div>
+              <MultiBrandSelect
+                label="Допустимые марки авто (опционально)"
+                placeholder="Выберите марку..."
+                options={brands}
+                value={allowedBrandIds}
+                onChange={setAllowedBrandIds}
+                error={fieldError("allowedBrandIds")}
+              />
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
