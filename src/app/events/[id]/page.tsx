@@ -150,36 +150,49 @@ export default async function EventDetails({
           <CardTitle className="text-xl font-semibold text-foreground">Описание</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="prose prose-sm text-muted-foreground leading-relaxed">
-            {event.description}
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
-              <Users className="h-4 w-4" />
-              <span>Максимум участников: {event.maxParticipants ?? "не ограничено"}</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
-              <MapPin className="h-4 w-4" />
-              <span>{event.locationText}</span>
-            </div>
-            {event.vehicleTypeRequirement !== "any" && (
-              <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
-                <ShieldCheck className="h-4 w-4" />
-                <span>Тип машины: {vehicleTypeLabel}</span>
-              </div>
-            )}
-            {event.isPaid && (
-              <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
-                <BadgeDollarSign className="h-4 w-4" />
-                <span>
-                  {event.price ? `Стоимость: ${event.price} ${event.currency ?? ""}` : "Платное"}
+          <p className="text-base leading-relaxed text-foreground">{event.description}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col text-sm">
+                <span className="text-muted-foreground">Максимум участников</span>
+                <span className="font-medium text-foreground">
+                  {event.maxParticipants ?? "не ограничено"}
                 </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col text-sm">
+                <span className="text-muted-foreground">Локация</span>
+                <span className="font-medium text-foreground">{event.locationText}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col text-sm">
+                <span className="text-muted-foreground">Тип машины</span>
+                <span className="font-medium text-foreground">{vehicleTypeLabel}</span>
+              </div>
+            </div>
+            {event.isPaid && (
+              <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+                <BadgeDollarSign className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col text-sm">
+                  <span className="text-muted-foreground">Участие</span>
+                  <span className="font-medium text-foreground">
+                    {event.price ? `${event.price} ${event.currency ?? ""}` : "Платное"}
+                  </span>
+                </div>
               </div>
             )}
           </div>
           {event.allowedBrands.length > 0 && (
-            <div className="text-sm text-muted-foreground">
-              Рекомендуемые марки: {event.allowedBrands.map((b) => b.name).join(", ")}
+            <div className="rounded-lg border bg-background px-3 py-2 text-sm">
+              <span className="font-medium text-foreground">Рекомендуемые марки:</span>{" "}
+              <span className="text-foreground">
+                {event.allowedBrands.map((b) => b.name).join(", ")}
+              </span>
             </div>
           )}
         </CardContent>
