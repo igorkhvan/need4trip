@@ -17,7 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EventCategory, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
+import {
+  CarBrand,
+  EventCategory,
+  EventCustomFieldSchema,
+  EventCustomFieldType,
+  VehicleTypeRequirement,
+  Visibility,
+} from "@/lib/types/event";
 
 const CATEGORY_OPTIONS: { value: EventCategory; label: string }[] = [
   { value: "weekend_trip", label: "Выезд на выходные" },
@@ -51,11 +58,34 @@ export default function CreateEventPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<EventCustomFieldSchema[]>([]);
+  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [allowedBrandIds, setAllowedBrandIds] = useState<string[]>([]);
+  const [visibility, setVisibility] = useState<Visibility>("public");
+  const [vehicleType, setVehicleType] = useState<VehicleTypeRequirement>("any");
+  const [rules, setRules] = useState<string>("");
+  const [isClubEvent, setIsClubEvent] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
+  const [price, setPrice] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("KZT");
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
     [customFields]
   );
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/car-brands");
+        if (!res.ok) return;
+        const data = (await res.json()) as { brands?: CarBrand[] };
+        setBrands(data.brands ?? []);
+      } catch (err) {
+        console.error("Failed to load car brands", err);
+      }
+    };
+    load();
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -100,6 +130,14 @@ export default function CreateEventPage() {
       locationLng: null,
       maxParticipants: maxParticipants ? Number(maxParticipants) : null,
       customFieldsSchema: sortedFields,
+      allowedBrandIds,
+      visibility,
+      vehicleTypeRequirement: vehicleType,
+      rules: rules.trim() || null,
+      isClubEvent,
+      isPaid,
+      price: isPaid ? (price ? Number(price) : null) : null,
+      currency: isPaid ? currency || null : null,
     };
 
     try {
@@ -187,6 +225,12 @@ export default function CreateEventPage() {
 
   const fieldError = (path: string) => fieldErrors[path];
 
+  const toggleBrand = (id: string) => {
+    setAllowedBrandIds((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
       <div className="space-y-2">
@@ -251,6 +295,35 @@ export default function CreateEventPage() {
                   placeholder="Необязательное поле"
                 />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="visibility">Видимость</Label>
+                <Select value={visibility} onValueChange={(val) => setVisibility(val as Visibility)}>
+                  <SelectTrigger id="visibility">
+                    <SelectValue placeholder="Выберите видимость" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Публичный</SelectItem>
+                    <SelectItem value="link_registered">По ссылке для авторизованных</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="vehicleTypeRequirement">Требования к машине</Label>
+                <Select
+                  value={vehicleType}
+                  onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
+                >
+                  <SelectTrigger id="vehicleTypeRequirement">
+                    <SelectValue placeholder="Требования" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Не важно</SelectItem>
+                    <SelectItem value="sedan">Легковой</SelectItem>
+                    <SelectItem value="crossover">Кроссовер</SelectItem>
+                    <SelectItem value="suv">Внедорожник</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -281,6 +354,101 @@ export default function CreateEventPage() {
               {fieldError("description") && (
                 <p className="text-xs text-red-600">{fieldError("description")}</p>
               )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Тип участия</Label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="radio"
+                      name="paid"
+                      checked={!isPaid}
+                      onChange={() => setIsPaid(false)}
+                    />
+                    Бесплатное
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="radio"
+                      name="paid"
+                      checked={isPaid}
+                      onChange={() => setIsPaid(true)}
+                    />
+                    Платное
+                  </label>
+                </div>
+                {isPaid && (
+                  <div className="mt-2 grid grid-cols-[1fr,120px] gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="price">Цена</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="currency">Валюта</Label>
+                      <Input
+                        id="currency"
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        placeholder="KZT"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={isClubEvent}
+                    onChange={(e) => setIsClubEvent(e.target.checked)}
+                  />
+                  Клубное событие
+                </Label>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="rules">Правила поведения в колонне и на маршруте (опционально)</Label>
+              <Textarea
+                id="rules"
+                rows={4}
+                value={rules}
+                onChange={(e) => setRules(e.target.value)}
+                placeholder="Порядок движения, частота рации, скорость, дистанция, запреты..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Допустимые марки авто (опционально)</Label>
+              <div className="flex flex-wrap gap-2 text-sm">
+                {brands.length === 0 ? (
+                  <span className="text-muted-foreground">Нет справочника марок или загрузка...</span>
+                ) : (
+                  brands.map((brand) => (
+                    <label
+                      key={brand.id}
+                      className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={allowedBrandIds.includes(brand.id)}
+                        onChange={() => toggleBrand(brand.id)}
+                      />
+                      {brand.name}
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">

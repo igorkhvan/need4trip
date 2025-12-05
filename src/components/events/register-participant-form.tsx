@@ -13,12 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
+import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 
 interface RegisterParticipantFormProps {
   eventId: string;
   customFieldsSchema: EventCustomFieldSchema[];
+  event?: Event;
 }
 
 type CustomValues = Record<string, string | number | boolean>;
@@ -39,6 +40,7 @@ function getDefaultValue(type: EventCustomFieldType) {
 export function RegisterParticipantForm({
   eventId,
   customFieldsSchema,
+  event,
 }: RegisterParticipantFormProps) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
@@ -195,6 +197,17 @@ export function RegisterParticipantForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-muted/10 p-4">
+      {event?.isPaid && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
+          {event.price ? ` Стоимость: ${event.price} ${event.currency ?? ""}.` : ""}
+        </div>
+      )}
+      {event?.rules && event.rules.trim().length > 0 && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          Ознакомьтесь с правилами в карточке события. Отправляя форму, вы подтверждаете согласие.
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-[2fr,1fr] md:items-end">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">

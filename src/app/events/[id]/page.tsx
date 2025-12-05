@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, ShieldCheck, BadgeDollarSign } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { OwnerActions } from "@/components/events/owner-actions";
 import { getEventWithParticipants } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
+import { grantEventAccessByLink } from "@/lib/services/events";
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
   weekend_trip: "Выезд на выходные",
@@ -40,6 +41,10 @@ export default async function EventDetails({
   const { event, participants } = await getEventWithParticipants(id);
   if (!event) return notFound();
   const currentUser = await getCurrentUserSafe();
+  const isLinkProtected = event.visibility === "link_registered";
+  if (currentUser && isLinkProtected) {
+    await grantEventAccessByLink(event.id, currentUser.id);
+  }
   const isOwner = currentUser?.id === event.createdByUserId;
   const isFull =
     event.maxParticipants !== null &&
@@ -54,9 +59,14 @@ export default async function EventDetails({
 
   const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : null;
   const formattedDateTime = new Date(event.dateTime).toLocaleString("ru-RU");
-  const participantsCountLabel = `${participants.length} / ${
-    event.maxParticipants ?? "∞"
-  } участников`;
+  const participantsCountLabel = `${participants.length} / ${event.maxParticipants ?? "∞"} участников`;
+  const vehicleTypeLabelMap: Record<string, string> = {
+    any: "Не важно",
+    sedan: "Легковой",
+    crossover: "Кроссовер",
+    suv: "Внедорожник",
+  };
+  const vehicleTypeLabel = vehicleTypeLabelMap[event.vehicleTypeRequirement] ?? "Не важно";
 
   const formatCustomValue = (
     value: unknown,
@@ -77,6 +87,10 @@ export default async function EventDetails({
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {isOwner && <Badge variant="outline">Владелец</Badge>}
+          {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
+          <Badge variant={event.isPaid ? "default" : "outline"}>
+            {event.isPaid ? "Платное" : "Бесплатное"}
+          </Badge>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
@@ -88,12 +102,23 @@ export default async function EventDetails({
         </div>
       </div>
 
-      {!currentUser && (
+      {(!currentUser || isLinkProtected) && (
         <Alert>
-          <AlertTitle>Вы не авторизованы</AlertTitle>
-          <AlertDescription>
-            Войдите через Telegram, чтобы управлять событием и регистрациями.
-          </AlertDescription>
+          {!currentUser ? (
+            <>
+              <AlertTitle>Вы не авторизованы</AlertTitle>
+              <AlertDescription>
+                Войдите через Telegram, чтобы управлять событием и регистрациями.
+              </AlertDescription>
+            </>
+          ) : isLinkProtected ? (
+            <>
+              <AlertTitle>Приватный ивент</AlertTitle>
+              <AlertDescription>
+                Это приватный ивент по ссылке. Вы авторизованы и получили доступ.
+              </AlertDescription>
+            </>
+          ) : null}
         </Alert>
       )}
 
@@ -114,9 +139,41 @@ export default async function EventDetails({
               <MapPin className="h-4 w-4" />
               <span>{event.locationText}</span>
             </div>
+            {event.vehicleTypeRequirement !== "any" && (
+              <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                <ShieldCheck className="h-4 w-4" />
+                <span>Тип машины: {vehicleTypeLabel}</span>
+              </div>
+            )}
+            {event.isPaid && (
+              <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                <BadgeDollarSign className="h-4 w-4" />
+                <span>
+                  {event.price ? `Стоимость: ${event.price} ${event.currency ?? ""}` : "Платное"}
+                </span>
+              </div>
+            )}
           </div>
+          {event.allowedBrands.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              Рекомендуемые марки: {event.allowedBrands.map((b) => b.name).join(", ")}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {event.rules && event.rules.trim().length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-foreground">Правила и регламент</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+              {event.rules}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card id="register">
         <CardHeader>
@@ -139,10 +196,18 @@ export default async function EventDetails({
                 если нужно обновить данные.
               </AlertDescription>
             </Alert>
+          ) : isLinkProtected && !currentUser ? (
+            <Alert>
+              <AlertTitle>Приватный ивент</AlertTitle>
+              <AlertDescription>
+                Регистрация доступна только авторизованным пользователям. Войдите через Telegram.
+              </AlertDescription>
+            </Alert>
           ) : (
             <RegisterParticipantForm
               eventId={event.id}
               customFieldsSchema={event.customFieldsSchema}
+              event={event}
             />
           )}
         </CardContent>

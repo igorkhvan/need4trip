@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { EventsTable } from "@/components/events/events-table";
 import { Button } from "@/components/ui/button";
-import { listEventsSafe } from "@/lib/services/events";
+import { listVisibleEventsForUser } from "@/lib/services/events";
+import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 
 function PageHeader() {
   return (
@@ -19,7 +20,8 @@ function PageHeader() {
 }
 
 export default async function EventsPage() {
-  const events = await listEventsSafe();
+  const currentUser = await getCurrentUserSafe();
+  const events = await listVisibleEventsForUser(currentUser?.id ?? null);
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">

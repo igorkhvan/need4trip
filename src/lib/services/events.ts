@@ -4,8 +4,10 @@ import {
   getEventById,
   listEvents as listEventsFromRepo,
   updateEvent as updateEventRecord,
+  replaceAllowedBrands,
+  getAllowedBrands,
 } from "@/lib/db/eventRepo";
-import { countParticipants, listParticipants } from "@/lib/db/participantRepo";
+import { countParticipants, listParticipants, listEventIdsForUser } from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
 import {
@@ -17,6 +19,7 @@ import {
 import { DomainParticipant } from "@/lib/types/participant";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { CurrentUser } from "@/lib/auth/currentUser";
+import { upsertEventAccess, listAccessibleEventIds } from "@/lib/db/eventAccessRepo";
 
 export async function listEvents(): Promise<Event[]> {
   const events = await listEventsFromRepo();
@@ -33,12 +36,49 @@ export async function listEventsSafe(): Promise<Event[]> {
   }
 }
 
+export async function listVisibleEventsForUser(userId: string | null): Promise<Event[]> {
+  const events = await listEventsSafe();
+  if (!userId) {
+    return events.filter((e) => e.visibility === "public");
+  }
+  let participantEventIds: string[] = [];
+  let accessEventIds: string[] = [];
+  try {
+    participantEventIds = await listEventIdsForUser(userId);
+  } catch (err) {
+    console.error("[listVisibleEventsForUser] Failed to load participant events", err);
+  }
+  try {
+    accessEventIds = await listAccessibleEventIds(userId);
+  } catch (err) {
+    console.error("[listVisibleEventsForUser] Failed to load access events", err);
+  }
+  const allowedIds = new Set([...participantEventIds, ...accessEventIds]);
+  return events.filter(
+    (e) => e.visibility === "public" || e.createdByUserId === userId || allowedIds.has(e.id)
+  );
+}
+
+export async function grantEventAccessByLink(eventId: string, userId: string): Promise<void> {
+  try {
+    await upsertEventAccess(eventId, userId, "link");
+  } catch (err) {
+    console.error("[grantEventAccessByLink] Failed to upsert access", err);
+  }
+}
+
 export async function getEvent(id: string): Promise<Event> {
   const dbEvent = await getEventById(id);
   if (!dbEvent) {
     throw new NotFoundError("Event not found");
   }
-  return mapDbEventToDomain(dbEvent);
+  const event = mapDbEventToDomain(dbEvent);
+  try {
+    event.allowedBrands = await getAllowedBrands(id);
+  } catch (err) {
+    console.error("[getEvent] Failed to load allowed brands", err);
+  }
+  return event;
 }
 
 export async function getEventWithParticipants(
@@ -47,8 +87,14 @@ export async function getEventWithParticipants(
   const dbEvent = await getEventById(id);
   if (!dbEvent) return { event: null, participants: [] };
   const participants = await listParticipants(dbEvent.id);
+  const event = mapDbEventToDomain(dbEvent);
+  try {
+    event.allowedBrands = await getAllowedBrands(id);
+  } catch (err) {
+    console.error("[getEventWithParticipants] Failed to load allowed brands", err);
+  }
   return {
-    event: mapDbEventToDomain(dbEvent),
+    event,
     participants: participants.map(mapDbParticipantToDomain),
   };
 }
@@ -63,7 +109,17 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     ...parsed,
     createdByUserId: currentUser.id,
   });
-  return mapDbEventToDomain(db);
+  if (parsed.allowedBrandIds?.length) {
+    await replaceAllowedBrands(db.id, parsed.allowedBrandIds);
+  }
+  await upsertEventAccess(db.id, currentUser.id, "owner");
+  const event = mapDbEventToDomain(db);
+  try {
+    event.allowedBrands = await getAllowedBrands(db.id);
+  } catch (err) {
+    console.error("[createEvent] Failed to load allowed brands", err);
+  }
+  return event;
 }
 
 function areCustomFieldsEqual(
@@ -129,7 +185,16 @@ export async function updateEvent(
   if (!updated) {
     throw new NotFoundError("Event not found");
   }
-  return mapDbEventToDomain(updated);
+  if (parsed.allowedBrandIds) {
+    await replaceAllowedBrands(id, parsed.allowedBrandIds);
+  }
+  const event = mapDbEventToDomain(updated);
+  try {
+    event.allowedBrands = await getAllowedBrands(id);
+  } catch (err) {
+    console.error("[updateEvent] Failed to load allowed brands", err);
+  }
+  return event;
 }
 
 export async function deleteEvent(id: string, currentUser: CurrentUser | null): Promise<boolean> {

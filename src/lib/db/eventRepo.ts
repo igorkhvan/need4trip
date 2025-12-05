@@ -74,6 +74,13 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     created_by_user_id: payload.createdByUserId ?? null,
     created_at: now,
     updated_at: now,
+    visibility: payload.visibility ?? "public",
+    vehicle_type_requirement: payload.vehicleTypeRequirement ?? "any",
+    rules: payload.rules ?? null,
+    is_club_event: payload.isClubEvent ?? false,
+    is_paid: payload.isPaid ?? false,
+    price: payload.price ?? null,
+    currency: payload.currency ?? null,
   };
 
   const { data, error } = await client
@@ -122,6 +129,15 @@ export async function updateEvent(
     ...(payload.createdByUserId !== undefined
       ? { created_by_user_id: payload.createdByUserId }
       : {}),
+    ...(payload.visibility !== undefined ? { visibility: payload.visibility } : {}),
+    ...(payload.vehicleTypeRequirement !== undefined
+      ? { vehicle_type_requirement: payload.vehicleTypeRequirement }
+      : {}),
+    ...(payload.rules !== undefined ? { rules: payload.rules } : {}),
+    ...(payload.isClubEvent !== undefined ? { is_club_event: payload.isClubEvent } : {}),
+    ...(payload.isPaid !== undefined ? { is_paid: payload.isPaid } : {}),
+    ...(payload.price !== undefined ? { price: payload.price } : {}),
+    ...(payload.currency !== undefined ? { currency: payload.currency } : {}),
     updated_at: new Date().toISOString(),
   };
 
@@ -138,6 +154,50 @@ export async function updateEvent(
   }
 
   return data ? (data as DbEvent) : null;
+}
+
+export async function replaceAllowedBrands(eventId: string, brandIds: string[]): Promise<void> {
+  const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
+  // delete existing
+  const { error: delError } = await client.from("event_allowed_brands").delete().eq("event_id", eventId);
+  if (delError) {
+    console.error("Failed to clear allowed brands", delError);
+    throw new InternalError("Failed to clear allowed brands", delError);
+  }
+  if (!brandIds.length) return;
+  const rows = brandIds.map((brandId) => ({ event_id: eventId, brand_id: brandId }));
+  const { error: insError } = await client.from("event_allowed_brands").insert(rows);
+  if (insError) {
+    console.error("Failed to insert allowed brands", insError);
+    throw new InternalError("Failed to insert allowed brands", insError);
+  }
+}
+
+export async function getAllowedBrands(eventId: string) {
+  const client = ensureClient();
+  if (!client) return [];
+  const { data: links, error: linkError } = await client
+    .from("event_allowed_brands")
+    .select("brand_id")
+    .eq("event_id", eventId);
+  if (linkError) {
+    console.error("Failed to load allowed brand ids", linkError);
+    throw new InternalError("Failed to load allowed brands", linkError);
+  }
+  const ids = (links ?? []).map((row) => row.brand_id);
+  if (!ids.length) return [];
+  const { data: brands, error: brandError } = await client
+    .from("car_brands")
+    .select("id, name, slug")
+    .in("id", ids);
+  if (brandError) {
+    console.error("Failed to load allowed brands", brandError);
+    throw new InternalError("Failed to load allowed brands", brandError);
+  }
+  return brands ?? [];
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {

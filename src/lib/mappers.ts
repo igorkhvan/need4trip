@@ -19,6 +19,13 @@ export interface DbEvent {
   created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
+  visibility: DomainEvent["visibility"];
+  vehicle_type_requirement: DomainEvent["vehicleTypeRequirement"];
+  rules: string | null;
+  is_club_event: boolean;
+  is_paid: boolean;
+  price: number | null;
+  currency: string | null;
 }
 
 export interface DbParticipant {
@@ -46,6 +53,14 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     createdByUserId: db.created_by_user_id ?? "",
     createdAt: db.created_at,
     updatedAt: db.updated_at,
+    visibility: db.visibility ?? "public",
+    vehicleTypeRequirement: db.vehicle_type_requirement ?? "any",
+    allowedBrands: [],
+    rules: db.rules ?? null,
+    isClubEvent: db.is_club_event ?? false,
+    isPaid: db.is_paid ?? false,
+    price: db.price ?? null,
+    currency: db.currency ?? null,
   };
 }
 

@@ -10,6 +10,18 @@ export const eventCategorySchema = z.enum([
 ]);
 export type EventCategory = z.infer<typeof eventCategorySchema>;
 
+export const visibilitySchema = z.enum(["public", "link_registered"]);
+export type Visibility = z.infer<typeof visibilitySchema>;
+
+export const vehicleTypeRequirementSchema = z.enum(["any", "sedan", "crossover", "suv"]);
+export type VehicleTypeRequirement = z.infer<typeof vehicleTypeRequirementSchema>;
+
+export interface CarBrand {
+  id: string;
+  name: string;
+  slug?: string | null;
+}
+
 export const eventCustomFieldTypeSchema = z.enum([
   "boolean",
   "text",
@@ -82,6 +94,14 @@ export interface Event {
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
+  visibility: Visibility;
+  vehicleTypeRequirement: VehicleTypeRequirement;
+  allowedBrands: CarBrand[];
+  rules?: string | null;
+  isClubEvent: boolean;
+  isPaid: boolean;
+  price?: number | null;
+  currency?: string | null;
 }
 
 export type DomainEvent = Event;
@@ -109,6 +129,14 @@ export const eventCreateSchema = z
     maxParticipants: z.number().int().min(1).max(500).nullable().optional(),
     customFieldsSchema: eventCustomFieldsSchema.default([]),
     createdByUserId: z.string().uuid().optional().nullable(),
+    visibility: visibilitySchema.default("public"),
+    vehicleTypeRequirement: vehicleTypeRequirementSchema.default("any"),
+    allowedBrandIds: z.array(z.string().uuid()).default([]),
+    rules: z.string().trim().max(10000).optional().nullable(),
+    isClubEvent: z.boolean().default(false),
+    isPaid: z.boolean().default(false),
+    price: z.number().finite().nonnegative().nullable().optional(),
+    currency: z.string().trim().max(10).optional().nullable(),
   })
   .superRefine((val, ctx) => {
     if (val.dateTime <= date5MinutesAgo()) {
@@ -131,6 +159,14 @@ const eventUpdateBaseSchema = z.object({
   maxParticipants: z.number().int().min(1).max(500).nullable().optional(),
   customFieldsSchema: eventCustomFieldsSchema.optional(),
   createdByUserId: z.string().uuid().optional().nullable(),
+  visibility: visibilitySchema.optional(),
+  vehicleTypeRequirement: vehicleTypeRequirementSchema.optional(),
+  allowedBrandIds: z.array(z.string().uuid()).optional(),
+  rules: z.string().trim().max(10000).optional().nullable(),
+  isClubEvent: z.boolean().optional(),
+  isPaid: z.boolean().optional(),
+  price: z.number().finite().nonnegative().nullable().optional(),
+  currency: z.string().trim().max(10).optional().nullable(),
 });
 
 export const eventUpdateSchema = eventUpdateBaseSchema.superRefine((val, ctx) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,7 +24,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EventCategory, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
+import {
+  CarBrand,
+  EventCategory,
+  EventCustomFieldSchema,
+  EventCustomFieldType,
+  VehicleTypeRequirement,
+  Visibility,
+} from "@/lib/types/event";
 
 const CATEGORY_OPTIONS: { value: EventCategory; label: string }[] = [
   { value: "weekend_trip", label: "Выезд на выходные" },
@@ -62,6 +69,14 @@ interface EditEventFormProps {
     locationText: string;
     maxParticipants: number | null;
     customFieldsSchema: EventCustomFieldSchema[];
+    visibility: Visibility;
+    vehicleTypeRequirement: VehicleTypeRequirement;
+    allowedBrands: CarBrand[];
+    rules?: string | null;
+    isClubEvent: boolean;
+    isPaid: boolean;
+    price?: number | null;
+    currency?: string | null;
   };
   hasParticipants: boolean;
   isOwner: boolean;
@@ -91,6 +106,19 @@ export function EditEventForm({
   const [customFields, setCustomFields] = useState<EventCustomFieldSchema[]>(
     event.customFieldsSchema ?? []
   );
+  const [visibility, setVisibility] = useState<Visibility>(event.visibility ?? "public");
+  const [vehicleType, setVehicleType] = useState<VehicleTypeRequirement>(
+    event.vehicleTypeRequirement ?? "any"
+  );
+  const [allowedBrandIds, setAllowedBrandIds] = useState<string[]>(
+    (event.allowedBrands ?? []).map((b) => b.id)
+  );
+  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [rules, setRules] = useState<string>(event.rules ?? "");
+  const [isClubEvent, setIsClubEvent] = useState<boolean>(event.isClubEvent ?? false);
+  const [isPaid, setIsPaid] = useState<boolean>(event.isPaid ?? false);
+  const [price, setPrice] = useState<string>(event.price ? String(event.price) : "");
+  const [currency, setCurrency] = useState<string>(event.currency ?? "KZT");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -111,6 +139,24 @@ export function EditEventForm({
     setCustomFields((prev) => prev.filter((field) => field.id !== id));
   };
 
+  useEffect(() => {
+    const loadBrands = async () => {
+      try {
+        const res = await fetch("/api/car-brands");
+        if (!res.ok) return;
+        const data = (await res.json()) as { brands?: CarBrand[] };
+        setBrands(data.brands ?? []);
+      } catch (err) {
+        console.error("Failed to load car brands", err);
+      }
+    };
+    loadBrands();
+  }, []);
+
+  const toggleBrand = (id: string) => {
+    setAllowedBrandIds((prev) => (prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -128,6 +174,14 @@ export function EditEventForm({
         locationText,
         maxParticipants,
         ...(hasParticipants ? {} : { customFieldsSchema: sortedFields }),
+        visibility,
+        vehicleTypeRequirement: vehicleType,
+        allowedBrandIds,
+        rules: rules.trim() || null,
+        isClubEvent,
+        isPaid,
+        price: isPaid ? (price ? Number(price) : null) : null,
+        currency: isPaid ? currency || null : null,
       };
       const res = await fetch(`/api/events/${event.id}`, {
         method: "PUT",
@@ -254,6 +308,40 @@ export function EditEventForm({
                   disabled={authMissing || !isOwner}
                 />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="visibility">Видимость</Label>
+                <Select
+                  value={visibility}
+                  disabled={authMissing || !isOwner}
+                  onValueChange={(val) => setVisibility(val as Visibility)}
+                >
+                  <SelectTrigger id="visibility">
+                    <SelectValue placeholder="Выберите видимость" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Публичный</SelectItem>
+                    <SelectItem value="link_registered">По ссылке для авторизованных</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="vehicleTypeRequirement">Требования к машине</Label>
+                <Select
+                  value={vehicleType}
+                  disabled={authMissing || !isOwner}
+                  onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
+                >
+                  <SelectTrigger id="vehicleTypeRequirement">
+                    <SelectValue placeholder="Требования" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Не важно</SelectItem>
+                    <SelectItem value="sedan">Легковой</SelectItem>
+                    <SelectItem value="crossover">Кроссовер</SelectItem>
+                    <SelectItem value="suv">Внедорожник</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -276,6 +364,108 @@ export function EditEventForm({
                 rows={4}
                 disabled={authMissing || !isOwner}
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Тип участия</Label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="radio"
+                      name="paid"
+                      checked={!isPaid}
+                      onChange={() => setIsPaid(false)}
+                      disabled={authMissing || !isOwner}
+                    />
+                    Бесплатное
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="radio"
+                      name="paid"
+                      checked={isPaid}
+                      onChange={() => setIsPaid(true)}
+                      disabled={authMissing || !isOwner}
+                    />
+                    Платное
+                  </label>
+                </div>
+                {isPaid && (
+                  <div className="mt-2 grid grid-cols-[1fr,120px] gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="price">Цена</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        disabled={authMissing || !isOwner}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="currency">Валюта</Label>
+                      <Input
+                        id="currency"
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        placeholder="KZT"
+                        disabled={authMissing || !isOwner}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={isClubEvent}
+                    onChange={(e) => setIsClubEvent(e.target.checked)}
+                    disabled={authMissing || !isOwner}
+                  />
+                  Клубное событие
+                </Label>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="rules">Правила поведения в колонне и на маршруте (опционально)</Label>
+              <Textarea
+                id="rules"
+                rows={4}
+                value={rules}
+                onChange={(e) => setRules(e.target.value)}
+                placeholder="Порядок движения, частота рации, скорость, дистанция, запреты..."
+                disabled={authMissing || !isOwner}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Допустимые марки авто (опционально)</Label>
+              <div className="flex flex-wrap gap-2 text-sm">
+                {brands.length === 0 ? (
+                  <span className="text-muted-foreground">Нет справочника марок или загрузка...</span>
+                ) : (
+                  brands.map((brand) => (
+                    <label
+                      key={brand.id}
+                      className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={allowedBrandIds.includes(brand.id)}
+                        onChange={() => toggleBrand(brand.id)}
+                        disabled={authMissing || !isOwner}
+                      />
+                      {brand.name}
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">

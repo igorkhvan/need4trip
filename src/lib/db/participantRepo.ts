@@ -187,6 +187,20 @@ export async function findParticipantById(id: string): Promise<DbParticipant | n
   return data ? (data as DbParticipant) : null;
 }
 
+export async function listEventIdsForUser(userId: string): Promise<string[]> {
+  const client = ensureClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from(table)
+    .select("event_id")
+    .eq("user_id", userId);
+  if (error) {
+    console.error("Failed to list participant events for user", error);
+    throw new InternalError("Failed to list participant events for user", error);
+  }
+  return (data ?? []).map((row) => row.event_id as string);
+}
+
 export async function updateParticipant(
   id: string,
   patch: Partial<Pick<RegisterParticipantPayload, "displayName" | "customFieldValues">>
