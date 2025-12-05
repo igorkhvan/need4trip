@@ -151,8 +151,8 @@ export default async function EventDetails({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-base leading-relaxed text-foreground">{event.description}</p>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
               <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-muted-foreground">Максимум участников</p>
@@ -161,14 +161,14 @@ export default async function EventDetails({
                 </p>
               </div>
             </li>
-            <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+            <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
               <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-muted-foreground">Локация</p>
                 <p className="font-medium text-foreground">{event.locationText}</p>
               </div>
             </li>
-            <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+            <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-muted-foreground">Тип машины</p>
@@ -176,7 +176,7 @@ export default async function EventDetails({
               </div>
             </li>
             {event.isPaid && (
-              <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+              <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
                 <BadgeDollarSign className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground">Участие</p>
@@ -187,7 +187,7 @@ export default async function EventDetails({
               </li>
             )}
             {event.allowedBrands.length > 0 && (
-              <li className="flex items-start gap-2 rounded-lg border bg-background px-3 py-2">
+              <li className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground">Рекомендуемые марки</p>
