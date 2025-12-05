@@ -110,12 +110,10 @@ export default function CreateEventPage() {
     const issues: Record<string, string> = {};
 
     if (title.length < 3) {
-      setErrorMessage("Название должно быть от 3 символов.");
-      return;
+      issues.title = "Название должно быть от 3 символов.";
     }
     if (description.length < 1) {
-      setErrorMessage("Описание не может быть пустым.");
-      return;
+      issues.description = "Описание не может быть пустым.";
     }
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       issues.dateTime = "Укажите корректную дату и время";
@@ -134,6 +132,7 @@ export default function CreateEventPage() {
 
     if (Object.keys(issues).length) {
       setFieldErrors(issues);
+      setErrorMessage(Object.values(issues)[0] ?? null);
       return;
     }
 
