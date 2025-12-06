@@ -259,13 +259,20 @@ export function EventForm({
 
       <Card>
         <form onSubmit={handleSubmit}>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">
-              Основные данные
-            </CardTitle>
-            <CardDescription>
-              Обновите название, дату, лимиты и описание ивента.
-            </CardDescription>
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
+                1
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-foreground">
+                  Основные данные
+                </CardTitle>
+                <CardDescription>
+                  Обновите название, дату, лимиты и описание ивента.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -353,24 +360,6 @@ export function EventForm({
                   <SelectContent>
                     <SelectItem value="public">Публичный</SelectItem>
                     <SelectItem value="link_registered">По ссылке для авторизованных</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vehicleTypeRequirement">Требования к машине</Label>
-                <Select
-                  value={vehicleType}
-                  onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
-                  disabled={disabled}
-                >
-                  <SelectTrigger id="vehicleTypeRequirement">
-                    <SelectValue placeholder="Требования" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Не важно</SelectItem>
-                    <SelectItem value="sedan">Легковой</SelectItem>
-                    <SelectItem value="crossover">Кроссовер</SelectItem>
-                    <SelectItem value="suv">Внедорожник</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -493,8 +482,62 @@ export function EventForm({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="rules">Правила поведения в колонне и на маршруте (опционально)</Label>
+            <div className="space-y-2 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
+                  2
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-[#111827]">Требования к автомобилю</p>
+                  <p className="text-xs text-[#6B7280]">Тип авто и допустимые марки</p>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="vehicleTypeRequirement">Требования к машине</Label>
+                  <Select
+                    value={vehicleType}
+                    onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger id="vehicleTypeRequirement" className="h-11 rounded-xl border-2">
+                      <SelectValue placeholder="Требования" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Не важно</SelectItem>
+                      <SelectItem value="sedan">Легковой</SelectItem>
+                      <SelectItem value="crossover">Кроссовер</SelectItem>
+                      <SelectItem value="suv">Внедорожник</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <MultiBrandSelect
+                    label="Допустимые марки авто (опционально)"
+                    placeholder="Выберите марку..."
+                    options={brands}
+                    value={allowedBrandIds}
+                    onChange={setAllowedBrandIds}
+                    error={fieldError("allowedBrandIds")}
+                    disabled={disabled}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Если не выбрано ни одной марки, участвовать могут любые автомобили.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
+                  3
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-[#111827]">Правила участия</p>
+                  <p className="text-xs text-[#6B7280]">Отображаются в карточке события и форме</p>
+                </div>
+              </div>
               <Textarea
                 id="rules"
                 rows={4}
@@ -503,20 +546,6 @@ export function EventForm({
                 placeholder="Порядок движения, частота рации, скорость, дистанция, запреты..."
                 disabled={disabled}
               />
-            </div>
-
-            <div className="space-y-2">
-              <MultiBrandSelect
-                label="Допустимые марки авто (опционально)"
-                placeholder="Выберите марку..."
-                options={brands}
-                value={allowedBrandIds}
-                onChange={setAllowedBrandIds}
-                error={fieldError("allowedBrandIds")}
-              />
-              <p className="text-xs text-muted-foreground">
-                Если не выбрано ни одной марки, участвовать могут любые автомобили.
-              </p>
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
@@ -532,58 +561,28 @@ export function EventForm({
 
       {!disableCustomFields && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">
-              Кастомные поля регистрации
-            </CardTitle>
-            <CardDescription>Поля, которые участники заполняют при регистрации.</CardDescription>
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
+                4
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-foreground">
+                  Кастомные поля регистрации
+                </CardTitle>
+                <CardDescription>Поля, которые участники заполняют при регистрации.</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {sortedFields.map((field, index) => {
               const errorText = fieldError(`customFieldsSchema.${index}.label`);
-              const badgeNumber = index + 1;
               return (
                 <div
                   key={field.id}
                   className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm"
                 >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
-                        {badgeNumber}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[#111827]">Поле регистрации</p>
-                        <p className="text-xs text-[#6B7280]">
-                          Заполняется участником в форме
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#6B7280]">Обязательное</span>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
-                          checked={field.required}
-                          onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                          disabled={disabled}
-                        />
-                      </label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        onClick={() => removeField(field.id)}
-                        disabled={disabled}
-                        className="text-[#6B7280] hover:text-[#EF4444]"
-                      >
-                        Удалить
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-1 md:col-span-2">
                       <Label>Метка</Label>
                       <Input
@@ -630,6 +629,31 @@ export function EventForm({
                         <Input value={field.type} disabled />
                       )}
                     </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#6B7280]">Обязательное поле</span>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                          checked={field.required}
+                          onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                          disabled={disabled}
+                        />
+                      </label>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      onClick={() => removeField(field.id)}
+                      disabled={disabled}
+                      className="text-[#6B7280] hover:text-[#EF4444]"
+                    >
+                      Удалить поле
+                    </Button>
                   </div>
                 </div>
               );
