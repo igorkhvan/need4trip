@@ -239,7 +239,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
             Несколько ближайших поездок. Полный список — на отдельной странице.
           </p>
         </div>
-        <Button variant="ghost" size="sm" asChild className="text-[#6B7280] hover:bg-[#F7F7F8]">
+        <Button variant="ghost" size="sm" asChild>
           <Link href="/events">Все ивенты →</Link>
         </Button>
       </div>

@@ -114,7 +114,7 @@ export default async function EventDetails({
       <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" asChild className="px-0 text-sm text-[#6B7280] hover:bg-transparent hover:text-[#111827]">
+            <Button variant="ghost" size="sm" asChild className="px-0 text-sm">
               <Link href="/events">← Назад к списку</Link>
             </Button>
             {ownerUser && (

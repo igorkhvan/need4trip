@@ -277,7 +277,7 @@ export function EventForm({
     <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 pt-12 md:px-6">
       <div className="space-y-4">
         <Button variant="ghost" className="inline-flex" asChild>
-          <Link href={backHref} className="text-base font-medium text-[#111827]">
+          <Link href={backHref} className="text-base font-medium">
             ← Назад
           </Link>
         </Button>
@@ -801,23 +801,23 @@ export function EventForm({
               type="button"
               onClick={addField}
               disabled={disabled || customFieldsLocked}
-              className="h-11 rounded-xl px-4 text-[#0F172A]"
+              className="h-11 rounded-xl px-4"
             >
               Добавить поле
             </Button>
           </div>
         </Card>
 
-        <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
-          <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
-          <Button
-            variant="ghost"
-            type="button"
-            asChild
-            className="rounded-xl px-4 text-[#0F172A]"
-          >
-            <Link href={backHref}>Отмена</Link>
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
+            <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
+            <Button
+              variant="ghost"
+              type="button"
+              asChild
+              className="rounded-xl px-4"
+            >
+              <Link href={backHref}>Отмена</Link>
+            </Button>
           <Button type="submit" disabled={isSubmitting || disabled} className="rounded-xl px-5">
             {isSubmitting ? "Сохраняем..." : submitLabel}
           </Button>
