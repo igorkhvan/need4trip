@@ -491,7 +491,7 @@ export function EventForm({
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-[#374151]">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                    className="h-4 w-4 rounded border-2 border-[#E5E7EB] accent-[#E86223] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
                     disabled={disabled}
@@ -772,7 +772,7 @@ export function EventForm({
                           <label className="flex items-center gap-2 text-sm text-[#374151]">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                              className="h-4 w-4 rounded border-2 border-[#E5E7EB] accent-[#E86223] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
                               checked={field.required}
                               onChange={(e) => updateField(field.id, { required: e.target.checked })}
                               disabled={disabled || customFieldsLocked}
