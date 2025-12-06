@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
+import { Trash2 } from "lucide-react";
 import {
   EventCategory,
   EventCustomFieldSchema,
@@ -240,24 +241,30 @@ export function EventForm({
   const customFieldsLocked = Boolean(disableCustomFields);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-10 md:px-6">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#E86223]">Ивент</p>
-        <h1 className="text-3xl font-bold tracking-tight text-[#111827]">{headerTitle}</h1>
-        <p className="text-sm text-[#6B7280]">{headerDescription}</p>
-        <Button variant="ghost" size="sm" asChild className="text-[#6B7280] hover:text-[#111827]">
-          <Link href={backHref}>← Назад</Link>
-        </Button>
+    <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 pt-12 md:px-6">
+      <div className="space-y-4">
+        <Link
+          href={backHref}
+          className="inline-flex items-center text-base font-medium text-[#111827] underline-offset-4 hover:text-[#0F172A] hover:underline"
+        >
+          ← Назад
+        </Link>
+        <div className="space-y-3">
+          <h1 className="text-4xl font-black leading-tight text-[#0F172A] sm:text-5xl">
+            {headerTitle}
+          </h1>
+          <p className="text-lg text-[#6B7280]">{headerDescription}</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <Card className="p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
               1
             </div>
             <div>
-              <p className="text-base font-semibold text-[#111827]">Основные данные</p>
+              <p className="text-2xl font-semibold text-[#0F172A]">Основные данные</p>
               <p className="text-xs text-[#6B7280]">Название, описание, дата, место, видимость</p>
             </div>
           </div>
@@ -538,13 +545,13 @@ export function EventForm({
           </div>
         </Card>
 
-        <Card className="p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
               2
             </div>
             <div>
-              <p className="text-base font-semibold text-[#111827]">Требования к автомобилю</p>
+              <p className="text-2xl font-semibold text-[#0F172A]">Требования к автомобилю</p>
               <p className="text-xs text-[#6B7280]">Тип авто и допустимые марки</p>
             </div>
           </div>
@@ -587,13 +594,13 @@ export function EventForm({
           </div>
         </Card>
 
-        <Card className="p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
               3
             </div>
             <div>
-              <p className="text-base font-semibold text-[#111827]">Правила участия</p>
+              <p className="text-2xl font-semibold text-[#0F172A]">Правила участия</p>
               <p className="text-xs text-[#6B7280]">Показываются в карточке события</p>
             </div>
           </div>
@@ -608,14 +615,14 @@ export function EventForm({
           />
         </Card>
 
-        <Card className="p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
               4
             </div>
             <div className="flex flex-1 items-center gap-3">
               <div>
-                <p className="text-base font-semibold text-[#111827]">Кастомные поля регистрации</p>
+                <p className="text-2xl font-semibold text-[#0F172A]">Кастомные поля регистрации</p>
                 <p className="text-xs text-[#6B7280]">Поля, которые заполняют участники</p>
               </div>
               {customFieldsLocked && (
@@ -704,13 +711,13 @@ export function EventForm({
                       <div className="mt-3 flex justify-end">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           type="button"
                           onClick={() => removeField(field.id)}
                           disabled={disabled || customFieldsLocked}
-                          className="text-[#6B7280] hover:text-[#EF4444]"
+                          className="h-9 w-9 rounded-full text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
                         >
-                          Удалить
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -733,7 +740,7 @@ export function EventForm({
           </div>
         </Card>
 
-        <div className="flex items-center justify-end gap-2 border-t border-[#E5E7EB] bg-background px-2 pt-4">
+        <div className="flex items-center justify-end gap-2 bg-transparent px-2 pt-2">
           <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
           <Button type="submit" disabled={isSubmitting || disabled} className="rounded-xl px-5">
             {isSubmitting ? "Сохраняем..." : submitLabel}
