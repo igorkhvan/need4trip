@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
+import { useCurrentUser } from "@/components/auth/use-current-user";
 
 interface RegisterParticipantFormProps {
   eventId: string;
@@ -43,6 +44,7 @@ export function RegisterParticipantForm({
   event,
 }: RegisterParticipantFormProps) {
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<ParticipantRole>("participant");
   const [customValues, setCustomValues] = useState<CustomValues>(() =>
@@ -55,6 +57,17 @@ export function RegisterParticipantForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const sortedFields = [...(customFieldsSchema || [])].sort((a, b) => a.order - b.order);
+
+  useEffect(() => {
+    if (user && !displayName) {
+      const preferred =
+        user.telegramHandle?.trim() ||
+        user.name?.trim() ||
+        user.email?.split("@")?.[0] ||
+        user.id.slice(0, 8);
+      setDisplayName(preferred);
+    }
+  }, [user, displayName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,36 +247,64 @@ export function RegisterParticipantForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-muted/10 p-4">
-      <p className="text-sm text-muted-foreground">
-        Заполните данные экипажа. Это займёт 1–2 минуты.
-      </p>
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm"
+    >
+      <div className="space-y-1">
+        <h3 className="text-xl font-semibold">Регистрация</h3>
+        <p className="text-sm text-muted-foreground">
+          Заполните данные экипажа — это займёт 1–2 минуты. После отправки вы появитесь в списке участников.
+        </p>
+      </div>
+
       {event?.isPaid && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
           {event.price ? ` Стоимость: ${event.price} ${event.currency ?? ""}.` : ""}
         </div>
       )}
       {event?.rules && event.rules.trim().length > 0 && (
-        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           Ознакомьтесь с правилами в карточке события. Отправляя форму, вы подтверждаете согласие.
         </div>
       )}
+
       <div className="grid gap-4 md:grid-cols-[2fr,1fr] md:items-end">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
             Имя экипажа
           </Label>
-          <Input
-            id="displayName"
-            placeholder="Ник или имя"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className={fieldErrors.displayName ? "border-red-500 focus-visible:ring-red-500" : ""}
-          />
-          <div className="min-h-[16px] text-xs text-red-600">
-            {fieldErrors.displayName ?? ""}
-          </div>
+          {user ? (
+            <div className="rounded-lg border bg-muted/50 px-3 py-2 text-sm text-foreground">
+              <div className="font-medium">
+                {displayName || user.telegramHandle || user.name || "Ваш профиль"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Имя берём из вашего профиля, менять не нужно
+              </div>
+              <Input
+                type="hidden"
+                value={displayName}
+                readOnly
+                aria-hidden
+                tabIndex={-1}
+              />
+            </div>
+          ) : (
+            <>
+              <Input
+                id="displayName"
+                placeholder="Ник или имя"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className={fieldErrors.displayName ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
+              <div className="min-h-[16px] text-xs text-red-600">
+                {fieldErrors.displayName ?? ""}
+              </div>
+            </>
+          )}
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium">Роль</Label>
@@ -279,11 +320,13 @@ export function RegisterParticipantForm({
           </Select>
         </div>
       </div>
+
       {sortedFields.length > 0 && (
         <div className="space-y-4">
           {sortedFields.map((field) => renderField(field))}
         </div>
       )}
+
       <div className="min-h-[20px] text-sm text-red-600">{error ?? ""}</div>
       <p className="text-xs text-muted-foreground">
         После отправки вы появитесь в списке участников, а организатор получит ваши данные.
