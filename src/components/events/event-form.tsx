@@ -654,9 +654,9 @@ export function EventForm({
                   return (
                     <div key={field.id} className="rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
                       <div className="flex flex-col gap-4">
-                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-                          <Label className="text-sm font-medium text-[#111827] md:w-40">Название поля</Label>
-                          <div className="flex-1">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-[#111827]">Название поля</Label>
                             <Input
                               value={field.label}
                               placeholder="Например: Наличие рации"
@@ -679,11 +679,8 @@ export function EventForm({
                             />
                             <div className="min-h-[28px] text-xs text-red-600">{errorText ?? ""}</div>
                           </div>
-                        </div>
-
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-                          <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center md:gap-3">
-                            <Label className="text-sm font-medium text-[#111827] md:w-40">Тип</Label>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-[#111827]">Тип</Label>
                             <Select
                               value={
                                 FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? field.type : "text"
@@ -691,7 +688,7 @@ export function EventForm({
                               onValueChange={(value) => updateField(field.id, { type: value as EventCustomFieldType })}
                               disabled={disabled || customFieldsLocked}
                             >
-                              <SelectTrigger className="h-11 flex-1 rounded-xl border-2">
+                              <SelectTrigger className="h-11 rounded-xl border-2">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -703,29 +700,29 @@ export function EventForm({
                               </SelectContent>
                             </Select>
                           </div>
+                        </div>
 
-                          <div className="flex flex-1 items-center justify-between gap-3 md:justify-end">
-                            <label className="flex items-center gap-2 text-sm text-[#374151]">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
-                                checked={field.required}
-                                onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                                disabled={disabled || customFieldsLocked}
-                              />
-                              Обязательное
-                            </label>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              type="button"
-                              onClick={() => removeField(field.id)}
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <label className="flex items-center gap-2 text-sm text-[#374151]">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                              checked={field.required}
+                              onChange={(e) => updateField(field.id, { required: e.target.checked })}
                               disabled={disabled || customFieldsLocked}
-                              className="h-9 w-9 rounded-full text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                            />
+                            Обязательное
+                          </label>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            onClick={() => removeField(field.id)}
+                            disabled={disabled || customFieldsLocked}
+                            className="h-9 w-9 rounded-full self-start text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
