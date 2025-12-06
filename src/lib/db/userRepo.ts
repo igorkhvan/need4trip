@@ -1,8 +1,10 @@
 import { supabase } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { User } from "@/lib/types/user";
+import { Database } from "@/lib/types/supabase";
 
-const table = "users";
+const table = "users" satisfies keyof Database["public"]["Tables"];
+type DbUserRow = Database["public"]["Tables"]["users"]["Row"];
 
 function ensureClient() {
   if (!supabase) {
@@ -12,21 +14,23 @@ function ensureClient() {
   return supabase;
 }
 
-interface DbUser {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-  telegram_handle: string | null;
-  telegram_id: string | null;
-  avatar_url: string | null;
-  car_model: string | null;
-  experience_level: User["experienceLevel"] | null;
-  created_at: string;
-  updated_at: string;
+function mapRowToUser(data: DbUserRow): User {
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    telegramHandle: data.telegram_handle,
+    telegramId: data.telegram_id,
+    avatarUrl: data.avatar_url,
+    carModel: data.car_model,
+    experienceLevel: data.experience_level,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
 }
 
-export async function ensureUserExists(id: string, name?: string): Promise<DbUser> {
+export async function ensureUserExists(id: string, name?: string): Promise<DbUserRow> {
   const client = ensureClient();
   if (!client) {
     throw new InternalError("Supabase client is not configured");
@@ -54,7 +58,7 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
     throw new InternalError("Failed to ensure user exists", error);
   }
 
-  return data as DbUser;
+  return data as DbUserRow;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
@@ -66,19 +70,7 @@ export async function getUserById(id: string): Promise<User | null> {
     throw new InternalError("Failed to fetch user", error);
   }
   if (!data) return null;
-  return {
-    id: data.id,
-    name: data.name,
-    phone: data.phone,
-    email: data.email,
-    telegramHandle: data.telegram_handle,
-    telegramId: data.telegram_id,
-    avatarUrl: data.avatar_url,
-    carModel: data.car_model,
-    experienceLevel: data.experience_level,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
+  return mapRowToUser(data as DbUserRow);
 }
 
 export async function findUserByTelegramId(telegramId: string): Promise<User | null> {
@@ -96,19 +88,7 @@ export async function findUserByTelegramId(telegramId: string): Promise<User | n
   }
 
   if (!data) return null;
-  return {
-    id: data.id,
-    name: data.name,
-    phone: data.phone,
-    email: data.email,
-    telegramHandle: data.telegram_handle,
-    telegramId: data.telegram_id,
-    avatarUrl: data.avatar_url,
-    carModel: data.car_model,
-    experienceLevel: data.experience_level,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
+  return mapRowToUser(data as DbUserRow);
 }
 
 export async function upsertTelegramUser(payload: {
@@ -139,17 +119,5 @@ export async function upsertTelegramUser(payload: {
     throw new InternalError("Failed to upsert telegram user", error);
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    phone: data.phone,
-    email: data.email,
-    telegramHandle: data.telegram_handle,
-    telegramId: data.telegram_id,
-    avatarUrl: data.avatar_url,
-    carModel: data.car_model,
-    experienceLevel: data.experience_level,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
+  return mapRowToUser(data as DbUserRow);
 }
