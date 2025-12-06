@@ -91,7 +91,7 @@ export interface Event {
   locationLng: number | null;
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchemaItem[];
-  createdByUserId: string;
+  createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
   visibility: Visibility;
@@ -102,6 +102,7 @@ export interface Event {
   isPaid: boolean;
   price?: number | null;
   currency?: string | null;
+  participantsCount?: number;
 }
 
 export type DomainEvent = Event;

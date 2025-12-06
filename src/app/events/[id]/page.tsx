@@ -18,10 +18,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RegisterParticipantForm } from "@/components/events/register-participant-form";
 import { ParticipantActions } from "@/components/events/participant-actions";
 import { OwnerActions } from "@/components/events/owner-actions";
-import { getEventWithParticipants } from "@/lib/services/events";
+import { getEventWithParticipantsVisibility } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
-import { grantEventAccessByLink } from "@/lib/services/events";
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
   weekend_trip: "Выезд на выходные",
@@ -38,13 +37,19 @@ export default async function EventDetails({
   params: Promise<{ id: string }> | { id: string };
 }) {
   const { id } = await params;
-  const { event, participants } = await getEventWithParticipants(id);
-  if (!event) return notFound();
   const currentUser = await getCurrentUserSafe();
-  const isLinkProtected = event.visibility === "link_registered";
-  if (currentUser && isLinkProtected) {
-    await grantEventAccessByLink(event.id, currentUser.id);
+  let eventWithParticipants: Awaited<ReturnType<typeof getEventWithParticipantsVisibility>>;
+  try {
+    eventWithParticipants = await getEventWithParticipantsVisibility(id, {
+      currentUser,
+      enforceVisibility: true,
+    });
+  } catch {
+    return notFound();
   }
+  const { event, participants } = eventWithParticipants;
+  if (!event) return notFound();
+  const isLinkProtected = event.visibility === "link_registered";
   const isOwner = currentUser?.id === event.createdByUserId;
   const isFull =
     event.maxParticipants !== null &&

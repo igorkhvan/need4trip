@@ -50,7 +50,7 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     locationLng: db.location_lng,
     maxParticipants: db.max_participants,
     customFieldsSchema: db.custom_fields_schema ?? [],
-    createdByUserId: db.created_by_user_id ?? "",
+    createdByUserId: db.created_by_user_id ?? null,
     createdAt: db.created_at,
     updatedAt: db.updated_at,
     visibility: db.visibility ?? "public",

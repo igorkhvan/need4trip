@@ -201,6 +201,21 @@ export async function listEventIdsForUser(userId: string): Promise<string[]> {
   return (data ?? []).map((row) => row.event_id as string);
 }
 
+export async function listParticipantEventIds(eventIds: string[]): Promise<string[]> {
+  const client = ensureClient();
+  if (!client) return [];
+  if (!eventIds.length) return [];
+  const { data, error } = await client
+    .from(table)
+    .select("event_id")
+    .in("event_id", eventIds);
+  if (error) {
+    console.error("Failed to list participants by event ids", error);
+    throw new InternalError("Failed to list participants by event ids", error);
+  }
+  return (data ?? []).map((row) => row.event_id as string);
+}
+
 export async function updateParticipant(
   id: string,
   patch: Partial<Pick<RegisterParticipantPayload, "displayName" | "customFieldValues">>

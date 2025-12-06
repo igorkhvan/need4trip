@@ -1,11 +1,12 @@
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUser, getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { AuthError } from "@/lib/errors";
-import { createEvent, listEvents } from "@/lib/services/events";
+import { createEvent, listVisibleEventsForUser } from "@/lib/services/events";
 
 export async function GET() {
   try {
-    const events = await listEvents();
+    const currentUser = await getCurrentUserSafe();
+    const events = await listVisibleEventsForUser(currentUser?.id ?? null);
     return respondJSON({ events });
   } catch (err) {
     return respondError(err);

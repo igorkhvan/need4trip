@@ -7,7 +7,12 @@ import {
   replaceAllowedBrands,
   getAllowedBrands,
 } from "@/lib/db/eventRepo";
-import { countParticipants, listParticipants, listEventIdsForUser } from "@/lib/db/participantRepo";
+import {
+  countParticipants,
+  listParticipants,
+  listEventIdsForUser,
+  listParticipantEventIds,
+} from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
 import {
@@ -20,6 +25,48 @@ import { DomainParticipant } from "@/lib/types/participant";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { CurrentUser } from "@/lib/auth/currentUser";
 import { upsertEventAccess, listAccessibleEventIds } from "@/lib/db/eventAccessRepo";
+
+type EventAccessOptions = {
+  currentUser?: CurrentUser | null;
+  enforceVisibility?: boolean;
+};
+
+async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
+  const enforce = opts?.enforceVisibility ?? false;
+  if (!enforce) return;
+  if (event.visibility === "public") return;
+
+  const currentUser = opts?.currentUser ?? null;
+  if (!currentUser) {
+    throw new AuthError("Недостаточно прав для просмотра события", undefined, 403);
+  }
+  if (event.createdByUserId === currentUser.id) return;
+
+  let allowed = false;
+  try {
+    const [participantEventIds, accessEventIds] = await Promise.all([
+      listEventIdsForUser(currentUser.id),
+      listAccessibleEventIds(currentUser.id),
+    ]);
+    const allowedIds = new Set<string>([...participantEventIds, ...accessEventIds]);
+    allowed = allowedIds.has(event.id);
+  } catch (err) {
+    console.error("[ensureEventVisibility] Failed to check access", err);
+  }
+
+  if (!allowed && event.visibility === "link_registered") {
+    try {
+      await upsertEventAccess(event.id, currentUser.id, "link");
+      allowed = true;
+    } catch (err) {
+      console.error("[ensureEventVisibility] Failed to upsert access for link", err);
+    }
+  }
+
+  if (!allowed) {
+    throw new AuthError("Недостаточно прав для просмотра события", undefined, 403);
+  }
+}
 
 export async function listEvents(): Promise<Event[]> {
   const events = await listEventsFromRepo();
@@ -38,25 +85,57 @@ export async function listEventsSafe(): Promise<Event[]> {
 
 export async function listVisibleEventsForUser(userId: string | null): Promise<Event[]> {
   const events = await listEventsSafe();
-  if (!userId) {
-    return events.filter((e) => e.visibility === "public");
-  }
-  let participantEventIds: string[] = [];
-  let accessEventIds: string[] = [];
+  const filtered = await (async () => {
+    if (!userId) {
+      return events.filter((e) => e.visibility === "public");
+    }
+    let participantEventIds: string[] = [];
+    let accessEventIds: string[] = [];
+    try {
+      participantEventIds = await listEventIdsForUser(userId);
+    } catch (err) {
+      console.error("[listVisibleEventsForUser] Failed to load participant events", err);
+    }
+    try {
+      accessEventIds = await listAccessibleEventIds(userId);
+    } catch (err) {
+      console.error("[listVisibleEventsForUser] Failed to load access events", err);
+    }
+    const allowedIds = new Set([...participantEventIds, ...accessEventIds]);
+    return events.filter(
+      (e) => e.visibility === "public" || e.createdByUserId === userId || allowedIds.has(e.id)
+    );
+  })();
+
+  const eventIds = filtered.map((e) => e.id);
+  let counts: Record<string, number> = {};
   try {
-    participantEventIds = await listEventIdsForUser(userId);
+    const participantEventIdsAll = await listParticipantEventIds(eventIds);
+    counts = participantEventIdsAll.reduce<Record<string, number>>((acc, eventId) => {
+      acc[eventId] = (acc[eventId] ?? 0) + 1;
+      return acc;
+    }, {});
   } catch (err) {
-    console.error("[listVisibleEventsForUser] Failed to load participant events", err);
+    console.error("[listVisibleEventsForUser] Failed to count participants for events", err);
   }
-  try {
-    accessEventIds = await listAccessibleEventIds(userId);
-  } catch (err) {
-    console.error("[listVisibleEventsForUser] Failed to load access events", err);
-  }
-  const allowedIds = new Set([...participantEventIds, ...accessEventIds]);
-  return events.filter(
-    (e) => e.visibility === "public" || e.createdByUserId === userId || allowedIds.has(e.id)
+
+  const hydrated = await Promise.all(
+    filtered.map(async (event) => {
+      let allowedBrands = event.allowedBrands;
+      try {
+        allowedBrands = await getAllowedBrands(event.id);
+      } catch (err) {
+        console.error("[listVisibleEventsForUser] Failed to load allowed brands for event", err);
+      }
+      return {
+        ...event,
+        allowedBrands,
+        participantsCount: counts[event.id] ?? 0,
+      };
+    })
   );
+
+  return hydrated;
 }
 
 export async function grantEventAccessByLink(eventId: string, userId: string): Promise<void> {
@@ -81,6 +160,15 @@ export async function getEvent(id: string): Promise<Event> {
   return event;
 }
 
+export async function getEventWithVisibility(
+  id: string,
+  options?: EventAccessOptions
+): Promise<Event> {
+  const event = await getEvent(id);
+  await ensureEventVisibility(event, options);
+  return event;
+}
+
 export async function getEventWithParticipants(
   id: string
 ): Promise<{ event: Event | null; participants: DomainParticipant[] }> {
@@ -93,6 +181,26 @@ export async function getEventWithParticipants(
   } catch (err) {
     console.error("[getEventWithParticipants] Failed to load allowed brands", err);
   }
+  return {
+    event,
+    participants: participants.map(mapDbParticipantToDomain),
+  };
+}
+
+export async function getEventWithParticipantsVisibility(
+  id: string,
+  options?: EventAccessOptions
+): Promise<{ event: Event | null; participants: DomainParticipant[] }> {
+  const dbEvent = await getEventById(id);
+  if (!dbEvent) return { event: null, participants: [] };
+  const participants = await listParticipants(dbEvent.id);
+  const event = mapDbEventToDomain(dbEvent);
+  try {
+    event.allowedBrands = await getAllowedBrands(id);
+  } catch (err) {
+    console.error("[getEventWithParticipants] Failed to load allowed brands", err);
+  }
+  await ensureEventVisibility(event, options);
   return {
     event,
     participants: participants.map(mapDbParticipantToDomain),

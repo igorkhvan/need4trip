@@ -60,7 +60,7 @@ function mapEvents(events: Event[]): EventRow[] {
     typeLabel: e.category ? CATEGORY_LABELS[e.category] : "Ивент",
     category: e.category ?? null,
     ownerName: null, // backend does not provide owner user; keeping placeholder
-    participantsCount: 0,
+    participantsCount: e.participantsCount ?? 0,
   }));
 }
 

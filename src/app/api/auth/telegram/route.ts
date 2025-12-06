@@ -91,47 +91,6 @@ async function upsertTelegramUser(
   name: string
 ) {
   const telegramId = String(payload.id);
-
-  const { data: existingById, error: findError } = await supabase
-    .from("users")
-    .select("*")
-    .eq("telegram_id", telegramId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (findError) {
-    console.error("[auth/telegram] Supabase error on find user:", findError);
-    return { error: findError };
-  }
-
-  let existing = existingById;
-
-  // Fallback: reclaim first user with empty telegram_id but matching handle/name.
-  if (!existing) {
-    const { data: existingFallback, error: findFallbackError } = await supabase
-      .from("users")
-      .select("*")
-      .is("telegram_id", null)
-      .or(
-        [
-          payload.username ? `telegram_handle.eq.${payload.username}` : "",
-          name ? `name.eq.${name}` : "",
-        ]
-          .filter(Boolean)
-          .join(",")
-      )
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (findFallbackError) {
-      console.error("[auth/telegram] Supabase error on fallback find user:", findFallbackError);
-      return { error: findFallbackError };
-    }
-    existing = existingFallback ?? null;
-  }
-
   const upsertPayload = {
     telegram_id: telegramId,
     telegram_handle: payload.username ?? null,
@@ -139,15 +98,11 @@ async function upsertTelegramUser(
     avatar_url: payload.photo_url ?? null,
   };
 
-  const query = supabase.from("users");
-
-  const { data, error } = existing
-    ? await query
-        .update(upsertPayload)
-        .eq("id", existing.id)
-        .select("*")
-        .maybeSingle()
-    : await query.insert(upsertPayload).select("*").maybeSingle();
+  const { data, error } = await supabase
+    .from("users")
+    .upsert(upsertPayload, { onConflict: "telegram_id" })
+    .select("*")
+    .maybeSingle();
 
   if (error) {
     console.error("[auth/telegram] Supabase error on upsert user:", error);
@@ -194,6 +149,29 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
     return NextResponse.json(
       { error: "Forbidden", message: "Не удалось проверить подпись Telegram" },
       { status: 403 }
+    );
+  }
+
+  const authDateSeconds = Number(payload.auth_date);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const MAX_PAYLOAD_AGE_SECONDS = 10 * 60; // 10 minutes
+  const ALLOWED_FUTURE_SKEW_SECONDS = 5 * 60; // clock skew guard
+  if (!Number.isFinite(authDateSeconds)) {
+    return NextResponse.json(
+      { error: "BadRequest", message: "Некорректное значение auth_date" },
+      { status: 400 }
+    );
+  }
+  if (authDateSeconds < nowSeconds - MAX_PAYLOAD_AGE_SECONDS) {
+    return NextResponse.json(
+      { error: "AuthExpired", message: "Слишком старый ответ Telegram. Обновите страницу и повторите вход." },
+      { status: 403 }
+    );
+  }
+  if (authDateSeconds > nowSeconds + ALLOWED_FUTURE_SKEW_SECONDS) {
+    return NextResponse.json(
+      { error: "BadRequest", message: "Некорректное время ответа Telegram" },
+      { status: 400 }
     );
   }
 

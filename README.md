@@ -43,6 +43,13 @@ npm run dev
 - `src/lib/auth` — JWT-утилиты (`getCurrentUser`, `getCurrentUserSafe`, куки)
 - `supabase/migrations` — SQL миграции
 
+## Что уже сделано в рамках аудита
+- Добавлены проверки приватности: приватные события теперь защищены на API и в SSR, доступ только авторизованным с правами/ссылкой.
+- Регистрация на приватные события требует авторизации, при первом заходе создаётся доступ по ссылке.
+- Telegram auth усилили TTL/anti-replay проверкой `auth_date` и детерминированным upsert по `telegram_id`.
+- Обновлена схема `supabase/schema.sql` до актуальных таблиц/полей (visibility, vehicle_type_requirement, клубность/платность, бренды, доступы).
+- В списке событий UI получает допустимые марки и реальное число участников.
+- Supabase client типизирован, добавлены схемные типы в `src/lib/types/supabase.ts`.
 ## Архитектура авторизации
 - Источник истины о пользователе — Supabase `users`.
 - JWT содержит только `userId` + `exp`, кука `auth_token` HttpOnly, SameSite=Lax, 30 дней.

@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/participantRepo";
 import { getEventById } from "@/lib/db/eventRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
+import { upsertEventAccess } from "@/lib/db/eventAccessRepo";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
 import { Event, EventCustomFieldValues } from "@/lib/types/event";
@@ -126,6 +127,17 @@ export async function registerParticipant(
     throw new NotFoundError("Event not found");
   }
   const event = mapDbEventToDomain(dbEvent);
+
+  if (event.visibility === "link_registered") {
+    if (!currentUser) {
+      throw new AuthError("Регистрация доступна только авторизованным пользователям", undefined, 401);
+    }
+    try {
+      await upsertEventAccess(event.id, currentUser.id, "link");
+    } catch (err) {
+      console.error("[registerParticipant] Failed to upsert access for private event", err);
+    }
+  }
 
   if (new Date(event.dateTime) <= new Date()) {
     throw new ConflictError("Event already in the past", { code: "EventInPast" });

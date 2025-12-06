@@ -1,13 +1,17 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { deleteEvent, getEvent, updateEvent } from "@/lib/services/events";
+import { deleteEvent, getEventWithVisibility, updateEvent } from "@/lib/services/events";
 
 type Params = { params: { id: string } } | { params: Promise<{ id: string }> };
 
 export async function GET(_: Request, { params }: Params) {
   try {
     const { id } = await params;
-    const event = await getEvent(id);
+    const currentUser = await getCurrentUser();
+    const event = await getEventWithVisibility(id, {
+      currentUser,
+      enforceVisibility: true,
+    });
     return respondJSON({ event });
   } catch (err) {
     return respondError(err);
