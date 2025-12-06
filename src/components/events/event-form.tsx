@@ -415,12 +415,15 @@ export function EventForm({
                 </Label>
                 <Input
                   id="maxParticipants"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   min={1}
                   max={15}
                   value={maxParticipants ?? ""}
                   onChange={(e) => {
-                    setMaxParticipants(e.target.value ? Number(e.target.value) : null);
+                    const digitsOnly = e.target.value.replace(/\D/g, "");
+                    setMaxParticipants(digitsOnly ? Number(digitsOnly) : null);
                     if (fieldErrors.maxParticipants) {
                       setFieldErrors((prev) => {
                         const next = { ...prev };
@@ -563,12 +566,15 @@ export function EventForm({
                     </Label>
                     <Input
                       id="price"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       min={0}
-                      step={0.01}
+                      step={1}
                       value={price}
                       onChange={(e) => {
-                        setPrice(e.target.value);
+                        const digitsOnly = e.target.value.replace(/\D/g, "");
+                        setPrice(digitsOnly);
                         if (fieldErrors.price) {
                           setFieldErrors((prev) => {
                             const next = { ...prev };
@@ -579,7 +585,11 @@ export function EventForm({
                       }}
                       disabled={disabled}
                       placeholder="5000"
-                      className="h-12 rounded-xl border-2"
+                      className={
+                        fieldErrors.price
+                          ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                          : "h-12 rounded-xl border-2"
+                      }
                     />
                     <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
                   </div>
