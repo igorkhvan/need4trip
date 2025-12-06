@@ -26,12 +26,12 @@ function formatEventMeta(event: EventSummary): string {
 
 const features: { title: string; description: string }[] = [
   {
-    title: "Создание выездов и тренировок",
-    description: "Планируйте покатушки, сервис-дни и встречи клуба.",
+    title: "Создание поездок и встреч",
+    description: "Планируйте любые автопоездки: выходные, встречи клуба, сервис-дни.",
   },
   {
-    title: "Регистрация экипажей с нужными полями",
-    description: "Настраивайте любые параметры: рация, резина, опыт, количество человек.",
+    title: "Регистрация экипажей по вашим правилам",
+    description: "Настраивайте поля: контакты, опыт, авто, количество людей.",
   },
   {
     title: "Лимиты и контроль участников",
@@ -53,31 +53,33 @@ const features: { title: string; description: string }[] = [
 
 function Hero() {
   return (
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <span className="inline-flex w-auto items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-wide text-secondary-foreground">
-          Для оффроад-клубов и организаторов 4x4 выездов
-        </span>
+    <section className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
+      <div className="space-y-6">
         <div className="space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Организация оффроад-покатушек и учет экипажей в пару кликов
-          </h1>
-          <p className="text-base text-muted-foreground max-w-2xl">
-            Need4Trip помогает лидерам клубов и организаторам выездов собирать экипажи, настраивать поля регистрации и управлять колонной в одном удобном интерфейсе.
-          </p>
+          <span className="inline-flex w-auto items-center rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Для клубов и организаторов автопоездок
+          </span>
+          <div className="space-y-3">
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Организация автомобильных поездок и учёт экипажей в пару кликов
+            </h1>
+            <p className="max-w-3xl text-base text-muted-foreground">
+              Need4Trip помогает лидерам клубов и организаторам поездок собирать экипажи, настраивать регистрацию и управлять колонной в удобном интерфейсе.
+            </p>
+          </div>
         </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+          <Button asChild className="h-12 rounded-lg px-6">
+            <Link href="/events/create">Создать ивент</Link>
+          </Button>
+          <Button variant="outline" asChild className="h-12 rounded-lg px-6">
+            <Link href="/events">Смотреть ивенты</Link>
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Бесплатно · авторизация через Telegram · 2 минуты на старт
+        </p>
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
-        <Button asChild>
-          <Link href="/events/create">Создать первый ивент</Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link href="/events">Смотреть ивенты</Link>
-        </Button>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Бесплатно · авторизация через Telegram · 2 минуты
-      </p>
     </section>
   );
 }
@@ -101,19 +103,19 @@ function HowItWorksSection() {
   ];
 
   return (
-    <section className="space-y-4">
-      <div className="space-y-1">
+    <section className="space-y-5">
+      <div className="space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight">Как это работает</h2>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          Простой процесс для организаторов и экипажей: от создания события до управления колонной.
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Простой путь от создания события до управления списком экипажей.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {items.map((item) => (
-          <Card key={item.title} className="h-full">
+          <Card key={item.title} className="h-full border border-border/70">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">{item.title}</CardTitle>
-              <CardDescription>{item.description}</CardDescription>
+              <CardTitle className="text-lg font-semibold text-foreground">{item.title}</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">{item.description}</CardDescription>
             </CardHeader>
           </Card>
         ))}
@@ -124,19 +126,19 @@ function HowItWorksSection() {
 
 function Features() {
   return (
-    <section className="space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">Что уже умеет Need4Trip</h2>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          Need4Trip — инструмент для организации выездов, учёта экипажей и управления клубными ивентами.
+    <section className="space-y-5">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold tracking-tight">Что умеет Need4Trip</h2>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Сервис для организации поездок, учёта экипажей и управления событиями клуба.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {features.map((item) => (
-          <Card key={item.title}>
+          <Card key={item.title} className="border border-border/70">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">{item.title}</CardTitle>
-              <CardDescription>{item.description}</CardDescription>
+              <CardTitle className="text-lg font-semibold text-foreground">{item.title}</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">{item.description}</CardDescription>
             </CardHeader>
           </Card>
         ))}
@@ -147,12 +149,12 @@ function Features() {
 
 function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
   return (
-    <section className="space-y-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="space-y-1">
+    <section className="space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="space-y-2">
           <h2 className="text-2xl font-semibold tracking-tight">Ближайшие ивенты</h2>
           <p className="text-sm text-muted-foreground">
-            Несколько ближайших выездов. Полный список — на отдельной странице.
+            Несколько ближайших поездок. Полный список — на отдельной странице.
           </p>
         </div>
         <Button variant="ghost" size="sm" asChild>
@@ -160,32 +162,32 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {events.length === 0 ? (
-          <div className="rounded-lg border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-            Пока нет ближайших ивентов.
-          </div>
-        ) : (
-          events.map((event) => (
-            <Card key={event.id}>
+      {events.length === 0 ? (
+        <div className="rounded-lg border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+          Пока нет ближайших ивентов.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3 sm:grid-cols-2">
+          {events.map((event) => (
+            <Card key={event.id} className="flex h-full flex-col border border-border/70">
               <CardHeader>
-                <CardTitle className="text-base font-semibold">{event.title}</CardTitle>
+                <CardTitle className="text-lg font-semibold">{event.title}</CardTitle>
                 <CardDescription>{formatEventMeta(event)}</CardDescription>
               </CardHeader>
               {event.description && (
                 <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3">{event.description}</p>
+                  <p className="line-clamp-3 text-sm text-muted-foreground">{event.description}</p>
                 </CardContent>
               )}
-              <CardFooter>
+              <CardFooter className="mt-auto flex justify-between">
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/events/${event.id}`}>Подробнее</Link>
                 </Button>
               </CardFooter>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -201,12 +203,12 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
+    <div className="container mx-auto max-w-6xl space-y-14 px-4 py-12 md:px-6">
       <Hero />
       <HowItWorksSection />
       <Features />
       <UpcomingEventsSection events={events} />
-      <footer className="pt-8">
+      <footer className="pt-6">
         <p className="text-xs text-muted-foreground">Need4Trip · бета-версия.</p>
       </footer>
     </div>
