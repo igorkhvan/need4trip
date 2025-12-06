@@ -174,6 +174,7 @@ export function EventForm({
     const trimmedDescription = description.trim();
     const trimmedLocation = locationText.trim();
     const parsedDate = dateTime ? new Date(dateTime) : null;
+    const participantsCount = maxParticipants ?? null;
     if (trimmedTitle.length < 3) {
       issues.title = "Название должно быть от 3 символов.";
     }
@@ -184,6 +185,11 @@ export function EventForm({
       issues.dateTime = "Укажите корректную дату и время";
     } else if (parsedDate <= new Date()) {
       issues.dateTime = "Дата должна быть в будущем";
+    }
+    if (participantsCount === null || Number.isNaN(participantsCount)) {
+      issues.maxParticipants = "Укажите количество участников от 1 до 15.";
+    } else if (participantsCount < 1 || participantsCount > 15) {
+      issues.maxParticipants = "Допустимый диапазон: 1–15.";
     }
     if (!trimmedLocation) {
       issues.locationText = "Укажите локацию";
@@ -243,12 +249,11 @@ export function EventForm({
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 pt-12 md:px-6">
       <div className="space-y-4">
-        <Link
-          href={backHref}
-          className="inline-flex items-center text-base font-medium text-[#111827] underline-offset-4 hover:text-[#0F172A] hover:underline"
-        >
-          ← Назад
-        </Link>
+        <Button variant="ghost" className="inline-flex" asChild>
+          <Link href={backHref} className="text-base font-medium text-[#111827]">
+            ← Назад
+          </Link>
+        </Button>
         <div className="space-y-3">
           <h1 className="text-4xl font-black leading-tight text-[#0F172A] sm:text-5xl">
             {headerTitle}
@@ -386,13 +391,29 @@ export function EventForm({
                   id="maxParticipants"
                   type="number"
                   min={1}
+                  max={15}
                   value={maxParticipants ?? ""}
-                  onChange={(e) => setMaxParticipants(e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) => {
+                    setMaxParticipants(e.target.value ? Number(e.target.value) : null);
+                    if (fieldErrors.maxParticipants) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.maxParticipants;
+                        return next;
+                      });
+                    }
+                  }}
                   disabled={disabled}
-                  placeholder="20"
-                  className="h-12 rounded-xl border-2"
+                  placeholder="15"
+                  className={
+                    fieldErrors.maxParticipants
+                      ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                      : "h-12 rounded-xl border-2"
+                  }
                 />
-                <div className="min-h-[28px]" />
+                <div className="min-h-[28px] text-xs text-red-600">
+                  {fieldErrors.maxParticipants ?? ""}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-sm font-medium text-[#111827]">
@@ -622,7 +643,7 @@ export function EventForm({
             </div>
             <div className="flex flex-1 items-center gap-3">
               <div>
-                <p className="text-2xl font-semibold text-[#0F172A]">Кастомные поля регистрации</p>
+                <p className="text-2xl font-semibold text-[#0F172A]">Дополнительные поля регистрации</p>
                 <p className="text-xs text-[#6B7280]">Поля, которые заполняют участники</p>
               </div>
               {customFieldsLocked && (
@@ -732,21 +753,24 @@ export function EventForm({
             )}
           </div>
 
-          <div className="mt-4 flex justify-start">
+          <div className="mt-4 flex justify-end">
             <Button
-              variant="outline"
+              variant="ghost"
               type="button"
               onClick={addField}
               disabled={disabled || customFieldsLocked}
-              className="h-11 rounded-xl px-4"
+              className="h-11 rounded-xl px-4 text-[#0F172A]"
             >
               Добавить поле
             </Button>
           </div>
         </Card>
 
-        <div className="flex items-center justify-end gap-2 bg-transparent px-2 pt-2">
+        <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
           <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
+          <Button variant="ghost" type="button" asChild className="rounded-xl px-4">
+            <Link href={backHref}>Отмена</Link>
+          </Button>
           <Button type="submit" disabled={isSubmitting || disabled} className="rounded-xl px-5">
             {isSubmitting ? "Сохраняем..." : submitLabel}
           </Button>

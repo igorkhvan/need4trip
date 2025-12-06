@@ -28,9 +28,9 @@ export default function CreateEventPage() {
     <EventForm
       mode="create"
       backHref="/events"
-      submitLabel="Сохранить ивент"
-      headerTitle="Создание ивента"
-      headerDescription="Опишите покатушку, добавьте кастомные поля для регистрации экипажей."
+      submitLabel="Создать событие"
+      headerTitle="Создание события"
+      headerDescription="Заполните информацию о вашей автомобильной поездке"
       onSubmit={handleSubmit}
     />
   );
