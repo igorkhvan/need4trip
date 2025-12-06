@@ -541,84 +541,106 @@ export function EventForm({
           <CardContent className="space-y-4">
             {sortedFields.map((field, index) => {
               const errorText = fieldError(`customFieldsSchema.${index}.label`);
+              const badgeNumber = index + 1;
               return (
                 <div
                   key={field.id}
-                  className="grid gap-3 rounded-lg border bg-background px-4 py-3 md:grid-cols-[1.5fr,1fr,0.7fr,auto] md:items-start"
+                  className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm"
                 >
-                  <div className="space-y-1">
-                    <Label>Метка</Label>
-                    <Input
-                      value={field.label}
-                      placeholder="Название поля"
-                      className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
-                      onChange={(e) => {
-                        updateField(field.id, { label: e.target.value });
-                        if (errorText) {
-                          setFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next[`customFieldsSchema.${index}.label`];
-                            return next;
-                          });
-                        }
-                      }}
-                      disabled={disabled}
-                    />
-                    <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Тип</Label>
-                    {FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? (
-                      <Select
-                        value={field.type}
-                        onValueChange={(value) =>
-                          updateField(field.id, { type: value as EventCustomFieldType })
-                        }
-                        disabled={disabled}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FIELD_TYPE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input value={field.type} disabled />
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Обязательное</Label>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
+                        {badgeNumber}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#111827]">Поле регистрации</p>
+                        <p className="text-xs text-[#6B7280]">
+                          Заполняется участником в форме
+                        </p>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 accent-primary"
-                        checked={field.required}
-                        onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                      <span className="text-xs text-[#6B7280]">Обязательное</span>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                          checked={field.required}
+                          onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                          disabled={disabled}
+                        />
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => removeField(field.id)}
                         disabled={disabled}
-                      />
-                      <span className="text-sm text-muted-foreground">Да</span>
+                        className="text-[#6B7280] hover:text-[#EF4444]"
+                      >
+                        Удалить
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end md:col-span-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() => removeField(field.id)}
-                      disabled={disabled}
-                    >
-                      Удалить поле
-                    </Button>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div className="space-y-1 md:col-span-2">
+                      <Label>Метка</Label>
+                      <Input
+                        value={field.label}
+                        placeholder="Например: Марка авто или Опыт оффроуд"
+                        className={errorText ? "border-red-500 focus-visible:ring-red-500" : "h-11 rounded-xl border-2"}
+                        onChange={(e) => {
+                          updateField(field.id, { label: e.target.value });
+                          if (errorText) {
+                            setFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next[`customFieldsSchema.${index}.label`];
+                              return next;
+                            });
+                          }
+                        }}
+                        disabled={disabled}
+                      />
+                      <div className="min-h-[28px] text-xs text-red-600">{errorText ?? ""}</div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Тип поля</Label>
+                      {FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? (
+                        <Select
+                          value={field.type}
+                          onValueChange={(value) =>
+                            updateField(field.id, { type: value as EventCustomFieldType })
+                          }
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl border-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FIELD_TYPE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={field.type} disabled />
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
-            <Button variant="outline" type="button" onClick={addField} disabled={disabled}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={addField}
+              disabled={disabled}
+              className="h-11 rounded-xl px-4"
+            >
               Добавить поле
             </Button>
           </CardContent>
