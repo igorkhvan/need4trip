@@ -95,45 +95,58 @@ export default async function EventDetails({
     event.createdByUserId ? await getUserById(event.createdByUserId) : null;
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-8 py-8 px-4">
-      <div className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            <Button variant="ghost" size="sm" asChild>
+    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" asChild className="px-0 text-sm text-muted-foreground">
               <Link href="/events">← Назад к списку</Link>
             </Button>
-            <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
-            <p className="text-sm text-muted-foreground">
-              {categoryLabel ?? "Ивент"} • {formattedDateTime} • {participantsCountLabel}
-            </p>
             {ownerUser && (
-              <p className="text-sm text-muted-foreground">
+              <div className="text-right text-xs text-muted-foreground">
                 Организатор: {ownerUser.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser.name}
-              </p>
+              </div>
             )}
-            <div className="flex flex-wrap items-center gap-2">
-              {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
-              <Badge variant={event.isPaid ? "default" : "outline"}>
-                {event.isPaid ? "Платное" : "Бесплатное"}
-              </Badge>
-              <Badge variant="outline">{vehicleTypeLabel}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">Локация: {event.locationText}</p>
           </div>
-          <div className="flex flex-col gap-2">
-            {isRegistered ? (
-              <Badge variant="secondary" className="w-fit">
-                Вы зарегистрированы
-              </Badge>
-            ) : (
-              <Button
-                asChild
-                disabled={isFull}
-                title={isFull ? "Достигнут лимит участников" : undefined}
-              >
-                <Link href="#register">Присоединиться</Link>
-              </Button>
-            )}
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">{event.title}</h1>
+              <p className="text-sm text-muted-foreground">
+                {categoryLabel ?? "Ивент"} • {formattedDateTime} • {participantsCountLabel}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
+                <Badge variant={event.isPaid ? "default" : "outline"}>
+                  {event.isPaid ? "Платное" : "Бесплатное"}
+                </Badge>
+                <Badge variant="outline">{vehicleTypeLabel}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Локация: {event.locationText}</p>
+            </div>
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              {isRegistered ? (
+                <>
+                  <Badge variant="secondary" className="w-fit">
+                    Вы зарегистрированы
+                  </Badge>
+                  {currentParticipant && (
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
+                        Редактировать данные
+                      </Link>
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Button
+                  asChild
+                  disabled={isFull}
+                  title={isFull ? "Достигнут лимит участников" : undefined}
+                >
+                  <Link href="#register">Присоединиться</Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -158,56 +171,58 @@ export default async function EventDetails({
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">Описание</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-base leading-relaxed text-foreground">{event.description}</p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-foreground">Описание</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-base leading-relaxed text-foreground">{event.description}</p>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">Параметры выезда</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-            <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-muted-foreground">Максимум участников</p>
-              <p className="font-medium text-foreground">
-                {event.maxParticipants ?? "не ограничено"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-            <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-muted-foreground">Тип машины</p>
-              <p className="font-medium text-foreground">{vehicleTypeLabel}</p>
-            </div>
-          </div>
-          {event.allowedBrands.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-foreground">Параметры поездки</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
             <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
-              <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-muted-foreground">Рекомендуемые марки</p>
+                <p className="text-muted-foreground">Максимум экипажей</p>
                 <p className="font-medium text-foreground">
-                  {event.allowedBrands.map((b) => b.name).join(", ")}
+                  {event.maxParticipants ?? "не ограничено"}
                 </p>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-muted-foreground">Требования к авто</p>
+                <p className="font-medium text-foreground">{vehicleTypeLabel}</p>
+              </div>
+            </div>
+            {event.allowedBrands.length > 0 && (
+              <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
+                <ShieldCheck className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Рекомендованные марки</p>
+                  <p className="font-medium text-foreground">
+                    {event.allowedBrands.map((b) => b.name).join(", ")}
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {event.rules && event.rules.trim().length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">Правила и регламент</CardTitle>
+            <CardTitle className="text-xl font-semibold text-foreground">Правила поездки</CardTitle>
             <CardDescription>
-              Ознакомьтесь с регламентом, это обязательная информация для участников.
+              Ознакомьтесь с правилами перед регистрацией.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -218,11 +233,11 @@ export default async function EventDetails({
         </Card>
       )}
 
-      <section id="register" className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+      <section id="register" className="space-y-3 rounded-xl border bg-card p-6 shadow-sm">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold text-foreground">Регистрация</h2>
+          <h2 className="text-xl font-semibold text-foreground">Регистрация экипажа</h2>
           <p className="text-sm text-muted-foreground">
-            Заполните данные экипажа — это займёт 1–2 минуты. После отправки вы появитесь в списке участников.
+            Укажите данные экипажа. После отправки вы появитесь в списке участников.
           </p>
         </div>
         {isFull ? (
