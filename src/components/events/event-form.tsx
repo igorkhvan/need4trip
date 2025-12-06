@@ -5,14 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -245,39 +238,32 @@ export function EventForm({
   };
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-4 py-10 md:px-6">
       <div className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Ивент</p>
-        <h1 className="text-3xl font-bold tracking-tight">{headerTitle}</h1>
-        <p className="text-sm text-muted-foreground">{headerDescription}</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={backHref}>← Назад</Link>
-          </Button>
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#E86223]">Ивент</p>
+        <h1 className="text-3xl font-bold tracking-tight text-[#111827]">{headerTitle}</h1>
+        <p className="text-sm text-[#6B7280]">{headerDescription}</p>
+        <Button variant="ghost" size="sm" asChild className="text-[#6B7280] hover:text-[#111827]">
+          <Link href={backHref}>← Назад</Link>
+        </Button>
       </div>
 
-      <Card>
-        <form onSubmit={handleSubmit}>
-          <CardHeader className="space-y-2">
+      <Card className="p-4 shadow-sm md:p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Секция 1: основные данные */}
+          <div className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
                 1
               </div>
               <div>
-                <CardTitle className="text-xl font-semibold text-foreground">
-                  Основные данные
-                </CardTitle>
-                <CardDescription>
-                  Обновите название, дату, лимиты и описание ивента.
-                </CardDescription>
+                <p className="text-base font-semibold text-[#111827]">Основные данные</p>
+                <p className="text-xs text-[#6B7280]">Название, описание, дата, место, видимость</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="title">Название</Label>
+
+            <div className="space-y-4">
+              <div>
                 <Input
                   id="title"
                   value={title}
@@ -292,384 +278,393 @@ export function EventForm({
                     }
                   }}
                   disabled={disabled}
-                  className={fieldErrors.title ? "border-red-500 focus-visible:ring-red-500" : ""}
-                />
-                <div className="min-h-[16px] text-xs text-red-600">
-                  {fieldErrors.title ?? ""}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="category">Категория</Label>
-                <Select
-                  value={category ?? undefined}
-                  onValueChange={(val) => setCategory(val as EventCategory)}
-                  disabled={disabled}
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Выберите категорию" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="dateTime">Дата и время</Label>
-                <Input
-                  id="dateTime"
-                  type="datetime-local"
-                  value={dateTime}
-                  onChange={(e) => setDateTime(e.target.value)}
-                  disabled={disabled}
+                  placeholder="Название события"
                   className={
-                    fieldErrors.dateTime ? "border-red-500 focus-visible:ring-red-500" : ""
+                    fieldErrors.title
+                      ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                      : "h-12 rounded-xl border-2"
                   }
                 />
-                <div className="min-h-[16px] text-xs text-red-600">
-                  {fieldErrors.dateTime ?? ""}
+                <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.title ?? ""}</div>
+              </div>
+
+              <div>
+                <Textarea
+                  id="description"
+                  rows={4}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    if (fieldErrors.description) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.description;
+                        return next;
+                      });
+                    }
+                  }}
+                  disabled={disabled}
+                  placeholder="Расскажите о маршруте, программе и особенностях"
+                  className={
+                    fieldErrors.description
+                      ? "rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                      : "rounded-xl border-2"
+                  }
+                />
+                <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.description ?? ""}</div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Input
+                    id="dateTime"
+                    type="datetime-local"
+                    value={dateTime}
+                    onChange={(e) => setDateTime(e.target.value)}
+                    disabled={disabled}
+                    className={
+                      fieldErrors.dateTime
+                        ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                        : "h-12 rounded-xl border-2"
+                    }
+                  />
+                  <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.dateTime ?? ""}</div>
+                </div>
+                <div>
+                  <Input
+                    id="locationText"
+                    value={locationText}
+                    onChange={(e) => {
+                      setLocationText(e.target.value);
+                      if (fieldErrors.locationText) {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.locationText;
+                          return next;
+                        });
+                      }
+                    }}
+                    disabled={disabled}
+                    placeholder="Место сбора"
+                    className={
+                      fieldErrors.locationText
+                        ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                        : "h-12 rounded-xl border-2"
+                    }
+                  />
+                  <div className="min-h-[28px] text-xs text-red-600">
+                    {fieldErrors.locationText ?? ""}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="maxParticipants">Максимум экипажей</Label>
-                <Input
-                  id="maxParticipants"
-                  type="number"
-                  min={1}
-                  value={maxParticipants ?? ""}
-                  onChange={(e) =>
-                    setMaxParticipants(e.target.value ? Number(e.target.value) : null)
-                  }
-                  disabled={disabled}
-                  placeholder="Необязательное поле"
-                />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Input
+                    id="maxParticipants"
+                    type="number"
+                    min={1}
+                    value={maxParticipants ?? ""}
+                    onChange={(e) => setMaxParticipants(e.target.value ? Number(e.target.value) : null)}
+                    disabled={disabled}
+                    placeholder="Максимум экипажей"
+                    className="h-12 rounded-xl border-2"
+                  />
+                  <div className="min-h-[28px]" />
+                </div>
+                <div>
+                  <Select
+                    value={category ?? undefined}
+                    onValueChange={(val) => setCategory(val as EventCategory)}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger id="category" className="h-12 rounded-xl border-2">
+                      <SelectValue placeholder="Категория события" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="min-h-[28px]" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="visibility">Видимость</Label>
+
+              <div className="grid gap-4 md:grid-cols-2">
                 <Select
                   value={visibility}
                   onValueChange={(val) => setVisibility(val as Visibility)}
                   disabled={disabled}
                 >
-                  <SelectTrigger id="visibility">
-                    <SelectValue placeholder="Выберите видимость" />
+                  <SelectTrigger id="visibility" className="h-12 rounded-xl border-2">
+                    <SelectValue placeholder="Видимость события" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="public">Публичный</SelectItem>
                     <SelectItem value="link_registered">По ссылке для авторизованных</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="locationText">Локация (текстом)</Label>
-              <Input
-                id="locationText"
-                value={locationText}
-                onChange={(e) => {
-                  setLocationText(e.target.value);
-                  if (fieldErrors.locationText) {
-                    setFieldErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.locationText;
-                      return next;
-                    });
-                  }
-                }}
-                disabled={disabled}
-                className={
-                  fieldErrors.locationText ? "border-red-500 focus-visible:ring-red-500" : ""
-                }
-              />
-              <p className="min-h-[16px] text-xs text-red-600">
-                {fieldErrors.locationText ?? ""}
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="description">Описание ивента</Label>
-              <Textarea
-                id="description"
-                rows={4}
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  if (fieldErrors.description) {
-                    setFieldErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.description;
-                      return next;
-                    });
-                  }
-                }}
-                disabled={disabled}
-                className={
-                  fieldErrors.description ? "border-red-500 focus-visible:ring-red-500" : ""
-                }
-              />
-              <p className="min-h-[16px] text-xs text-red-600">
-                {fieldErrors.description ?? ""}
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label>Тип участия</Label>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-[#374151]">
+                    <div
+                      className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                        isClubEvent ? "bg-[#FF6F2C] border-[#FF6F2C]" : "border-[#E5E7EB] hover:border-[#6B7280]"
+                      }`}
+                    >
+                      {isClubEvent && (
+                        <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
                     <input
-                      type="radio"
-                      name="paid"
-                      checked={!isPaid}
-                      onChange={() => setIsPaid(false)}
+                      type="checkbox"
+                      checked={isClubEvent}
+                      onChange={(e) => setIsClubEvent(e.target.checked)}
+                      className="sr-only"
                       disabled={disabled}
                     />
+                    Клубное событие
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-[#111827]">Тип участия</p>
+                <div className="flex flex-wrap items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-[#374151]">
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        !isPaid ? "border-[#FF6F2C]" : "border-[#E5E7EB] hover:border-[#6B7280]"
+                      }`}
+                    >
+                      {!isPaid && <div className="h-2.5 w-2.5 rounded-full bg-[#FF6F2C]" />}
+                    </div>
+                    <input type="radio" name="paid" checked={!isPaid} onChange={() => setIsPaid(false)} className="sr-only" disabled={disabled} />
                     Бесплатное
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <input
-                      type="radio"
-                      name="paid"
-                      checked={isPaid}
-                      onChange={() => setIsPaid(true)}
-                      disabled={disabled}
-                    />
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-[#374151]">
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        isPaid ? "border-[#FF6F2C]" : "border-[#E5E7EB] hover:border-[#6B7280]"
+                      }`}
+                    >
+                      {isPaid && <div className="h-2.5 w-2.5 rounded-full bg-[#FF6F2C]" />}
+                    </div>
+                    <input type="radio" name="paid" checked={isPaid} onChange={() => setIsPaid(true)} className="sr-only" disabled={disabled} />
                     Платное
                   </label>
                 </div>
                 {isPaid && (
-                  <div className="mt-2 grid grid-cols-[1fr,120px] gap-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="price">Цена</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        disabled={disabled}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="currency">Валюта</Label>
-                      <Input
-                        id="currency"
-                        value={currency}
-                        onChange={(e) => setCurrency(e.target.value)}
-                        placeholder="KZT"
-                        disabled={disabled}
-                      />
-                    </div>
+                  <div className="grid gap-3 md:grid-cols-[1fr,140px]">
+                    <Input
+                      id="price"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      disabled={disabled}
+                      placeholder="Цена"
+                      className="h-12 rounded-xl border-2"
+                    />
+                    <Input
+                      id="currency"
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      placeholder="Валюта"
+                      disabled={disabled}
+                      className="h-12 rounded-xl border-2"
+                    />
                   </div>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    checked={isClubEvent}
-                    onChange={(e) => setIsClubEvent(e.target.checked)}
-                    disabled={disabled}
-                  />
-                  Клубное событие
-                </Label>
-              </div>
             </div>
+          </div>
 
-            <div className="space-y-2 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
-                  2
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-[#111827]">Требования к автомобилю</p>
-                  <p className="text-xs text-[#6B7280]">Тип авто и допустимые марки</p>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="vehicleTypeRequirement">Требования к машине</Label>
-                  <Select
-                    value={vehicleType}
-                    onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
-                    disabled={disabled}
-                  >
-                    <SelectTrigger id="vehicleTypeRequirement" className="h-11 rounded-xl border-2">
-                      <SelectValue placeholder="Требования" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Не важно</SelectItem>
-                      <SelectItem value="sedan">Легковой</SelectItem>
-                      <SelectItem value="crossover">Кроссовер</SelectItem>
-                      <SelectItem value="suv">Внедорожник</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <MultiBrandSelect
-                    label="Допустимые марки авто (опционально)"
-                    placeholder="Выберите марку..."
-                    options={brands}
-                    value={allowedBrandIds}
-                    onChange={setAllowedBrandIds}
-                    error={fieldError("allowedBrandIds")}
-                    disabled={disabled}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Если не выбрано ни одной марки, участвовать могут любые автомобили.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
-                  3
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-[#111827]">Правила участия</p>
-                  <p className="text-xs text-[#6B7280]">Отображаются в карточке события и форме</p>
-                </div>
-              </div>
-              <Textarea
-                id="rules"
-                rows={4}
-                value={rules}
-                onChange={(e) => setRules(e.target.value)}
-                placeholder="Порядок движения, частота рации, скорость, дистанция, запреты..."
-                disabled={disabled}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex items-center justify-end gap-2 border-t bg-background px-4 py-3">
-            <div className="mr-auto min-h-[20px] text-sm text-red-600">
-              {errorMessage ?? ""}
-            </div>
-            <Button type="submit" disabled={isSubmitting || disabled}>
-              {isSubmitting ? "Сохраняем..." : submitLabel}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-
-      {!disableCustomFields && (
-        <Card>
-          <CardHeader className="space-y-2">
+          {/* Секция 2: авто */}
+          <div className="space-y-3 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF4EF] text-sm font-semibold text-[#E86223]">
-                4
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+                2
               </div>
               <div>
-                <CardTitle className="text-xl font-semibold text-foreground">
-                  Кастомные поля регистрации
-                </CardTitle>
-                <CardDescription>Поля, которые участники заполняют при регистрации.</CardDescription>
+                <p className="text-base font-semibold text-[#111827]">Требования к автомобилю</p>
+                <p className="text-xs text-[#6B7280]">Тип авто и допустимые марки</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {sortedFields.map((field, index) => {
-              const errorText = fieldError(`customFieldsSchema.${index}.label`);
-              return (
-                <div
-                  key={field.id}
-                  className="rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4 shadow-sm"
-                >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-1 md:col-span-2">
-                      <Label>Метка</Label>
-                      <Input
-                        value={field.label}
-                        placeholder="Например: Марка авто или Опыт оффроуд"
-                        className={errorText ? "border-red-500 focus-visible:ring-red-500" : "h-11 rounded-xl border-2"}
-                        onChange={(e) => {
-                          updateField(field.id, { label: e.target.value });
-                          if (errorText) {
-                            setFieldErrors((prev) => {
-                              const next = { ...prev };
-                              delete next[`customFieldsSchema.${index}.label`];
-                              return next;
-                            });
-                          }
-                        }}
-                        disabled={disabled}
-                      />
-                      <div className="min-h-[28px] text-xs text-red-600">{errorText ?? ""}</div>
-                    </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Select
+                value={vehicleType}
+                onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
+                disabled={disabled}
+              >
+                <SelectTrigger id="vehicleTypeRequirement" className="h-12 rounded-xl border-2">
+                  <SelectValue placeholder="Тип автомобиля" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Не важно</SelectItem>
+                  <SelectItem value="sedan">Легковой</SelectItem>
+                  <SelectItem value="crossover">Кроссовер</SelectItem>
+                  <SelectItem value="suv">Внедорожник</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="space-y-2">
+                <MultiBrandSelect
+                  label="Допустимые марки авто (опционально)"
+                  placeholder="Выберите марку..."
+                  options={brands}
+                  value={allowedBrandIds}
+                  onChange={setAllowedBrandIds}
+                  error={fieldError("allowedBrandIds")}
+                  disabled={disabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Если не выбрано ни одной марки, участвовать могут любые автомобили.
+                </p>
+              </div>
+            </div>
+          </div>
 
-                    <div className="space-y-1">
-                      <Label>Тип поля</Label>
-                      {FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? (
-                        <Select
-                          value={field.type}
-                          onValueChange={(value) =>
-                            updateField(field.id, { type: value as EventCustomFieldType })
-                          }
-                          disabled={disabled}
-                        >
-                          <SelectTrigger className="h-11 rounded-xl border-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FIELD_TYPE_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input value={field.type} disabled />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#6B7280]">Обязательное поле</span>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
-                          checked={field.required}
-                          onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                          disabled={disabled}
-                        />
-                      </label>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() => removeField(field.id)}
-                      disabled={disabled}
-                      className="text-[#6B7280] hover:text-[#EF4444]"
-                    >
-                      Удалить поле
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-            <Button
-              variant="outline"
-              type="button"
-              onClick={addField}
+          {/* Секция 3: правила */}
+          <div className="space-y-3 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+                3
+              </div>
+              <div>
+                <p className="text-base font-semibold text-[#111827]">Правила участия</p>
+                <p className="text-xs text-[#6B7280]">Показываются в карточке события</p>
+              </div>
+            </div>
+            <Textarea
+              id="rules"
+              rows={4}
+              value={rules}
+              onChange={(e) => setRules(e.target.value)}
+              placeholder="Опишите условия: порядок движения, скорость, рация, запреты..."
               disabled={disabled}
-              className="h-11 rounded-xl px-4"
-            >
-              Добавить поле
+              className="rounded-xl border-2"
+            />
+          </div>
+
+          {/* Секция 4: кастомные поля */}
+          {!disableCustomFields && (
+            <div className="space-y-3 rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+                  4
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-[#111827]">Кастомные поля регистрации</p>
+                  <p className="text-xs text-[#6B7280]">Поля, которые заполняют участники</p>
+                </div>
+              </div>
+              {sortedFields.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-white px-4 py-6 text-center text-sm text-[#6B7280]">
+                  Добавьте первое поле регистрации
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {sortedFields.map((field, index) => {
+                    const errorText = fieldError(`customFieldsSchema.${index}.label`);
+                    return (
+                      <div key={field.id} className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-1 md:col-span-2">
+                            <Label className="text-sm font-medium text-[#111827]">Название поля</Label>
+                            <Input
+                              value={field.label}
+                              placeholder="Например: Наличие рации"
+                              className={
+                                errorText
+                                  ? "border-red-500 focus-visible:ring-red-500 h-11 rounded-xl border-2"
+                                  : "h-11 rounded-xl border-2"
+                              }
+                              onChange={(e) => {
+                                updateField(field.id, { label: e.target.value });
+                                if (errorText) {
+                                  setFieldErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next[`customFieldsSchema.${index}.label`];
+                                    return next;
+                                  });
+                                }
+                              }}
+                              disabled={disabled}
+                            />
+                            <div className="min-h-[28px] text-xs text-red-600">{errorText ?? ""}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium text-[#111827]">Тип</Label>
+                            <Select
+                              value={FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? field.type : "text"}
+                              onValueChange={(value) => updateField(field.id, { type: value as EventCustomFieldType })}
+                              disabled={disabled}
+                            >
+                              <SelectTrigger className="h-11 rounded-xl border-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FIELD_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                              checked={field.required}
+                              onChange={(e) => updateField(field.id, { required: e.target.checked })}
+                              disabled={disabled}
+                            />
+                            <span className="text-sm text-[#374151]">Обязательное</span>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={() => removeField(field.id)}
+                            disabled={disabled}
+                            className="text-[#6B7280] hover:text-[#EF4444]"
+                          >
+                            Удалить
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                type="button"
+                onClick={addField}
+                disabled={disabled}
+                className="h-11 rounded-xl px-4"
+              >
+                Добавить поле
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 border-t border-[#E5E7EB] bg-background px-2 pt-4">
+            <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
+            <Button type="submit" disabled={isSubmitting || disabled} className="rounded-xl px-5">
+              {isSubmitting ? "Сохраняем..." : submitLabel}
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }
