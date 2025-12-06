@@ -25,6 +25,28 @@ type AuthEnv = {
   jwtSecret: string;
 };
 
+// In-memory replay cache per instance to mitigate repeated payloads
+const usedTelegramPayloads = new Map<string, number>();
+const MAX_PAYLOAD_AGE_SECONDS = 10 * 60; // 10 minutes
+const ALLOWED_FUTURE_SKEW_SECONDS = 5 * 60;
+
+function pruneReplayCache(nowSeconds: number) {
+  for (const [key, ts] of usedTelegramPayloads.entries()) {
+    if (ts < nowSeconds - MAX_PAYLOAD_AGE_SECONDS) {
+      usedTelegramPayloads.delete(key);
+    }
+  }
+}
+
+function isReplay(payload: TelegramPayload): boolean {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  pruneReplayCache(nowSeconds);
+  const key = `${payload.id}:${payload.auth_date}:${payload.hash}`;
+  if (usedTelegramPayloads.has(key)) return true;
+  usedTelegramPayloads.set(key, nowSeconds);
+  return false;
+}
+
 function buildDataCheckString(payload: Omit<TelegramPayload, "hash">) {
   const entries = Object.entries(payload).filter(
     ([, value]) => value !== undefined && value !== null && value !== ""
@@ -154,8 +176,6 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
 
   const authDateSeconds = Number(payload.auth_date);
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const MAX_PAYLOAD_AGE_SECONDS = 10 * 60; // 10 minutes
-  const ALLOWED_FUTURE_SKEW_SECONDS = 5 * 60; // clock skew guard
   if (!Number.isFinite(authDateSeconds)) {
     return NextResponse.json(
       { error: "BadRequest", message: "Некорректное значение auth_date" },
@@ -172,6 +192,12 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
     return NextResponse.json(
       { error: "BadRequest", message: "Некорректное время ответа Telegram" },
       { status: 400 }
+    );
+  }
+  if (isReplay(payload)) {
+    return NextResponse.json(
+      { error: "AuthReplay", message: "Повторный ответ Telegram отклонён. Обновите страницу и попробуйте снова." },
+      { status: 403 }
     );
   }
 

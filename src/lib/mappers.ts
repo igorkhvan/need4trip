@@ -38,6 +38,14 @@ export interface DbParticipant {
   created_at: string;
 }
 
+export interface DbEventWithOwner extends DbEvent {
+  created_by_user?: {
+    id: string;
+    name: string;
+    telegram_handle: string | null;
+  } | null;
+}
+
 export function mapDbEventToDomain(db: DbEvent): DomainEvent {
   return {
     id: db.id,
@@ -62,6 +70,17 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     price: db.price ?? null,
     currency: db.currency ?? null,
   };
+}
+
+export function mapDbEventWithOwnerToDomain(db: DbEventWithOwner): DomainEvent {
+  const event = mapDbEventToDomain(db);
+  const ownerName = db.created_by_user?.name ?? null;
+  const ownerHandle = db.created_by_user?.telegram_handle ?? null;
+  return {
+    ...event,
+    ownerName,
+    ownerHandle,
+  } as DomainEvent & { ownerName: string | null; ownerHandle: string | null };
 }
 
 export function mapDbParticipantToDomain(db: DbParticipant): DomainParticipant {

@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
-import { DbEvent } from "@/lib/mappers";
+import { DbEvent, DbEventWithOwner } from "@/lib/mappers";
 import { EventCreateInput, EventUpdateInput } from "@/lib/types/event";
 
 const table = "events";
@@ -27,6 +27,22 @@ export async function listEvents(): Promise<DbEvent[]> {
   }
 
   return (data ?? []) as DbEvent[];
+}
+
+export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
+  const client = ensureClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from(table)
+    .select("*, created_by_user:users(id, name, telegram_handle)")
+    .order("date_time", { ascending: true });
+
+  if (error) {
+    console.error("Failed to list events with owner", error);
+    throw new InternalError("Failed to list events", error);
+  }
+
+  return (data ?? []) as DbEventWithOwner[];
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {

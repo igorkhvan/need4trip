@@ -103,6 +103,8 @@ export interface Event {
   price?: number | null;
   currency?: string | null;
   participantsCount?: number;
+  ownerName?: string | null;
+  ownerHandle?: string | null;
 }
 
 export type DomainEvent = Event;

@@ -26,6 +26,7 @@ type EventRow = {
   startsAt: string;
   typeLabel?: string | null;
   ownerName?: string | null;
+  ownerHandle?: string | null;
   participantsCount: number;
   category?: EventCategory | null;
 };
@@ -59,7 +60,8 @@ function mapEvents(events: Event[]): EventRow[] {
     startsAt: e.dateTime,
     typeLabel: e.category ? CATEGORY_LABELS[e.category] : "Ивент",
     category: e.category ?? null,
-    ownerName: null, // backend does not provide owner user; keeping placeholder
+    ownerName: e.ownerName ?? null,
+    ownerHandle: e.ownerHandle ?? null,
     participantsCount: e.participantsCount ?? 0,
   }));
 }
@@ -218,7 +220,11 @@ export function EventsTable({ events }: EventsTableProps) {
                 <TableCell className="font-medium">{event.title}</TableCell>
                 <TableCell>{formatEventDateTime(event.startsAt)}</TableCell>
                 <TableCell>{event.typeLabel ?? "Ивент"}</TableCell>
-                <TableCell>{event.ownerName ?? "—"}</TableCell>
+                <TableCell>
+                  {event.ownerHandle
+                    ? `@${event.ownerHandle}`
+                    : event.ownerName ?? "—"}
+                </TableCell>
                 <TableCell className="text-right">{event.participantsCount}</TableCell>
               </TableRow>
             ))}

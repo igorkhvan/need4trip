@@ -21,6 +21,7 @@ import { OwnerActions } from "@/components/events/owner-actions";
 import { getEventWithParticipantsVisibility } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
+import { getUserById } from "@/lib/db/userRepo";
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
   weekend_trip: "Выезд на выходные",
@@ -90,6 +91,8 @@ export default async function EventDetails({
   const currentParticipant = currentUser
     ? participants.find((p) => p.userId === currentUser.id)
     : undefined;
+  const ownerUser =
+    event.createdByUserId ? await getUserById(event.createdByUserId) : null;
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 py-8 px-4">
@@ -103,6 +106,11 @@ export default async function EventDetails({
             <p className="text-sm text-muted-foreground">
               {categoryLabel ?? "Ивент"} • {formattedDateTime} • {participantsCountLabel}
             </p>
+            {ownerUser && (
+              <p className="text-sm text-muted-foreground">
+                Организатор: {ownerUser.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser.name}
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
               <Badge variant={event.isPaid ? "default" : "outline"}>

@@ -2,7 +2,7 @@ import {
   createEvent as createEventRecord,
   deleteEvent as deleteEventRecord,
   getEventById,
-  listEvents as listEventsFromRepo,
+  listEventsWithOwner,
   updateEvent as updateEventRecord,
   replaceAllowedBrands,
   getAllowedBrands,
@@ -14,7 +14,11 @@ import {
   listParticipantEventIds,
 } from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
-import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
+import {
+  mapDbEventToDomain,
+  mapDbEventWithOwnerToDomain,
+  mapDbParticipantToDomain,
+} from "@/lib/mappers";
 import {
   EventUpdateInput,
   eventCreateSchema,
@@ -69,14 +73,15 @@ async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
 }
 
 export async function listEvents(): Promise<Event[]> {
-  const events = await listEventsFromRepo();
-  return events.map(mapDbEventToDomain);
+  const events = await listEventsWithOwner();
+  const mapped = events.map(mapDbEventWithOwnerToDomain);
+  return mapped;
 }
 
 export async function listEventsSafe(): Promise<Event[]> {
   try {
-    const events = await listEventsFromRepo();
-    return events.map(mapDbEventToDomain);
+    const events = await listEventsWithOwner();
+    return events.map(mapDbEventWithOwnerToDomain);
   } catch (err) {
     console.error("[listEventsSafe] Failed to list events", err);
     return [];
@@ -108,16 +113,7 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
   })();
 
   const eventIds = filtered.map((e) => e.id);
-  let counts: Record<string, number> = {};
-  try {
-    const participantEventIdsAll = await listParticipantEventIds(eventIds);
-    counts = participantEventIdsAll.reduce<Record<string, number>>((acc, eventId) => {
-      acc[eventId] = (acc[eventId] ?? 0) + 1;
-      return acc;
-    }, {});
-  } catch (err) {
-    console.error("[listVisibleEventsForUser] Failed to count participants for events", err);
-  }
+  const counts = await getParticipantsCountByEventIds(eventIds);
 
   const hydrated = await Promise.all(
     filtered.map(async (event) => {
@@ -136,6 +132,37 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
   );
 
   return hydrated;
+}
+
+async function getParticipantsCountByEventIds(eventIds: string[]): Promise<Record<string, number>> {
+  if (!eventIds.length) return {};
+  let participantEventIdsAll: string[] = [];
+  try {
+    participantEventIdsAll = await listParticipantEventIds(eventIds);
+  } catch (err) {
+    console.error("[getParticipantsCountByEventIds] Failed to count participants for events", err);
+    return {};
+  }
+  return participantEventIdsAll.reduce<Record<string, number>>((acc, eventId) => {
+    acc[eventId] = (acc[eventId] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+export async function hydrateEvent(event: Event): Promise<Event> {
+  let allowedBrands = event.allowedBrands;
+  try {
+    allowedBrands = await getAllowedBrands(event.id);
+  } catch (err) {
+    console.error("[hydrateEvent] Failed to load allowed brands", err);
+  }
+  let participantsCount = event.participantsCount ?? 0;
+  try {
+    participantsCount = await countParticipants(event.id);
+  } catch (err) {
+    console.error("[hydrateEvent] Failed to count participants", err);
+  }
+  return { ...event, allowedBrands, participantsCount };
 }
 
 export async function grantEventAccessByLink(eventId: string, userId: string): Promise<void> {

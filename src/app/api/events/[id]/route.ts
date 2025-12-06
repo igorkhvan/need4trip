@@ -1,6 +1,6 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { deleteEvent, getEventWithVisibility, updateEvent } from "@/lib/services/events";
+import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
 
 type Params = { params: { id: string } } | { params: Promise<{ id: string }> };
 
@@ -12,7 +12,8 @@ export async function GET(_: Request, { params }: Params) {
       currentUser,
       enforceVisibility: true,
     });
-    return respondJSON({ event });
+    const hydrated = await hydrateEvent(event);
+    return respondJSON({ event: hydrated });
   } catch (err) {
     return respondError(err);
   }
