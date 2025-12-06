@@ -52,16 +52,37 @@ export function EditEventForm({
   }`;
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Ивент</p>
-        <h1 className="text-3xl font-bold tracking-tight">Редактирование: {event.title}</h1>
-        <p className="text-sm text-muted-foreground">{headerDescription}</p>
-        <p className="text-sm text-muted-foreground">
-          Обновите ключевые параметры ивента. Изменения сразу будут видны участникам.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link className="text-sm text-muted-foreground underline-offset-4 hover:underline" href={`/events/${event.id}`}>
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-10 md:px-10 lg:px-12">
+      <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#E86223]">Редактирование</p>
+            <h1 className="text-3xl font-semibold leading-tight text-[#111827]">
+              {event.title}
+            </h1>
+            <p className="text-sm text-[#6B7280]">{headerDescription}</p>
+            <p className="text-sm text-[#6B7280]">
+              Обновите параметры ивента. Изменения сразу будут видны участникам.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {event.isClubEvent && (
+                <span className="rounded-full bg-[#F0FDF4] px-3 py-1 text-[13px] font-medium text-[#16A34A]">
+                  Клубное событие
+                </span>
+              )}
+              <span
+                className={`rounded-full px-3 py-1 text-[13px] font-medium ${
+                  event.isPaid ? "bg-[#FFF4EF] text-[#E86223]" : "bg-[#E5E7EB] text-[#374151]"
+                }`}
+              >
+                {event.isPaid ? "Платное" : "Бесплатное"}
+              </span>
+            </div>
+          </div>
+          <Link
+            className="text-sm text-[#6B7280] underline-offset-4 hover:text-[#111827] hover:underline"
+            href={`/events/${event.id}`}
+          >
             ← Назад к событию
           </Link>
         </div>

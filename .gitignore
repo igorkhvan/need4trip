@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# design showcase (not part of app build)
+src/figma-design
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

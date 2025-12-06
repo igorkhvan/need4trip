@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore embedded figma design showcase (not part of app build)
+    "src/figma-design/**",
   ]),
 ]);
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Users, ShieldCheck } from "lucide-react";
+import { Users, ShieldCheck, Calendar as CalendarIcon, MapPin, Car } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { RegisterParticipantForm } from "@/components/events/register-participant-form";
 import { ParticipantActions } from "@/components/events/participant-actions";
 import { OwnerActions } from "@/components/events/owner-actions";
+import { RegisterParticipantModal } from "@/components/events/register-participant-modal";
 import { getEventWithParticipantsVisibility } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
@@ -31,6 +31,22 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   service_day: "Сервис-день",
   other: "Другое",
 };
+
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getProgressColor(percent: number) {
+  if (percent >= 80) return "bg-[#EF4444]";
+  if (percent >= 50) return "bg-[#FF6F2C]";
+  return "bg-[#22C55E]";
+}
 
 export default async function EventDetails({
   params,
@@ -64,12 +80,7 @@ export default async function EventDetails({
   );
 
   const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : null;
-  const formattedDateTime = new Date(event.dateTime).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const formattedDateTime = formatDateTime(event.dateTime);
   const participantsCountLabel = `${participants.length} / ${event.maxParticipants ?? "∞"} участников`;
   const vehicleTypeLabelMap: Record<string, string> = {
     any: "Не важно",
@@ -93,44 +104,73 @@ export default async function EventDetails({
     : undefined;
   const ownerUser =
     event.createdByUserId ? await getUserById(event.createdByUserId) : null;
+  const fillPercent =
+    event.maxParticipants && event.maxParticipants > 0
+      ? Math.min(100, Math.round((participants.length / event.maxParticipants) * 100))
+      : null;
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-3">
+    <div className="mx-auto max-w-6xl space-y-10 px-5 py-10 md:px-10 lg:px-12">
+      <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" asChild className="px-0 text-sm text-muted-foreground">
+            <Button variant="ghost" size="sm" asChild className="px-0 text-sm text-[#6B7280] hover:bg-transparent hover:text-[#111827]">
               <Link href="/events">← Назад к списку</Link>
             </Button>
             {ownerUser && (
-              <div className="text-right text-xs text-muted-foreground">
+              <div className="text-right text-xs text-[#6B7280]">
                 Организатор: {ownerUser.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser.name}
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">{event.title}</h1>
-              <p className="text-sm text-muted-foreground">
-                {categoryLabel ?? "Ивент"} • {formattedDateTime} • {participantsCountLabel}
-              </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                {event.isClubEvent && <Badge variant="secondary">Клубное событие</Badge>}
-                <Badge variant={event.isPaid ? "default" : "outline"}>
+                {categoryLabel ? (
+                  <Badge variant="secondary" className="bg-[#FFF4EF] text-[#E86223]">
+                    {categoryLabel}
+                  </Badge>
+                ) : null}
+                {event.isClubEvent && (
+                  <Badge variant="secondary" className="bg-[#F0FDF4] text-[#16A34A]">
+                    Клубное событие
+                  </Badge>
+                )}
+                <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
                   {event.isPaid ? "Платное" : "Бесплатное"}
                 </Badge>
-                <Badge variant="outline">{vehicleTypeLabel}</Badge>
+                <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
+                  {vehicleTypeLabel}
+                </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">Локация: {event.locationText}</p>
+              <h1 className="text-3xl font-semibold leading-tight text-[#111827]">{event.title}</h1>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>{formattedDateTime}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+                  <MapPin className="h-4 w-4" />
+                  <span>{event.locationText}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+                  <Users className="h-4 w-4" />
+                  <span>{participantsCountLabel}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+                  <Car className="h-4 w-4" />
+                  <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col items-start gap-2 md:items-end">
+            <div className="flex flex-col items-start gap-3 md:items-end">
               {isRegistered ? (
                 <>
-                  <Badge variant="secondary" className="w-fit">
+                  <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
                     Вы зарегистрированы
                   </Badge>
                   {currentParticipant && (
-                    <Button variant="secondary" size="sm" asChild>
+                    <Button variant="secondary" size="sm" asChild className="rounded-xl">
                       <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
                         Редактировать данные
                       </Link>
@@ -141,6 +181,7 @@ export default async function EventDetails({
                 <Button
                   asChild
                   disabled={isFull}
+                  className="rounded-xl px-5"
                   title={isFull ? "Достигнут лимит участников" : undefined}
                 >
                   <Link href="#register">Присоединиться</Link>
@@ -148,6 +189,20 @@ export default async function EventDetails({
               )}
             </div>
           </div>
+          {fillPercent !== null && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#6B7280]">Заполнено мест</span>
+                <span className="font-medium text-[#111827]">{fillPercent}%</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-[#F3F4F6]">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${getProgressColor(fillPercent)}`}
+                  style={{ width: `${fillPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -233,10 +288,13 @@ export default async function EventDetails({
         </Card>
       )}
 
-      <section id="register" className="space-y-3 rounded-xl border bg-card p-6 shadow-sm">
+      <section
+        id="register"
+        className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8"
+      >
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold text-foreground">Регистрация экипажа</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-2xl font-semibold text-[#111827]">Регистрация экипажа</h2>
+          <p className="text-sm text-[#6B7280]">
             Укажите данные экипажа. После отправки вы появитесь в списке участников.
           </p>
         </div>
@@ -269,11 +327,17 @@ export default async function EventDetails({
             </AlertDescription>
           </Alert>
         ) : (
-          <RegisterParticipantForm
-            eventId={event.id}
-            customFieldsSchema={event.customFieldsSchema}
-            event={event}
-          />
+          <div className="space-y-4">
+            <RegisterParticipantModal
+              eventId={event.id}
+              customFieldsSchema={event.customFieldsSchema}
+              event={event}
+              triggerLabel="Открыть форму"
+            />
+            <div className="text-xs text-[#6B7280]">
+              Форма откроется во всплывающем окне. Данные отправятся сразу после нажатия «Сохранить».
+            </div>
+          </div>
         )}
       </section>
 
