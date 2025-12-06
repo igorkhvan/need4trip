@@ -211,12 +211,26 @@ export function EventForm({
         issues[`customFieldsSchema.${idx}.label`] = "Введите название поля";
       }
     });
-    return { issues, parsedDate, trimmedTitle, trimmedDescription, trimmedLocation };
+    return {
+      issues,
+      parsedDate,
+      trimmedTitle,
+      trimmedDescription,
+      trimmedLocation,
+      trimmedPrice,
+    };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { issues, parsedDate, trimmedTitle, trimmedDescription, trimmedLocation } = validate();
+    const {
+      issues,
+      parsedDate,
+      trimmedTitle,
+      trimmedDescription,
+      trimmedLocation,
+      trimmedPrice,
+    } = validate();
     if (Object.keys(issues).length) {
       setFieldErrors(issues);
       return;
