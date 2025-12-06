@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -198,9 +199,7 @@ export function RegisterParticipantForm({
             className="flex items-center gap-3 rounded-md border bg-background px-3 py-2"
             key={field.id}
           >
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-primary"
+            <Checkbox
               checked={Boolean(value)}
               onChange={(e) => handleChange(field.id, e.target.checked)}
             />

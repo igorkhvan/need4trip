@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
 import { EventCustomFieldSchema } from "@/lib/types/event";
 
@@ -168,9 +169,7 @@ export function EditParticipationForm({
             className="flex items-center gap-3 rounded-md border bg-background px-3 py-2"
             key={field.id}
           >
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-primary"
+            <Checkbox
               checked={Boolean(value)}
               onChange={(e) => updateValue(e.target.checked)}
             />

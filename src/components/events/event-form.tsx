@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 import { Trash2 } from "lucide-react";
 import {
@@ -489,9 +490,7 @@ export function EventForm({
               </div>
               <div className="flex items-center">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-[#374151]">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-2 border-[#E5E7EB] accent-[#E86223] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                  <Checkbox
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
                     disabled={disabled}
@@ -770,9 +769,7 @@ export function EventForm({
 
                         <div className="flex items-center justify-between gap-3">
                           <label className="flex items-center gap-2 text-sm text-[#374151]">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-2 border-[#E5E7EB] accent-[#E86223] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
+                            <Checkbox
                               checked={field.required}
                               onChange={(e) => updateField(field.id, { required: e.target.checked })}
                               disabled={disabled || customFieldsLocked}
