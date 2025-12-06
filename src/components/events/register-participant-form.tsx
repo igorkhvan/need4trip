@@ -251,13 +251,6 @@ export function RegisterParticipantForm({
       onSubmit={handleSubmit}
       className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm"
     >
-      <div className="space-y-1">
-        <h3 className="text-xl font-semibold">Регистрация</h3>
-        <p className="text-sm text-muted-foreground">
-          Заполните данные экипажа — это займёт 1–2 минуты. После отправки вы появитесь в списке участников.
-        </p>
-      </div>
-
       {event?.isPaid && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
@@ -273,16 +266,11 @@ export function RegisterParticipantForm({
       <div className="grid gap-4 md:grid-cols-[2fr,1fr] md:items-end">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
-            Имя экипажа
+            Имя водителя
           </Label>
           {user ? (
             <div className="rounded-lg border bg-muted/50 px-3 py-2 text-sm text-foreground">
-              <div className="font-medium">
-                {displayName || user.telegramHandle || user.name || "Ваш профиль"}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Имя берём из вашего профиля, менять не нужно
-              </div>
+              <div className="font-medium">{displayName || user.telegramHandle || user.name || "Ваш профиль"}</div>
               <Input
                 type="hidden"
                 value={displayName}
@@ -331,7 +319,7 @@ export function RegisterParticipantForm({
       <p className="text-xs text-muted-foreground">
         После отправки вы появитесь в списке участников, а организатор получит ваши данные.
       </p>
-      <div className="flex justify-end">
+      <div className="flex justify-end pb-1">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Сохраняем..." : "Зарегистрироваться"}
         </Button>

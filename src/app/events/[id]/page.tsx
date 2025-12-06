@@ -218,51 +218,49 @@ export default async function EventDetails({
         </Card>
       )}
 
-      <Card id="register">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">Регистрация</CardTitle>
-          <CardDescription>
+      <section id="register" className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold text-foreground">Регистрация</h2>
+          <p className="text-sm text-muted-foreground">
             Заполните данные экипажа — это займёт 1–2 минуты. После отправки вы появитесь в списке участников.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isFull ? (
-            <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-              Регистрация закрыта: достигнуто максимальное количество участников (
-              {event.maxParticipants}).
+          </p>
+        </div>
+        {isFull ? (
+          <div className="rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+            Регистрация закрыта: достигнуто максимальное количество участников (
+            {event.maxParticipants}).
+          </div>
+        ) : isRegistered && currentParticipant ? (
+          <Alert>
+            <AlertTitle>Вы уже зарегистрированы</AlertTitle>
+            <AlertDescription>
+              Ваш профиль уже есть в списке участников этого ивента.
+            </AlertDescription>
+            <div className="mt-3">
+              <Button size="sm" variant="secondary" asChild>
+                <Link
+                  href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}
+                >
+                  Редактировать данные экипажа
+                </Link>
+              </Button>
             </div>
-          ) : isRegistered && currentParticipant ? (
-            <Alert>
-              <AlertTitle>Вы уже зарегистрированы</AlertTitle>
-              <AlertDescription>
-                Ваш профиль уже есть в списке участников этого ивента.
-              </AlertDescription>
-              <div className="mt-3">
-                <Button size="sm" variant="secondary" asChild>
-                  <Link
-                    href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}
-                  >
-                    Редактировать данные экипажа
-                  </Link>
-                </Button>
-              </div>
-            </Alert>
-          ) : isLinkProtected && !currentUser ? (
-            <Alert>
-              <AlertTitle>Приватный ивент</AlertTitle>
-              <AlertDescription>
-                Регистрация доступна только авторизованным пользователям.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <RegisterParticipantForm
-              eventId={event.id}
-              customFieldsSchema={event.customFieldsSchema}
-              event={event}
-            />
-          )}
-        </CardContent>
-      </Card>
+          </Alert>
+        ) : isLinkProtected && !currentUser ? (
+          <Alert>
+            <AlertTitle>Приватный ивент</AlertTitle>
+            <AlertDescription>
+              Регистрация доступна только авторизованным пользователям.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <RegisterParticipantForm
+            eventId={event.id}
+            customFieldsSchema={event.customFieldsSchema}
+            event={event}
+          />
+        )}
+      </section>
 
       <Card>
         <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
