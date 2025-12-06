@@ -487,30 +487,13 @@ export function EventForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
+              <div className="flex items-center">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-[#374151]">
-                  <div
-                    className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
-                      isClubEvent ? "border-[#FF6F2C] bg-[#FF6F2C]" : "border-[#E5E7EB] hover:border-[#6B7280]"
-                    }`}
-                  >
-                    {isClubEvent && (
-                      <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M5 13l4 4L19 7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </div>
                   <input
                     type="checkbox"
+                    className="h-4 w-4 rounded border-2 border-[#E5E7EB] text-[#E86223] focus-visible:ring-2 focus-visible:ring-[#FF6F2C33]"
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
-                    className="sr-only"
                     disabled={disabled}
                   />
                   Клубное событие
@@ -785,7 +768,7 @@ export function EventForm({
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center justify-between gap-3">
                           <label className="flex items-center gap-2 text-sm text-[#374151]">
                             <input
                               type="checkbox"
@@ -802,7 +785,7 @@ export function EventForm({
                             type="button"
                             onClick={() => removeField(field.id)}
                             disabled={disabled || customFieldsLocked}
-                            className="h-9 w-9 rounded-full self-start text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
+                            className="h-9 w-9 rounded-full text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
