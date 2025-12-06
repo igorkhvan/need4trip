@@ -81,7 +81,7 @@ export function MultiBrandSelect({
           >
             <div className="flex flex-wrap items-center gap-1">
               {selected.length === 0 ? (
-                <span className="text-sm text-muted-foreground">{placeholder}</span>
+                <span className="text-base text-[#6B7280]">{placeholder}</span>
               ) : (
                 selected.map((brand) => (
                   <Badge

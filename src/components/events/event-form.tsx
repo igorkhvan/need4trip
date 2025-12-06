@@ -175,6 +175,8 @@ export function EventForm({
     const trimmedLocation = locationText.trim();
     const parsedDate = dateTime ? new Date(dateTime) : null;
     const participantsCount = maxParticipants ?? null;
+    const trimmedPrice = price.trim();
+    const parsedPrice = trimmedPrice ? Number(trimmedPrice) : NaN;
     if (trimmedTitle.length < 3) {
       issues.title = "Название должно быть от 3 символов.";
     }
@@ -190,6 +192,16 @@ export function EventForm({
       issues.maxParticipants = "Укажите количество участников от 1 до 15.";
     } else if (participantsCount < 1 || participantsCount > 15) {
       issues.maxParticipants = "Допустимый диапазон: 1–15.";
+    }
+    if (isPaid) {
+      if (!trimmedPrice) {
+        issues.price = "Укажите цену";
+      } else if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
+        issues.price = "Цена должна быть больше 0";
+      }
+      if (!currency) {
+        issues.currency = "Выберите валюту";
+      }
     }
     if (!trimmedLocation) {
       issues.locationText = "Укажите локацию";
@@ -227,7 +239,7 @@ export function EventForm({
       rules: rules.trim() || null,
       isClubEvent,
       isPaid,
-      price: isPaid ? (price ? Number(price) : null) : null,
+      price: isPaid ? (trimmedPrice ? Number(trimmedPrice) : null) : null,
       currency: isPaid ? currency || null : null,
     };
 
@@ -541,24 +553,50 @@ export function EventForm({
                       min={0}
                       step={0.01}
                       value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      onChange={(e) => {
+                        setPrice(e.target.value);
+                        if (fieldErrors.price) {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.price;
+                            return next;
+                          });
+                        }
+                      }}
                       disabled={disabled}
                       placeholder="5000"
                       className="h-12 rounded-xl border-2"
                     />
+                    <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="currency" className="text-sm font-medium text-[#111827]">
                       Валюта
                     </Label>
-                    <Input
-                      id="currency"
+                    <Select
                       value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      placeholder="KZT"
+                      onValueChange={(val) => {
+                        setCurrency(val);
+                        if (fieldErrors.currency) {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.currency;
+                            return next;
+                          });
+                        }
+                      }}
                       disabled={disabled}
-                      className="h-12 rounded-xl border-2"
-                    />
+                    >
+                      <SelectTrigger id="currency" className="h-12 rounded-xl border-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KZT">KZT</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.currency ?? ""}</div>
                   </div>
                 </div>
               )}
@@ -608,7 +646,7 @@ export function EventForm({
                 error={fieldError("allowedBrandIds")}
                 disabled={disabled}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-[#6B7280]">
                 Если не выбрано ни одной марки, участвовать могут любые автомобили.
               </p>
             </div>
@@ -768,7 +806,12 @@ export function EventForm({
 
         <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
           <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
-          <Button variant="ghost" type="button" asChild className="rounded-xl px-4">
+          <Button
+            variant="ghost"
+            type="button"
+            asChild
+            className="rounded-xl px-4 text-[#0F172A]"
+          >
             <Link href={backHref}>Отмена</Link>
           </Button>
           <Button type="submit" disabled={isSubmitting || disabled} className="rounded-xl px-5">
