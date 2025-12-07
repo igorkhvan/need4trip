@@ -22,6 +22,8 @@ interface RegisterParticipantFormProps {
   eventId: string;
   customFieldsSchema: EventCustomFieldSchema[];
   event?: Event;
+  mode?: "create" | "edit";
+  initialRole?: ParticipantRole;
 }
 
 type CustomValues = Record<string, string | number | boolean>;
@@ -43,6 +45,8 @@ export function RegisterParticipantForm({
   eventId,
   customFieldsSchema,
   event,
+  mode = "create",
+  initialRole = "participant",
 }: RegisterParticipantFormProps) {
   const router = useRouter();
   const { user } = useCurrentUser();
@@ -52,7 +56,7 @@ export function RegisterParticipantForm({
     user?.email?.split("@")?.[0] ||
     (user ? user.id.slice(0, 8) : "");
   const [displayName, setDisplayName] = useState<string>(preferredName ?? "");
-  const [role, setRole] = useState<ParticipantRole>("participant");
+  const [role, setRole] = useState<ParticipantRole>(initialRole);
   const [customValues, setCustomValues] = useState<CustomValues>(() =>
     Object.fromEntries(
       (customFieldsSchema || []).map((field) => [field.id, getDefaultValue(field.type)])
@@ -267,35 +271,24 @@ export function RegisterParticipantForm({
           <Label htmlFor="displayName" className="text-sm font-medium">
             Имя водителя
           </Label>
-          {user ? (
-            <div className="rounded-lg border bg-muted/50 px-3 py-2 text-sm text-foreground">
-              <div className="font-medium">{displayName || user.telegramHandle || user.name || "Ваш профиль"}</div>
-              <Input
-                type="hidden"
-                value={displayName}
-                readOnly
-                aria-hidden
-                tabIndex={-1}
-              />
-            </div>
-          ) : (
-            <>
-              <Input
-                id="displayName"
-                placeholder="Ник или имя"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className={fieldErrors.displayName ? "border-red-500 focus-visible:ring-red-500" : ""}
-              />
-              <div className="min-h-[16px] text-xs text-red-600">
-                {fieldErrors.displayName ?? ""}
-              </div>
-            </>
-          )}
+          <Input
+            id="displayName"
+            placeholder="Ник или имя"
+            value={displayName}
+            disabled
+            readOnly
+          />
+          <div className="min-h-[16px] text-xs text-red-600">
+            {fieldErrors.displayName ?? ""}
+          </div>
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium">Роль</Label>
-          <Select value={role} onValueChange={(value) => setRole(value as ParticipantRole)}>
+          <Select
+            value={role}
+            onValueChange={(value) => setRole(value as ParticipantRole)}
+            disabled={mode === "create" ? false : false}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
