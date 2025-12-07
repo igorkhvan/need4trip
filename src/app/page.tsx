@@ -252,7 +252,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="min-h-screen bg-[#F7F7F8] text-[#111827]">
+    <div className="min-h-screen bg-white text-[#111827]">
       <Hero />
       <HowItWorksSection />
       <Features />
