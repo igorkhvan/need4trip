@@ -109,8 +109,8 @@ export default async function EventDetails({
           </Button>
         </div>
 
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-3">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               {categoryLabel ? (
                 <Badge variant="secondary" className="bg-[#FFF4EF] text-[#E86223]">
@@ -129,24 +129,26 @@ export default async function EventDetails({
                 {vehicleTypeLabel}
               </Badge>
             </div>
-            <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-base text-[#6B7280]">
-              <span className="inline-flex items-center gap-2">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-2 text-base text-[#6B7280]">
                 <CalendarIcon className="h-5 w-5" />
-                {formattedDateTime}
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                {participantsCountLabel}
-              </span>
-              <span className="inline-flex items-center gap-2">
+                <span>{formattedDateTime}</span>
+              </div>
+              <div className="flex items-center gap-2 text-base text-[#6B7280]">
                 <MapPin className="h-5 w-5" />
-                {event.locationText}
-              </span>
-              <span className="inline-flex items-center gap-2">
+                <span>{event.locationText}</span>
+              </div>
+              <div className="flex items-center gap-2 text-base text-[#6B7280]">
+                <Users className="h-5 w-5" />
+                <span>{participantsCountLabel}</span>
+              </div>
+              <div className="flex items-center gap-2 text-base text-[#6B7280]">
                 <Car className="h-5 w-5" />
-                {ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}
-              </span>
+                <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-3">
