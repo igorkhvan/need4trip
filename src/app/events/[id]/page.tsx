@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Users, Calendar as CalendarIcon, MapPin, Car } from "lucide-react";
+import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,7 +177,10 @@ export default async function EventDetails({
             )}
             {isOwner && (
               <Button variant="secondary" asChild>
-                <Link href={`/events/${event.id}/edit`}>Редактировать</Link>
+                <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
+                  <PencilLine className="h-4 w-4" />
+                  Редактировать
+                </Link>
               </Button>
             )}
           </div>
