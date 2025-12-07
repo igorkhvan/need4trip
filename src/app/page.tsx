@@ -98,15 +98,15 @@ function Hero() {
           <h1 className="text-4xl font-bold leading-tight text-[#111827] sm:text-5xl">
             Организация автомобильных поездок и учёт экипажей в пару кликов
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-[#374151]">
+          <p className="mx-auto max-w-2xl text-base text-[#374151]">
             Need4Trip помогает клубам и организаторам поездок собирать экипажи, настраивать регистрацию
             и управлять колонной в удобном интерфейсе.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="sm" asChild>
+            <Button size="default" asChild>
               <Link href="/events/create">Создать ивент</Link>
             </Button>
-            <Button size="sm" variant="secondary" asChild>
+            <Button size="default" variant="secondary" asChild>
               <Link href="/events">Посмотреть ивенты</Link>
             </Button>
           </div>
@@ -188,7 +188,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
             <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
             <p className="text-base text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
           </div>
-          <Button size="sm" variant="secondary" asChild>
+          <Button size="default" variant="secondary" asChild>
             <Link href="/events">Все события</Link>
           </Button>
         </div>
@@ -281,7 +281,7 @@ export default async function HomePage() {
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
           <div className="flex justify-center">
-            <Button size="sm" variant="secondary" asChild>
+            <Button size="default" variant="secondary" asChild>
               <Link href="/events/create">Создать ивент бесплатно</Link>
             </Button>
           </div>

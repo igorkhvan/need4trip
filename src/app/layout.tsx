@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { MainHeader } from "@/components/layout/main-header";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Need4Trip",
@@ -14,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.className}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <div className="flex min-h-screen flex-col bg-muted/20">
           <MainHeader />

@@ -274,7 +274,7 @@ export function EventForm({
   const customFieldsLocked = Boolean(disableCustomFields);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 pt-12 md:px-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-8 pb-10 pt-12">
       <div className="space-y-4">
         <Button variant="ghost" className="inline-flex" asChild>
           <Link href={backHref} className="text-base font-medium">
@@ -282,10 +282,10 @@ export function EventForm({
           </Link>
         </Button>
         <div className="space-y-3">
-          <h1 className="text-4xl font-black leading-tight text-[#0F172A] sm:text-5xl">
+          <h1 className="text-5xl font-bold leading-tight text-[#0F172A]">
             {headerTitle}
           </h1>
-          <p className="text-lg text-[#6B7280]">{headerDescription}</p>
+          <p className="text-base text-[#6B7280]">{headerDescription}</p>
         </div>
       </div>
 
