@@ -46,7 +46,12 @@ export function RegisterParticipantForm({
 }: RegisterParticipantFormProps) {
   const router = useRouter();
   const { user } = useCurrentUser();
-  const [displayName, setDisplayName] = useState("");
+  const preferredName =
+    user?.telegramHandle?.trim() ||
+    user?.name?.trim() ||
+    user?.email?.split("@")?.[0] ||
+    (user ? user.id.slice(0, 8) : "");
+  const [displayName, setDisplayName] = useState<string>(preferredName ?? "");
   const [role, setRole] = useState<ParticipantRole>("participant");
   const [customValues, setCustomValues] = useState<CustomValues>(() =>
     Object.fromEntries(
@@ -60,15 +65,10 @@ export function RegisterParticipantForm({
   const sortedFields = [...(customFieldsSchema || [])].sort((a, b) => a.order - b.order);
 
   useEffect(() => {
-    if (user && !displayName) {
-      const preferred =
-        user.telegramHandle?.trim() ||
-        user.name?.trim() ||
-        user.email?.split("@")?.[0] ||
-        user.id.slice(0, 8);
-      setDisplayName(preferred);
+    if (preferredName && !displayName) {
+      setDisplayName(preferredName);
     }
-  }, [user, displayName]);
+  }, [preferredName, displayName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

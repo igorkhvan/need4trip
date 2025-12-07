@@ -211,7 +211,6 @@ export async function changeParticipantRole(
 }
 
 const participantUpdateSchema = z.object({
-  displayName: z.string().trim().min(1).max(100).optional(),
   customFieldValues: z.record(z.any()).optional(),
 });
 
@@ -246,7 +245,6 @@ export async function updateParticipant(
   const sanitizedCustomValues = validateCustomFieldValues(event, mergedCustomValues);
 
   const updated = await updateParticipantRepo(participantId, {
-    displayName: parsed.displayName,
     customFieldValues: sanitizedCustomValues,
   });
 

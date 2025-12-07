@@ -48,7 +48,6 @@ export function EditParticipationForm({
 }: EditParticipationFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, unknown>>(initialValues || {});
-  const [name, setName] = useState(displayName);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -60,11 +59,7 @@ export function EditParticipationForm({
       return;
     }
     setFieldErrors({});
-    const trimmedName = name.trim();
     const issues: Record<string, string> = {};
-    if (!trimmedName || trimmedName.length > 100) {
-        issues.displayName = "Введите имя экипажа (до 100 символов).";
-    }
     customFields.forEach((field) => {
       if (!field.required) return;
       const val = values[field.id];
@@ -92,7 +87,7 @@ export function EditParticipationForm({
       const res = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: trimmedName, customFieldValues: values }),
+        body: JSON.stringify({ customFieldValues: values }),
       });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
@@ -248,24 +243,14 @@ export function EditParticipationForm({
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-foreground">Данные экипажа</CardTitle>
-            <CardDescription>Обновите отображаемое имя и ответы.</CardDescription>
+            <CardDescription>Обновите ответы. Имя экипажа фиксировано.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-        <div className="space-y-1">
-          <Label htmlFor="displayName">Имя экипажа</Label>
-          <Input
-            id="displayName"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={authMissing || !isSelf}
-            className={
-              fieldErrors.displayName ? "border-red-500 focus-visible:ring-red-500" : ""
-            }
-          />
-          <div className="min-h-[16px] text-xs text-red-600">
-            {fieldErrors.displayName ?? ""}
-          </div>
-        </div>
+            <div className="space-y-1">
+              <Label htmlFor="displayName">Имя экипажа</Label>
+              <Input id="displayName" value={displayName} disabled readOnly />
+              <div className="min-h-[16px] text-xs text-red-600" />
+            </div>
             {customFields.length > 0 && (
               <div className="grid gap-3 md:grid-cols-2">
                 {customFields.map((field) => renderField(field))}

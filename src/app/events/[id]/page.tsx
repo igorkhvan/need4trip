@@ -111,8 +111,8 @@ export default async function EventDetails({
   };
 
   return (
-    <div className="section bg-white">
-      <div className="section-inner space-y-8">
+    <div className="bg-white py-10 md:py-16">
+      <div className="page-container space-y-6">
         <div className="flex flex-col gap-5">
           <Button variant="ghost" size="sm" asChild className="w-fit">
             <Link href="/events">← Назад к событиям</Link>
