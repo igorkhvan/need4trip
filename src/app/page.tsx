@@ -96,19 +96,10 @@ function Hero() {
             и управлять колонной в удобном интерфейсе.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button
-              size="lg"
-              asChild
-              className="h-12 rounded-xl px-6 text-base shadow-md transition-transform duration-150 hover:-translate-y-0.5"
-            >
+            <Button size="lg" asChild>
               <Link href="/events/create">Создать ивент</Link>
             </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              asChild
-              className="h-12 rounded-xl px-6 text-base shadow-md transition-transform duration-150 hover:-translate-y-0.5"
-            >
+            <Button size="lg" variant="secondary" asChild>
               <Link href="/events">Посмотреть ивенты</Link>
             </Button>
           </div>
@@ -190,12 +181,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
             <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
             <p className="text-lg text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
           </div>
-          <Button
-            size="lg"
-            variant="secondary"
-            asChild
-            className="h-11 rounded-xl px-6 text-base shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
-          >
+          <Button size="lg" variant="secondary" asChild>
             <Link href="/events">Все события</Link>
           </Button>
         </div>
@@ -239,12 +225,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                     </p>
                   </div>
                   <div className="mt-auto flex justify-end">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      asChild
-                      className="rounded-lg px-4 transition-transform duration-150 hover:-translate-y-0.5"
-                    >
+                    <Button variant="secondary" size="sm" asChild>
                       <Link href={`/events/${event.id}`}>Подробнее</Link>
                     </Button>
                   </div>
@@ -291,12 +272,7 @@ export default async function HomePage() {
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
           <div className="flex justify-center">
-            <Button
-              size="lg"
-              variant="secondary"
-              asChild
-              className="h-12 rounded-xl px-6 text-base shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
-            >
+            <Button size="lg" variant="secondary" asChild>
               <Link href="/events/create">Создать ивент бесплатно</Link>
             </Button>
           </div>
