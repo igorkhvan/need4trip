@@ -86,7 +86,7 @@ function formatEventMeta(event: EventSummary): string {
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 px-5 py-24 text-center md:px-8 md:py-32">
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-10 px-8 py-24 text-center md:py-40">
         <div className="space-y-6">
           <h1 className="text-4xl font-bold leading-tight text-[#111827] sm:text-5xl">
             Организация автомобильных поездок и учёт экипажей в пару кликов
@@ -111,9 +111,9 @@ function Hero() {
 
 function HowItWorksSection() {
   return (
-    <section className="bg-white py-20 md:py-24">
-      <div className="mx-auto max-w-6xl space-y-12 px-5 text-center md:px-8">
-        <div className="space-y-4">
+    <section className="bg-white py-24 md:py-32">
+      <div className="mx-auto max-w-7xl space-y-12 px-8 text-center">
+        <div className="space-y-4 md:mb-4">
           <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Как это работает</h2>
           <p className="text-lg text-[#6B7280]">Три простых шага для организации вашей автомобильной поездки</p>
         </div>
@@ -140,8 +140,8 @@ function HowItWorksSection() {
 
 function Features() {
   return (
-    <section className="bg-[#F7F7F8] py-20 md:py-24">
-      <div className="mx-auto max-w-6xl space-y-12 px-5 md:px-8">
+    <section className="bg-[#F7F7F8] py-24 md:py-32">
+      <div className="mx-auto max-w-7xl space-y-12 px-8">
         <div className="space-y-4 text-center">
           <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Что умеет Need4Trip</h2>
           <p className="mx-auto max-w-2xl text-lg text-[#6B7280]">
@@ -174,8 +174,8 @@ function Features() {
 
 function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
   return (
-    <section className="bg-white py-20 md:py-24">
-      <div className="mx-auto max-w-6xl space-y-10 px-5 md:px-8">
+    <section className="bg-white py-24 md:py-32">
+      <div className="mx-auto max-w-7xl space-y-12 px-8">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="space-y-4">
             <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
@@ -197,7 +197,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                 key={event.id}
                 className="flex h-full flex-col border border-[#E5E7EB] bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
               >
-                <CardContent className="flex h-full flex-col gap-5 p-5">
+                <CardContent className="flex h-full flex-col gap-5 p-6">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <CardTitle className="text-lg font-semibold text-[#111827]">{event.title}</CardTitle>
