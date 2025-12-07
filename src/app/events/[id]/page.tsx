@@ -6,6 +6,7 @@ import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine } from "lucide
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 import {
   Table,
   TableBody,
@@ -28,6 +29,15 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   training: "Тренировка",
   service_day: "Сервис-день",
   other: "Другое",
+};
+
+const CATEGORY_CHIP_CLASSES: Record<EventCategory, string> = {
+  weekend_trip: "bg-[#FF6F2C] text-white",
+  technical_ride: "bg-[#3B82F6] text-white",
+  meeting: "bg-[#8B5CF6] text-white",
+  training: "bg-[#FBBF24] text-white",
+  service_day: "bg-[#0EA5E9] text-white",
+  other: "bg-[#374151] text-white",
 };
 
 function formatDateTime(iso: string) {
@@ -103,88 +113,79 @@ export default async function EventDetails({
   return (
     <div className="section bg-white">
       <div className="section-inner space-y-8">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/events">← Назад к событиям</Link>
-          </Button>
-        </div>
-
-        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {categoryLabel ? (
-                <Badge variant="secondary" className="bg-[#FFF4EF] text-[#E86223]">
-                  {categoryLabel}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/events">← Назад к событиям</Link>
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
+                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                  {categoryLabel && event.category ? (
+                    <Chip className={CATEGORY_CHIP_CLASSES[event.category]}>{categoryLabel}</Chip>
+                  ) : null}
+                  {event.isClubEvent && <Chip variant="success">Клубное событие</Chip>}
+                  <Chip variant="outline">{event.isPaid ? "Платное" : "Бесплатное"}</Chip>
+                  <Chip variant="outline">{vehicleTypeLabel}</Chip>
+                </div>
+              </div>
+              <div className="grid gap-y-3 gap-x-10 sm:grid-cols-2 text-base text-[#6B7280]">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="h-5 w-5" />
+                  <span>{formattedDateTime}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5" />
+                  <span>{event.locationText}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5" />
+                  <span>{participantsCountLabel}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5" />
+                  <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-3">
+              {isRegistered ? (
+                <>
+                  <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
+                    Вы зарегистрированы
+                  </Badge>
+                  {currentParticipant && (
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
+                        Редактировать данные
+                      </Link>
+                    </Button>
+                  )}
+                </>
+              ) : isFull ? (
+                <Badge variant="secondary" className="w-fit bg-[#FFF4EF] text-[#E86223]">
+                  Лимит участников достигнут
                 </Badge>
-              ) : null}
-              {event.isClubEvent && (
-                <Badge variant="secondary" className="bg-[#F0FDF4] text-[#16A34A]">
-                  Клубное событие
-                </Badge>
+              ) : (
+                <RegisterParticipantModal
+                  eventId={event.id}
+                  customFieldsSchema={event.customFieldsSchema}
+                  event={event}
+                  triggerLabel="Присоединиться"
+                />
               )}
-              <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
-                {event.isPaid ? "Платное" : "Бесплатное"}
-              </Badge>
-              <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
-                {vehicleTypeLabel}
-              </Badge>
+              {isOwner && (
+                <Button variant="secondary" asChild>
+                  <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
+                    <PencilLine className="h-4 w-4" />
+                    Редактировать
+                  </Link>
+                </Button>
+              )}
             </div>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
-            </div>
-            <div className="grid gap-y-3 gap-x-10 sm:grid-cols-2 text-base text-[#6B7280]">
-              <div className="flex items-center gap-3">
-                <CalendarIcon className="h-5 w-5" />
-                <span>{formattedDateTime}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5" />
-                <span>{event.locationText}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5" />
-                <span>{participantsCountLabel}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Car className="h-5 w-5" />
-                <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-3">
-            {isRegistered ? (
-              <>
-                <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
-                  Вы зарегистрированы
-                </Badge>
-                {currentParticipant && (
-                  <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
-                      Редактировать данные
-                    </Link>
-                  </Button>
-                )}
-              </>
-            ) : isFull ? (
-              <Badge variant="secondary" className="w-fit bg-[#FFF4EF] text-[#E86223]">
-                Лимит участников достигнут
-              </Badge>
-            ) : (
-              <RegisterParticipantModal
-                eventId={event.id}
-                customFieldsSchema={event.customFieldsSchema}
-                event={event}
-                triggerLabel="Присоединиться"
-              />
-            )}
-            {isOwner && (
-              <Button variant="secondary" asChild>
-                <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
-                  <PencilLine className="h-4 w-4" />
-                  Редактировать
-                </Link>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -325,6 +326,20 @@ export default async function EventDetails({
           </div>
 
           <div className="space-y-6">
+            {event.isPaid && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-[28px] font-semibold text-foreground">Стоимость участия</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-4xl font-semibold text-[#111827]">
+                    {event.price ?? 0} {event.currency ?? ""}
+                  </p>
+                  <p className="text-sm text-[#6B7280]">за экипаж</p>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-[28px] font-semibold text-foreground">Требования к авто</CardTitle>
