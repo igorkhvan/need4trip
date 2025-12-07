@@ -132,20 +132,20 @@ export default async function EventDetails({
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-2 text-base text-[#6B7280]">
+            <div className="grid gap-y-3 gap-x-10 sm:grid-cols-2 text-base text-[#6B7280]">
+              <div className="flex items-center gap-3">
                 <CalendarIcon className="h-5 w-5" />
                 <span>{formattedDateTime}</span>
               </div>
-              <div className="flex items-center gap-2 text-base text-[#6B7280]">
+              <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5" />
                 <span>{event.locationText}</span>
               </div>
-              <div className="flex items-center gap-2 text-base text-[#6B7280]">
+              <div className="flex items-center gap-3">
                 <Users className="h-5 w-5" />
                 <span>{participantsCountLabel}</span>
               </div>
-              <div className="flex items-center gap-2 text-base text-[#6B7280]">
+              <div className="flex items-center gap-3">
                 <Car className="h-5 w-5" />
                 <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
               </div>
