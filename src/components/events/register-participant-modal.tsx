@@ -35,7 +35,7 @@ export function RegisterParticipantModal({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="rounded-xl px-5">
+      <Button onClick={() => setOpen(true)}>
         {triggerLabel}
       </Button>
 

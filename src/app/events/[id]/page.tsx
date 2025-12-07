@@ -104,7 +104,7 @@ export default async function EventDetails({
     <div className="section bg-white">
       <div className="section-inner space-y-8">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" asChild className="px-0 text-sm">
+          <Button variant="ghost" size="sm" asChild>
             <Link href="/events">← Назад к событиям</Link>
           </Button>
         </div>
