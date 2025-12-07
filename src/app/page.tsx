@@ -92,10 +92,10 @@ function formatEventMeta(event: EventSummary): string {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white">
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-10 px-8 py-24 text-center md:py-40">
+    <section className="section relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white">
+      <div className="section-inner flex flex-col items-center gap-10 text-center">
         <div className="space-y-6">
-          <h1 className="text-4xl font-bold leading-tight text-[#111827] sm:text-5xl">
+          <h1 className="heading-hero">
             Организация автомобильных поездок и учёт экипажей в пару кликов
           </h1>
           <p className="mx-auto max-w-2xl text-base text-[#374151]">
@@ -118,11 +118,11 @@ function Hero() {
 
 function HowItWorksSection() {
   return (
-    <section className="bg-white py-24 md:py-32">
-      <div className="mx-auto w-full max-w-7xl space-y-12 px-8 text-center">
+    <section className="section bg-white">
+      <div className="section-inner text-center">
         <div className="space-y-4 md:mb-4">
-          <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Как это работает</h2>
-          <p className="text-base text-[#6B7280]">Три простых шага для организации вашей автомобильной поездки</p>
+          <h2 className="heading-section">Как это работает</h2>
+          <p className="text-lead">Три простых шага для организации вашей автомобильной поездки</p>
         </div>
         <div className="grid gap-8 md:grid-cols-3">
           {steps.map((item, index) => (
@@ -147,11 +147,11 @@ function HowItWorksSection() {
 
 function Features() {
   return (
-    <section className="bg-[#F7F7F8] py-24 md:py-32">
-      <div className="mx-auto w-full max-w-7xl space-y-12 px-8">
+    <section className="section bg-[#F7F7F8]">
+      <div className="section-inner">
         <div className="space-y-4 text-center">
-          <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Что умеет Need4Trip</h2>
-          <p className="mx-auto max-w-2xl text-base text-[#6B7280]">
+          <h2 className="heading-section">Что умеет Need4Trip</h2>
+          <p className="text-lead mx-auto max-w-2xl">
             Все необходимые инструменты для организации автомобильных мероприятий
           </p>
         </div>
@@ -181,12 +181,12 @@ function Features() {
 
 function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
   return (
-    <section className="bg-white py-24 md:py-32">
-      <div className="mx-auto w-full max-w-7xl space-y-12 px-8">
+    <section className="section bg-white">
+      <div className="section-inner">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="space-y-4">
-            <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
-            <p className="text-base text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
+            <h2 className="heading-section">Ближайшие ивенты</h2>
+            <p className="text-lead">Присоединяйтесь к активным автомобильным сообществам</p>
           </div>
           <Button size="default" variant="secondary" asChild>
             <Link href="/events">Все события</Link>
@@ -275,7 +275,7 @@ export default async function HomePage() {
               "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')",
           }}
         />
-        <div className="relative mx-auto max-w-6xl space-y-6 px-5 md:px-8">
+        <div className="relative page-container space-y-6">
           <h2 className="text-4xl font-semibold leading-tight">Готовы начать?</h2>
           <p className="text-base text-white/90">
             Создайте своё первое событие за несколько минут и начните собирать экипажи

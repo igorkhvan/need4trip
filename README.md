@@ -1,11 +1,22 @@
-Need4Trip — сервис для организации оффроуд-ивентов на Next.js 14 (App Router, TS) + Supabase. Один монолит: фронт, API Route Handlers, UI (Tailwind + shadcn/ui), авторизация через Telegram + собственный JWT (HttpOnly cookie `auth_token`).
+Need4Trip — сервис для организации оффроуд-ивентов на Next.js + Supabase. Один монолит: фронт (App Router), API Route Handlers, UI (Tailwind + shadcn/ui), авторизация через Telegram + собственный JWT (`auth_token`).
 
 ## Стек
-- Next.js 16 (App Router, TypeScript), Turbopack для dev
+- Next.js 16 (App Router, TypeScript)
 - Tailwind CSS 3.4 + shadcn/ui
 - Supabase (Postgres) + supabase-js
-- Auth: Telegram Login Widget → `/api/auth/telegram` → JWT (`auth_token`, HS256)
-- eslint 9
+- Auth: Telegram Login Widget → `/api/auth/telegram` → JWT (HttpOnly cookie `auth_token`)
+- eslint 9, Turbopack для dev
+
+## Дизайн-система и глобальные правила
+- Шрифт: Inter (latin+cyrillic), подключён глобально через `next/font`.
+- Цвета: используем токены Tailwind/shadcn (`bg-white`, `border-muted`, primary #FF6F2C / hover #E86223, акцент #F7F7F8 и т.д.). Не добавляем инлайновых цветов, если есть токены.
+- Макет/ширина: контент через `.page-container` (max-w-7xl, px-8), секции — `section` (`py-24 md:py-32`), внутренности — `section-inner`.
+- Типографика: `heading-hero` (32–48px), `heading-section` (36px), базовый текст 16px (`text-lead` для описаний), мелкие подписи 14px/12px через стандартные utility. Семейство шрифта единое (Inter).
+- Кнопки/компоненты: используем дефолтные варианты `Button`/`Card` из `src/components/ui/*`, без локальных кастомных стилей. Размер кнопок по умолчанию (`size="default"`). Фоновые заливки секций/CTA — full-bleed, контент центрирован `page-container`.
+- Глобальные utility заданы в `src/app/globals.css`:
+  - `.page-container`, `.section`, `.section-inner`
+  - `.heading-hero`, `.heading-section`, `.text-lead`
+- Новые страницы собираем из этих utility — никаких уникальных размеров/паддингов вне токенов.
 
 ## Быстрый старт
 ```bash
@@ -18,114 +29,56 @@ npm run dev
 ## Окружение
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (используется для серверных операций логина)
-- `TELEGRAM_BOT_TOKEN` — токен бота для проверки подписи
-- `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` — username бота для виджета логина
-- `NEXT_PUBLIC_TELEGRAM_AUTH_URL` — опциональный полный URL, если виджет должен слать запросы на внешний домен; по умолчанию текущий origin + `/api/auth/telegram`
-- `AUTH_JWT_SECRET` — секрет подписи JWT (cookie `auth_token`)
-> На Vercel все переменные заведены во всех окружениях.
+- `SUPABASE_SERVICE_ROLE_KEY` (для серверных операций логина)
+- `TELEGRAM_BOT_TOKEN` — подпись Telegram
+- `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` — username бота для виджета
+- `NEXT_PUBLIC_TELEGRAM_AUTH_URL` — опционально внешний URL для виджета; по умолчанию origin + `/api/auth/telegram`
+- `AUTH_JWT_SECRET` — секрет подписи JWT (кука `auth_token`)
 
 ## Структура
 - `src/app`
-  - `/page.tsx` — лендинг
-  - `/events/page.tsx` — список ивентов (SSR, сортировка; безопасная загрузка)
-  - `/events/create/page.tsx` — создание ивента
-  - `/events/[id]/page.tsx` — детали, участники, регистрация
-  - `/events/[id]/edit/page.tsx` — редактирование ивента
-  - `/events/[id]/participants/[participantId]/edit/page.tsx` — правка регистрации
+  - `page.tsx` — лендинг
+  - `events/page.tsx` — список ивентов
+  - `events/create/page.tsx` — создание
+  - `events/[id]/page.tsx` — детали/участники/регистрация
+  - `events/[id]/edit/page.tsx` — редактирование
+  - `events/[id]/participants/[participantId]/edit/page.tsx` — правка регистрации
   - API:
     - `/api/auth/telegram`, `/api/auth/me`, `/api/auth/logout`
     - `/api/events`, `/api/events/[id]`, `/api/events/[id]/participants`, `/api/events/[id]/participants/[participantId]`
-    - `/api/car-brands` — список марок авто (для форм)
+    - `/api/car-brands`
 - `src/lib/db` — репозитории Supabase (events, participants, users, car_brands, event_allowed_brands, event_user_access)
-- `src/lib/services` — бизнес-логика и безопасные загрузчики (listVisibleEventsForUser, getEventWithParticipants и т.д.)
-- `src/lib/types` — доменные типы (User, Event, Participant, CustomFields, Visibility и т.д.)
-- `src/lib/auth` — JWT-утилиты (`getCurrentUser`, `getCurrentUserSafe`, куки)
+- `src/lib/services` — бизнес-логика (видимость, доступы, подсчёты)
+- `src/lib/types` — доменные типы
+- `src/lib/auth` — JWT/куки, `getCurrentUser`
 - `supabase/migrations` — SQL миграции
 
-## Что уже сделано в рамках аудита
-- Добавлены проверки приватности: приватные события теперь защищены на API и в SSR, доступ только авторизованным с правами/ссылкой.
-- Регистрация на приватные события требует авторизации, при первом заходе создаётся доступ по ссылке.
-- Telegram auth усилили TTL/anti-replay проверкой `auth_date` и детерминированным upsert по `telegram_id`.
-- Обновлена схема `supabase/schema.sql` до актуальных таблиц/полей (visibility, vehicle_type_requirement, клубность/платность, бренды, доступы).
-- В списке событий UI получает допустимые марки и реальное число участников.
-- Supabase client типизирован, добавлены схемные типы в `src/lib/types/supabase.ts`.
-- API list/get гидратируют события (allowedBrands, participantsCount, owner info).
-- Добавлен общий компонент `EventForm`, переиспользуется для создания/редактирования.
-- tsconfig ужесточён (no allowJs, no skipLibCheck); eslint проходит. Build в песочнице не запускался из-за ограничений Turbopack.
-
-## Что осталось сделать
-- Anti-replay Telegram вынесен в память процесса; для продакшена добавить хранение nonce/used payload в Redis/БД, чтобы защита работала при перезапуске/нескольких инстансах.
-- Определить стратегию Supabase RLS/ключей: либо включить RLS и прокидывать user-контекст, либо чётко ограничить использование anon key.
-- API `/api/events` и `listVisibleEventsForUser` сейчас грузят все события и затем фильтруют/гидратируют по одному (N+1) и даже получают приватные записи до фильтра; нужен серверный фильтр/агрегации в один запрос без лишних вызовов.
-- Прогнать `npm run build` в рабочем окружении (Turbopack падал в песочнице при биндинге порта).
-- Добавить e2e/интеграционные тесты на приватность, регистрацию, новые поля событий.
-- Усилить инварианты на уровне БД (constraints/RLS), чтобы серверные проверки (maxParticipants, visibility, vehicleType/allowedBrands) не полагались только на Zod/код; добавить уникальные ограничения для ролей leader/tail и транзакционную защиту лимита участников.
-- Регистрация сейчас не валидирует на сервере соответствие vehicleTypeRequirement/allowedBrands; добавить проверки и человекочитаемые ошибки.
-- Детали события сейчас тянут владельца отдельным запросом; стоит отдавать owner в API деталей, чтобы UI не делал дополнительный запрос.
-- Сгенерировать supabase-типизацию автоматически (`supabase gen types`) и заменить ручной `types/supabase.ts`, чтобы не разъезжалась со схемой.
-## Архитектура авторизации
-- Источник истины о пользователе — Supabase `users`.
-- JWT содержит только `userId` + `exp`, кука `auth_token` HttpOnly, SameSite=Lax, 30 дней.
-- `getCurrentUser` декодирует JWT и читает `users`; при ошибке БД/отсутствии записи возвращает `null`. `getCurrentUserSafe` логирует и возвращает `null`, не падает.
-- `/api/auth/telegram`: проверка подписи Telegram, upsert в `users` по `telegram_id`, обязательный select, генерация JWT, установка куки. Ошибки Supabase → `503 db_error`.
+## Авторизация
+- JWT (`auth_token`, HS256) хранит `userId` + `exp`; HttpOnly, SameSite=Lax, 30 дней.
+- `/api/auth/telegram`: проверка подписи Telegram, upsert в `users` по `telegram_id`, генерация JWT, установка куки. Anti-replay/TTL включены.
 - `/api/auth/me`: 200 `{ user }` или 401 + очистка куки.
 - `/api/auth/logout`: очистка куки.
-- UI использует серверный `getCurrentUser` и клиентский хук `useCurrentUser`; LoginButton убирает виджет после авторизации, LogoutButton дергает `/api/auth/logout` + `router.refresh()`.
+- Клиент: `useCurrentUser`, сервер: `getCurrentUser` / `getCurrentUserSafe`.
 
-## Бизнес-правила (базовые)
-- Владелец ивента может редактировать/удалять; кастомные поля нельзя менять, если есть участники.
-- maxParticipants нельзя опускать ниже текущего числа участников.
-- Участник может редактировать/удалять свою регистрацию; владелец может удалить любого.
-- Роли leader/tail уникальны; лимит участников соблюдается; валидация кастомных полей по типам.
+## Схема БД (кратко)
+- `users`: базовые поля + telegram_handle/id/avatar.
+- `events`: `visibility` (`public` | `link_registered`), `vehicle_type_requirement` (`any` | `sedan` | `crossover` | `suv`), `rules`, `is_club_event`, `is_paid`, `price`, `currency`, `custom_fields_schema`, гео/тайм/лимиты.
+- `event_participants`: роли leader/tail/participant, кастомные значения.
+- `car_brands`, `event_allowed_brands` (допустимые марки).
+- `event_user_access`: доступы к приватным ивентам (owner/participant/link).
 
-## Новые поля/таблицы для ивентов (применена миграция `20241205_event_extensions.sql`)
-- `events`: `visibility` (`public` | `link_registered`), `vehicle_type_requirement` (`any` | `sedan` | `crossover` | `suv`), `rules` (text), `is_club_event` (bool), `is_paid` (bool), `price`, `currency`, + ранее существующие поля.
-- Справочник марок: `car_brands` (id, name, slug).
-- Допустимые марки: `event_allowed_brands` (event_id, brand_id, PK).
-- Доступы к приватным ивентам: `event_user_access` (event_id, user_id, source: owner/participant/link, unique(event_id,user_id)).
+## Бизнес-правила (основное)
+- Видимость: public всегда доступна; `link_registered` — только авторизованным с доступом/участием/владельцу; при переходе по ссылке авторизованным добавляется access.
+- Кастомные поля нельзя менять, если есть участники; maxParticipants нельзя опускать ниже текущего числа; лидер/замыкающий уникальны; лимит участников соблюдается.
+- Участник может редактировать/удалять себя; владелец — любого участника; владелец может редактировать/удалять событие.
 
-## Доменные типы (кратко)
-- `Visibility = "public" | "link_registered"`
-- `VehicleTypeRequirement = "any" | "sedan" | "crossover" | "suv"`
-- `CarBrand { id; name; slug? }`
-- `Event` расширен: `visibility`, `vehicleTypeRequirement`, `allowedBrands: CarBrand[]`, `rules`, `isClubEvent`, `isPaid`, `price`, `currency`.
+## Сервисы/фичи
+- `listVisibleEventsForUser`, `getEventWithVisibility/Participants`, `hydrateEvent` (allowedBrands, participantsCount).
+- Allowed brands: `replaceAllowedBrands`, `getAllowedBrands`; бренды подгружаются через `/api/car-brands`.
+- Безопасные методы (`listEventsSafe`, `getCurrentUserSafe`) не валят SSR при сбоях Supabase.
 
-## Сервисы и репозитории
-- Безопасная загрузка: `listEventsSafe`, `getCurrentUserSafe`.
-- Видимость: `listVisibleEventsForUser(userId)` учитывает public + владельца + участие + `event_user_access`.
-- Приватный доступ: `grantEventAccessByLink(eventId,userId)` upsert в `event_user_access`.
-- Бренды: `carBrandRepo.listCarBrands()`, `eventRepo.replaceAllowedBrands/getAllowedBrands`.
-- При создании/обновлении ивента сохраняются allowedBrandIds, новые поля; для владельца создаётся запись доступа (source=owner).
-
-## UI (текущее состояние)
-- Create/Edit: поля видимости, требований к машине, клубность, платность (цена/валюта), правила, допустимые марки (чекбоксы из `/api/car-brands`), базовые поля и кастомные поля (text/number/boolean).
-- View: показывает клубность, платность (стоимость), требования к машине, локацию, рекомендованные марки, правила. Кнопка регистрации убрана из hero. Приватный ивент по ссылке: авторизованным даёт доступ (grantEventAccessByLink), неавторизованным — алерт без формы. Регистрация: информбаннер про платность/правила, блокировка формы для приватного и неавторизованного, алерт при повторной регистрации.
-- /events: использует `listVisibleEventsForUser`, но таблица ещё без индикаторов клуб/платно/owner.
-- Регистрация: кнопка переименована в “Зарегистрироваться”; ошибки 409 теперь показывают общий конфликт (дубликат/лимит/роль).
-
-## Отказоустойчивость Supabase
-- safe-функции (`listEventsSafe`, `getCurrentUserSafe`) логируют и возвращают []/null при сбоях Supabase/Cloudflare, чтобы SSR не падал.
-- Страницы используют safe-версии для событий/пользователя.
-
-## Валидация форм (клиент)
-- Браузерные `required`/тултипы отключены; ошибки показываются нашим UI (красный бордер + текст под полем).
-- Под каждым полем зарезервирован небольшой блок (`min-h`), чтобы при появлении ошибок лэйаут не прыгал.
-- Используем `fieldErrors` для конкретных инпутов (title/description/date/location в create/edit event, имя экипажа и кастомные поля в регистрациях) и общий текст только для серверных/авторизационных ошибок.
-- Проверки на клиенте повторяют базовые правила серверных Zod-схем (длина имени, обязательность, валидная дата в будущем, обязательные кастомные поля), но источник истины остаётся на сервере.
-
-## Миграции
-- `20241204_add_telegram_columns.sql` — добавляет telegram_id/handle/avatar_url + unique.
-- `20241204_fix_telegram_duplicates.sql` — дедуп по telegram_id, перекидывает ссылки, включает уникальный констрейнт.
-- `20241205_event_extensions.sql` — новые поля событий, бренды, доступы, связи.
-
-## TODO / открытые задачи
-- UI допилить: /events список — индикаторы клуб/платно/владелец, фильтры; отображение новых атрибутов в таблице.
-- Регистрация: выбор марки участника из car_brands, предупреждения о несоответствии брендов/типа авто, чекбокс согласия с правилами.
-- Видимость: на страницах enforce link_registered (видна авторизованным по ссылке, добавлять access), возможно фильтры/мои ивенты.
-- Оптимизация multi-select марок (сейчас чекбоксы, требуется поиск/чипы).
-- Тесты e2e/интеграция новых полей, safe-пути при сбоях Supabase.
-- Документировать/добавить payments UI (пока информативно, без оплаты).
-
-## Итоговый промпт для продолжения в новом чате
-«Ты — ведущий разработчик Need4Trip (Next.js 14 App Router + TS + Tailwind + shadcn/ui + Supabase). Система событий с Telegram-авторизацией (JWT в HttpOnly `auth_token`). Миграции применены: события имеют поля visibility, vehicle_type_requirement, rules, is_club_event, is_paid, price, currency; есть таблицы car_brands, event_allowed_brands, event_user_access. Типы/сервисы обновлены: Event включает новые поля, есть listVisibleEventsForUser, grantEventAccessByLink, replaceAllowedBrands/getAllowedBrands, safe-функции для Supabase (listEventsSafe, getCurrentUserSafe). Create/Edit формы уже содержат новые поля (видимость, требования к авто, клубность, платность, правила, допустимые марки через /api/car-brands). View страницы показывают клуб/платно, требования, правила, бренды; регистрация скрыта для приватных без авторизации и информирует про платность/правила. /events использует listVisibleEventsForUser, но таблица ещё без индикаторов клуб/платно/owner. Регистрация не выбирает марку участника и не предупреждает о несоответствии. Твои задачи: довести UI списка/регистрации/предупреждений, фильтры, индикаторы, учёт брендов участника, согласие с правилами, и прочие TODO из README. Строгий TS, без any, Supabase не трогать по схеме (уже мигрировано), безопасные обёртки оставить. Документируй изменения.»
+## Что ещё планируется
+- Сохранение anti-replay для Telegram в общем сторе (Redis/БД).
+- Оптимизация загрузки событий (без N+1, фильтр на сервере).
+- Индикаторы клуб/платно/owner в /events, фильтры; предупреждения о несоответствии авто/бренда при регистрации.
+- Интеграционные/e2e-тесты; `supabase gen types` вместо ручных типов; `npm run build` в прод окружении.

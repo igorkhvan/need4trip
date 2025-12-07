@@ -57,3 +57,29 @@
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   }
 }
+
+@layer components {
+  .page-container {
+    @apply mx-auto w-full max-w-7xl px-8;
+  }
+
+  .section {
+    @apply py-24 md:py-32;
+  }
+
+  .section-inner {
+    @apply page-container space-y-12;
+  }
+
+  .heading-hero {
+    @apply text-4xl font-bold leading-tight text-[#111827] sm:text-5xl;
+  }
+
+  .heading-section {
+    @apply text-4xl font-semibold leading-tight text-[#111827];
+  }
+
+  .text-lead {
+    @apply text-base text-[#6B7280];
+  }
+}

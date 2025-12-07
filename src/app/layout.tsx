@@ -25,7 +25,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-background text-foreground antialiased">
         <div className="flex min-h-screen flex-col bg-muted/20">
           <MainHeader />
-          <main className="container flex-1 py-10">{children}</main>
+          <main className="flex-1 py-10">
+            <div className="page-container">{children}</div>
+          </main>
           <footer className="border-t py-6 text-center text-sm text-muted-foreground">
             Need4Trip · бета-версия ·{" "}
             <a className="underline-offset-4 hover:underline" href="mailto:hello@need4trip.app">
