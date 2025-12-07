@@ -42,12 +42,6 @@ function formatDateTime(iso: string) {
   });
 }
 
-function getProgressColor(percent: number) {
-  if (percent >= 80) return "bg-[#EF4444]";
-  if (percent >= 50) return "bg-[#FF6F2C]";
-  return "bg-[#22C55E]";
-}
-
 export default async function EventDetails({
   params,
 }: {
@@ -104,107 +98,89 @@ export default async function EventDetails({
     : undefined;
   const ownerUser =
     event.createdByUserId ? await getUserById(event.createdByUserId) : null;
-  const fillPercent =
-    event.maxParticipants && event.maxParticipants > 0
-      ? Math.min(100, Math.round((participants.length / event.maxParticipants) * 100))
-      : null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 px-5 py-10 md:px-10 lg:px-12">
-      <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" asChild className="px-0 text-sm">
-              <Link href="/events">← Назад к списку</Link>
-            </Button>
-            {ownerUser && (
-              <div className="text-right text-xs text-[#6B7280]">
-                Организатор: {ownerUser.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser.name}
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {categoryLabel ? (
-                  <Badge variant="secondary" className="bg-[#FFF4EF] text-[#E86223]">
-                    {categoryLabel}
-                  </Badge>
-                ) : null}
-                {event.isClubEvent && (
-                  <Badge variant="secondary" className="bg-[#F0FDF4] text-[#16A34A]">
-                    Клубное событие
-                  </Badge>
-                )}
-                <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
-                  {event.isPaid ? "Платное" : "Бесплатное"}
-                </Badge>
-                <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
-                  {vehicleTypeLabel}
-                </Badge>
-              </div>
-              <h1 className="text-3xl font-semibold leading-tight text-[#111827]">{event.title}</h1>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span>{formattedDateTime}</span>
+    <div className="section bg-white">
+      <div className="section-inner space-y-8">
+        <Card>
+          <CardContent className="space-y-6 p-6 md:p-8">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" asChild className="px-0 text-sm">
+                <Link href="/events">← Назад к событиям</Link>
+              </Button>
+              {ownerUser && (
+                <div className="text-xs text-[#6B7280]">
+                  Организатор: {ownerUser.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser.name}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
-                  <MapPin className="h-4 w-4" />
-                  <span>{event.locationText}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
-                  <Users className="h-4 w-4" />
-                  <span>{participantsCountLabel}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-[#6B7280]">
-                  <Car className="h-4 w-4" />
-                  <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col items-start gap-3 md:items-end">
-              {isRegistered ? (
-                <>
-                  <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
-                    Вы зарегистрированы
-                  </Badge>
-                  {currentParticipant && (
-                    <Button variant="secondary" size="sm" asChild className="rounded-xl">
-                      <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
-                        Редактировать данные
-                      </Link>
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <Button
-                  asChild
-                  disabled={isFull}
-                  className="rounded-xl px-5"
-                  title={isFull ? "Достигнут лимит участников" : undefined}
-                >
-                  <Link href="#register">Присоединиться</Link>
-                </Button>
               )}
             </div>
-          </div>
-          {fillPercent !== null && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#6B7280]">Заполнено мест</span>
-                <span className="font-medium text-[#111827]">{fillPercent}%</span>
+            <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {categoryLabel ? (
+                    <Badge variant="secondary" className="bg-[#FFF4EF] text-[#E86223]">
+                      {categoryLabel}
+                    </Badge>
+                  ) : null}
+                  {event.isClubEvent && (
+                    <Badge variant="secondary" className="bg-[#F0FDF4] text-[#16A34A]">
+                      Клубное событие
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
+                    {event.isPaid ? "Платное" : "Бесплатное"}
+                  </Badge>
+                  <Badge variant="outline" className="border-[#E5E7EB] text-[#374151]">
+                    {vehicleTypeLabel}
+                  </Badge>
+                </div>
+                <h1 className="heading-section">{event.title}</h1>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex items-center gap-2 text-base text-[#6B7280]">
+                    <CalendarIcon className="h-4 w-4" />
+                    <span>{formattedDateTime}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-base text-[#6B7280]">
+                    <MapPin className="h-4 w-4" />
+                    <span>{event.locationText}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-base text-[#6B7280]">
+                    <Users className="h-4 w-4" />
+                    <span>{participantsCountLabel}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-base text-[#6B7280]">
+                    <Car className="h-4 w-4" />
+                    <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
+                  </div>
+                </div>
               </div>
-              <div className="h-2 w-full rounded-full bg-[#F3F4F6]">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${getProgressColor(fillPercent)}`}
-                  style={{ width: `${fillPercent}%` }}
-                />
+              <div className="flex flex-col items-start gap-3 md:items-end">
+                {isRegistered ? (
+                  <>
+                    <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
+                      Вы зарегистрированы
+                    </Badge>
+                    {currentParticipant && (
+                      <Button variant="secondary" size="sm" asChild>
+                        <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
+                          Редактировать данные
+                        </Link>
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button
+                    asChild
+                    disabled={isFull}
+                    title={isFull ? "Достигнут лимит участников" : undefined}
+                  >
+                    <Link href="#register">Присоединиться</Link>
+                  </Button>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
       {(!currentUser || isLinkProtected) && (
         <Alert>
@@ -229,7 +205,7 @@ export default async function EventDetails({
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">Описание</CardTitle>
+            <CardTitle className="heading-section text-[28px]">Описание</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-base leading-relaxed text-foreground">{event.description}</p>
@@ -238,7 +214,7 @@ export default async function EventDetails({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">Параметры поездки</CardTitle>
+            <CardTitle className="heading-section text-[28px]">Параметры поездки</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-start gap-3 rounded-lg border bg-background px-3 py-2">
@@ -275,13 +251,13 @@ export default async function EventDetails({
       {event.rules && event.rules.trim().length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground">Правила поездки</CardTitle>
-            <CardDescription>
+            <CardTitle className="heading-section text-[28px]">Правила поездки</CardTitle>
+            <CardDescription className="text-base text-[#6B7280]">
               Ознакомьтесь с правилами перед регистрацией.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
+            <p className="whitespace-pre-line text-base leading-relaxed text-foreground">
               {event.rules}
             </p>
           </CardContent>
@@ -293,8 +269,8 @@ export default async function EventDetails({
         className="space-y-4 rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8"
       >
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold text-[#111827]">Регистрация экипажа</h2>
-          <p className="text-sm text-[#6B7280]">
+          <h2 className="heading-section text-[28px]">Регистрация экипажа</h2>
+          <p className="text-base text-[#6B7280]">
             Укажите данные экипажа. После отправки вы появитесь в списке участников.
           </p>
         </div>
@@ -334,7 +310,7 @@ export default async function EventDetails({
               event={event}
               triggerLabel="Открыть форму"
             />
-            <div className="text-xs text-[#6B7280]">
+            <div className="text-sm text-[#6B7280]">
               Форма откроется во всплывающем окне. Данные отправятся сразу после нажатия «Сохранить».
             </div>
           </div>
@@ -344,7 +320,7 @@ export default async function EventDetails({
       <Card>
         <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle className="text-xl font-semibold text-foreground">Участники</CardTitle>
+            <CardTitle className="heading-section text-[28px]">Участники</CardTitle>
             <CardDescription>{participantsCountLabel}</CardDescription>
           </div>
         </CardHeader>
@@ -448,6 +424,7 @@ export default async function EventDetails({
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }
