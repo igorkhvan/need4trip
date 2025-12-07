@@ -252,7 +252,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="min-h-screen bg-white text-[#111827]">
+    <div className="relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] min-h-screen bg-white text-[#111827]">
       <Hero />
       <HowItWorksSection />
       <Features />
