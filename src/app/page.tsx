@@ -86,7 +86,7 @@ function formatEventMeta(event: EventSummary): string {
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white">
-      <div className="mx-auto flex w-full max-w-none flex-col items-center gap-10 px-8 py-24 text-center md:py-40">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-10 px-8 py-24 text-center md:py-40">
         <div className="space-y-6">
           <h1 className="text-4xl font-bold leading-tight text-[#111827] sm:text-5xl">
             Организация автомобильных поездок и учёт экипажей в пару кликов
@@ -112,7 +112,7 @@ function Hero() {
 function HowItWorksSection() {
   return (
     <section className="bg-white py-24 md:py-32">
-      <div className="mx-auto w-full max-w-none space-y-12 px-8 text-center">
+      <div className="mx-auto w-full max-w-7xl space-y-12 px-8 text-center">
         <div className="space-y-4 md:mb-4">
           <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Как это работает</h2>
           <p className="text-lg text-[#6B7280]">Три простых шага для организации вашей автомобильной поездки</p>
@@ -141,7 +141,7 @@ function HowItWorksSection() {
 function Features() {
   return (
     <section className="bg-[#F7F7F8] py-24 md:py-32">
-      <div className="mx-auto w-full max-w-none space-y-12 px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-12 px-8">
         <div className="space-y-4 text-center">
           <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Что умеет Need4Trip</h2>
           <p className="mx-auto max-w-2xl text-lg text-[#6B7280]">
@@ -175,7 +175,7 @@ function Features() {
 function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
   return (
     <section className="bg-white py-24 md:py-32">
-      <div className="mx-auto w-full max-w-none space-y-12 px-8">
+      <div className="mx-auto w-full max-w-7xl space-y-12 px-8">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="space-y-4">
             <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
