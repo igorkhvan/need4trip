@@ -5,6 +5,7 @@ import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEventsSafe } from "@/lib/services/events";
+import { EventCategory } from "@/lib/types/event";
 
 type EventSummary = {
   id: string;
@@ -14,6 +15,15 @@ type EventSummary = {
   description?: string | null;
   participantsCount?: number | null;
   maxParticipants?: number | null;
+};
+
+const CATEGORY_LABELS: Record<EventCategory, string> = {
+  weekend_trip: "Выезд на выходные",
+  technical_ride: "Техническая покатушка",
+  meeting: "Встреча",
+  training: "Тренировка",
+  service_day: "Сервис-день",
+  other: "Другое",
 };
 
 const features = [
@@ -75,21 +85,30 @@ function formatEventMeta(event: EventSummary): string {
 
 function Hero() {
   return (
-    <section className="bg-gradient-to-b from-[#F7F9FC] to-white py-20 md:py-28">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-10 px-5 text-center md:px-8">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 px-5 py-24 text-center md:px-8 md:py-32">
         <div className="space-y-6">
-          <h1 className="text-4xl font-bold leading-tight text-[#0F172A] sm:text-5xl">
+          <h1 className="text-4xl font-bold leading-tight text-[#111827] sm:text-5xl">
             Организация автомобильных поездок и учёт экипажей в пару кликов
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-[#6B7280]">
+          <p className="mx-auto max-w-2xl text-lg text-[#374151]">
             Need4Trip помогает клубам и организаторам поездок собирать экипажи, настраивать регистрацию
             и управлять колонной в удобном интерфейсе.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild>
+            <Button
+              size="lg"
+              asChild
+              className="h-12 rounded-xl px-6 text-base shadow-md transition-transform duration-150 hover:-translate-y-0.5"
+            >
               <Link href="/events/create">Создать ивент</Link>
             </Button>
-            <Button size="lg" variant="secondary" asChild>
+            <Button
+              size="lg"
+              variant="secondary"
+              asChild
+              className="h-12 rounded-xl px-6 text-base shadow-md transition-transform duration-150 hover:-translate-y-0.5"
+            >
               <Link href="/events">Посмотреть ивенты</Link>
             </Button>
           </div>
@@ -101,20 +120,23 @@ function Hero() {
 
 function HowItWorksSection() {
   return (
-    <section className="py-16 md:py-24">
+    <section className="bg-white py-20 md:py-24">
       <div className="mx-auto max-w-6xl space-y-12 px-5 text-center md:px-8">
         <div className="space-y-4">
-          <h2 className="text-3xl font-semibold leading-tight text-[#0F172A]">Как это работает</h2>
+          <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Как это работает</h2>
           <p className="text-lg text-[#6B7280]">Три простых шага для организации вашей автомобильной поездки</p>
         </div>
         <div className="grid gap-8 md:grid-cols-3">
           {steps.map((item, index) => (
-            <Card key={item.title} className="h-full border border-[#E5E7EB] shadow-sm">
+            <Card
+              key={item.title}
+              className="h-full border border-[#E5E7EB] bg-white shadow-sm transition-transform duration-150 hover:-translate-y-1 hover:shadow-md"
+            >
               <CardHeader className="space-y-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6F2C] to-[#ff874c] text-2xl font-bold text-white shadow-lg">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-2xl font-bold text-white shadow-lg">
                   {index + 1}
                 </div>
-                <CardTitle className="text-lg font-semibold text-[#0F172A]">{item.title}</CardTitle>
+                <CardTitle className="text-lg font-semibold text-[#111827]">{item.title}</CardTitle>
                 <CardDescription className="text-base text-[#6B7280]">{item.description}</CardDescription>
               </CardHeader>
             </Card>
@@ -127,10 +149,10 @@ function HowItWorksSection() {
 
 function Features() {
   return (
-    <section className="bg-[#F7F9FC] py-16 md:py-24">
+    <section className="bg-[#F7F7F8] py-20 md:py-24">
       <div className="mx-auto max-w-6xl space-y-12 px-5 md:px-8">
         <div className="space-y-4 text-center">
-          <h2 className="text-3xl font-semibold leading-tight text-[#0F172A]">Что умеет Need4Trip</h2>
+          <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Что умеет Need4Trip</h2>
           <p className="mx-auto max-w-2xl text-lg text-[#6B7280]">
             Все необходимые инструменты для организации автомобильных мероприятий
           </p>
@@ -139,12 +161,15 @@ function Features() {
           {features.map((item) => {
             const Icon = item.icon;
             return (
-              <Card key={item.title} className="h-full border border-[#E5E7EB] shadow-sm">
+              <Card
+                key={item.title}
+                className="h-full border border-[#E5E7EB] bg-white shadow-sm transition-transform duration-150 hover:-translate-y-1 hover:shadow-md"
+              >
                 <CardHeader className="space-y-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF4EF]">
                     <Icon className="h-6 w-6 text-[#FF6F2C]" />
                   </div>
-                  <CardTitle className="text-lg font-semibold text-[#0F172A]">{item.title}</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-[#111827]">{item.title}</CardTitle>
                   <CardDescription className="text-base text-[#6B7280]">{item.description}</CardDescription>
                 </CardHeader>
               </Card>
@@ -158,15 +183,19 @@ function Features() {
 
 function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-6xl space-y-12 px-5 md:px-8">
-        <div className="space-y-3 text-center">
-          <h2 className="text-3xl font-semibold leading-tight text-[#0F172A]">Ближайшие ивенты</h2>
-          <p className="text-lg text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
-        </div>
-
-        <div className="flex justify-center">
-          <Button size="lg" variant="secondary" asChild>
+    <section className="bg-white py-20 md:py-24">
+      <div className="mx-auto max-w-6xl space-y-10 px-5 md:px-8">
+        <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+          <div className="space-y-4">
+            <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
+            <p className="text-lg text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
+          </div>
+          <Button
+            size="lg"
+            variant="secondary"
+            asChild
+            className="h-11 rounded-xl px-6 text-base shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
+          >
             <Link href="/events">Все события</Link>
           </Button>
         </div>
@@ -185,8 +214,8 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                 <CardContent className="flex h-full flex-col gap-5 p-5">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                      <CardTitle className="text-lg font-semibold text-[#0F172A]">{event.title}</CardTitle>
-                      <span className="whitespace-nowrap rounded-full bg-[#F0F2F5] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
+                      <CardTitle className="text-lg font-semibold text-[#111827]">{event.title}</CardTitle>
+                      <span className="whitespace-nowrap rounded-full bg-[#F7F7F8] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
                         {event.typeLabel ?? "Ивент"}
                       </span>
                     </div>
@@ -204,11 +233,18 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                       </div>
                     </div>
                     <p className="text-sm text-[#6B7280]">
-                      {event.description ? event.description.slice(0, 90) : "Детали маршрута и требования внутри карточки события."}
+                      {event.description
+                        ? `${event.description.slice(0, 90)}${event.description.length > 90 ? "..." : ""}`
+                        : "Детали маршрута и требования внутри карточки события."}
                     </p>
                   </div>
                   <div className="mt-auto flex justify-end">
-                    <Button variant="secondary" size="sm" asChild>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      asChild
+                      className="rounded-lg px-4 transition-transform duration-150 hover:-translate-y-0.5"
+                    >
                       <Link href={`/events/${event.id}`}>Подробнее</Link>
                     </Button>
                   </div>
@@ -228,21 +264,21 @@ export default async function HomePage() {
     id: e.id,
     title: e.title,
     startsAt: e.dateTime,
-    typeLabel: e.category ?? "Ивент",
+    typeLabel: e.category ? CATEGORY_LABELS[e.category as EventCategory] ?? "Ивент" : "Ивент",
     description: e.description ?? null,
     participantsCount: e.participantsCount ?? null,
     maxParticipants: e.maxParticipants ?? null,
   }));
 
   return (
-    <div className="space-y-0 bg-[#F7F9FC]">
+    <div className="min-h-screen bg-[#F7F7F8] text-[#111827]">
       <Hero />
       <HowItWorksSection />
       <Features />
       <UpcomingEventsSection events={events} />
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#ff874c] py-20 text-center text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#E86223] py-20 text-center text-white md:py-24">
         <div
-          className="absolute inset-0 opacity-30"
+          className="absolute inset-0 opacity-40"
           aria-hidden
           style={{
             backgroundImage:
@@ -250,12 +286,17 @@ export default async function HomePage() {
           }}
         />
         <div className="relative mx-auto max-w-6xl space-y-6 px-5 md:px-8">
-          <h2 className="text-3xl font-semibold leading-tight">Готовы начать?</h2>
+          <h2 className="text-3xl font-semibold leading-tight md:text-4xl">Готовы начать?</h2>
           <p className="text-lg text-white/90">
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
           <div className="flex justify-center">
-            <Button size="lg" variant="secondary" asChild>
+            <Button
+              size="lg"
+              variant="secondary"
+              asChild
+              className="h-12 rounded-xl px-6 text-base shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
+            >
               <Link href="/events/create">Создать ивент бесплатно</Link>
             </Button>
           </div>
