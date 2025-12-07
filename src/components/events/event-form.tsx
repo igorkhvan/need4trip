@@ -801,24 +801,24 @@ export function EventForm({
               type="button"
               onClick={addField}
               disabled={disabled || customFieldsLocked}
-              className="h-11 rounded-xl px-4"
+              className="h-11 px-4"
             >
               Добавить поле
             </Button>
           </div>
         </Card>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
-            <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
-            <Button
-              variant="ghost"
-              type="button"
-              asChild
-              className="rounded-xl px-4"
-            >
-              <Link href={backHref}>Отмена</Link>
-            </Button>
-          <Button type="submit" disabled={isSubmitting || disabled} className="rounded-xl px-5">
+        <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
+          <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
+          <Button
+            variant="ghost"
+            type="button"
+            asChild
+            className="px-4"
+          >
+            <Link href={backHref}>Отмена</Link>
+          </Button>
+          <Button type="submit" disabled={isSubmitting || disabled} className="px-5">
             {isSubmitting ? "Сохраняем..." : submitLabel}
           </Button>
         </div>
