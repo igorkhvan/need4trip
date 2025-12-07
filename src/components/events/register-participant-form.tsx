@@ -266,7 +266,7 @@ export function RegisterParticipantForm({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-[2fr,1fr] md:items-end">
+      <div className="grid gap-4 md:grid-cols-2 md:items-center">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
             Имя водителя
@@ -277,6 +277,7 @@ export function RegisterParticipantForm({
             value={displayName}
             disabled
             readOnly
+            className="h-12"
           />
           <div className="min-h-[16px] text-xs text-red-600">
             {fieldErrors.displayName ?? ""}
@@ -289,7 +290,7 @@ export function RegisterParticipantForm({
             onValueChange={(value) => setRole(value as ParticipantRole)}
             disabled={mode === "create" ? false : false}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-12">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
