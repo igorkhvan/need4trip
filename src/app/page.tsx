@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Inter } from "next/font/google";
 
 import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-react";
 
@@ -6,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEventsSafe } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
+
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 type EventSummary = {
   id: string;
@@ -96,10 +103,10 @@ function Hero() {
             и управлять колонной в удобном интерфейсе.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild>
+            <Button size="sm" asChild>
               <Link href="/events/create">Создать ивент</Link>
             </Button>
-            <Button size="lg" variant="secondary" asChild>
+            <Button size="sm" variant="secondary" asChild>
               <Link href="/events">Посмотреть ивенты</Link>
             </Button>
           </div>
@@ -114,8 +121,8 @@ function HowItWorksSection() {
     <section className="bg-white py-24 md:py-32">
       <div className="mx-auto w-full max-w-7xl space-y-12 px-8 text-center">
         <div className="space-y-4 md:mb-4">
-          <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Как это работает</h2>
-          <p className="text-lg text-[#6B7280]">Три простых шага для организации вашей автомобильной поездки</p>
+          <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Как это работает</h2>
+          <p className="text-base text-[#6B7280]">Три простых шага для организации вашей автомобильной поездки</p>
         </div>
         <div className="grid gap-8 md:grid-cols-3">
           {steps.map((item, index) => (
@@ -143,8 +150,8 @@ function Features() {
     <section className="bg-[#F7F7F8] py-24 md:py-32">
       <div className="mx-auto w-full max-w-7xl space-y-12 px-8">
         <div className="space-y-4 text-center">
-          <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Что умеет Need4Trip</h2>
-          <p className="mx-auto max-w-2xl text-lg text-[#6B7280]">
+          <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Что умеет Need4Trip</h2>
+          <p className="mx-auto max-w-2xl text-base text-[#6B7280]">
             Все необходимые инструменты для организации автомобильных мероприятий
           </p>
         </div>
@@ -178,10 +185,10 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
       <div className="mx-auto w-full max-w-7xl space-y-12 px-8">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="space-y-4">
-            <h2 className="text-3xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
-            <p className="text-lg text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
+            <h2 className="text-4xl font-semibold leading-tight text-[#111827]">Ближайшие ивенты</h2>
+            <p className="text-base text-[#6B7280]">Присоединяйтесь к активным автомобильным сообществам</p>
           </div>
-          <Button size="lg" variant="secondary" asChild>
+          <Button size="sm" variant="secondary" asChild>
             <Link href="/events">Все события</Link>
           </Button>
         </div>
@@ -205,7 +212,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                         {event.typeLabel ?? "Ивент"}
                       </span>
                     </div>
-                    <div className="space-y-2 text-[15px] text-[#6B7280]">
+                    <div className="space-y-2 text-base text-[#6B7280]">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-[#9CA3AF]" />
                         <span>{formatEventMeta(event)}</span>
@@ -218,7 +225,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-[#6B7280]">
+                    <p className="text-base text-[#6B7280]">
                       {event.description
                         ? `${event.description.slice(0, 90)}${event.description.length > 90 ? "..." : ""}`
                         : "Детали маршрута и требования внутри карточки события."}
@@ -252,7 +259,9 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] min-h-screen bg-white text-[#111827]">
+    <div
+      className={`${inter.className} relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] min-h-screen bg-white text-[#111827]`}
+    >
       <Hero />
       <HowItWorksSection />
       <Features />
@@ -267,12 +276,12 @@ export default async function HomePage() {
           }}
         />
         <div className="relative mx-auto max-w-6xl space-y-6 px-5 md:px-8">
-          <h2 className="text-3xl font-semibold leading-tight md:text-4xl">Готовы начать?</h2>
-          <p className="text-lg text-white/90">
+          <h2 className="text-4xl font-semibold leading-tight">Готовы начать?</h2>
+          <p className="text-base text-white/90">
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
           <div className="flex justify-center">
-            <Button size="lg" variant="secondary" asChild>
+            <Button size="sm" variant="secondary" asChild>
               <Link href="/events/create">Создать ивент бесплатно</Link>
             </Button>
           </div>
