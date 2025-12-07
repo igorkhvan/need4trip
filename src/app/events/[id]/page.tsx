@@ -176,7 +176,7 @@ export default async function EventDetails({
               />
             )}
             {isOwner && (
-              <Button variant="secondary" size="sm" asChild>
+              <Button variant="secondary" asChild>
                 <Link href={`/events/${event.id}/edit`}>Редактировать</Link>
               </Button>
             )}
