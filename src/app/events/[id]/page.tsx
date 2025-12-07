@@ -113,13 +113,14 @@ export default async function EventDetails({
   return (
     <div className="section bg-white">
       <div className="section-inner space-y-8">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/events">← Назад к событиям</Link>
-            </Button>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-3">
+        <div className="flex flex-col gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/events">← Назад к событиям</Link>
+          </Button>
+
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2">
                 <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
                 <div className="flex flex-wrap items-center gap-2">
                   {categoryLabel && event.category ? (
@@ -130,59 +131,60 @@ export default async function EventDetails({
                   <Chip variant="outline">{vehicleTypeLabel}</Chip>
                 </div>
               </div>
-              <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-3">
-                {isRegistered ? (
-                  <>
-                    <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
-                      Вы зарегистрированы
-                    </Badge>
-                    {currentParticipant && (
-                      <Button variant="secondary" size="sm" asChild>
-                        <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
-                          Редактировать данные
-                        </Link>
-                      </Button>
-                    )}
-                  </>
-                ) : isFull ? (
-                  <Badge variant="secondary" className="w-fit bg-[#FFF4EF] text-[#E86223]">
-                    Лимит участников достигнут
-                  </Badge>
-                ) : (
-                  <RegisterParticipantModal
-                    eventId={event.id}
-                    customFieldsSchema={event.customFieldsSchema}
-                    event={event}
-                    triggerLabel="Присоединиться"
-                  />
-                )}
-                {isOwner && (
-                  <Button variant="secondary" asChild>
-                    <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
-                      <PencilLine className="h-4 w-4" />
-                      Редактировать
-                    </Link>
-                  </Button>
-                )}
+              <div className="grid gap-y-3 gap-x-10 sm:grid-cols-2 text-base text-[#6B7280]">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="h-5 w-5" />
+                  <span>{formattedDateTime}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5" />
+                  <span>{event.locationText}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5" />
+                  <span>{participantsCountLabel}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5" />
+                  <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
+                </div>
               </div>
             </div>
-            <div className="grid gap-y-3 gap-x-10 sm:grid-cols-2 text-base text-[#6B7280]">
-              <div className="flex items-center gap-3">
-                <CalendarIcon className="h-5 w-5" />
-                <span>{formattedDateTime}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5" />
-                <span>{event.locationText}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5" />
-                <span>{participantsCountLabel}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Car className="h-5 w-5" />
-                <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
-              </div>
+
+            <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-3">
+              {isRegistered ? (
+                <>
+                  <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
+                    Вы зарегистрированы
+                  </Badge>
+                  {currentParticipant && (
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
+                        Редактировать данные
+                      </Link>
+                    </Button>
+                  )}
+                </>
+              ) : isFull ? (
+                <Badge variant="secondary" className="w-fit bg-[#FFF4EF] text-[#E86223]">
+                  Лимит участников достигнут
+                </Badge>
+              ) : (
+                <RegisterParticipantModal
+                  eventId={event.id}
+                  customFieldsSchema={event.customFieldsSchema}
+                  event={event}
+                  triggerLabel="Присоединиться"
+                />
+              )}
+              {isOwner && (
+                <Button variant="secondary" asChild>
+                  <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
+                    <PencilLine className="h-4 w-4" />
+                    Редактировать
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
