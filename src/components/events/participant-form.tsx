@@ -317,7 +317,7 @@ export function ParticipantForm({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+      <div className={mode === "create" ? "grid gap-4 md:grid-cols-2 md:items-start" : "space-y-4"}>
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
             Имя водителя / экипажа
