@@ -6,6 +6,7 @@ import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine } from "lucide
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   Table,
   TableBody,
@@ -117,26 +118,9 @@ export default async function EventDetails({
               <h1 className="text-4xl font-bold leading-tight text-[#111827] md:text-5xl">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-3">
                 {isRegistered ? (
-                  <>
-                    <Badge variant="success" className="w-fit">
-                      Вы зарегистрированы
-                    </Badge>
-                    {currentParticipant && (
-                      <ParticipantModal
-                        mode="edit"
-                        eventId={event.id}
-                        participantId={currentParticipant.id}
-                        customFieldsSchema={event.customFieldsSchema}
-                        event={event}
-                        initialValues={{
-                          displayName: currentParticipant.displayName,
-                          role: currentParticipant.role,
-                          customFieldValues: currentParticipant.customFieldValues,
-                        }}
-                        triggerLabel="Редактировать данные"
-                      />
-                    )}
-                  </>
+                  <Badge variant="success" className="w-fit">
+                    Вы зарегистрированы
+                  </Badge>
                 ) : isFull ? (
                   <Badge variant="warning" className="w-fit">
                     Лимит участников достигнут
@@ -154,7 +138,7 @@ export default async function EventDetails({
                   <Button variant="secondary" asChild>
                     <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
                       <PencilLine className="h-4 w-4" />
-                      Редактировать
+                      Редактировать событие
                     </Link>
                   </Button>
                 )}
@@ -195,18 +179,7 @@ export default async function EventDetails({
         </div>
 
         {fillPercent !== null && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-[#6B7280]">
-              <span>Заполнено мест</span>
-              <span className="text-[#111827]">{fillPercent}%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-[#F3F4F6]">
-              <div
-                className="h-full rounded-full bg-[#FF6F2C] transition-all duration-300"
-                style={{ width: `${fillPercent}%` }}
-              />
-            </div>
-          </div>
+          <ProgressBar value={fillPercent} label="Заполнено мест" />
         )}
 
         <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
