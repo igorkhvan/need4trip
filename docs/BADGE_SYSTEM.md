@@ -36,6 +36,10 @@ interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
     | "solid-cyan"           // Голубой - сервис-день
     | "solid-gray"           // Серый - другое
     
+    // Тип участия (платное/бесплатное)
+    | "paid"                 // Фиолетовый - платное
+    | "free"                 // Зеленый - бесплатное
+    
     // Специальные
     | "club"                 // Зеленый - клубное событие
     | "outline";             // С границей
@@ -171,6 +175,8 @@ export function getCategoryLabel(category: EventCategory): string;
 | `solid-yellow` | `#F59E0B` | `#FFFFFF` |
 | `solid-cyan` | `#06B6D4` | `#FFFFFF` |
 | `solid-gray` | `#374151` | `#FFFFFF` |
+| `paid` | `#8B5CF6` | `#FFFFFF` |
+| `free` | `#10B981` | `#FFFFFF` |
 | `club` | `#10B981` | `#FFFFFF` |
 
 ## Best Practices
@@ -239,6 +245,10 @@ export function getCategoryLabel(category: EventCategory): string;
     Клубное событие
   </Badge>
 )}
+
+<Badge variant={event.isPaid ? "paid" : "free"} size="md">
+  {event.isPaid ? "Платное" : "Бесплатное"}
+</Badge>
 ```
 
 ### Events Grid
@@ -286,7 +296,13 @@ const getStatusBadge = (event: Event) => {
 
 ## Changelog
 
-### v1.0.0 (Current)
+### v1.1.0 (Current)
+- ✨ Добавлены варианты для типа участия:
+  - `paid` - Платное (фиолетовый #8B5CF6)
+  - `free` - Бесплатное (зеленый #10B981)
+- ♻️ Заменен Chip на Badge для отображения платности события
+
+### v1.0.0
 - ✨ Создана полная система Badge компонентов
 - ✨ Добавлены Subtle и Solid варианты
 - ✨ Добавлены размеры (sm, md, lg)

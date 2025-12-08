@@ -169,7 +169,9 @@ export default async function EventDetails({
                 </Badge>
               ) : null}
               {event.isClubEvent && <Badge variant="club" size="md">Клубное событие</Badge>}
-              <Chip variant="outline">{event.isPaid ? "Платное" : "Бесплатное"}</Chip>
+              <Badge variant={event.isPaid ? "paid" : "free"} size="md">
+                {event.isPaid ? "Платное" : "Бесплатное"}
+              </Badge>
               <Chip variant="outline">{vehicleTypeLabel}</Chip>
             </div>
 

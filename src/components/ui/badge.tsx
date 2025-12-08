@@ -41,6 +41,10 @@ const badgeVariants = cva(
         "solid-cyan": "border-transparent bg-[#06B6D4] text-white",
         "solid-gray": "border-transparent bg-[#374151] text-white",
         
+        // Тип участия (платное/бесплатное)
+        paid: "border-transparent bg-[#8B5CF6] text-white",
+        free: "border-transparent bg-[#10B981] text-white",
+        
         // Клубный статус
         club: "border-transparent bg-[#10B981] text-white",
         
