@@ -112,15 +112,15 @@ export default async function EventDetails({
 
   return (
     <div className="bg-white py-10 md:py-16">
-      <div className="page-container space-y-6">
-        <div className="flex flex-col gap-5">
+      <div className="page-container space-y-8">
+        <div className="flex flex-col gap-6">
           <Button variant="ghost" size="sm" asChild className="w-fit">
             <Link href="/events">← Назад к событиям</Link>
           </Button>
 
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <h1 className="text-5xl font-bold leading-tight text-[#111827]">{event.title}</h1>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <h1 className="text-4xl font-bold leading-tight text-[#111827] md:text-5xl">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-3">
                 {isRegistered ? (
                   <>
@@ -176,21 +176,21 @@ export default async function EventDetails({
               <Chip variant="outline">{vehicleTypeLabel}</Chip>
             </div>
 
-            <div className="grid gap-y-3 gap-x-10 sm:grid-cols-2 text-base text-[#6B7280]">
+            <div className="grid gap-4 sm:grid-cols-2 text-base text-[#6B7280]">
               <div className="flex items-center gap-3">
-                <CalendarIcon className="h-5 w-5" />
+                <CalendarIcon className="h-5 w-5 flex-shrink-0" />
                 <span>{formattedDateTime}</span>
               </div>
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="h-5 w-5 flex-shrink-0" />
                 <span>{event.locationText}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Users className="h-5 w-5" />
+                <Users className="h-5 w-5 flex-shrink-0" />
                 <span>{participantsCountLabel}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Car className="h-5 w-5" />
+                <Car className="h-5 w-5 flex-shrink-0" />
                 <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
               </div>
             </div>
@@ -216,20 +216,20 @@ export default async function EventDetails({
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-[28px] font-semibold text-foreground">Описание</CardTitle>
+                <CardTitle className="text-xl font-semibold text-[#111827]">Описание</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-base leading-relaxed text-foreground">{event.description}</p>
+                <p className="text-base leading-relaxed text-[#374151]">{event.description}</p>
               </CardContent>
             </Card>
 
             {event.rules && event.rules.trim().length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-[28px] font-semibold text-foreground">Правила участия</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-[#111827]">Правила участия</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line text-base leading-relaxed text-foreground">
+                  <p className="whitespace-pre-line text-base leading-relaxed text-[#374151]">
                     {event.rules}
                   </p>
                 </CardContent>
@@ -239,10 +239,10 @@ export default async function EventDetails({
             <Card>
               <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <CardTitle className="text-[28px] font-semibold text-foreground">
+                  <CardTitle className="text-xl font-semibold text-[#111827]">
                     Участники ({participants.length})
                   </CardTitle>
-                  <CardDescription>{participantsCountLabel}</CardDescription>
+                  <CardDescription className="text-sm text-[#6B7280]">{participantsCountLabel}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -344,10 +344,10 @@ export default async function EventDetails({
             {event.isPaid && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-[28px] font-semibold text-foreground">Стоимость участия</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-[#111827]">Стоимость участия</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-4xl font-semibold text-[#111827]">
+                  <p className="text-4xl font-bold text-[#111827]">
                     {event.price ?? 0} {event.currency ?? ""}
                   </p>
                   <p className="text-sm text-[#6B7280]">за экипаж</p>
@@ -357,7 +357,7 @@ export default async function EventDetails({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-[28px] font-semibold text-foreground">Требования к авто</CardTitle>
+                <CardTitle className="text-xl font-semibold text-[#111827]">Требования к авто</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1">
@@ -387,14 +387,14 @@ export default async function EventDetails({
             {ownerUser && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-[28px] font-semibold text-foreground">Организатор</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-[#111827]">Организатор</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                  <p className="text-base font-medium text-[#111827]">
+                  <p className="text-base font-semibold text-[#111827]">
                     {ownerUser.name || ownerUser.telegramHandle || "Организатор"}
                   </p>
                   {ownerUser.telegramHandle && (
-                    <p className="text-base text-[#6B7280]">@{ownerUser.telegramHandle}</p>
+                    <p className="text-sm text-[#6B7280]">@{ownerUser.telegramHandle}</p>
                   )}
                 </CardContent>
               </Card>
