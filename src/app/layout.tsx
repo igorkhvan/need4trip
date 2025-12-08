@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { MainHeader } from "@/components/layout/main-header";
+import { MainFooter } from "@/components/layout/main-footer";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -28,12 +29,7 @@ export default function RootLayout({
           <main className="flex-1 py-10">
             <div className="page-container">{children}</div>
           </main>
-          <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-            Need4Trip · бета-версия ·{" "}
-            <a className="underline-offset-4 hover:underline" href="mailto:hello@need4trip.app">
-              Связаться с нами
-            </a>
-          </footer>
+          <MainFooter />
           <Toaster />
         </div>
       </body>

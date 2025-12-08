@@ -285,9 +285,6 @@ export default async function HomePage() {
           </Button>
         </div>
       </section>
-      <footer className="bg-white px-5 py-6 text-center text-xs text-muted-foreground md:px-8">
-        Need4Trip · бета-версия.
-      </footer>
     </div>
   );
 }
