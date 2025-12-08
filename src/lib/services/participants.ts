@@ -218,6 +218,7 @@ export async function changeParticipantRole(
 }
 
 const participantUpdateSchema = z.object({
+  displayName: z.string().trim().min(1).max(100).optional(),
   role: participantRoleSchema.optional(),
   customFieldValues: z.record(z.any()).optional(),
 });
@@ -271,12 +272,16 @@ export async function updateParticipant(
     : participant.customFieldValues ?? {};
   const sanitizedCustomValues = validateCustomFieldValues(event, mergedCustomValues);
 
-  const updatePayload: { customFieldValues: EventCustomFieldValues; role?: ParticipantRole } = {
+  const updatePayload: { customFieldValues: EventCustomFieldValues; role?: ParticipantRole; displayName?: string } = {
     customFieldValues: sanitizedCustomValues,
   };
 
   if (parsed.role) {
     updatePayload.role = parsed.role;
+  }
+
+  if (parsed.displayName) {
+    updatePayload.displayName = parsed.displayName;
   }
 
   const updated = await updateParticipantRepo(participantId, updatePayload);

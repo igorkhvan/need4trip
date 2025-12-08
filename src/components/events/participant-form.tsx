@@ -164,6 +164,7 @@ export function ParticipantForm({
         url = `/api/events/${eventId}/participants/${participantId}`;
         method = "PATCH";
         body = {
+          displayName: displayName.trim() || "Без имени",
           role,
           customFieldValues: preparedValues,
         };
@@ -337,7 +338,6 @@ export function ParticipantForm({
                 });
               }
             }}
-            disabled={mode === "edit"}
             className="h-12"
           />
           <div className="min-h-[28px] text-left text-[13px] text-red-600">
@@ -360,7 +360,6 @@ export function ParticipantForm({
             </SelectContent>
           </Select>
           <div className="min-h-[28px] text-left text-[13px] text-[#6B7280]">
-            {mode === "edit" && "Если роль занята, вы получите ошибку при сохранении"}
           </div>
         </div>
       </div>
