@@ -277,11 +277,18 @@ export function EventForm({
   return (
     <div className="page-container space-y-6 pb-10 pt-12">
       <div className="space-y-4">
-        <Button variant="ghost" asChild className="w-fit">
-          <Link href={backHref}>
-            ← Назад
-          </Link>
-        </Button>
+        <ConfirmDialog
+          trigger={
+            <Button variant="ghost" className="w-fit">
+              ← Назад
+            </Button>
+          }
+          title="Вернуться назад?"
+          description="Все несохранённые данные будут потеряны. Вы уверены, что хотите вернуться?"
+          confirmText="Да, вернуться"
+          cancelText="Продолжить редактирование"
+          onConfirm={() => router.push(backHref)}
+        />
         <div className="space-y-3">
           <h1 className="text-5xl font-bold leading-tight text-[#0F172A]">
             {headerTitle}
