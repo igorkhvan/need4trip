@@ -20,6 +20,7 @@ import {
   RegisterParticipantPayload,
   participantInputSchema,
   participantRoleSchema,
+  ParticipantRole,
   DomainParticipant,
 } from "@/lib/types/participant";
 import { CurrentUser } from "@/lib/auth/currentUser";
