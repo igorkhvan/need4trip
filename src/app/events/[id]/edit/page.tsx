@@ -50,7 +50,7 @@ export default function EditEventPage() {
         setCurrentUserId(userData?.user?.id ?? null);
         console.log("👤 Current user:", userData?.user?.id ?? "guest");
 
-        // Fetch event with participants
+        // Fetch event
         const eventRes = await fetch(`/api/events/${id}`);
         console.log("📡 Event response status:", eventRes.status);
         
@@ -60,16 +60,21 @@ export default function EditEventPage() {
           throw new Error(`Event not found: ${eventRes.status}`);
         }
         
-        const data = await eventRes.json();
+        const eventData = await eventRes.json();
+        
+        // Fetch participants
+        const participantsRes = await fetch(`/api/events/${id}/participants`);
+        const participantsData = participantsRes.ok ? await participantsRes.json() : { participants: [] };
+        
         console.log("✅ Event data:", {
-          id: data.event?.id,
-          title: data.event?.title,
-          participantsCount: data.participants?.length,
-          customFieldsCount: data.event?.customFieldsSchema?.length
+          id: eventData.event?.id,
+          title: eventData.event?.title,
+          participantsCount: participantsData.participants?.length,
+          customFieldsCount: eventData.event?.customFieldsSchema?.length
         });
         
-        setEvent(data.event);
-        setParticipantCount(data.participants?.length ?? 0);
+        setEvent(eventData.event);
+        setParticipantCount(participantsData.participants?.length ?? 0);
       } catch (err) {
         console.error("💥 Load event error:", err);
         setError(err instanceof Error ? err.message : "Failed to load event");
