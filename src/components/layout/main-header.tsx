@@ -39,13 +39,6 @@ export async function MainHeader() {
           <div className="flex items-center gap-3">
             {currentUser ? (
               <>
-                <Link
-                  href="/profile"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-[#F7F7F8]"
-                  title="Профиль"
-                >
-                  <User className="h-5 w-5 text-[#111827]" />
-                </Link>
                 <Button asChild>
                   <Link href="/events/create">Создать событие</Link>
                 </Button>
