@@ -66,8 +66,48 @@ export default function EditEventPage() {
 
   if (loading) {
     return (
-      <div className="page-container">
-        <PageLoader />
+      <div className="page-container space-y-6 pb-10 pt-12">
+        {/* Back Button Skeleton */}
+        <div className="h-12 w-32 animate-pulse rounded-lg bg-[#F7F7F8]" />
+        
+        {/* Header Skeleton */}
+        <div className="space-y-3">
+          <div className="h-12 w-96 animate-pulse rounded-lg bg-[#F7F7F8]" />
+          <div className="h-6 w-full max-w-2xl animate-pulse rounded-lg bg-[#F7F7F8]" />
+        </div>
+
+        {/* Form Cards Skeleton */}
+        <div className="space-y-5">
+          {[1, 2, 3, 4].map((cardNum) => (
+            <div key={cardNum} className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
+              {/* Card Header */}
+              <div className="mb-6 flex items-center gap-3">
+                <div className="h-8 w-8 animate-pulse rounded-full bg-[#FF6F2C]/20" />
+                <div className="h-7 w-64 animate-pulse rounded bg-[#F7F7F8]" />
+              </div>
+              
+              {/* Card Fields */}
+              <div className="space-y-4">
+                {[1, 2].map((fieldNum) => (
+                  <div key={fieldNum} className="space-y-2">
+                    <div className="h-5 w-32 animate-pulse rounded bg-[#F7F7F8]" />
+                    <div className="h-12 w-full animate-pulse rounded-xl bg-[#F7F7F8]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Centered Spinner */}
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="h-12 w-12 animate-spin rounded-full border-3 border-solid border-[#FF6F2C] border-r-transparent" />
+            </div>
+            <p className="text-base font-medium text-[#6B7280]">Загрузка данных события...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -129,7 +169,11 @@ export default function EditEventPage() {
         submitLabel="Сохранить изменения"
         headerTitle="Редактирование события"
         headerDescription="Обновите параметры события. Изменения сразу будут видны участникам."
-        lockedFieldIds={hasParticipants ? event.customFieldsSchema.map((f: any) => f.id) : []}
+        lockedFieldIds={
+          hasParticipants && event.customFieldsSchema 
+            ? event.customFieldsSchema.map((f: any) => f.id).filter((id: string) => id)
+            : []
+        }
         disabled={authMissing || !isOwner}
         initialValues={{
           title: event.title,
@@ -138,7 +182,7 @@ export default function EditEventPage() {
           dateTime: event.dateTime,
           locationText: event.locationText,
           maxParticipants: event.maxParticipants,
-          customFieldsSchema: event.customFieldsSchema,
+          customFieldsSchema: event.customFieldsSchema || [],
           visibility: event.visibility,
           vehicleTypeRequirement: event.vehicleTypeRequirement,
           allowedBrandIds: event.allowedBrands.map((b) => b.id),

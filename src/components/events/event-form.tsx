@@ -277,6 +277,14 @@ export function EventForm({
   const customFieldsLocked = Boolean(disableCustomFields);
   const hasLockedFields = lockedFieldIds.length > 0;
 
+  // Debug logging
+  useEffect(() => {
+    if (hasLockedFields) {
+      console.log("🔒 Locked Field IDs:", lockedFieldIds);
+      console.log("📋 Current Fields:", sortedFields.map(f => ({ id: f.id, label: f.label })));
+    }
+  }, [hasLockedFields, lockedFieldIds, sortedFields]);
+
   return (
     <div className="page-container space-y-6 pb-10 pt-12">
       <div className="space-y-4">
