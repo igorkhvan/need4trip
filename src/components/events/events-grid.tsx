@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
 import { Event, EventCategory } from "@/lib/types/event";
 import { getCategoryLabel } from "@/lib/utils/eventCategories";
 
@@ -132,11 +133,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
     );
   };
 
-  const getProgressColor = (fillPercentage: number) => {
-    if (fillPercentage >= 80) return "bg-[#EF4444]";
-    if (fillPercentage >= 50) return "bg-[#FF6F2C]";
-    return "bg-[#22C55E]";
-  };
+  // Удалено: используем компонент ProgressBar вместо кастомной логики
 
   return (
     <div className="space-y-8">
@@ -254,9 +251,10 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
       {filteredBySearch.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {filteredBySearch.map((event) => {
-            const fillPercentage = event.maxParticipants
-              ? Math.round(((event.participantsCount ?? 0) / event.maxParticipants) * 100)
-              : 0;
+            const fillPercentage = calculateEventFillPercentage(
+              event.participantsCount ?? 0,
+              event.maxParticipants
+            );
             const CategoryIcon = event.category ? CATEGORY_ICONS[event.category] : Car;
             const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
             const priceLabel =
@@ -326,20 +324,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
 
                   {/* Progress Bar */}
                   {event.maxParticipants && (
-                    <div>
-                      <div className="mb-2 flex items-center justify-between text-[13px]">
-                        <span className="text-[#6B7280]">Заполненность</span>
-                        <span className="text-[#111827]">{fillPercentage}%</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-[#F3F4F6]">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${getProgressColor(
-                            fillPercentage
-                          )}`}
-                          style={{ width: `${fillPercentage}%` }}
-                        />
-                      </div>
-                    </div>
+                    <ProgressBar value={fillPercentage} />
                   )}
                 </CardContent>
               </Card>

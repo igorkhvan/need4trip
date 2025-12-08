@@ -6,7 +6,6 @@ import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine } from "lucide
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Chip } from "@/components/ui/chip";
 import {
   Table,
   TableBody,
@@ -172,7 +171,6 @@ export default async function EventDetails({
               <Badge variant={event.isPaid ? "paid" : "free"} size="md">
                 {event.isPaid ? "Платное" : "Бесплатное"}
               </Badge>
-              <Chip variant="outline">{vehicleTypeLabel}</Chip>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 text-base text-[#6B7280]">
