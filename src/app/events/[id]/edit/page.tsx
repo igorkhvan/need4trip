@@ -64,7 +64,13 @@ export default function EditEventPage() {
     loadEvent();
   }, [id]);
 
-  if (loading) return <PageLoader />;
+  if (loading) {
+    return (
+      <div className="page-container">
+        <PageLoader />
+      </div>
+    );
+  }
   if (error || !event) return notFound();
 
   const isOwner = currentUserId === event.createdByUserId;

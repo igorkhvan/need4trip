@@ -720,9 +720,24 @@ export function EventForm({
               <div className="space-y-4">
                 {sortedFields.map((field, index) => {
                   const errorText = fieldError(`customFieldsSchema.${index}.label`);
+                  const isLocked = lockedFieldIds.includes(field.id);
                   return (
-                    <div key={field.id} className="rounded-xl border border-[#E5E7EB] bg-[#F7F7F8] p-4">
+                    <div 
+                      key={field.id} 
+                      className={`rounded-xl border p-4 ${
+                        isLocked ? "border-[#FFF4EF] bg-[#FFFBF8]" : "border-[#E5E7EB] bg-[#F7F7F8]"
+                      }`}
+                    >
                       <div className="flex flex-col gap-4">
+                        {isLocked && (
+                          <div className="mb-2 flex items-center gap-2 text-xs text-[#E86223]">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            Используется участниками — удаление запрещено
+                          </div>
+                        )}
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-2">
                             <Label className="text-sm font-medium text-[#111827]">Название поля</Label>
@@ -785,8 +800,9 @@ export function EventForm({
                             size="icon"
                             type="button"
                             onClick={() => removeField(field.id)}
-                            disabled={disabled || customFieldsLocked}
-                            className="h-9 w-9 rounded-full text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
+                            disabled={disabled || customFieldsLocked || isLocked}
+                            className="h-9 w-9 rounded-full text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223] disabled:cursor-not-allowed disabled:opacity-40"
+                            title={isLocked ? "Поле используется участниками и не может быть удалено" : "Удалить поле"}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
