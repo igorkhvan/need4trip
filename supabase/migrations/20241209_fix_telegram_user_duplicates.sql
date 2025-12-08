@@ -37,13 +37,26 @@ canonical AS (
   RETURNING p.id, p.user_id
 )
 -- 4. Обновить доступы к событиям (event_user_access)
+-- Сначала удаляем записи где будет конфликт unique(event_id, user_id)
+, deleted_conflicting_access AS (
+  DELETE FROM public.event_user_access a
+  WHERE EXISTS (
+    SELECT 1 FROM canonical c
+    WHERE a.user_id = ANY(c.delete_ids)
+      AND EXISTS (
+        SELECT 1 FROM public.event_user_access existing
+        WHERE existing.event_id = a.event_id 
+          AND existing.user_id = c.keep_id
+      )
+  )
+  RETURNING a.id
+)
+-- Теперь обновляем оставшиеся записи (без конфликтов)
 , updated_access AS (
   UPDATE public.event_user_access a
   SET user_id = c.keep_id
   FROM canonical c
   WHERE a.user_id = ANY(c.delete_ids)
-  -- Может быть конфликт unique(event_id, user_id), поэтому используем ON CONFLICT
-  ON CONFLICT (event_id, user_id) DO NOTHING
   RETURNING a.id, a.user_id
 )
 -- 5. Удалить дублирующихся пользователей
