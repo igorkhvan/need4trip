@@ -67,7 +67,7 @@ function getDaysUntil(dateTime: string): number {
   const eventDate = new Date(dateTime);
   const now = new Date();
   const diff = eventDate.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
 export function EventsGrid({ events, currentUserId }: EventsGridProps) {
