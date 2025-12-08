@@ -59,10 +59,16 @@
 }
 
 @layer components {
+  /* Layout containers */
   .page-container {
     @apply mx-auto w-full max-w-7xl px-8;
   }
 
+  .container-custom {
+    @apply mx-auto w-full max-w-[1280px] px-5 sm:px-6 md:px-8;
+  }
+
+  /* Sections */
   .section {
     @apply py-24 md:py-32;
   }
@@ -71,6 +77,7 @@
     @apply page-container space-y-12;
   }
 
+  /* Typography */
   .heading-hero {
     @apply text-4xl font-bold leading-tight text-[#111827] sm:text-5xl;
   }
@@ -81,5 +88,38 @@
 
   .text-lead {
     @apply text-base text-[#6B7280];
+  }
+
+  /* Spacing utilities */
+  .space-xs {
+    @apply gap-2;
+  }
+
+  .space-sm {
+    @apply gap-3;
+  }
+
+  .space-md {
+    @apply gap-4;
+  }
+
+  .space-lg {
+    @apply gap-6;
+  }
+
+  .space-xl {
+    @apply gap-8;
+  }
+
+  .space-2xl {
+    @apply gap-12;
+  }
+
+  .space-3xl {
+    @apply gap-16;
+  }
+
+  .space-4xl {
+    @apply gap-24;
   }
 }
