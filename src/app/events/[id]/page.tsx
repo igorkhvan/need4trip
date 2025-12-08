@@ -227,7 +227,7 @@ export default async function EventDetails({
                           {sortedCustomFields.map((field) => (
                             <TableHead key={field.id}>{field.label}</TableHead>
                           ))}
-                          {(isOwner || currentUser) && (
+                          {(isOwner || currentUser || guestSessionId) && (
                             <TableHead className="text-right">Действия</TableHead>
                           )}
                         </TableRow>
