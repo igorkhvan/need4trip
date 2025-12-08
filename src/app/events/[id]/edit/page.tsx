@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import { EventForm } from "@/components/events/event-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PageLoader } from "@/components/ui/spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { handleApiError } from "@/lib/utils/errors";
 import { EventCategory, VehicleTypeRequirement, Visibility } from "@/lib/types/event";
 
@@ -124,10 +124,8 @@ export default function EditEventPage() {
         {/* Centered Spinner */}
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="h-12 w-12 animate-spin rounded-full border-3 border-solid border-[#FF6F2C] border-r-transparent" />
-            </div>
-            <p className="text-base font-medium text-[#6B7280]">Загрузка данных события...</p>
+            <Spinner size="lg" />
+            <p className="mt-4 text-base text-[#6B7280]">Загрузка данных события...</p>
           </div>
         </div>
       </div>
