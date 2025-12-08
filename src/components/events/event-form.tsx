@@ -277,8 +277,8 @@ export function EventForm({
   return (
     <div className="page-container space-y-6 pb-10 pt-12">
       <div className="space-y-4">
-        <Button variant="ghost" className="inline-flex" asChild>
-          <Link href={backHref} className="text-base font-medium">
+        <Button variant="ghost" asChild className="w-fit">
+          <Link href={backHref}>
             ← Назад
           </Link>
         </Button>
