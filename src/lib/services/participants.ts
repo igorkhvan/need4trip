@@ -19,6 +19,7 @@ import { Event, EventCustomFieldValues } from "@/lib/types/event";
 import {
   RegisterParticipantPayload,
   participantInputSchema,
+  participantRoleSchema,
   DomainParticipant,
 } from "@/lib/types/participant";
 import { CurrentUser } from "@/lib/auth/currentUser";
