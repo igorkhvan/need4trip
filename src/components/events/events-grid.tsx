@@ -267,7 +267,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
                       <div className="mb-1 text-[13px] text-[#6B7280]">Дата и время</div>
                       <div className="flex items-center gap-1 text-[15px] text-[#111827]">
                         <Clock className="h-4 w-4 text-[#6B7280]" />
-                        <span>{formatDateTime(event.dateTime)}</span>
+                        <span>{formatDateTimeShort(event.dateTime)}</span>
                       </div>
                     </div>
                     <div>
