@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
@@ -258,6 +259,10 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
 
     const response = NextResponse.json({ ok: true, user });
     setAuthCookie(response, token);
+    
+    // Revalidate all pages to update currentUser
+    revalidatePath('/', 'layout');
+    
     return response;
   } catch (err) {
     console.error("[auth/telegram] Unexpected error during Supabase operations", err);

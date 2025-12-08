@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
