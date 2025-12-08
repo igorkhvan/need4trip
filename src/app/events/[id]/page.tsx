@@ -111,7 +111,7 @@ export default async function EventDetails({
   };
 
   return (
-    <div className="bg-white py-10 md:py-16">
+    <div className="py-10 md:py-16">
       <div className="page-container space-y-8">
         <div className="flex flex-col gap-6">
           <Button variant="ghost" size="sm" asChild className="w-fit">
@@ -124,7 +124,7 @@ export default async function EventDetails({
               <div className="flex flex-wrap items-center gap-3">
                 {isRegistered ? (
                   <>
-                    <Badge variant="secondary" className="w-fit bg-[#F0FDF4] text-[#16A34A]">
+                    <Badge variant="success" className="w-fit">
                       Вы зарегистрированы
                     </Badge>
                     {currentParticipant && (
@@ -144,7 +144,7 @@ export default async function EventDetails({
                     )}
                   </>
                 ) : isFull ? (
-                  <Badge variant="secondary" className="w-fit bg-[#FFF4EF] text-[#E86223]">
+                  <Badge variant="warning" className="w-fit">
                     Лимит участников достигнут
                   </Badge>
                 ) : (
@@ -216,7 +216,7 @@ export default async function EventDetails({
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-[#111827]">Описание</CardTitle>
+                <CardTitle>Описание</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-base leading-relaxed text-[#374151]">{event.description}</p>
@@ -226,7 +226,7 @@ export default async function EventDetails({
             {event.rules && event.rules.trim().length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">Правила участия</CardTitle>
+                  <CardTitle>Правила участия</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="whitespace-pre-line text-base leading-relaxed text-[#374151]">
@@ -239,9 +239,7 @@ export default async function EventDetails({
             <Card>
               <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">
-                    Участники ({participants.length})
-                  </CardTitle>
+                  <CardTitle>Участники ({participants.length})</CardTitle>
                   <CardDescription className="text-sm text-[#6B7280]">{participantsCountLabel}</CardDescription>
                 </div>
               </CardHeader>
@@ -344,7 +342,7 @@ export default async function EventDetails({
             {event.isPaid && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">Стоимость участия</CardTitle>
+                  <CardTitle>Стоимость участия</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-4xl font-bold text-[#111827]">
@@ -357,7 +355,7 @@ export default async function EventDetails({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-[#111827]">Требования к авто</CardTitle>
+                <CardTitle>Требования к авто</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1">
@@ -387,7 +385,7 @@ export default async function EventDetails({
             {ownerUser && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">Организатор</CardTitle>
+                  <CardTitle>Организатор</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1">
                   <p className="text-base font-semibold text-[#111827]">
