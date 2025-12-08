@@ -359,11 +359,9 @@ export function ParticipantForm({
               <SelectItem value="tail">Замыкающий</SelectItem>
             </SelectContent>
           </Select>
-          {mode === "edit" && (
-            <p className="text-xs text-[#6B7280]">
-              Если роль занята, вы получите ошибку при сохранении
-            </p>
-          )}
+          <div className="min-h-[28px] text-xs text-[#6B7280]">
+            {mode === "edit" && "Если роль занята, вы получите ошибку при сохранении"}
+          </div>
         </div>
       </div>
 
