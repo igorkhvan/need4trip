@@ -27,15 +27,7 @@ import {
   VehicleTypeRequirement,
   Visibility,
 } from "@/lib/types/event";
-
-const CATEGORY_OPTIONS: { value: EventCategory; label: string }[] = [
-  { value: "weekend_trip", label: "Выезд на выходные" },
-  { value: "technical_ride", label: "Техническая покатушка" },
-  { value: "meeting", label: "Встреча" },
-  { value: "training", label: "Тренировка" },
-  { value: "service_day", label: "Сервис-день" },
-  { value: "other", label: "Другое" },
-];
+import { CATEGORY_OPTIONS } from "@/lib/utils/eventCategories";
 
 const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
   { value: "text", label: "Текст" },

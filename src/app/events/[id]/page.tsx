@@ -22,24 +22,9 @@ import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
+import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  weekend_trip: "Выезд на выходные",
-  technical_ride: "Техническая покатушка",
-  meeting: "Встреча",
-  training: "Тренировка",
-  service_day: "Сервис-день",
-  other: "Другое",
-};
-
-const CATEGORY_CHIP_CLASSES: Record<EventCategory, string> = {
-  weekend_trip: "bg-[#FF6F2C] text-white",
-  technical_ride: "bg-[#3B82F6] text-white",
-  meeting: "bg-[#8B5CF6] text-white",
-  training: "bg-[#FBBF24] text-white",
-  service_day: "bg-[#0EA5E9] text-white",
-  other: "bg-[#374151] text-white",
-};
+// Удалено: используем getCategoryLabel и getCategoryBadgeVariant из utils/eventCategories
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -87,7 +72,7 @@ export default async function EventDetails({
     (a, b) => a.order - b.order
   );
 
-  const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : null;
+  const categoryLabel = event.category ? getCategoryLabel(event.category) : null;
   const formattedDateTime = formatDateTime(event.dateTime);
   const participantsCountLabel = `${participants.length} / ${event.maxParticipants ?? "∞"} участников`;
   const vehicleTypeLabelMap: Record<string, string> = {
@@ -179,9 +164,11 @@ export default async function EventDetails({
 
             <div className="flex flex-wrap items-center gap-2">
               {categoryLabel && event.category ? (
-                <Chip className={CATEGORY_CHIP_CLASSES[event.category]}>{categoryLabel}</Chip>
+                <Badge variant={getCategoryBadgeVariant(event.category)} size="md">
+                  {categoryLabel}
+                </Badge>
               ) : null}
-              {event.isClubEvent && <Chip variant="success">Клубное событие</Chip>}
+              {event.isClubEvent && <Badge variant="club" size="md">Клубное событие</Badge>}
               <Chip variant="outline">{event.isPaid ? "Платное" : "Бесплатное"}</Chip>
               <Chip variant="outline">{vehicleTypeLabel}</Chip>
             </div>
@@ -278,16 +265,16 @@ export default async function EventDetails({
                                 <span>{participant.displayName}</span>
                                 <div className="flex flex-wrap gap-1">
                                   {participant.userId ? (
-                                    <Badge className="bg-slate-100 text-slate-800" variant="outline">
+                                    <Badge variant="neutral" size="sm">
                                       Пользователь
                                     </Badge>
                                   ) : (
-                                    <Badge className="bg-slate-100 text-slate-800" variant="outline">
+                                    <Badge variant="neutral" size="sm">
                                       Гость
                                     </Badge>
                                   )}
                                   {participant.userId === event.createdByUserId && (
-                                    <Badge variant="secondary">Владелец</Badge>
+                                    <Badge variant="attention" size="sm">Владелец</Badge>
                                   )}
                                 </div>
                               </div>

@@ -15,18 +15,11 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Event, EventCategory } from "@/lib/types/event";
-
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  weekend_trip: "Выезд на выходные",
-  technical_ride: "Техническая покатушка",
-  meeting: "Встреча",
-  training: "Тренировка",
-  service_day: "Сервис-день",
-  other: "Другое",
-};
+import { getCategoryLabel } from "@/lib/utils/eventCategories";
 
 const CATEGORY_ICONS: Record<EventCategory, typeof Car> = {
   weekend_trip: Mountain,
@@ -118,24 +111,24 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
 
     if (daysUntil <= 7 && daysUntil >= 0) {
       return (
-        <span className="rounded-full bg-[#FFFBEB] px-3 py-1 text-[13px] font-medium text-[#D97706]">
+        <Badge variant="starting-soon" size="md">
           Скоро начало
-        </span>
+        </Badge>
       );
     }
 
     if (fillPercentage >= 90) {
       return (
-        <span className="rounded-full bg-[#FFFBEB] px-3 py-1 text-[13px] font-medium text-[#D97706]">
+        <Badge variant="almost-full" size="md">
           Почти заполнено
-        </span>
+        </Badge>
       );
     }
 
     return (
-      <span className="rounded-full bg-[#F0FDF4] px-3 py-1 text-[13px] font-medium text-[#16A34A]">
+      <Badge variant="registration-open" size="md">
         Открыта регистрация
-      </span>
+      </Badge>
     );
   };
 
@@ -265,7 +258,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
               ? Math.round(((event.participantsCount ?? 0) / event.maxParticipants) * 100)
               : 0;
             const CategoryIcon = event.category ? CATEGORY_ICONS[event.category] : Car;
-            const categoryLabel = event.category ? CATEGORY_LABELS[event.category] : "Событие";
+            const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
             const priceLabel =
               event.isPaid && event.price
                 ? `${event.price} ${event.currency ?? ""}`.trim()

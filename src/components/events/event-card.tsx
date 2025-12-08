@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -9,16 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Event, EventCategory } from "@/lib/types/event";
-
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  weekend_trip: "Выезд на выходные",
-  technical_ride: "Техническая покатушка",
-  meeting: "Встреча",
-  training: "Тренировка",
-  service_day: "Сервис-день",
-  other: "Другое",
-};
+import { Event } from "@/lib/types/event";
+import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("ru-RU", {
@@ -40,9 +33,9 @@ export function EventCard({ event }: EventCardProps) {
         <CardTitle className="flex items-center justify-between gap-2">
           <span>{event.title}</span>
           {event.category && (
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-              {CATEGORY_LABELS[event.category]}
-            </span>
+            <Badge variant={getCategoryBadgeVariant(event.category)} size="sm">
+              {getCategoryLabel(event.category)}
+            </Badge>
           )}
         </CardTitle>
         <CardDescription className="flex flex-wrap gap-3 text-sm">

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEventsSafe } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
+import { getCategoryLabel } from "@/lib/utils/eventCategories";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -22,15 +23,6 @@ type EventSummary = {
   description?: string | null;
   participantsCount?: number | null;
   maxParticipants?: number | null;
-};
-
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  weekend_trip: "Выезд на выходные",
-  technical_ride: "Техническая покатушка",
-  meeting: "Встреча",
-  training: "Тренировка",
-  service_day: "Сервис-день",
-  other: "Другое",
 };
 
 const features = [
@@ -252,7 +244,7 @@ export default async function HomePage() {
     id: e.id,
     title: e.title,
     startsAt: e.dateTime,
-    typeLabel: e.category ? CATEGORY_LABELS[e.category as EventCategory] ?? "Событие" : "Событие",
+    typeLabel: e.category ? getCategoryLabel(e.category as EventCategory) : "Событие",
     description: e.description ?? null,
     participantsCount: e.participantsCount ?? null,
     maxParticipants: e.maxParticipants ?? null,
