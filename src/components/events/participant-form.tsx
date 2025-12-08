@@ -359,7 +359,7 @@ export function ParticipantForm({
               <SelectItem value="tail">Замыкающий</SelectItem>
             </SelectContent>
           </Select>
-          <div className="min-h-[28px] text-xs text-[#6B7280]">
+          <div className="min-h-[28px] text-left text-[13px] text-[#6B7280]">
             {mode === "edit" && "Если роль занята, вы получите ошибку при сохранении"}
           </div>
         </div>
