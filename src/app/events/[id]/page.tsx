@@ -316,6 +316,7 @@ export default async function EventDetails({
                                     isOwner={Boolean(isOwner)}
                                     authMissing={!currentUser}
                                     customFieldsSchema={event.customFieldsSchema}
+                                    event={event}
                                     participantData={{
                                       displayName: participant.displayName,
                                       role: participant.role,

@@ -8,7 +8,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { ParticipantModal } from "@/components/events/participant-modal";
-import { EventCustomFieldSchema } from "@/lib/types/event";
+import { Event, EventCustomFieldSchema } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 
 interface ParticipantActionsProps {
@@ -24,6 +24,7 @@ interface ParticipantActionsProps {
     role: ParticipantRole;
     customFieldValues: Record<string, unknown>;
   };
+  event?: Event;
 }
 
 export function ParticipantActions({
@@ -35,6 +36,7 @@ export function ParticipantActions({
   authMissing,
   customFieldsSchema = [],
   participantData,
+  event,
 }: ParticipantActionsProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -88,6 +90,7 @@ export function ParticipantActions({
             eventId={eventId}
             participantId={participantId}
             customFieldsSchema={customFieldsSchema}
+            event={event}
             initialValues={participantData}
             iconOnly
           />
