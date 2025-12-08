@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface OwnerActionsProps {
   eventId: string;
@@ -27,10 +28,6 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
     setError(null);
     setIsDeleting(true);
     try {
-      if (!confirm("Удалить событие?")) {
-        setIsDeleting(false);
-        return;
-      }
       const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
@@ -57,14 +54,23 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
       >
         <Link href={`/events/${eventId}/edit`}>Редактировать</Link>
       </Button>
-      <Button
-        variant="destructive"
-        onClick={handleDelete}
-        disabled={isDeleting || authMissing}
-        title={authMissing ? "Требуется авторизация через Telegram" : undefined}
-      >
-        {isDeleting ? "Удаляем..." : "Удалить событие"}
-      </Button>
+      <ConfirmDialog
+        trigger={
+          <Button
+            variant="destructive"
+            disabled={isDeleting || authMissing}
+            title={authMissing ? "Требуется авторизация через Telegram" : undefined}
+          >
+            {isDeleting ? "Удаляем..." : "Удалить событие"}
+          </Button>
+        }
+        title="Удалить событие?"
+        description="Событие и все регистрации участников будут удалены. Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        onConfirm={handleDelete}
+        destructive
+      />
       {error && <div className="text-xs text-red-600">{error}</div>}
     </div>
   );

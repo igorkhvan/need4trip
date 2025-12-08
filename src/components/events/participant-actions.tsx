@@ -7,6 +7,7 @@ import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ParticipantModal } from "@/components/events/participant-modal";
 import { Event, EventCustomFieldSchema } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
@@ -45,9 +46,6 @@ export function ParticipantActions({
   const handleDelete = async () => {
     if (!canRemove || authMissing) {
       setError("Недостаточно прав / войдите через Telegram");
-      return;
-    }
-    if (!confirm("Удалить участника?")) {
       return;
     }
     setError(null);
@@ -96,15 +94,28 @@ export function ParticipantActions({
           />
         ) : null}
         {canRemove && (
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={isDeleting || authMissing}
-            onClick={handleDelete}
-            title={authMissing ? "Требуется авторизация через Telegram" : "Удалить участника"}
-          >
-            <Trash2 className="h-4 w-4 text-red-600" />
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={isDeleting || authMissing}
+                title={authMissing ? "Требуется авторизация через Telegram" : "Удалить участника"}
+              >
+                <Trash2 className="h-4 w-4 text-red-600" />
+              </Button>
+            }
+            title="Удалить участника?"
+            description={
+              participantData?.displayName
+                ? `${participantData.displayName} будет удалён из списка участников. Это действие нельзя отменить.`
+                : "Участник будет удалён из списка. Это действие нельзя отменить."
+            }
+            confirmText="Удалить"
+            cancelText="Отмена"
+            onConfirm={handleDelete}
+            destructive
+          />
         )}
       </div>
       {error && <div className="text-xs text-red-600">{error}</div>}
