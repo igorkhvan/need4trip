@@ -123,7 +123,7 @@ export default function EditEventPage() {
         submitLabel="Сохранить изменения"
         headerTitle="Редактирование события"
         headerDescription="Обновите параметры события. Изменения сразу будут видны участникам."
-        disableCustomFields={hasParticipants}
+        lockedFieldIds={hasParticipants ? event.customFieldsSchema.map((f: any) => f.id) : []}
         disabled={authMissing || !isOwner}
         initialValues={{
           title: event.title,

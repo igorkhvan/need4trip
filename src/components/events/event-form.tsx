@@ -70,6 +70,7 @@ export type EventFormProps = {
   backHref: string;
   submitLabel: string;
   disableCustomFields?: boolean;
+  lockedFieldIds?: string[]; // ID полей, которые нельзя удалять (если есть участники)
   disabled?: boolean;
   headerTitle: string;
   headerDescription: string;
@@ -92,6 +93,7 @@ export function EventForm({
   backHref,
   submitLabel,
   disableCustomFields,
+  lockedFieldIds = [],
   disabled,
   headerTitle,
   headerDescription,
@@ -273,6 +275,7 @@ export function EventForm({
   };
 
   const customFieldsLocked = Boolean(disableCustomFields);
+  const hasLockedFields = lockedFieldIds.length > 0;
 
   return (
     <div className="page-container space-y-6 pb-10 pt-12">
@@ -691,7 +694,7 @@ export function EventForm({
                 <p className="text-2xl font-semibold text-[#0F172A]">Дополнительные поля регистрации</p>
                 <p className="text-xs text-[#6B7280]">Поля, которые заполняют участники</p>
               </div>
-              {customFieldsLocked && (
+              {hasLockedFields && (
                 <span className="flex items-center gap-2 rounded-full bg-[#FFF4EF] px-3 py-1 text-[12px] font-semibold text-[#E86223]">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
                     <path
@@ -702,16 +705,16 @@ export function EventForm({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  Заблокировано
+                  Частично заблокировано
                 </span>
               )}
             </div>
           </div>
 
-          <div className={customFieldsLocked ? "mt-4 space-y-4 opacity-70" : "mt-4 space-y-4"}>
+          <div className="mt-4 space-y-4">
             {sortedFields.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F7F7F8] px-4 py-6 text-center text-sm text-[#6B7280]">
-                {customFieldsLocked ? "Кастомные поля недоступны для редактирования" : "Добавьте первое поле регистрации"}
+                Добавьте первое поле регистрации
               </div>
             ) : (
               <div className="space-y-4">
@@ -804,9 +807,14 @@ export function EventForm({
               disabled={disabled || customFieldsLocked}
               className="h-11 px-4"
             >
-              Добавить поле
+              {hasLockedFields ? "Добавить новое поле" : "Добавить поле"}
             </Button>
           </div>
+          {hasLockedFields && (
+            <p className="mt-2 text-xs text-[#6B7280]">
+              Вы можете добавлять новые поля, но не можете удалять существующие, так как они используются участниками.
+            </p>
+          )}
         </Card>
 
         <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
