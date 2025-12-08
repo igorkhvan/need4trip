@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -8,6 +7,9 @@ import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { ParticipantModal } from "@/components/events/participant-modal";
+import { EventCustomFieldSchema } from "@/lib/types/event";
+import { ParticipantRole } from "@/lib/types/participant";
 
 interface ParticipantActionsProps {
   eventId: string;
@@ -16,6 +18,12 @@ interface ParticipantActionsProps {
   canRemove: boolean;
   isOwner: boolean;
   authMissing: boolean;
+  customFieldsSchema?: EventCustomFieldSchema[];
+  participantData?: {
+    displayName: string;
+    role: ParticipantRole;
+    customFieldValues: Record<string, unknown>;
+  };
 }
 
 export function ParticipantActions({
@@ -25,6 +33,8 @@ export function ParticipantActions({
   canRemove,
   isOwner,
   authMissing,
+  customFieldsSchema = [],
+  participantData,
 }: ParticipantActionsProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -72,12 +82,15 @@ export function ParticipantActions({
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        {canEdit ? (
-          <Button variant="ghost" size="icon" asChild title="Редактировать участника">
-            <Link href={`/events/${eventId}/participants/${participantId}/edit`}>
-              <Pencil className="h-4 w-4" />
-            </Link>
-          </Button>
+        {canEdit && participantData ? (
+          <ParticipantModal
+            mode="edit"
+            eventId={eventId}
+            participantId={participantId}
+            customFieldsSchema={customFieldsSchema}
+            initialValues={participantData}
+            iconOnly
+          />
         ) : null}
         {canRemove && (
           <Button

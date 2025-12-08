@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RegisterParticipantModal } from "@/components/events/register-participant-modal";
+import { ParticipantModal } from "@/components/events/participant-modal";
 import { ParticipantActions } from "@/components/events/participant-actions";
 import { getEventWithParticipantsVisibility } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
@@ -128,11 +128,19 @@ export default async function EventDetails({
                       Вы зарегистрированы
                     </Badge>
                     {currentParticipant && (
-                      <Button variant="secondary" size="sm" asChild>
-                        <Link href={`/events/${event.id}/participants/${currentParticipant.id}/edit`}>
-                          Редактировать данные
-                        </Link>
-                      </Button>
+                      <ParticipantModal
+                        mode="edit"
+                        eventId={event.id}
+                        participantId={currentParticipant.id}
+                        customFieldsSchema={event.customFieldsSchema}
+                        event={event}
+                        initialValues={{
+                          displayName: currentParticipant.displayName,
+                          role: currentParticipant.role,
+                          customFieldValues: currentParticipant.customFieldValues,
+                        }}
+                        triggerLabel="Редактировать данные"
+                      />
                     )}
                   </>
                 ) : isFull ? (
@@ -140,7 +148,8 @@ export default async function EventDetails({
                     Лимит участников достигнут
                   </Badge>
                 ) : (
-                  <RegisterParticipantModal
+                  <ParticipantModal
+                    mode="create"
                     eventId={event.id}
                     customFieldsSchema={event.customFieldsSchema}
                     event={event}
@@ -306,6 +315,12 @@ export default async function EventDetails({
                                     }
                                     isOwner={Boolean(isOwner)}
                                     authMissing={!currentUser}
+                                    customFieldsSchema={event.customFieldsSchema}
+                                    participantData={{
+                                      displayName: participant.displayName,
+                                      role: participant.role,
+                                      customFieldValues: participant.customFieldValues,
+                                    }}
                                   />
                                 </div>
                               </TableCell>

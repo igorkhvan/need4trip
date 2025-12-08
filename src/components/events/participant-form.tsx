@@ -14,16 +14,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/components/ui/use-toast";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 import { useCurrentUser } from "@/components/auth/use-current-user";
 
-interface RegisterParticipantFormProps {
+interface ParticipantFormProps {
+  mode: "create" | "edit";
   eventId: string;
+  participantId?: string;
   customFieldsSchema: EventCustomFieldSchema[];
   event?: Event;
-  mode?: "create" | "edit";
-  initialRole?: ParticipantRole;
+  initialValues?: {
+    displayName?: string;
+    role?: ParticipantRole;
+    customFieldValues?: Record<string, unknown>;
+  };
+  onSuccess?: () => void;
 }
 
 type CustomValues = Record<string, string | number | boolean>;
@@ -41,27 +48,35 @@ function getDefaultValue(type: EventCustomFieldType) {
   }
 }
 
-export function RegisterParticipantForm({
+export function ParticipantForm({
+  mode,
   eventId,
+  participantId,
   customFieldsSchema,
   event,
-  mode = "create",
-  initialRole = "participant",
-}: RegisterParticipantFormProps) {
+  initialValues,
+  onSuccess,
+}: ParticipantFormProps) {
   const router = useRouter();
   const { user } = useCurrentUser();
+  
   const preferredName =
+    initialValues?.displayName ||
     user?.telegramHandle?.trim() ||
     user?.name?.trim() ||
     user?.email?.split("@")?.[0] ||
     (user ? user.id.slice(0, 8) : "");
+
   const [displayName, setDisplayName] = useState<string>(preferredName ?? "");
-  const [role, setRole] = useState<ParticipantRole>(initialRole);
-  const [customValues, setCustomValues] = useState<CustomValues>(() =>
-    Object.fromEntries(
+  const [role, setRole] = useState<ParticipantRole>(initialValues?.role || "participant");
+  const [customValues, setCustomValues] = useState<CustomValues>(() => {
+    if (mode === "edit" && initialValues?.customFieldValues) {
+      return initialValues.customFieldValues as CustomValues;
+    }
+    return Object.fromEntries(
       (customFieldsSchema || []).map((field) => [field.id, getDefaultValue(field.type)])
-    )
-  );
+    );
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -69,24 +84,23 @@ export function RegisterParticipantForm({
   const sortedFields = [...(customFieldsSchema || [])].sort((a, b) => a.order - b.order);
 
   useEffect(() => {
-    if (preferredName && !displayName) {
+    if (mode === "create" && preferredName && !displayName) {
       setDisplayName(preferredName);
     }
-  }, [preferredName, displayName]);
+  }, [mode, preferredName, displayName]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setFieldErrors({});
-    setIsSubmitting(true);
+  const validate = () => {
     const trimmedName = displayName.trim();
     const issues: Record<string, string> = {};
+
     if (!trimmedName || trimmedName.length > 100) {
       issues.displayName = "Введите имя экипажа (до 100 символов).";
     }
+
     sortedFields.forEach((field) => {
       const value = customValues[field.id];
       if (!field.required) return;
+
       if (field.type === "number") {
         if (value === "" || value === null || Number.isNaN(Number(value))) {
           issues[field.id] = "Укажите значение";
@@ -101,11 +115,23 @@ export function RegisterParticipantForm({
         }
       }
     });
+
+    return issues;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    const issues = validate();
     if (Object.keys(issues).length) {
       setFieldErrors(issues);
-      setIsSubmitting(false);
       return;
     }
+
+    setIsSubmitting(true);
+
     const preparedValues: Record<string, unknown> = {};
     sortedFields.forEach((field) => {
       const value = customValues[field.id];
@@ -120,16 +146,34 @@ export function RegisterParticipantForm({
         preparedValues[field.id] = value ?? "";
       }
     });
+
     try {
-      const res = await fetch(`/api/events/${eventId}/participants`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let url: string;
+      let method: string;
+      let body: Record<string, unknown>;
+
+      if (mode === "create") {
+        url = `/api/events/${eventId}/participants`;
+        method = "POST";
+        body = {
           displayName: displayName.trim() || "Без имени",
           role,
           customFieldValues: preparedValues,
-        }),
+        };
+      } else {
+        url = `/api/events/${eventId}/participants/${participantId}`;
+        method = "PATCH";
+        body = {
+          customFieldValues: preparedValues,
+        };
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         if (res.status === 401 || res.status === 403) {
@@ -145,17 +189,27 @@ export function RegisterParticipantForm({
         if (res.status === 400) {
           throw new Error(body?.message || "Ошибка валидации");
         }
-        throw new Error(body?.message || body?.error || "Не удалось зарегистрировать участника");
+        throw new Error(body?.message || body?.error || "Не удалось сохранить данные");
       }
-      setDisplayName("");
-      setRole("participant");
-      setCustomValues(
-        Object.fromEntries(
-          sortedFields.map((field) => [field.id, getDefaultValue(field.type)])
-        )
-      );
+
+      if (mode === "create") {
+        setDisplayName("");
+        setRole("participant");
+        setCustomValues(
+          Object.fromEntries(
+            sortedFields.map((field) => [field.id, getDefaultValue(field.type)])
+          )
+        );
+      } else {
+        toast({ 
+          title: "Обновлено", 
+          description: "Регистрация успешно сохранена" 
+        });
+      }
+
       setFieldErrors({});
       router.refresh();
+      onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка. Повторите попытку.");
     } finally {
@@ -250,10 +304,7 @@ export function RegisterParticipantForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm"
-    >
+    <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
       {event?.isPaid && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
@@ -269,54 +320,67 @@ export function RegisterParticipantForm({
       <div className="grid gap-4 md:grid-cols-2 md:items-start">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
-            Имя водителя
+            Имя водителя / экипажа
           </Label>
           <Input
             id="displayName"
             placeholder="Ник или имя"
             value={displayName}
-            disabled
-            readOnly
+            onChange={(e) => {
+              setDisplayName(e.target.value);
+              if (fieldErrors.displayName) {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.displayName;
+                  return next;
+                });
+              }
+            }}
+            disabled={mode === "edit"}
             className="h-12"
           />
           <div className="min-h-[28px] text-[13px] text-red-600">
             {fieldErrors.displayName ?? ""}
           </div>
         </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Роль</Label>
-          <Select
-            value={role}
-            onValueChange={(value) => setRole(value as ParticipantRole)}
-            disabled={mode === "create" ? false : false}
-          >
-            <SelectTrigger className="h-12">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="participant">Участник</SelectItem>
-              <SelectItem value="leader">Лидер</SelectItem>
-              <SelectItem value="tail">Замыкающий</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {mode === "create" && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Роль</Label>
+            <Select
+              value={role}
+              onValueChange={(value) => setRole(value as ParticipantRole)}
+            >
+              <SelectTrigger className="h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="participant">Участник</SelectItem>
+                <SelectItem value="leader">Лидер</SelectItem>
+                <SelectItem value="tail">Замыкающий</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {sortedFields.length > 0 && (
-        <div className="space-y-4">
-          {sortedFields.map((field) => renderField(field))}
-        </div>
+        <div className="space-y-4">{sortedFields.map((field) => renderField(field))}</div>
       )}
 
       <div className="min-h-[20px] text-sm text-red-600">{error ?? ""}</div>
-      <p className="text-sm text-[#6B7280]">
-        После отправки вы появитесь в списке участников, а организатор получит ваши данные.
-      </p>
+      
+      {mode === "create" && (
+        <p className="text-sm text-[#6B7280]">
+          После отправки вы появитесь в списке участников, а организатор получит ваши данные.
+        </p>
+      )}
+
       <div className="flex justify-end pb-1">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Сохраняем..." : "Зарегистрироваться"}
+          {isSubmitting ? "Сохраняем..." : mode === "create" ? "Зарегистрироваться" : "Сохранить"}
         </Button>
       </div>
     </form>
   );
 }
+
