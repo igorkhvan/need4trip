@@ -83,11 +83,7 @@ export function ParticipantForm({
 
   const sortedFields = [...(customFieldsSchema || [])].sort((a, b) => a.order - b.order);
 
-  useEffect(() => {
-    if (mode === "create" && preferredName && !displayName) {
-      setDisplayName(preferredName);
-    }
-  }, [mode, preferredName, displayName]);
+  // Удален проблемный useEffect - имя устанавливается только через useState при инициализации
 
   const validate = () => {
     const trimmedName = displayName.trim();
