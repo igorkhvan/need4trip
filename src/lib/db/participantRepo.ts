@@ -218,7 +218,7 @@ export async function listParticipantEventIds(eventIds: string[]): Promise<strin
 
 export async function updateParticipant(
   id: string,
-  patch: Partial<Pick<RegisterParticipantPayload, "displayName" | "customFieldValues">>
+  patch: Partial<Pick<RegisterParticipantPayload, "displayName" | "role" | "customFieldValues">>
 ): Promise<DbParticipant | null> {
   const client = ensureClient();
   if (!client) {
@@ -226,6 +226,7 @@ export async function updateParticipant(
   }
   const updatePayload = {
     ...(patch.displayName !== undefined ? { display_name: patch.displayName } : {}),
+    ...(patch.role !== undefined ? { role: patch.role } : {}),
     ...(patch.customFieldValues !== undefined
       ? { custom_field_values: patch.customFieldValues }
       : {}),

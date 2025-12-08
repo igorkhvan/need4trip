@@ -164,6 +164,7 @@ export function ParticipantForm({
         url = `/api/events/${eventId}/participants/${participantId}`;
         method = "PATCH";
         body = {
+          role,
           customFieldValues: preparedValues,
         };
       }
@@ -317,7 +318,7 @@ export function ParticipantForm({
         </div>
       )}
 
-      <div className={mode === "create" ? "grid gap-4 md:grid-cols-2 md:items-start" : "space-y-4"}>
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
             Имя водителя / экипажа
@@ -343,24 +344,27 @@ export function ParticipantForm({
             {fieldErrors.displayName ?? ""}
           </div>
         </div>
-        {mode === "create" && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Роль</Label>
-            <Select
-              value={role}
-              onValueChange={(value) => setRole(value as ParticipantRole)}
-            >
-              <SelectTrigger className="h-12">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="participant">Участник</SelectItem>
-                <SelectItem value="leader">Лидер</SelectItem>
-                <SelectItem value="tail">Замыкающий</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Роль</Label>
+          <Select
+            value={role}
+            onValueChange={(value) => setRole(value as ParticipantRole)}
+          >
+            <SelectTrigger className="h-12">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="participant">Участник</SelectItem>
+              <SelectItem value="leader">Лидер</SelectItem>
+              <SelectItem value="tail">Замыкающий</SelectItem>
+            </SelectContent>
+          </Select>
+          {mode === "edit" && (
+            <p className="text-xs text-[#6B7280]">
+              Если роль занята, вы получите ошибку при сохранении
+            </p>
+          )}
+        </div>
       </div>
 
       {sortedFields.length > 0 && (

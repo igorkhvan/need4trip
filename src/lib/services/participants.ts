@@ -211,6 +211,7 @@ export async function changeParticipantRole(
 }
 
 const participantUpdateSchema = z.object({
+  role: participantRoleSchema.optional(),
   customFieldValues: z.record(z.any()).optional(),
 });
 
@@ -239,14 +240,34 @@ export async function updateParticipant(
     throw new AuthError("Недостаточно прав для изменения регистрации", undefined, 403);
   }
 
+  // Валидация роли, если она изменяется
+  if (parsed.role && parsed.role !== participant.role) {
+    if (parsed.role === "leader" || parsed.role === "tail") {
+      const roleCount = await countParticipantsByRole(dbEvent.id, parsed.role);
+      // roleCount должен быть 0, либо 1 если это текущий участник с этой ролью
+      if (roleCount > 0 && participant.role !== parsed.role) {
+        throw new ConflictError(`Роль ${parsed.role === "leader" ? "Лидер" : "Замыкающий"} уже занята`, {
+          role: parsed.role,
+          code: "RoleTaken",
+        });
+      }
+    }
+  }
+
   const mergedCustomValues = parsed.customFieldValues
     ? { ...(participant.customFieldValues ?? {}), ...parsed.customFieldValues }
     : participant.customFieldValues ?? {};
   const sanitizedCustomValues = validateCustomFieldValues(event, mergedCustomValues);
 
-  const updated = await updateParticipantRepo(participantId, {
+  const updatePayload: { customFieldValues: EventCustomFieldValues; role?: ParticipantRole } = {
     customFieldValues: sanitizedCustomValues,
-  });
+  };
+
+  if (parsed.role) {
+    updatePayload.role = parsed.role;
+  }
+
+  const updated = await updateParticipantRepo(participantId, updatePayload);
 
   if (!updated) {
     throw new NotFoundError("Participant not found");
