@@ -194,7 +194,7 @@ export function RegisterParticipantForm({
               className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => handleChange(field.id, e.target.value)}
             />
-            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
+            <div className="min-h-[28px] text-[13px] text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "boolean":
@@ -229,7 +229,7 @@ export function RegisterParticipantForm({
                 ))}
               </SelectContent>
             </Select>
-            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
+            <div className="min-h-[28px] text-[13px] text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "text":
@@ -243,7 +243,7 @@ export function RegisterParticipantForm({
               onChange={(e) => handleChange(field.id, e.target.value)}
               placeholder=""
             />
-            <div className="min-h-[16px] text-xs text-red-600">{errorText ?? ""}</div>
+            <div className="min-h-[28px] text-[13px] text-red-600">{errorText ?? ""}</div>
           </div>
         );
     }
@@ -266,7 +266,7 @@ export function RegisterParticipantForm({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 md:items-center">
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
         <div className="space-y-2">
           <Label htmlFor="displayName" className="text-sm font-medium">
             Имя водителя
@@ -279,7 +279,7 @@ export function RegisterParticipantForm({
             readOnly
             className="h-12"
           />
-          <div className="min-h-[16px] text-xs text-red-600">
+          <div className="min-h-[28px] text-[13px] text-red-600">
             {fieldErrors.displayName ?? ""}
           </div>
         </div>
@@ -309,7 +309,7 @@ export function RegisterParticipantForm({
       )}
 
       <div className="min-h-[20px] text-sm text-red-600">{error ?? ""}</div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-[#6B7280]">
         После отправки вы появитесь в списке участников, а организатор получит ваши данные.
       </p>
       <div className="flex justify-end pb-1">

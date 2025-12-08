@@ -1,5 +1,15 @@
 Need4Trip — сервис для организации оффроуд-ивентов на Next.js + Supabase. Один монолит: фронт (App Router), API Route Handlers, UI (Tailwind + shadcn/ui), авторизация через Telegram + собственный JWT (`auth_token`).
 
+## Требования
+- Node.js 18.18+ (рекомендуется 20 LTS) и npm 9+
+- Настроенные переменные окружения (см. `.env.example` / раздел «Окружение»)
+
+## Скрипты
+- `npm run dev` — локальная разработка (Turbopack)
+- `npm run build` — сборка (`NEXT_FORCE_WEBPACK=1` для стабильности Next 16)
+- `npm run start` — прод-режим после сборки
+- `npm run lint` — eslint 9
+
 ## Стек
 - Next.js 16 (App Router, TypeScript)
 - Tailwind CSS 3.4 + shadcn/ui
