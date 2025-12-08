@@ -35,6 +35,25 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
   if (!client) {
     throw new InternalError("Supabase client is not configured");
   }
+  
+  // 1. Проверяем существует ли пользователь
+  const { data: existing, error: findError } = await client
+    .from(table)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (findError) {
+    console.error("Failed to check if user exists", findError);
+    throw new InternalError("Failed to check if user exists", findError);
+  }
+
+  // 2. Если пользователь существует - возвращаем его (НЕ обновляем)
+  if (existing) {
+    return existing as DbUserRow;
+  }
+
+  // 3. Если пользователя нет - создаем нового (только для dev/тестов)
   const payload = {
     id,
     name: name?.trim() || "Dev User",
@@ -49,15 +68,16 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
 
   const { data, error } = await client
     .from(table)
-    .upsert(payload, { onConflict: "id" })
+    .insert(payload)
     .select("*")
-    .maybeSingle();
+    .single();
 
   if (error) {
-    console.error("Failed to ensure user exists", error);
-    throw new InternalError("Failed to ensure user exists", error);
+    console.error("Failed to create user", error);
+    throw new InternalError("Failed to create user", error);
   }
 
+  console.log("[ensureUserExists] Created new user (dev mode):", { id, name });
   return data as DbUserRow;
 }
 
