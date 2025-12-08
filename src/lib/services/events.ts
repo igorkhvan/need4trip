@@ -257,11 +257,37 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   return event;
 }
 
-function areCustomFieldsEqual(
-  a: Event["customFieldsSchema"] | undefined,
-  b: Event["customFieldsSchema"] | undefined
-): boolean {
-  return JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
+/**
+ * Проверяет что новая схема не удаляет существующие поля.
+ * Разрешает: добавление новых полей, изменение существующих.
+ * Запрещает: удаление существующих полей.
+ */
+function validateCustomFieldsUpdate(
+  newSchema: Event["customFieldsSchema"] | undefined,
+  existingSchema: Event["customFieldsSchema"] | undefined
+): { valid: boolean; error?: string } {
+  const existing = existingSchema ?? [];
+  const updated = newSchema ?? [];
+  
+  // Если нет существующих полей - можно делать что угодно
+  if (existing.length === 0) {
+    return { valid: true };
+  }
+  
+  // Проверяем что все существующие поля присутствуют в новой схеме
+  const existingIds = new Set(existing.map(f => f.id));
+  const updatedIds = new Set(updated.map(f => f.id));
+  
+  for (const existingId of existingIds) {
+    if (!updatedIds.has(existingId)) {
+      return {
+        valid: false,
+        error: `Нельзя удалять поле "${existing.find(f => f.id === existingId)?.label || existingId}" - оно используется участниками`
+      };
+    }
+  }
+  
+  return { valid: true };
 }
 
 export async function updateEvent(
@@ -292,13 +318,13 @@ export async function updateEvent(
   }
 
   if (participantsCount > 0 && parsed.customFieldsSchema !== undefined) {
-    const sameSchema = areCustomFieldsEqual(
+    const validation = validateCustomFieldsUpdate(
       parsed.customFieldsSchema,
       existing.custom_fields_schema
     );
-    if (!sameSchema) {
+    if (!validation.valid) {
       throw new ValidationError(
-        "Нельзя изменять схему кастомных полей — есть зарегистрированные участники"
+        validation.error || "Нельзя удалять существующие поля - они используются участниками"
       );
     }
   }

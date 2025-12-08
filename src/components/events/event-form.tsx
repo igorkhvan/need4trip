@@ -69,7 +69,6 @@ export type EventFormProps = {
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
   backHref: string;
   submitLabel: string;
-  disableCustomFields?: boolean;
   lockedFieldIds?: string[]; // ID полей, которые нельзя удалять (если есть участники)
   disabled?: boolean;
   headerTitle: string;
@@ -92,7 +91,6 @@ export function EventForm({
   onSubmit,
   backHref,
   submitLabel,
-  disableCustomFields,
   lockedFieldIds = [],
   disabled,
   headerTitle,
@@ -250,7 +248,7 @@ export function EventForm({
       dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
       locationText: trimmedLocation,
       maxParticipants,
-      ...(disableCustomFields ? {} : { customFieldsSchema: sortedFields }),
+      customFieldsSchema: sortedFields,
       visibility,
       vehicleTypeRequirement: vehicleType,
       allowedBrandIds,
@@ -274,7 +272,6 @@ export function EventForm({
     }
   };
 
-  const customFieldsLocked = Boolean(disableCustomFields);
   const hasLockedFields = lockedFieldIds.length > 0;
 
   // Debug logging
@@ -767,7 +764,7 @@ export function EventForm({
                                   });
                                 }
                               }}
-                              disabled={disabled || customFieldsLocked}
+                              disabled={disabled}
                             />
                             <div className="min-h-[28px] text-xs text-red-600">{errorText ?? ""}</div>
                           </div>
@@ -778,7 +775,7 @@ export function EventForm({
                                 FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? field.type : "text"
                               }
                               onValueChange={(value) => updateField(field.id, { type: value as EventCustomFieldType })}
-                              disabled={disabled || customFieldsLocked}
+                              disabled={disabled}
                             >
                               <SelectTrigger className="h-11 rounded-xl border-2">
                                 <SelectValue />
@@ -799,7 +796,7 @@ export function EventForm({
                             <Checkbox
                               checked={field.required}
                               onChange={(e) => updateField(field.id, { required: e.target.checked })}
-                              disabled={disabled || customFieldsLocked}
+                              disabled={disabled}
                             />
                             Обязательное
                           </label>
@@ -808,7 +805,7 @@ export function EventForm({
                             size="icon"
                             type="button"
                             onClick={() => removeField(field.id)}
-                            disabled={disabled || customFieldsLocked || isLocked}
+                            disabled={disabled || isLocked}
                             className="h-9 w-9 rounded-full text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223] disabled:cursor-not-allowed disabled:opacity-40"
                             title={isLocked ? "Поле используется участниками и не может быть удалено" : "Удалить поле"}
                           >
@@ -828,7 +825,7 @@ export function EventForm({
               variant="ghost"
               type="button"
               onClick={addField}
-              disabled={disabled || customFieldsLocked}
+              disabled={disabled}
               className="h-11 px-4"
             >
               {hasLockedFields ? "Добавить новое поле" : "Добавить поле"}
