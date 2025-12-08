@@ -114,24 +114,60 @@ async function upsertTelegramUser(
   name: string
 ) {
   const telegramId = String(payload.id);
-  const upsertPayload = {
-    telegram_id: telegramId,
-    telegram_handle: payload.username ?? null,
-    name,
-    avatar_url: payload.photo_url ?? null,
-  };
-
-  const { data, error } = await supabase
+  
+  // 1. Ищем существующего пользователя по telegram_id
+  const { data: existing, error: findError } = await supabase
     .from("users")
-    .upsert(upsertPayload, { onConflict: "telegram_id" })
     .select("*")
+    .eq("telegram_id", telegramId)
     .maybeSingle();
 
+  if (findError) {
+    console.error("[auth/telegram] Error finding existing user:", findError);
+    return { error: findError };
+  }
+
+  // 2. Если пользователь существует - обновляем его данные
+  if (existing) {
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        telegram_handle: payload.username ?? null,
+        name,
+        avatar_url: payload.photo_url ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      console.error("[auth/telegram] Error updating existing user:", error);
+      return { error };
+    }
+
+    console.log("[auth/telegram] Updated existing user:", { id: data.id, telegram_id: telegramId });
+    return { data };
+  }
+
+  // 3. Если пользователя нет - создаем нового
+  const { data, error } = await supabase
+    .from("users")
+    .insert({
+      telegram_id: telegramId,
+      telegram_handle: payload.username ?? null,
+      name,
+      avatar_url: payload.photo_url ?? null,
+    })
+    .select("*")
+    .single();
+
   if (error) {
-    console.error("[auth/telegram] Supabase error on upsert user:", error);
+    console.error("[auth/telegram] Error creating new user:", error);
     return { error };
   }
 
+  console.log("[auth/telegram] Created new user:", { id: data.id, telegram_id: telegramId });
   return { data };
 }
 
