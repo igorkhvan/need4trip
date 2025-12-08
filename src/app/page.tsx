@@ -103,10 +103,10 @@ function Hero() {
             и управлять колонной в удобном интерфейсе.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="default" asChild>
+            <Button asChild>
               <Link href="/events/create">Создать ивент</Link>
             </Button>
-            <Button size="default" variant="secondary" asChild>
+            <Button variant="secondary" asChild>
               <Link href="/events">Посмотреть ивенты</Link>
             </Button>
           </div>
@@ -188,7 +188,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
             <h2 className="heading-section">Ближайшие ивенты</h2>
             <p className="text-lead">Присоединяйтесь к активным автомобильным сообществам</p>
           </div>
-          <Button size="default" variant="secondary" asChild>
+          <Button variant="secondary" asChild>
             <Link href="/events">Все события</Link>
           </Button>
         </div>
@@ -281,7 +281,7 @@ export default async function HomePage() {
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
           <div className="flex justify-center">
-            <Button size="default" variant="secondary" asChild>
+            <Button variant="secondary" asChild>
               <Link href="/events/create">Создать ивент бесплатно</Link>
             </Button>
           </div>

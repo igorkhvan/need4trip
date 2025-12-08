@@ -5,26 +5,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 disabled:pointer-events-none ring-offset-background shadow-sm",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(255,111,44,0.1)] disabled:pointer-events-none disabled:opacity-60 shadow-sm",
   {
     variants: {
       variant: {
         default:
           "bg-[#FF6F2C] text-white hover:bg-[#E86223] disabled:bg-[#FECDB3] disabled:text-white disabled:opacity-100",
         secondary:
-          "border-2 border-[#FF6F2C] bg-white text-[#FF6F2C] hover:bg-[#FFF4EF] disabled:border-[#FECDB3] disabled:text-[#FECDB3] disabled:bg-transparent disabled:opacity-100",
+          "border-2 border-[#E5E7EB] bg-white text-[#111827] hover:border-[#6B7280] disabled:border-[#E5E7EB] disabled:text-[#6B7280] disabled:opacity-60",
         outline:
-          "border-2 border-border bg-white text-foreground hover:bg-muted/50",
+          "border-2 border-[#E5E7EB] bg-white text-[#111827] hover:bg-[#F7F7F8]",
         ghost:
-          "bg-transparent text-[#0F172A] hover:bg-[#F5F7FB] hover:text-[#0F172A]",
+          "bg-transparent text-[#6B7280] hover:bg-[#F7F7F8] hover:text-[#111827] shadow-none",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        link: "text-[#FF6F2C] underline-offset-4 hover:underline",
+          "bg-[#EF4444] text-white hover:bg-[#DC2626]",
+        link: "text-[#FF6F2C] underline-offset-4 hover:underline shadow-none",
       },
       size: {
-        default: "h-12 px-5",
-        sm: "h-10 px-4 text-sm",
-        lg: "h-14 px-6 text-base",
+        default: "h-12 px-6",
+        sm: "h-9 px-4 text-sm",
+        lg: "h-14 px-8 text-lg",
         icon: "h-12 w-12",
       },
     },

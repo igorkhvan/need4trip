@@ -67,7 +67,7 @@ function getDaysUntil(dateTime: string): number {
   const eventDate = new Date(dateTime);
   const now = new Date();
   const diff = eventDate.getTime() - now.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 export function EventsGrid({ events, currentUserId }: EventsGridProps) {
@@ -157,7 +157,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
             Найдите подходящую автомобильную поездку или создайте свою
           </p>
         </div>
-        <Button asChild className="h-12 rounded-xl px-6 text-base shadow-sm">
+        <Button asChild>
           <Link href="/events/create">Создать событие</Link>
         </Button>
       </div>
