@@ -121,7 +121,8 @@ function validateCustomFieldValues(
 export async function registerParticipant(
   eventId: string,
   input: unknown,
-  currentUser: CurrentUser | null
+  currentUser: CurrentUser | null,
+  guestSessionId?: string | null
 ): Promise<DomainParticipant> {
   const parsed = participantInputSchema.parse(input);
   const dbEvent = await getEventById(eventId);
@@ -157,22 +158,25 @@ export async function registerParticipant(
   }
 
   const resolvedUserId = currentUser?.id ?? null;
+  const resolvedGuestSessionId = resolvedUserId ? null : (guestSessionId ?? null);
 
+  // Check for duplicate registration
   if (resolvedUserId) {
     await ensureUserExists(resolvedUserId, currentUser?.name ?? undefined);
     const existingByUser = await findParticipantByUser(eventId, resolvedUserId);
     if (existingByUser) {
-      throw new ConflictError("User already registered for this event", {
+      throw new ConflictError("Вы уже зарегистрированы на это событие", {
         code: "DuplicateRegistration",
       });
     }
-  } else {
-    const existingByName = await findParticipantByDisplayName(
-      eventId,
-      parsed.displayName
+  } else if (resolvedGuestSessionId) {
+    // Check if guest with this session is already registered
+    const allParticipants = await listParticipantsRepo(eventId);
+    const existingGuest = allParticipants.find(
+      (p) => p.guest_session_id === resolvedGuestSessionId
     );
-    if (existingByName) {
-      throw new ConflictError("Display name already registered for this event", {
+    if (existingGuest) {
+      throw new ConflictError("Вы уже зарегистрированы на это событие", {
         code: "DuplicateRegistration",
       });
     }
@@ -196,6 +200,7 @@ export async function registerParticipant(
   const payload: RegisterParticipantPayload = {
     eventId,
     userId: resolvedUserId,
+    guestSessionId: resolvedGuestSessionId,
     displayName: parsed.displayName,
     role: parsed.role,
     customFieldValues: sanitizedCustomValues,
@@ -220,11 +225,9 @@ const participantUpdateSchema = z.object({
 export async function updateParticipant(
   participantId: string,
   input: unknown,
-  currentUser: CurrentUser | null
+  currentUser: CurrentUser | null,
+  guestSessionId?: string | null
 ): Promise<DomainParticipant> {
-  if (!currentUser) {
-    throw new AuthError("Необходимо авторизоваться для изменения регистрации", undefined, 401);
-  }
   const parsed = participantUpdateSchema.parse(input);
   const dbParticipant = await findParticipantById(participantId);
   if (!dbParticipant) {
@@ -237,8 +240,15 @@ export async function updateParticipant(
 
   const event = mapDbEventToDomain(dbEvent);
   const participant = mapDbParticipantToDomain(dbParticipant);
+  const isOwner = currentUser?.id === event.createdByUserId;
 
-  if (!participant.userId || participant.userId !== currentUser.id) {
+  // Check permissions: owner OR authenticated user editing own record OR guest editing own record
+  const canEdit =
+    isOwner ||
+    (currentUser && participant.userId && participant.userId === currentUser.id) ||
+    (!currentUser && guestSessionId && participant.guestSessionId && participant.guestSessionId === guestSessionId);
+
+  if (!canEdit) {
     throw new AuthError("Недостаточно прав для изменения регистрации", undefined, 403);
   }
 
@@ -280,11 +290,9 @@ export async function updateParticipant(
 
 export async function deleteParticipant(
   participantId: string,
-  currentUser: CurrentUser | null
+  currentUser: CurrentUser | null,
+  guestSessionId?: string | null
 ): Promise<boolean> {
-  if (!currentUser) {
-    throw new AuthError("Необходимо авторизоваться для удаления регистрации", undefined, 401);
-  }
   const dbParticipant = await findParticipantById(participantId);
   if (!dbParticipant) {
     throw new NotFoundError("Participant not found");
@@ -296,11 +304,10 @@ export async function deleteParticipant(
   const event = mapDbEventToDomain(dbEvent);
   const participant = mapDbParticipantToDomain(dbParticipant);
 
-  const isOwner = event.createdByUserId === currentUser.id;
+  const isOwner = currentUser?.id === event.createdByUserId;
   const isSelf =
-    participant.userId !== null &&
-    participant.userId !== undefined &&
-    participant.userId === currentUser.id;
+    (currentUser && participant.userId && participant.userId === currentUser.id) ||
+    (!currentUser && guestSessionId && participant.guestSessionId && participant.guestSessionId === guestSessionId);
 
   if (!isOwner && !isSelf) {
     throw new AuthError("Недостаточно прав для удаления регистрации", undefined, 403);

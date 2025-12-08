@@ -132,6 +132,7 @@ export type Database = {
           id: string;
           event_id: string;
           user_id: string | null;
+          guest_session_id: string | null;
           display_name: string;
           role: string;
           custom_field_values: Json;
@@ -141,6 +142,7 @@ export type Database = {
           id?: string;
           event_id: string;
           user_id?: string | null;
+          guest_session_id?: string | null;
           display_name: string;
           role: string;
           custom_field_values?: Json;
@@ -150,6 +152,7 @@ export type Database = {
           id?: string;
           event_id?: string;
           user_id?: string | null;
+          guest_session_id?: string | null;
           display_name?: string;
           role?: string;
           custom_field_values?: Json;

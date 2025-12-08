@@ -32,6 +32,7 @@ export interface DbParticipant {
   id: string;
   event_id: string;
   user_id: string | null;
+  guest_session_id: string | null;
   display_name: string;
   role: ParticipantRole;
   custom_field_values: EventCustomFieldValues;
@@ -88,6 +89,7 @@ export function mapDbParticipantToDomain(db: DbParticipant): DomainParticipant {
     id: db.id,
     eventId: db.event_id,
     userId: db.user_id,
+    guestSessionId: db.guest_session_id,
     displayName: db.display_name,
     role: db.role,
     customFieldValues: db.custom_field_values ?? {},

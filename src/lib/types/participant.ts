@@ -10,6 +10,7 @@ export interface EventParticipant {
   id: string;
   eventId: string;
   userId: string | null;
+  guestSessionId: string | null;
   displayName: string;
   role: ParticipantRole;
   customFieldValues: Record<string, EventCustomFieldValue>;
@@ -22,6 +23,7 @@ export type DomainParticipant = EventParticipant;
 export interface RegisterParticipantPayload {
   eventId: string;
   userId?: string | null;
+  guestSessionId?: string | null;
   displayName: string;
   role: ParticipantRole;
   customFieldValues?: EventCustomFieldValues;
@@ -32,6 +34,7 @@ export const participantInputSchema = z.object({
   role: participantRoleSchema.default("participant"),
   customFieldValues: z.record(z.any()).default({}),
   userId: z.string().uuid().optional().nullable(),
+  guestSessionId: z.string().uuid().optional().nullable(),
 });
 
 export type ParticipantInput = z.infer<typeof participantInputSchema>;

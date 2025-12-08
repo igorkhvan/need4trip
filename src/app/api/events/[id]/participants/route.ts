@@ -1,5 +1,6 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { listParticipants, registerParticipant } from "@/lib/services/participants";
 
@@ -22,7 +23,11 @@ export async function POST(request: Request, context: Params) {
     const { id } = await context.params;
     const currentUser = await getCurrentUser();
     const payload = await request.json();
-    const participant = await registerParticipant(id, payload, currentUser);
+    
+    // Get or create guest session ID for non-authenticated users
+    const guestSessionId = currentUser ? null : await getOrCreateGuestSessionId();
+    
+    const participant = await registerParticipant(id, payload, currentUser, guestSessionId);
     return respondJSON({ participant }, 201);
   } catch (err: unknown) {
     return respondError(err);

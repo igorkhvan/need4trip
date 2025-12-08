@@ -20,6 +20,7 @@ import { ParticipantActions } from "@/components/events/participant-actions";
 import { getEventWithParticipantsVisibility } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
+import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
@@ -57,6 +58,8 @@ export default async function EventDetails({
 }) {
   const { id } = await params;
   const currentUser = await getCurrentUserSafe();
+  const guestSessionId = currentUser ? null : await getGuestSessionId();
+  
   let eventWithParticipants: Awaited<ReturnType<typeof getEventWithParticipantsVisibility>>;
   try {
     eventWithParticipants = await getEventWithParticipantsVisibility(id, {
@@ -73,9 +76,13 @@ export default async function EventDetails({
     event.maxParticipants !== null &&
     event.maxParticipants !== undefined &&
     participants.length >= event.maxParticipants;
+  
+  // Check if user or guest is registered
   const isRegistered = currentUser
     ? participants.some((p) => p.userId === currentUser.id)
-    : false;
+    : guestSessionId
+      ? participants.some((p) => p.guestSessionId === guestSessionId)
+      : false;
   const sortedCustomFields = [...(event.customFieldsSchema || [])].sort(
     (a, b) => a.order - b.order
   );
@@ -91,9 +98,12 @@ export default async function EventDetails({
   };
   const vehicleTypeLabel = vehicleTypeLabelMap[event.vehicleTypeRequirement] ?? "Любой";
 
+  // Find current participant (authenticated or guest)
   const currentParticipant = currentUser
     ? participants.find((p) => p.userId === currentUser.id)
-    : undefined;
+    : guestSessionId
+      ? participants.find((p) => p.guestSessionId === guestSessionId)
+      : undefined;
   const ownerUser =
     event.createdByUserId ? await getUserById(event.createdByUserId) : null;
   const fillPercent =
@@ -300,19 +310,24 @@ export default async function EventDetails({
                                 )}
                               </TableCell>
                             ))}
-                            {(isOwner || currentUser) && (
+                            {(isOwner || currentUser || guestSessionId) && (
                               <TableCell className="text-right">
                                 <div className="flex justify-end">
                                   <ParticipantActions
                                     eventId={event.id}
                                     participantId={participant.id}
-                                    canEdit={Boolean(currentUser && participant.userId === currentUser.id)}
+                                    canEdit={
+                                      Boolean(isOwner) ||
+                                      Boolean(currentUser && participant.userId === currentUser.id) ||
+                                      Boolean(guestSessionId && participant.guestSessionId === guestSessionId)
+                                    }
                                     canRemove={
                                       Boolean(isOwner) ||
-                                      Boolean(currentUser && participant.userId === currentUser.id)
+                                      Boolean(currentUser && participant.userId === currentUser.id) ||
+                                      Boolean(guestSessionId && participant.guestSessionId === guestSessionId)
                                     }
                                     isOwner={Boolean(isOwner)}
-                                    authMissing={!currentUser}
+                                    authMissing={false}
                                     customFieldsSchema={event.customFieldsSchema}
                                     event={event}
                                     participantData={{

@@ -43,6 +43,7 @@ export async function createParticipant(
   const insertPayload = {
     event_id: payload.eventId,
     user_id: payload.userId ?? null,
+    guest_session_id: payload.guestSessionId ?? null,
     display_name: payload.displayName,
     role: payload.role,
     custom_field_values: payload.customFieldValues ?? {},
