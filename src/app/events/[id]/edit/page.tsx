@@ -42,20 +42,36 @@ export default function EditEventPage() {
   useEffect(() => {
     async function loadEvent() {
       try {
+        console.log("🔍 Loading event:", id);
+        
         // Fetch current user
         const userRes = await fetch("/api/auth/me");
         const userData = userRes.ok ? await userRes.json() : null;
         setCurrentUserId(userData?.user?.id ?? null);
+        console.log("👤 Current user:", userData?.user?.id ?? "guest");
 
         // Fetch event with participants
         const eventRes = await fetch(`/api/events/${id}`);
+        console.log("📡 Event response status:", eventRes.status);
+        
         if (!eventRes.ok) {
-          throw new Error("Event not found");
+          const errorBody = await eventRes.text();
+          console.error("❌ Event fetch failed:", eventRes.status, errorBody);
+          throw new Error(`Event not found: ${eventRes.status}`);
         }
+        
         const data = await eventRes.json();
+        console.log("✅ Event data:", {
+          id: data.event?.id,
+          title: data.event?.title,
+          participantsCount: data.participants?.length,
+          customFieldsCount: data.event?.customFieldsSchema?.length
+        });
+        
         setEvent(data.event);
         setParticipantCount(data.participants?.length ?? 0);
       } catch (err) {
+        console.error("💥 Load event error:", err);
         setError(err instanceof Error ? err.message : "Failed to load event");
       } finally {
         setLoading(false);
@@ -111,7 +127,10 @@ export default function EditEventPage() {
       </div>
     );
   }
-  if (error || !event) return notFound();
+  if (error || !event) {
+    console.error("🚫 Returning notFound:", { error, hasEvent: !!event });
+    return notFound();
+  }
 
   const isOwner = currentUserId === event.createdByUserId;
   const hasParticipants = participantCount > 0;
