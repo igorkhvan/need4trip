@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -84,9 +84,26 @@ export function ParticipantForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Флаг: был ли установлен начальный displayName из user
+  const hasSetInitialName = useRef(false);
+
   const sortedFields = [...(customFieldsSchema || [])].sort((a, b) => a.order - b.order);
 
-  // Удален проблемный useEffect - имя устанавливается только через useState при инициализации
+  // Обновляем displayName когда загрузится user (только один раз в режиме создания)
+  useEffect(() => {
+    if (mode === "create" && !hasSetInitialName.current && user) {
+      const name = 
+        user.name?.trim() ||
+        user.telegramHandle?.trim() ||
+        user.email?.split("@")?.[0] ||
+        user.id.slice(0, 8);
+      
+      if (name) {
+        setDisplayName(name);
+        hasSetInitialName.current = true;
+      }
+    }
+  }, [mode, user]);
 
   const validate = () => {
     const trimmedName = displayName.trim();
