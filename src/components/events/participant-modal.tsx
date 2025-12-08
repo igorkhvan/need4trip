@@ -96,7 +96,7 @@ export function ParticipantModal({
             >
               <X className="h-5 w-5" />
             </button>
-            <div className="space-y-6">
+            <div className="space-y-6 text-left">
               <div className="space-y-2 pr-10">
                 <h3 className="text-2xl font-semibold leading-tight text-[#111827]">
                   {title}
