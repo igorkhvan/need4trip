@@ -19,17 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
-import { Event, EventCategory } from "@/lib/types/event";
-import { getCategoryLabel } from "@/lib/utils/eventCategories";
-
-const CATEGORY_ICONS: Record<EventCategory, typeof Car> = {
-  weekend_trip: Mountain,
-  technical_ride: Car,
-  meeting: Users,
-  training: TrendingUp,
-  service_day: Car,
-  other: Car,
-};
+import { Event } from "@/lib/types/event";
+import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
+import { formatDateTimeShort, formatDateShort, getDaysUntil } from "@/lib/utils/dates";
 
 interface EventsGridProps {
   events: Event[];
@@ -38,31 +30,7 @@ interface EventsGridProps {
 
 type TabType = "all" | "upcoming" | "my";
 
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getDaysUntil(dateTime: string): number {
-  const eventDate = new Date(dateTime);
-  const now = new Date();
-  const diff = eventDate.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
+// Удалено: используем централизованные утилиты из @/lib/utils/dates
 
 export function EventsGrid({ events, currentUserId }: EventsGridProps) {
   const router = useRouter();
@@ -255,7 +223,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
               event.participantsCount ?? 0,
               event.maxParticipants
             );
-            const CategoryIcon = event.category ? CATEGORY_ICONS[event.category] : Car;
+            const CategoryIcon = event.category ? getCategoryIcon(event.category) : Car;
             const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
             const priceLabel =
               event.isPaid && event.price

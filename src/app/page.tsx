@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { listEventsSafe } from "@/lib/services/events";
 import { EventCategory } from "@/lib/types/event";
 import { getCategoryLabel } from "@/lib/utils/eventCategories";
+import { formatDate } from "@/lib/utils/dates";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -72,15 +73,6 @@ const steps = [
     description: "Следите за регистрациями, формируйте колонну и управляйте участниками",
   },
 ];
-
-function formatEventMeta(event: EventSummary): string {
-  const d = new Date(event.startsAt);
-  return d.toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 function Hero() {
   return (
@@ -208,7 +200,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                     <div className="space-y-3 text-[15px] text-[#6B7280]">
                       <div className="flex items-center gap-3">
                         <Calendar className="h-5 w-5 text-[#9CA3AF]" />
-                        <span>{formatEventMeta(event)}</span>
+                        <span>{formatDate(event.startsAt)}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Users className="h-5 w-5 text-[#9CA3AF]" />

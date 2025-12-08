@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { EventForm } from "@/components/events/event-form";
+import { handleApiError } from "@/lib/utils/errors";
 
 export default function CreateEventPage() {
   const handleSubmit = async (payload: Record<string, unknown>) => {
@@ -12,15 +13,7 @@ export default function CreateEventPage() {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      if (res.status === 401 || res.status === 403) {
-        throw new Error("Недостаточно прав / войдите через Telegram");
-      }
-      if (res.status === 409) {
-        throw new Error("Лимит участников достигнут");
-      }
-      const errMessage = body?.message || body?.error || "Не удалось создать событие";
-      throw new Error(errMessage);
+      await handleApiError(res);
     }
   };
 

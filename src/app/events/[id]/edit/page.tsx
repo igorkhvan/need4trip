@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { EventForm } from "@/components/events/event-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageLoader } from "@/components/ui/spinner";
+import { handleApiError } from "@/lib/utils/errors";
 import { EventCategory, VehicleTypeRequirement, Visibility } from "@/lib/types/event";
 
 type Event = {
@@ -151,17 +152,7 @@ export default function EditEventPage() {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      if (res.status === 401 || res.status === 403) {
-        throw new Error("Недостаточно прав / войдите через Telegram");
-      }
-      if (res.status === 409) {
-        throw new Error("Лимит участников достигнут");
-      }
-      if (res.status === 400) {
-        throw new Error(body?.message || "Ошибка валидации");
-      }
-      throw new Error(body?.message || "Не удалось сохранить событие");
+      await handleApiError(res);
     }
   };
 

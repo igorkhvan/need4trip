@@ -25,18 +25,8 @@ import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
-
-// Удалено: используем getCategoryLabel и getCategoryBadgeVariant из utils/eventCategories
-
-function formatDateTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatDateTime } from "@/lib/utils/dates";
+import { formatCustomFieldValue, formatParticipantRole } from "@/lib/utils/customFields";
 
 export default async function EventDetails({
   params,
@@ -97,15 +87,6 @@ export default async function EventDetails({
     event.maxParticipants && event.maxParticipants > 0
       ? Math.min(100, Math.round((participants.length / event.maxParticipants) * 100))
       : null;
-
-  const formatCustomValue = (
-    value: unknown,
-    type: (typeof event.customFieldsSchema)[number]["type"]
-  ) => {
-    if (value === null || value === undefined || value === "") return "—";
-    if (type === "boolean") return value ? "Да" : "Нет";
-    return String(value);
-  };
 
   return (
     <div className="py-10 md:py-16">
@@ -255,18 +236,14 @@ export default async function EventDetails({
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {participant.role === "leader"
-                                ? "Лидер"
-                                : participant.role === "tail"
-                                  ? "Замыкающий"
-                                  : "Участник"}
+                              {formatParticipantRole(participant.role)}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               {participant.user?.telegramHandle ?? participant.userId ?? "Гость"}
                             </TableCell>
                             {sortedCustomFields.map((field) => (
                               <TableCell key={field.id} className="text-muted-foreground">
-                                {formatCustomValue(
+                                {formatCustomFieldValue(
                                   participant.customFieldValues?.[field.id],
                                   field.type
                                 )}

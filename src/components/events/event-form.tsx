@@ -28,6 +28,7 @@ import {
   Visibility,
 } from "@/lib/types/event";
 import { CATEGORY_OPTIONS } from "@/lib/utils/eventCategories";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
@@ -256,9 +257,7 @@ export function EventForm({
       router.push(backHref);
       router.refresh();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Не удалось сохранить событие. Попробуйте ещё раз.";
-      setErrorMessage(message);
+      setErrorMessage(getErrorMessage(err, "Не удалось сохранить событие. Попробуйте ещё раз."));
     } finally {
       setIsSubmitting(false);
     }

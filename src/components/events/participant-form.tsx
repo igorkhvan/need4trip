@@ -18,6 +18,8 @@ import { toast } from "@/components/ui/use-toast";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 import { useCurrentUser } from "@/components/auth/use-current-user";
+import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
+import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
 
 interface ParticipantFormProps {
   mode: "create" | "edit";
@@ -34,19 +36,6 @@ interface ParticipantFormProps {
 }
 
 type CustomValues = Record<string, string | number | boolean>;
-
-function getDefaultValue(type: EventCustomFieldType) {
-  switch (type) {
-    case "boolean":
-      return false;
-    case "number":
-      return 0;
-    case "text":
-    case "enum":
-    default:
-      return "";
-  }
-}
 
 export function ParticipantForm({
   mode,
@@ -77,7 +66,7 @@ export function ParticipantForm({
       return initialValues.customFieldValues as CustomValues;
     }
     return Object.fromEntries(
-      (customFieldsSchema || []).map((field) => [field.id, getDefaultValue(field.type)])
+      (customFieldsSchema || []).map((field) => [field.id, getDefaultCustomFieldValue(field.type)])
     );
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,21 +182,7 @@ export function ParticipantForm({
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        if (res.status === 401 || res.status === 403) {
-          throw new Error("Недостаточно прав / войдите через Telegram");
-        }
-        if (res.status === 409) {
-          throw new Error(
-            body?.message ||
-              body?.error ||
-              "Конфликт: вы уже зарегистрированы, достигнут лимит или роль занята"
-          );
-        }
-        if (res.status === 400) {
-          throw new Error(body?.message || "Ошибка валидации");
-        }
-        throw new Error(body?.message || body?.error || "Не удалось сохранить данные");
+        await handleApiError(res);
       }
 
       if (mode === "create") {
@@ -215,7 +190,7 @@ export function ParticipantForm({
         setRole("participant");
         setCustomValues(
           Object.fromEntries(
-            sortedFields.map((field) => [field.id, getDefaultValue(field.type)])
+            sortedFields.map((field) => [field.id, getDefaultCustomFieldValue(field.type)])
           )
         );
       } else {
@@ -229,7 +204,7 @@ export function ParticipantForm({
       router.refresh();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка. Повторите попытку.");
+      setError(getErrorMessage(err, "Произошла ошибка. Повторите попытку."));
     } finally {
       setIsSubmitting(false);
     }

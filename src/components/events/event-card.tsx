@@ -12,15 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatDateTimeShort } from "@/lib/utils/dates";
 
 interface EventCardProps {
   event: Event;
@@ -39,7 +31,7 @@ export function EventCard({ event }: EventCardProps) {
           )}
         </CardTitle>
         <CardDescription className="flex flex-wrap gap-3 text-sm">
-          <span>🗓 {formatDateTime(event.dateTime)}</span>
+          <span>🗓 {formatDateTimeShort(event.dateTime)}</span>
           <span>📍 {event.locationText}</span>
           {event.maxParticipants && (
             <span>👥 До {event.maxParticipants} экипажей</span>

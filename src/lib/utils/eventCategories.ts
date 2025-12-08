@@ -1,5 +1,6 @@
 import { EventCategory } from "@/lib/types/event";
 import { BadgeProps } from "@/components/ui/badge";
+import { Car, Mountain, Users, TrendingUp, LucideIcon } from "lucide-react";
 
 /**
  * Маппинг категорий событий на человекочитаемые названия
@@ -46,9 +47,28 @@ export function getCategoryBadgeVariant(category: EventCategory): BadgeProps["va
 }
 
 /**
+ * Маппинг категорий событий на иконки Lucide
+ */
+export const CATEGORY_ICONS: Record<EventCategory, LucideIcon> = {
+  weekend_trip: Mountain,
+  technical_ride: Car,
+  meeting: Users,
+  training: TrendingUp,
+  service_day: Car,
+  other: Car,
+};
+
+/**
  * Получить label для категории события
  */
 export function getCategoryLabel(category: EventCategory): string {
   return CATEGORY_LABELS[category] || "Другое";
+}
+
+/**
+ * Получить иконку для категории события
+ */
+export function getCategoryIcon(category: EventCategory): LucideIcon {
+  return CATEGORY_ICONS[category] || Car;
 }
 
