@@ -249,7 +249,7 @@ export function ParticipantForm({
               className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => handleChange(field.id, e.target.value)}
             />
-            <div className="min-h-[28px] text-[13px] text-red-600">{errorText ?? ""}</div>
+            <div className="min-h-[28px] text-left text-[13px] text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "boolean":
@@ -284,7 +284,7 @@ export function ParticipantForm({
                 ))}
               </SelectContent>
             </Select>
-            <div className="min-h-[28px] text-[13px] text-red-600">{errorText ?? ""}</div>
+            <div className="min-h-[28px] text-left text-[13px] text-red-600">{errorText ?? ""}</div>
           </div>
         );
       case "text":
@@ -298,7 +298,7 @@ export function ParticipantForm({
               onChange={(e) => handleChange(field.id, e.target.value)}
               placeholder=""
             />
-            <div className="min-h-[28px] text-[13px] text-red-600">{errorText ?? ""}</div>
+            <div className="min-h-[28px] text-left text-[13px] text-red-600">{errorText ?? ""}</div>
           </div>
         );
     }
@@ -307,13 +307,13 @@ export function ParticipantForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
       {event?.isPaid && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
           {event.price ? ` Стоимость: ${event.price} ${event.currency ?? ""}.` : ""}
         </div>
       )}
       {event?.rules && event.rules.trim().length > 0 && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left text-sm text-blue-800">
           Ознакомьтесь с правилами в карточке события. Отправляя форму, вы подтверждаете согласие.
         </div>
       )}
@@ -340,7 +340,7 @@ export function ParticipantForm({
             disabled={mode === "edit"}
             className="h-12"
           />
-          <div className="min-h-[28px] text-[13px] text-red-600">
+          <div className="min-h-[28px] text-left text-[13px] text-red-600">
             {fieldErrors.displayName ?? ""}
           </div>
         </div>
@@ -369,10 +369,10 @@ export function ParticipantForm({
         <div className="space-y-4">{sortedFields.map((field) => renderField(field))}</div>
       )}
 
-      <div className="min-h-[20px] text-sm text-red-600">{error ?? ""}</div>
+      <div className="min-h-[20px] text-left text-sm text-red-600">{error ?? ""}</div>
       
       {mode === "create" && (
-        <p className="text-sm text-[#6B7280]">
+        <p className="text-left text-sm text-[#6B7280]">
           После отправки вы появитесь в списке участников, а организатор получит ваши данные.
         </p>
       )}
