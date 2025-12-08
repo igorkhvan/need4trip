@@ -48,7 +48,7 @@ export function EditEventForm({
   formattedDateTime,
 }: EditEventFormProps) {
   const headerDescription = `${formattedDateTime} • ${
-    event.category ? CATEGORY_LABELS[event.category] ?? "Ивент" : "Ивент"
+    event.category ? CATEGORY_LABELS[event.category] ?? "Событие" : "Событие"
   }`;
 
   return (
@@ -62,7 +62,7 @@ export function EditEventForm({
             </h1>
             <p className="text-sm text-[#6B7280]">{headerDescription}</p>
             <p className="text-sm text-[#6B7280]">
-              Обновите параметры ивента. Изменения сразу будут видны участникам.
+              Обновите параметры события. Изменения сразу будут видны участникам.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {event.isClubEvent && (
@@ -91,22 +91,22 @@ export function EditEventForm({
       {authMissing && (
         <Alert>
           <AlertTitle>Требуется авторизация</AlertTitle>
-          <AlertDescription>Войдите через Telegram, чтобы редактировать ивент.</AlertDescription>
+          <AlertDescription>Войдите через Telegram, чтобы редактировать событие.</AlertDescription>
         </Alert>
       )}
       {!isOwner && (
         <Alert variant="destructive">
           <AlertTitle>Нет прав</AlertTitle>
-          <AlertDescription>Только владелец может редактировать этот ивент.</AlertDescription>
+          <AlertDescription>Только владелец может редактировать это событие.</AlertDescription>
         </Alert>
       )}
 
       <EventForm
         mode="edit"
         backHref={`/events/${event.id}`}
-        submitLabel="Сохранить ивент"
+        submitLabel="Сохранить событие"
         headerTitle={`Редактирование: ${event.title}`}
-        headerDescription="Обновите ключевые параметры ивента. Изменения сразу будут видны участникам."
+        headerDescription="Обновите ключевые параметры события. Изменения сразу будут видны участникам."
         disableCustomFields={hasParticipants}
         disabled={authMissing || !isOwner}
         initialValues={{
@@ -147,7 +147,7 @@ export function EditEventForm({
               throw new Error(body?.message || "Ошибка валидации");
             }
             const body = await res.json().catch(() => ({}));
-            throw new Error(body?.message || "Не удалось сохранить ивент");
+            throw new Error(body?.message || "Не удалось сохранить событие");
           }
         }}
       />

@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const navItems = [
-  { href: "/events", label: "Ивенты" },
-  { href: "/events/create", label: "Создать ивент" },
+  { href: "/events", label: "События" },
+  { href: "/events/create", label: "Создать событие" },
 ];
 
 export async function MainHeader() {

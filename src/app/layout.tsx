@@ -12,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Need4Trip",
-  description: "Организация оффроуд-ивентов и регистрация участников",
+  description: "Организация оффроуд-событий и регистрация участников",
 };
 
 export default function RootLayout({

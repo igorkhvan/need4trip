@@ -18,6 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Trash2 } from "lucide-react";
 import {
   EventCategory,
@@ -264,7 +265,7 @@ export function EventForm({
       router.refresh();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Не удалось сохранить ивент. Попробуйте ещё раз.";
+        err instanceof Error ? err.message : "Не удалось сохранить событие. Попробуйте ещё раз.";
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -810,14 +811,18 @@ export function EventForm({
 
         <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
           <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
-          <Button
-            variant="ghost"
-            type="button"
-            asChild
-            className="px-4"
-          >
-            <Link href={backHref}>Отмена</Link>
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button variant="ghost" type="button" className="px-4">
+                Отмена
+              </Button>
+            }
+            title="Отменить изменения?"
+            description="Все несохранённые данные будут потеряны. Вы уверены, что хотите отменить?"
+            confirmText="Да, отменить"
+            cancelText="Продолжить редактирование"
+            onConfirm={() => router.push(backHref)}
+          />
           <Button type="submit" disabled={isSubmitting || disabled} className="px-5">
             {isSubmitting ? "Сохраняем..." : submitLabel}
           </Button>

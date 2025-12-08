@@ -1,4 +1,4 @@
-Need4Trip — сервис для организации оффроуд-ивентов на Next.js + Supabase. Один монолит: фронт (App Router), API Route Handlers, UI (Tailwind + shadcn/ui), авторизация через Telegram + собственный JWT (`auth_token`).
+Need4Trip — сервис для организации оффроуд-событий на Next.js + Supabase. Один монолит: фронт (App Router), API Route Handlers, UI (Tailwind + shadcn/ui), авторизация через Telegram + собственный JWT (`auth_token`).
 
 ## Требования
 - Node.js 18.18+ (рекомендуется 20 LTS) и npm 9+
@@ -48,7 +48,7 @@ npm run dev
 ## Структура
 - `src/app`
   - `page.tsx` — лендинг
-  - `events/page.tsx` — список ивентов
+  - `events/page.tsx` — список событий
   - `events/create/page.tsx` — создание
   - `events/[id]/page.tsx` — детали/участники/регистрация
   - `events/[id]/edit/page.tsx` — редактирование
@@ -75,7 +75,7 @@ npm run dev
 - `events`: `visibility` (`public` | `link_registered`), `vehicle_type_requirement` (`any` | `sedan` | `crossover` | `suv`), `rules`, `is_club_event`, `is_paid`, `price`, `currency`, `custom_fields_schema`, гео/тайм/лимиты.
 - `event_participants`: роли leader/tail/participant, кастомные значения.
 - `car_brands`, `event_allowed_brands` (допустимые марки).
-- `event_user_access`: доступы к приватным ивентам (owner/participant/link).
+- `event_user_access`: доступы к приватным событиям (owner/participant/link).
 
 ## Бизнес-правила (основное)
 - Видимость: public всегда доступна; `link_registered` — только авторизованным с доступом/участием/владельцу; при переходе по ссылке авторизованным добавляется access.

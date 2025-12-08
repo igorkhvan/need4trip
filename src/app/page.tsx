@@ -46,7 +46,7 @@ const features = [
   },
   {
     title: "Требования к авто",
-    description: "Задавайте требования к типам и маркам автомобилей для вашего ивента",
+    description: "Задавайте требования к типам и маркам автомобилей для вашего события",
     icon: Car,
   },
   {
@@ -104,10 +104,10 @@ function Hero() {
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button asChild>
-              <Link href="/events/create">Создать ивент</Link>
+              <Link href="/events/create">Создать событие</Link>
             </Button>
             <Button variant="secondary" asChild>
-              <Link href="/events">Посмотреть ивенты</Link>
+              <Link href="/events">Посмотреть события</Link>
             </Button>
           </div>
         </div>
@@ -185,7 +185,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
       <div className="section-inner">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="space-y-4">
-            <h2 className="heading-section">Ближайшие ивенты</h2>
+            <h2 className="heading-section">Ближайшие события</h2>
             <p className="text-lead">Присоединяйтесь к активным автомобильным сообществам</p>
           </div>
           <Button variant="secondary" asChild>
@@ -195,7 +195,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
 
         {events.length === 0 ? (
           <div className="rounded-2xl border border-[#E5E7EB] bg-white px-4 py-12 text-center text-sm text-[#6B7280] shadow-sm">
-            Пока нет ближайших ивентов.
+            Пока нет ближайших событий.
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -209,7 +209,7 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
                     <div className="flex items-start justify-between gap-3">
                       <CardTitle className="text-lg font-semibold text-[#111827]">{event.title}</CardTitle>
                       <span className="whitespace-nowrap rounded-full bg-[#F7F7F8] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
-                        {event.typeLabel ?? "Ивент"}
+                        {event.typeLabel ?? "Событие"}
                       </span>
                     </div>
                     <div className="space-y-2 text-base text-[#6B7280]">
@@ -252,7 +252,7 @@ export default async function HomePage() {
     id: e.id,
     title: e.title,
     startsAt: e.dateTime,
-    typeLabel: e.category ? CATEGORY_LABELS[e.category as EventCategory] ?? "Ивент" : "Ивент",
+    typeLabel: e.category ? CATEGORY_LABELS[e.category as EventCategory] ?? "Событие" : "Событие",
     description: e.description ?? null,
     participantsCount: e.participantsCount ?? null,
     maxParticipants: e.maxParticipants ?? null,
@@ -282,7 +282,7 @@ export default async function HomePage() {
           </p>
           <div className="flex justify-center">
             <Button variant="secondary" asChild>
-              <Link href="/events/create">Создать ивент бесплатно</Link>
+              <Link href="/events/create">Создать событие бесплатно</Link>
             </Button>
           </div>
         </div>

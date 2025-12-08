@@ -157,7 +157,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
             Найдите подходящую автомобильную поездку или создайте свою
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="h-12 rounded-xl px-6 text-base shadow-sm">
           <Link href="/events/create">Создать событие</Link>
         </Button>
       </div>

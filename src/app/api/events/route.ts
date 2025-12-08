@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      throw new AuthError("Авторизация обязательна для создания ивента", undefined, 401);
+      throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
     }
     const payload = await request.json();
     const event = await createEvent(payload, currentUser);

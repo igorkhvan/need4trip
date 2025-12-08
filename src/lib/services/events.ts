@@ -236,7 +236,7 @@ export async function getEventWithParticipantsVisibility(
 
 export async function createEvent(input: unknown, currentUser: CurrentUser | null) {
   if (!currentUser) {
-    throw new AuthError("Авторизация обязательна для создания ивента", undefined, 401);
+    throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
   }
   const parsed = eventCreateSchema.parse(input);
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
@@ -270,7 +270,7 @@ export async function updateEvent(
   currentUser: CurrentUser | null
 ) {
   if (!currentUser) {
-    throw new AuthError("Авторизация обязательна для изменения ивента", undefined, 401);
+    throw new AuthError("Авторизация обязательна для изменения события", undefined, 401);
   }
   const parsed = eventUpdateSchema.parse(input);
   const existing = await getEventById(id);
@@ -278,7 +278,7 @@ export async function updateEvent(
     throw new NotFoundError("Event not found");
   }
   if (existing.created_by_user_id !== currentUser.id) {
-    throw new AuthError("Недостаточно прав для изменения ивента", undefined, 403);
+    throw new AuthError("Недостаточно прав для изменения события", undefined, 403);
   }
 
   const participantsCount = await countParticipants(id);
@@ -334,14 +334,14 @@ export async function updateEvent(
 
 export async function deleteEvent(id: string, currentUser: CurrentUser | null): Promise<boolean> {
   if (!currentUser) {
-    throw new AuthError("Авторизация обязательна для удаления ивента", undefined, 401);
+    throw new AuthError("Авторизация обязательна для удаления события", undefined, 401);
   }
   const existing = await getEventById(id);
   if (!existing) {
     throw new NotFoundError("Event not found");
   }
   if (existing.created_by_user_id !== currentUser.id) {
-    throw new AuthError("Недостаточно прав для удаления ивента", undefined, 403);
+    throw new AuthError("Недостаточно прав для удаления события", undefined, 403);
   }
   return deleteEventRecord(id);
 }

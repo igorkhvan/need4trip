@@ -19,7 +19,7 @@ export default function CreateEventPage() {
       if (res.status === 409) {
         throw new Error("Лимит участников достигнут");
       }
-      const errMessage = body?.message || body?.error || "Не удалось создать ивент";
+      const errMessage = body?.message || body?.error || "Не удалось создать событие";
       throw new Error(errMessage);
     }
   };
