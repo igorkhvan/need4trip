@@ -46,7 +46,7 @@ const badgeVariants = cva(
         free: "border-transparent bg-[#10B981] text-white",
         
         // Клубный статус
-        club: "border-transparent bg-[#10B981] text-white",
+        club: "border-transparent bg-[#16A34A] text-white",
         
         // Outline
         outline: "border border-[#D1D5DB] bg-transparent text-[#374151]",

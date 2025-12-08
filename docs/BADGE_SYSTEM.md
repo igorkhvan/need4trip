@@ -177,7 +177,7 @@ export function getCategoryLabel(category: EventCategory): string;
 | `solid-gray` | `#374151` | `#FFFFFF` |
 | `paid` | `#8B5CF6` | `#FFFFFF` |
 | `free` | `#10B981` | `#FFFFFF` |
-| `club` | `#10B981` | `#FFFFFF` |
+| `club` | `#16A34A` | `#FFFFFF` |
 
 ## Best Practices
 
