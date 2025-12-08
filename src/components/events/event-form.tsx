@@ -775,7 +775,7 @@ export function EventForm({
                                 FIELD_TYPE_OPTIONS.some((opt) => opt.value === field.type) ? field.type : "text"
                               }
                               onValueChange={(value) => updateField(field.id, { type: value as EventCustomFieldType })}
-                              disabled={disabled}
+                              disabled={disabled || isLocked}
                             >
                               <SelectTrigger className="h-11 rounded-xl border-2">
                                 <SelectValue />
@@ -788,6 +788,9 @@ export function EventForm({
                                 ))}
                               </SelectContent>
                             </Select>
+                            {isLocked && (
+                              <p className="text-xs text-[#6B7280]">Тип нельзя изменить</p>
+                            )}
                           </div>
                         </div>
 

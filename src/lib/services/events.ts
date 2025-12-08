@@ -258,9 +258,9 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
 }
 
 /**
- * Проверяет что новая схема не удаляет существующие поля.
- * Разрешает: добавление новых полей, изменение существующих.
- * Запрещает: удаление существующих полей.
+ * Проверяет что новая схема не нарушает существующие данные участников.
+ * Разрешает: добавление новых полей, изменение label/required/options.
+ * Запрещает: удаление полей, изменение типа полей.
  */
 function validateCustomFieldsUpdate(
   newSchema: Event["customFieldsSchema"] | undefined,
@@ -274,15 +274,27 @@ function validateCustomFieldsUpdate(
     return { valid: true };
   }
   
-  // Проверяем что все существующие поля присутствуют в новой схеме
-  const existingIds = new Set(existing.map(f => f.id));
-  const updatedIds = new Set(updated.map(f => f.id));
+  // Создаем мапы для быстрого доступа
+  const existingMap = new Map(existing.map(f => [f.id, f]));
+  const updatedMap = new Map(updated.map(f => [f.id, f]));
   
-  for (const existingId of existingIds) {
-    if (!updatedIds.has(existingId)) {
+  // Проверяем каждое существующее поле
+  for (const [existingId, existingField] of existingMap) {
+    const updatedField = updatedMap.get(existingId);
+    
+    // Проверка 1: Поле не удалено
+    if (!updatedField) {
       return {
         valid: false,
-        error: `Нельзя удалять поле "${existing.find(f => f.id === existingId)?.label || existingId}" - оно используется участниками`
+        error: `Нельзя удалять поле "${existingField.label || existingId}" - оно используется участниками`
+      };
+    }
+    
+    // Проверка 2: Тип поля не изменен
+    if (updatedField.type !== existingField.type) {
+      return {
+        valid: false,
+        error: `Нельзя изменять тип поля "${existingField.label || existingId}" (${existingField.type} → ${updatedField.type}) - оно используется участниками`
       };
     }
   }
