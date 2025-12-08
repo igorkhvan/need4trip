@@ -60,14 +60,17 @@ export function ParticipantForm({
   const router = useRouter();
   const { user } = useCurrentUser();
   
-  const preferredName =
-    initialValues?.displayName ||
-    user?.telegramHandle?.trim() ||
-    user?.name?.trim() ||
-    user?.email?.split("@")?.[0] ||
-    (user ? user.id.slice(0, 8) : "");
+  // При создании - берем из Telegram, при редактировании - из регистрации
+  const initialDisplayName = mode === "edit" 
+    ? (initialValues?.displayName || "")
+    : (
+      user?.name?.trim() ||
+      user?.telegramHandle?.trim() ||
+      user?.email?.split("@")?.[0] ||
+      (user ? user.id.slice(0, 8) : "")
+    );
 
-  const [displayName, setDisplayName] = useState<string>(preferredName ?? "");
+  const [displayName, setDisplayName] = useState<string>(initialDisplayName);
   const [role, setRole] = useState<ParticipantRole>(initialValues?.role || "participant");
   const [customValues, setCustomValues] = useState<CustomValues>(() => {
     if (mode === "edit" && initialValues?.customFieldValues) {
