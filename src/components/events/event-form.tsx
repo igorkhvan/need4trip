@@ -490,8 +490,9 @@ export function EventForm({
                     <SelectValue placeholder="Кто видит событие" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="public">Публичный</SelectItem>
-                    <SelectItem value="link_registered">По ссылке для авторизованных</SelectItem>
+                    <SelectItem value="public">Публичный (видно всем)</SelectItem>
+                    <SelectItem value="unlisted">По прямой ссылке</SelectItem>
+                    <SelectItem value="restricted">Только участникам/клубу</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

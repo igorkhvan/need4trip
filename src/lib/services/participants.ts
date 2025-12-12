@@ -131,14 +131,15 @@ export async function registerParticipant(
   }
   const event = mapDbEventToDomain(dbEvent);
 
-  if (event.visibility === "link_registered") {
+  // For 'restricted' visibility, grant access automatically when user registers
+  if (event.visibility === "restricted") {
     if (!currentUser) {
       throw new AuthError("Регистрация доступна только авторизованным пользователям", undefined, 401);
     }
     try {
       await upsertEventAccess(event.id, currentUser.id, "link");
     } catch (err) {
-      console.error("[registerParticipant] Failed to upsert access for private event", err);
+      console.error("[registerParticipant] Failed to upsert access for restricted event", err);
     }
   }
 

@@ -58,12 +58,13 @@ async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
     console.error("[ensureEventVisibility] Failed to check access", err);
   }
 
-  if (!allowed && event.visibility === "link_registered") {
+  // For 'restricted' visibility, grant access automatically when user visits via link
+  if (!allowed && event.visibility === "restricted") {
     try {
       await upsertEventAccess(event.id, currentUser.id, "link");
       allowed = true;
     } catch (err) {
-      console.error("[ensureEventVisibility] Failed to upsert access for link", err);
+      console.error("[ensureEventVisibility] Failed to upsert access for restricted event", err);
     }
   }
 
