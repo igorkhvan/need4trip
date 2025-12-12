@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       throw new NotFoundError("Клуб не найден");
     }
 
-    const canManage = await canManageClub(user.id, clubId);
+    const canManage = await canManageClub(user, clubId);
     if (!canManage.allowed) {
       throw new AuthError(canManage.reason || "Нет доступа к экспорту участников", undefined, 403);
     }
