@@ -1,0 +1,35 @@
+Initialising login role...
+Connecting to remote database...
+Skipping migration 00_APPLY_MIGRATIONS.md... (file name must match pattern "<timestamp>_name.sql")
+Skipping migration QUICK_VERIFY.sql... (file name must match pattern "<timestamp>_name.sql")
+Do you want to push these migrations to the remote database?
+ • 20241204_fix_telegram_duplicates.sql
+ • 20241205_event_extensions.sql
+ • 20241206_seed_car_brands.sql
+ • 20241209_add_guest_session_id.sql
+ • 20241209_cleanup_empty_telegram_users.sql
+ • 20241209_fix_telegram_user_duplicates.sql
+ • 20241212_alter_events_club_and_visibility.sql
+ • 20241212_alter_users_add_plan.sql
+ • 20241212_create_club_members.sql
+ • 20241212_create_club_subscriptions.sql
+ • 20241212_create_clubs.sql
+ • 20241212_create_initial_triggers.sql
+ • 20241213_add_city_to_events_and_users.sql
+ • 20241213_create_cities_table.sql
+ • 20241213_create_currencies_table.sql
+ • 20241213_migrate_clubs_city_to_fk.sql
+ • 20241213_migrate_events_city_to_fk.sql
+ • 20241213_migrate_users_city_to_fk.sql
+ • 20241213_normalize_car_brands_in_users.sql
+ • 20241213_normalize_car_model.sql
+ • 20241213_normalize_cities.sql
+ • 20241213_normalize_currencies.sql
+
+ [Y/n] 
+Applying migration 20241204_fix_telegram_duplicates.sql...
+ERROR: duplicate key value violates unique constraint "schema_migrations_pkey" (SQLSTATE 23505)
+Key (version)=(20241204) already exists.                                                       
+At statement: 2                                                                                
+INSERT INTO supabase_migrations.schema_migrations(version, name, statements) VALUES($1, $2, $3)
+Try rerunning the command with --debug to troubleshoot the error.

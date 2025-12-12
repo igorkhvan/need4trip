@@ -162,7 +162,17 @@ export async function hydrateEvent(event: Event): Promise<Event> {
   } catch (err) {
     console.error("[hydrateEvent] Failed to count participants", err);
   }
-  return { ...event, allowedBrands, participantsCount };
+  
+  // Hydrate city and currency
+  let hydratedEvent = { ...event, allowedBrands, participantsCount };
+  try {
+    const [hydrated] = await hydrateCitiesAndCurrencies([hydratedEvent]);
+    hydratedEvent = hydrated;
+  } catch (err) {
+    console.error("[hydrateEvent] Failed to hydrate city/currency", err);
+  }
+  
+  return hydratedEvent;
 }
 
 export async function grantEventAccessByLink(eventId: string, userId: string): Promise<void> {
