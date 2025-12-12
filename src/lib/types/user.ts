@@ -96,7 +96,6 @@ export const profileUpdateSchema = z.object({
   cityId: z.string().uuid("Выберите город из списка"),
   carBrandId: z.string().uuid().nullable(),
   carModelText: z.string().trim().max(100).nullable(),
-  carYear: z.number().int().min(1900).max(2100).nullable().optional(),
 });
 
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

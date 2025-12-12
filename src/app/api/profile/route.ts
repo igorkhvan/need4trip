@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest) {
       throw new ValidationError("Ошибка валидации", parseResult.error.errors);
     }
     
-    const { name, cityId, carBrandId, carModelText, carYear } = parseResult.data;
+    const { name, cityId, carBrandId, carModelText } = parseResult.data;
     
     // Update user
     const updatedUser = await updateUser(user.id, {
@@ -94,7 +94,6 @@ export async function PATCH(req: NextRequest) {
       cityId,
       carBrandId,
       carModelText,
-      carYear,
     });
     
     // Hydrate city

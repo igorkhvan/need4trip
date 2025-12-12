@@ -156,7 +156,6 @@ export async function updateUser(
     cityId?: string;
     carBrandId?: string | null;
     carModelText?: string | null;
-    carYear?: number | null;
   }
 ): Promise<User> {
   const client = ensureClient();
@@ -170,7 +169,6 @@ export async function updateUser(
   if (updates.cityId !== undefined) patch.city_id = updates.cityId;
   if (updates.carBrandId !== undefined) patch.car_brand_id = updates.carBrandId;
   if (updates.carModelText !== undefined) patch.car_model_text = updates.carModelText;
-  if (updates.carYear !== undefined) patch.car_year = updates.carYear;
   
   const { data, error } = await (client as any)
     .from(table)

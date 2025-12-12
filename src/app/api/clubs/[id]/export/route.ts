@@ -76,7 +76,6 @@ export async function GET(req: NextRequest, { params }: Params) {
       "city",
       "car_brand",
       "car_model",
-      "car_year",
       "role",
       "joined_at",
     ].join(","));
@@ -92,7 +91,6 @@ export async function GET(req: NextRequest, { params }: Params) {
         escapeCSV(user.city?.name || ""),
         escapeCSV(user.carBrand?.name || ""),
         escapeCSV(user.carModelText || ""),
-        user.carYear || "",
         member.role,
         member.joined_at,
       ];

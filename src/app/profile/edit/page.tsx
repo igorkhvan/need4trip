@@ -24,7 +24,6 @@ interface ProfileEditForm {
   city: City | null;
   carBrandId: string | null;
   carModelText: string | null;
-  carYear: number | null;
 }
 
 export default function ProfileEditPage() {
@@ -40,7 +39,6 @@ export default function ProfileEditPage() {
     city: null,
     carBrandId: null,
     carModelText: "",
-    carYear: null,
   });
 
   // Load current profile
@@ -60,7 +58,6 @@ export default function ProfileEditPage() {
           city: user.city || null,
           carBrandId: user.carBrandId || null,
           carModelText: user.carModelText || "",
-          carYear: user.carYear || null,
         });
       } catch (err) {
         console.error("Failed to load profile:", err);
@@ -107,7 +104,6 @@ export default function ProfileEditPage() {
           cityId: formData.cityId,
           carBrandId: formData.carBrandId,
           carModelText: formData.carModelText,
-          carYear: formData.carYear,
         }),
       });
       
@@ -234,27 +230,6 @@ export default function ProfileEditPage() {
                 <p className="text-sm text-gray-500">
                   Укажите модель и комплектацию
                 </p>
-              </div>
-            )}
-
-            {/* Car Year */}
-            {formData.carBrandId && (
-              <div className="space-y-2">
-                <Label htmlFor="carYear" className="text-base font-semibold">
-                  Год выпуска
-                </Label>
-                <Input
-                  id="carYear"
-                  type="number"
-                  value={formData.carYear || ""}
-                  onChange={(e) => {
-                    const year = e.target.value ? parseInt(e.target.value) : null;
-                    setFormData({ ...formData, carYear: year });
-                  }}
-                  placeholder="2020"
-                  min="1900"
-                  max="2100"
-                />
               </div>
             )}
 
