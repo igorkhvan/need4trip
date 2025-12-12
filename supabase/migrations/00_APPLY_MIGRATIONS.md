@@ -371,9 +371,12 @@ RETURNING id, club_id, is_club_event;
 -- Ожидается: is_club_event = TRUE ✅
 ```
 
-### Тест 7: Попытка нарушить consistency constraint
+### Тест 7: Проверка автоматической синхронизации через триггер
 
 ```sql
+-- ВАЖНО: Триггер BEFORE INSERT автоматически исправляет is_club_event!
+-- Это ФИЧА, а не баг - БД защищает от ошибок разработчика
+
 -- Попытаться создать событие с is_club_event=TRUE но club_id=NULL
 INSERT INTO public.events (
   title,
@@ -385,16 +388,50 @@ INSERT INTO public.events (
   created_by_user_id
 )
 VALUES (
-  'Bad Event',
-  'Test',
+  'Auto-Fixed Event',
+  'Test автоисправления',
   NOW() + INTERVAL '7 days',
   'Москва',
   NULL,  -- club_id = NULL
-  TRUE,  -- но is_club_event = TRUE
+  TRUE,  -- пытаемся установить is_club_event = TRUE
   'PASTE_USER_ID_HERE'
-);
--- Ожидается ERROR: new row violates check constraint "events_club_consistency_check" ✅
+)
+RETURNING id, title, club_id, is_club_event;
+
+-- Ожидается: SUCCESS, но is_club_event = FALSE (триггер автоматически исправил!) ✅
+
+-- Проверить что триггер сработал
+SELECT id, title, club_id, is_club_event 
+FROM public.events 
+WHERE title = 'Auto-Fixed Event';
+
+-- Ожидается: is_club_event = FALSE (несмотря на попытку установить TRUE)
+
+-- Теперь попробуем обратную ситуацию: club_id есть, но is_club_event=FALSE
+INSERT INTO public.events (
+  title,
+  description,
+  date_time,
+  location_text,
+  club_id,
+  is_club_event,
+  created_by_user_id
+)
+VALUES (
+  'Auto-Fixed Event 2',
+  'Test автоисправления 2',
+  NOW() + INTERVAL '7 days',
+  'Москва',
+  'PASTE_CLUB_ID_HERE',  -- club_id есть
+  FALSE,  -- пытаемся установить is_club_event = FALSE
+  'PASTE_USER_ID_HERE'
+)
+RETURNING id, title, club_id, is_club_event;
+
+-- Ожидается: SUCCESS, но is_club_event = TRUE (триггер автоматически исправил!) ✅
 ```
+
+**Вывод:** Триггер работает правильно - он **автоматически синхронизирует** `is_club_event` с `club_id`, предотвращая ошибки разработчика. Constraint `events_club_consistency_check` остается как дополнительная защита на случай если триггер будет отключен.
 
 ### Тест 8: Проверка новых значений visibility
 
