@@ -20,6 +20,7 @@ interface CityAutocompleteProps {
   placeholder?: string;
   disabled?: boolean;
   error?: boolean;
+  errorMessage?: string;
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export function CityAutocomplete({
   placeholder = "Выберите город",
   disabled = false,
   error = false,
+  errorMessage,
   className,
 }: CityAutocompleteProps) {
   const [open, setOpen] = useState(false);
@@ -134,77 +136,82 @@ export function CityAutocomplete({
     : placeholder;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn(
-            "h-12 w-full justify-between rounded-xl border-2",
-            error && "border-red-500",
-            !selectedCity && "text-gray-500",
-            className
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-gray-500" />
-            <span className="truncate">{displayValue}</span>
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Поиск города..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-          <CommandEmpty>
-            {loading ? "Загрузка..." : "Город не найден"}
-          </CommandEmpty>
-          <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {cities.map((city) => (
-              <CommandItem
-                key={city.id}
-                value={city.id}
-                onSelect={() => handleSelect(city)}
-                className="cursor-pointer"
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className={cn(
+              "h-12 w-full justify-between rounded-xl border-2 text-left font-normal",
+              error ? "border-red-500 focus-visible:ring-red-500" : "border-[#E5E7EB]",
+              !selectedCity && "text-[#9CA3AF]",
+              className
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <MapPin className={cn("h-4 w-4", selectedCity ? "text-[#6B7280]" : "text-[#9CA3AF]")} />
+              <span className="truncate">{displayValue}</span>
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Поиск города..."
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandEmpty>
+              {loading ? "Загрузка..." : "Город не найден"}
+            </CommandEmpty>
+            <CommandGroup className="max-h-[300px] overflow-y-auto">
+              {cities.map((city) => (
+                <CommandItem
+                  key={city.id}
+                  value={city.id}
+                  onSelect={() => handleSelect(city)}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedCity?.id === city.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{city.name}</span>
+                    {city.region && (
+                      <span className="text-xs text-[#6B7280]">{city.region}</span>
+                    )}
+                  </div>
+                  {city.isPopular && (
+                    <span className="ml-auto text-xs text-[#FF6F2C]">★</span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+          {selectedCity && (
+            <div className="border-t p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClear}
+                className="w-full text-[#6B7280] hover:text-[#374151]"
               >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selectedCity?.id === city.id ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <div className="flex flex-col">
-                  <span className="font-medium">{city.name}</span>
-                  {city.region && (
-                    <span className="text-xs text-gray-500">{city.region}</span>
-                  )}
-                </div>
-                {city.isPopular && (
-                  <span className="ml-auto text-xs text-orange-500">★</span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </Command>
-        {selectedCity && (
-          <div className="border-t p-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClear}
-              className="w-full text-gray-500 hover:text-gray-700"
-            >
-              Очистить выбор
-            </Button>
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+                Очистить выбор
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+      {errorMessage && (
+        <div className="min-h-[28px] text-xs text-red-600">{errorMessage}</div>
+      )}
+    </div>
   );
 }

@@ -8,7 +8,10 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { getErrorMessage } from "@/lib/utils/errors";
 import type { Club, ClubCreateInput } from "@/lib/types/club";
@@ -72,33 +75,33 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Название */}
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="space-y-2">
+        <Label htmlFor="name" className="text-sm font-medium text-[#111827]">
           Название клуба <span className="text-red-500">*</span>
-        </label>
-        <input
+        </Label>
+        <Input
           type="text"
           id="name"
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="h-12 rounded-xl border-2"
           placeholder="Например: OFF-ROAD Москва"
           disabled={loading}
         />
       </div>
 
       {/* Описание */}
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="space-y-2">
+        <Label htmlFor="description" className="text-sm font-medium text-[#111827]">
           Описание
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="description"
           rows={4}
           value={formData.description ?? ""}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+          className="rounded-xl border-2"
           placeholder="Расскажите о вашем клубе..."
           disabled={loading}
         />
@@ -106,9 +109,9 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
 
       {/* Город */}
       <div>
-        <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+        <Label className="text-sm font-medium text-[#111827]">
           Город
-        </label>
+        </Label>
         <CityAutocomplete
           value={formData.cityId}
           onChange={(newCityId, city) => {
@@ -120,16 +123,16 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       </div>
 
       {/* URL логотипа */}
-      <div>
-        <label htmlFor="logoUrl" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="space-y-2">
+        <Label htmlFor="logoUrl" className="text-sm font-medium text-[#111827]">
           URL логотипа
-        </label>
-        <input
+        </Label>
+        <Input
           type="url"
           id="logoUrl"
           value={formData.logoUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="h-12 rounded-xl border-2"
           placeholder="https://example.com/logo.png"
           disabled={loading}
         />
@@ -148,32 +151,32 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       </div>
 
       {/* Telegram */}
-      <div>
-        <label htmlFor="telegramUrl" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="space-y-2">
+        <Label htmlFor="telegramUrl" className="text-sm font-medium text-[#111827]">
           Ссылка на Telegram
-        </label>
-        <input
+        </Label>
+        <Input
           type="url"
           id="telegramUrl"
           value={formData.telegramUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, telegramUrl: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="h-12 rounded-xl border-2"
           placeholder="https://t.me/your_club"
           disabled={loading}
         />
       </div>
 
       {/* Сайт */}
-      <div>
-        <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="space-y-2">
+        <Label htmlFor="websiteUrl" className="text-sm font-medium text-[#111827]">
           Сайт клуба
-        </label>
-        <input
+        </Label>
+        <Input
           type="url"
           id="websiteUrl"
           value={formData.websiteUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="h-12 rounded-xl border-2"
           placeholder="https://yourclub.com"
           disabled={loading}
         />
@@ -181,39 +184,30 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
 
       {/* Ошибка */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           {error}
         </div>
       )}
 
       {/* Кнопки */}
       <div className="flex gap-3 pt-4">
-        <button
+        <Button
           type="submit"
           disabled={loading || !formData.name.trim()}
-          className="flex-1 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="flex-1"
         >
-          {loading ? (
-            <>
-              <Spinner size="sm" />
-              <span>Сохранение...</span>
-            </>
-          ) : mode === "create" ? (
-            "Создать клуб"
-          ) : (
-            "Сохранить изменения"
-          )}
-        </button>
+          {loading ? "Сохранение..." : mode === "create" ? "Создать клуб" : "Сохранить изменения"}
+        </Button>
 
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onCancel}
             disabled={loading}
-            className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50"
           >
             Отмена
-          </button>
+          </Button>
         )}
       </div>
     </form>

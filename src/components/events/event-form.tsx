@@ -372,7 +372,7 @@ export function EventForm({
             </div>
 
             {/* Город */}
-            <div className="space-y-2">
+            <div>
               <Label className="text-sm font-medium text-[#111827]">
                 Город
               </Label>
@@ -392,10 +392,13 @@ export function EventForm({
                 disabled={disabled}
                 placeholder="Выберите город..."
                 error={!!fieldErrors.cityId}
+                errorMessage={fieldErrors.cityId}
               />
-              <div className="text-xs text-gray-500">
-                Поможет участникам найти события в их городе
-              </div>
+              {!fieldErrors.cityId && (
+                <div className="mt-2 text-xs text-[#6B7280]">
+                  Поможет участникам найти события в их городе
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
