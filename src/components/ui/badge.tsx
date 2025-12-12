@@ -48,6 +48,12 @@ const badgeVariants = cva(
         // Клубный статус
         club: "border-transparent bg-[#16A34A] text-white",
         
+        // Premium / Pro статус
+        premium: "border-transparent bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] text-white",
+        
+        // Default (primary)
+        default: "border-transparent bg-[#FF6F2C] text-white",
+        
         // Outline
         outline: "border border-[#D1D5DB] bg-transparent text-[#374151]",
       },
