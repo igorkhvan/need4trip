@@ -145,7 +145,7 @@ export function CityAutocomplete({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "h-12 w-full justify-between rounded-xl border-2 text-left font-normal",
+              "h-12 w-full justify-between rounded-xl border-2 text-left font-normal shadow-none hover:bg-white",
               error ? "border-red-500 focus-visible:ring-red-500" : "border-[#E5E7EB]",
               !selectedCity && "text-[#9CA3AF]",
               className
