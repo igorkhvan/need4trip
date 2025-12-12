@@ -19,6 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Trash2 } from "lucide-react";
 import {
   EventCategory,
@@ -43,7 +45,7 @@ export type EventFormValues = {
   description: string;
   category: EventCategory | null;
   dateTime: string;
-  city: string | null; // Город проведения события
+  cityId: string | null; // FK на cities
   locationText: string;
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchema[];
@@ -54,7 +56,7 @@ export type EventFormValues = {
   isClubEvent: boolean;
   isPaid: boolean;
   price: string;
-  currency: string;
+  currencyCode: string | null; // ISO 4217 code
 };
 
 export type EventFormProps = {
@@ -98,7 +100,7 @@ export function EventForm({
     if (initialValues?.dateTime) return initialValues.dateTime.slice(0, 16);
     return "";
   });
-  const [city, setCity] = useState<string>(initialValues?.city ?? "");
+  const [cityId, setCityId] = useState<string | null>(initialValues?.cityId ?? null);
   const [locationText, setLocationText] = useState(initialValues?.locationText ?? "");
   const [maxParticipants, setMaxParticipants] = useState<number | null>(
     initialValues?.maxParticipants ?? null
@@ -120,7 +122,7 @@ export function EventForm({
   const [isClubEvent, setIsClubEvent] = useState<boolean>(initialValues?.isClubEvent ?? false);
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
-  const [currency, setCurrency] = useState<string>(initialValues?.currency ?? "KZT");
+  const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? "RUB");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,8 +198,8 @@ export function EventForm({
       } else if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
         issues.price = "Цена должна быть больше 0";
       }
-      if (!currency) {
-        issues.currency = "Выберите валюту";
+      if (!currencyCode) {
+        issues.currencyCode = "Выберите валюту";
       }
     }
     if (!trimmedLocation) {
@@ -241,7 +243,7 @@ export function EventForm({
       description: trimmedDescription,
       category,
       dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
-      city: city.trim() || null, // Добавлено поле город
+      cityId: cityId || null, // FK на cities
       locationText: trimmedLocation,
       maxParticipants,
       customFieldsSchema: sortedFields,
@@ -252,7 +254,7 @@ export function EventForm({
       isClubEvent,
       isPaid,
       price: isPaid ? (trimmedPrice ? Number(trimmedPrice) : null) : null,
-      currency: isPaid ? currency || null : null,
+      currencyCode: isPaid ? currencyCode || null : null,
     };
 
     try {
@@ -371,16 +373,24 @@ export function EventForm({
 
             {/* Город */}
             <div className="space-y-2">
-              <Label htmlFor="city" className="text-sm font-medium text-[#111827]">
+              <Label className="text-sm font-medium text-[#111827]">
                 Город
               </Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+              <CityAutocomplete
+                value={cityId}
+                onChange={(newCityId) => {
+                  setCityId(newCityId);
+                  if (fieldErrors.cityId) {
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.cityId;
+                      return next;
+                    });
+                  }
+                }}
                 disabled={disabled}
-                placeholder="Например: Москва"
-                className="h-12 rounded-xl border-2"
+                placeholder="Выберите город..."
+                error={fieldErrors.cityId}
               />
               <div className="text-xs text-gray-500">
                 Поможет участникам найти события в их городе
@@ -605,33 +615,25 @@ export function EventForm({
                     <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="currency" className="text-sm font-medium text-[#111827]">
+                    <Label className="text-sm font-medium text-[#111827]">
                       Валюта
                     </Label>
-                    <Select
-                      value={currency}
-                      onValueChange={(val) => {
-                        setCurrency(val);
-                        if (fieldErrors.currency) {
+                    <CurrencySelect
+                      value={currencyCode}
+                      onChange={(newCode) => {
+                        setCurrencyCode(newCode);
+                        if (fieldErrors.currencyCode) {
                           setFieldErrors((prev) => {
                             const next = { ...prev };
-                            delete next.currency;
+                            delete next.currencyCode;
                             return next;
                           });
                         }
                       }}
                       disabled={disabled}
-                    >
-                      <SelectTrigger id="currency" className="h-12 rounded-xl border-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="KZT">KZT</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="EUR">EUR</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.currency ?? ""}</div>
+                      placeholder="Выберите валюту..."
+                      error={fieldErrors.currencyCode}
+                    />
                   </div>
                 </div>
               )}

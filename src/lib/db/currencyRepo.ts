@@ -1,0 +1,136 @@
+/**
+ * Currency Repository - Database operations for currencies table
+ */
+
+import { createClient } from "@/lib/supabase/server";
+import { Currency } from "@/lib/types/currency";
+
+// ============================================================================
+// Database Row Type
+// ============================================================================
+
+interface DbCurrency {
+  code: string;
+  symbol: string;
+  name_ru: string;
+  name_en: string;
+  decimal_places: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+// ============================================================================
+// Mapper Function
+// ============================================================================
+
+function mapDbCurrencyToDomain(row: DbCurrency): Currency {
+  return {
+    code: row.code,
+    symbol: row.symbol,
+    nameRu: row.name_ru,
+    nameEn: row.name_en,
+    decimalPlaces: row.decimal_places,
+    isActive: row.is_active,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+  };
+}
+
+// ============================================================================
+// Repository Functions
+// ============================================================================
+
+/**
+ * Get all active currencies
+ */
+export async function getActiveCurrencies(): Promise<Currency[]> {
+  const supabase = await createClient();
+  
+  const { data, error } = await (supabase as any)
+    .from("currencies")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("code", { ascending: true });
+
+  if (error) {
+    console.error("[currencyRepo] Error fetching currencies:", error);
+    throw new Error(`Failed to fetch currencies: ${error.message}`);
+  }
+
+  return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
+}
+
+/**
+ * Get all currencies (including inactive)
+ */
+export async function getAllCurrencies(): Promise<Currency[]> {
+  const supabase = await createClient();
+  
+  const { data, error } = await (supabase as any)
+    .from("currencies")
+    .select("*")
+    .order("is_active", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("code", { ascending: true });
+
+  if (error) {
+    console.error("[currencyRepo] Error fetching all currencies:", error);
+    throw new Error(`Failed to fetch currencies: ${error.message}`);
+  }
+
+  return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
+}
+
+/**
+ * Get currency by code
+ */
+export async function getCurrencyByCode(code: string): Promise<Currency | null> {
+  const supabase = await createClient();
+  
+  const { data, error } = await (supabase as any)
+    .from("currencies")
+    .select("*")
+    .eq("code", code.toUpperCase())
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null; // Not found
+    }
+    console.error("[currencyRepo] Error fetching currency:", error);
+    throw new Error(`Failed to fetch currency: ${error.message}`);
+  }
+
+  return data ? mapDbCurrencyToDomain(data as DbCurrency) : null;
+}
+
+/**
+ * Get currencies by codes (for hydration)
+ */
+export async function getCurrenciesByCodes(codes: string[]): Promise<Map<string, Currency>> {
+  if (codes.length === 0) {
+    return new Map();
+  }
+
+  const supabase = await createClient();
+  
+  const upperCodes = codes.map(c => c.toUpperCase());
+  const { data, error } = await (supabase as any)
+    .from("currencies")
+    .select("*")
+    .in("code", upperCodes);
+
+  if (error) {
+    console.error("[currencyRepo] Error fetching currencies by codes:", error);
+    throw new Error(`Failed to fetch currencies: ${error.message}`);
+  }
+
+  const currencyMap = new Map<string, Currency>();
+  (data || []).forEach((row: DbCurrency) => {
+    currencyMap.set(row.code, mapDbCurrencyToDomain(row));
+  });
+
+  return currencyMap;
+}

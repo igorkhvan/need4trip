@@ -82,7 +82,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
       payload.dateTime instanceof Date
         ? payload.dateTime.toISOString()
         : payload.dateTime,
-    city: payload.city ?? null, // Добавлено поле город
+    city_id: payload.cityId ?? null, // FK на cities (normalized)
     location_text: payload.locationText,
     location_lat: payload.locationLat ?? null,
     location_lng: payload.locationLng ?? null,
@@ -97,7 +97,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     is_club_event: payload.isClubEvent ?? false,
     is_paid: payload.isPaid ?? false,
     price: payload.price ?? null,
-    currency: payload.currency ?? null,
+    currency_code: payload.currencyCode ?? null, // ISO 4217 (normalized)
   };
 
   const { data, error } = await client
@@ -134,7 +134,7 @@ export async function updateEvent(
               : payload.dateTime,
         }
       : {}),
-    ...(payload.city !== undefined ? { city: payload.city } : {}), // Добавлено поле город
+    ...(payload.cityId !== undefined ? { city_id: payload.cityId } : {}), // FK на cities (normalized)
     ...(payload.locationText !== undefined ? { location_text: payload.locationText } : {}),
     ...(payload.locationLat !== undefined ? { location_lat: payload.locationLat } : {}),
     ...(payload.locationLng !== undefined ? { location_lng: payload.locationLng } : {}),
@@ -155,7 +155,7 @@ export async function updateEvent(
     ...(payload.isClubEvent !== undefined ? { is_club_event: payload.isClubEvent } : {}),
     ...(payload.isPaid !== undefined ? { is_paid: payload.isPaid } : {}),
     ...(payload.price !== undefined ? { price: payload.price } : {}),
-    ...(payload.currency !== undefined ? { currency: payload.currency } : {}),
+    ...(payload.currencyCode !== undefined ? { currency_code: payload.currencyCode } : {}), // ISO 4217 (normalized)
     updated_at: new Date().toISOString(),
   };
 

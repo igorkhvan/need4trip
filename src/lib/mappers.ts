@@ -11,7 +11,7 @@ export interface DbEvent {
   description: string;
   category: DomainEvent["category"];
   date_time: string;
-  city: string | null; // Город проведения события
+  city_id: string | null; // FK на cities (normalized)
   location_text: string;
   location_lat: number | null;
   location_lng: number | null;
@@ -27,7 +27,7 @@ export interface DbEvent {
   club_id: string | null; // ID клуба-организатора
   is_paid: boolean;
   price: number | null;
-  currency: string | null;
+  currency_code: string | null; // ISO 4217 code (normalized)
 }
 
 export interface DbParticipant {
@@ -56,7 +56,7 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     description: db.description,
     category: db.category,
     dateTime: db.date_time,
-    city: db.city ?? null, // Маппинг города
+    cityId: db.city_id ?? null, // FK на cities (normalized)
     locationText: db.location_text,
     locationLat: db.location_lat,
     locationLng: db.location_lng,
@@ -73,7 +73,7 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     clubId: db.club_id ?? null, // ID клуба-организатора
     isPaid: db.is_paid ?? false,
     price: db.price ?? null,
-    currency: db.currency ?? null,
+    currencyCode: db.currency_code ?? null, // ISO 4217 (normalized)
   };
 }
 

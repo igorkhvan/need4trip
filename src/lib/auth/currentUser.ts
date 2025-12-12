@@ -11,10 +11,11 @@ export interface CurrentUser {
   telegramHandle?: string | null;
   telegramId?: string | null;
   avatarUrl?: string | null;
-  city?: string | null; // Город пользователя
+  cityId?: string | null; // FK на cities (normalized)
   phone?: string | null;
   email?: string | null;
-  carModel?: string | null;
+  carBrandId?: string | null; // FK на car_brands (normalized)
+  carModelText?: string | null; // Свободный текст модели
   experienceLevel?: ExperienceLevel | null;
   createdAt?: string;
   updatedAt?: string;
@@ -117,10 +118,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     telegramHandle: user.telegramHandle,
     telegramId: user.telegramId ?? null,
     avatarUrl: user.avatarUrl,
-    city: user.city ?? null, // Добавлено поле город
+    cityId: user.cityId ?? null, // FK на cities (normalized)
     phone: user.phone ?? null,
     email: user.email ?? null,
-    carModel: user.carModel ?? null,
+    carBrandId: user.carBrandId ?? null, // FK на car_brands (normalized)
+    carModelText: user.carModelText ?? null, // Свободный текст модели
     experienceLevel: user.experienceLevel ?? null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

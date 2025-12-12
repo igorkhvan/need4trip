@@ -87,7 +87,8 @@ export interface Event {
   description: string;
   category: EventCategory | null;
   dateTime: string;
-  city: string | null; // Город проведения события
+  cityId: string | null; // FK на cities table (normalized)
+  city?: { id: string; name: string; region: string | null } | null; // Hydrated city info
   locationText: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -109,7 +110,8 @@ export interface Event {
   } | null;
   isPaid: boolean;
   price?: number | null;
-  currency?: string | null;
+  currencyCode?: string | null; // ISO 4217 code (normalized)
+  currency?: { code: string; symbol: string; nameRu: string } | null; // Hydrated currency info
   participantsCount?: number;
   ownerName?: string | null;
   ownerHandle?: string | null;
@@ -134,7 +136,7 @@ export const eventCreateSchema = z
     description: z.string().trim().min(1).max(5000),
     category: eventCategorySchema.nullable().optional(),
     dateTime: eventDateSchema,
-    city: z.string().trim().max(100).nullable().optional(), // Город проведения
+    cityId: z.string().uuid().nullable().optional(), // FK на cities table (normalized)
     locationText: z.string().trim().min(1),
     locationLat: z.number().finite().nullable().optional(),
     locationLng: z.number().finite().nullable().optional(),
@@ -149,7 +151,7 @@ export const eventCreateSchema = z
     clubId: z.string().uuid().nullable().optional(), // ID клуба-организатора
     isPaid: z.boolean().default(false),
     price: z.number().finite().nonnegative().nullable().optional(),
-    currency: z.string().trim().max(10).optional().nullable(),
+    currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
   })
   .superRefine((val, ctx) => {
     if (val.dateTime <= date5MinutesAgo()) {
@@ -166,7 +168,7 @@ const eventUpdateBaseSchema = z.object({
   description: z.string().trim().min(1).max(5000).optional(),
   category: eventCategorySchema.nullable().optional(),
   dateTime: eventDateSchema.optional(),
-  city: z.string().trim().max(100).nullable().optional(), // Добавлено поле город
+  cityId: z.string().uuid().nullable().optional(), // FK на cities table (normalized)
   locationText: z.string().trim().min(1).optional(),
   locationLat: z.number().finite().nullable().optional(),
   locationLng: z.number().finite().nullable().optional(),
@@ -177,11 +179,11 @@ const eventUpdateBaseSchema = z.object({
   vehicleTypeRequirement: vehicleTypeRequirementSchema.optional(),
   allowedBrandIds: z.array(z.string().uuid()).optional(),
   rules: z.string().trim().max(10000).optional().nullable(),
-  isClubEvent: z.boolean().optional(),
-  clubId: z.string().uuid().nullable().optional(),
-  isPaid: z.boolean().optional(),
-  price: z.number().finite().nonnegative().nullable().optional(),
-  currency: z.string().trim().max(10).optional().nullable(),
+    isClubEvent: z.boolean().optional(),
+    clubId: z.string().uuid().nullable().optional(),
+    isPaid: z.boolean().optional(),
+    price: z.number().finite().nonnegative().nullable().optional(),
+    currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
 });
 
 export const eventUpdateSchema = eventUpdateBaseSchema.superRefine((val, ctx) => {

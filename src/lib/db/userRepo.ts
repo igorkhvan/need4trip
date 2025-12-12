@@ -23,8 +23,9 @@ function mapRowToUser(data: DbUserRow): User {
     telegramHandle: data.telegram_handle,
     telegramId: data.telegram_id,
     avatarUrl: data.avatar_url,
-    city: (data as any).city ?? null, // TODO: Need4Trip: Regenerate supabase types
-    carModel: data.car_model,
+    cityId: (data as any).city_id ?? null, // FK на cities (normalized)
+    carBrandId: (data as any).car_brand_id ?? null, // FK на car_brands (normalized)
+    carModelText: (data as any).car_model_text ?? null, // Свободный текст модели
     experienceLevel: data.experience_level,
     // TODO: Need4Trip: Regenerate supabase types after DB migration to include 'plan' field
     plan: ((data as any).plan as "free" | "pro") ?? "free", // Personal subscription plan

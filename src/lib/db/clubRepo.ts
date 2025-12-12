@@ -23,7 +23,7 @@ export interface DbClub {
   id: string;
   name: string;
   description: string | null;
-  city: string | null;
+  city_id: string | null; // FK на cities (normalized)
   logo_url: string | null;
   telegram_url: string | null;
   website_url: string | null;
@@ -150,7 +150,7 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
   const insertPayload = {
     name: payload.name,
     description: payload.description ?? null,
-    city: payload.city ?? null,
+    city_id: payload.cityId ?? null, // FK на cities (normalized)
     logo_url: payload.logoUrl ?? null,
     telegram_url: payload.telegramUrl ?? null,
     website_url: payload.websiteUrl ?? null,
@@ -188,7 +188,7 @@ export async function updateClub(
   const patch = {
     ...(payload.name !== undefined ? { name: payload.name } : {}),
     ...(payload.description !== undefined ? { description: payload.description } : {}),
-    ...(payload.city !== undefined ? { city: payload.city } : {}),
+    ...(payload.cityId !== undefined ? { city_id: payload.cityId } : {}), // FK на cities (normalized)
     ...(payload.logoUrl !== undefined ? { logo_url: payload.logoUrl } : {}),
     ...(payload.telegramUrl !== undefined ? { telegram_url: payload.telegramUrl } : {}),
     ...(payload.websiteUrl !== undefined ? { website_url: payload.websiteUrl } : {}),

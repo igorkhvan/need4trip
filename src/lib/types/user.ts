@@ -14,8 +14,11 @@ export interface User {
   telegramHandle: string | null;
   telegramId?: string | null;
   avatarUrl?: string | null;
-  city: string | null; // Город проживания пользователя
-  carModel: string | null;
+  cityId: string | null; // FK на cities table (normalized)
+  city?: { id: string; name: string; region: string | null } | null; // Hydrated city info
+  carBrandId: string | null; // FK на car_brands table (normalized)
+  carBrand?: { id: string; name: string } | null; // Hydrated brand info
+  carModelText: string | null; // Свободный текст модели (например: "Land Cruiser 200")
   experienceLevel: ExperienceLevel | null;
   plan?: UserPlan; // Personal subscription plan (free by default)
   createdAt: string;
