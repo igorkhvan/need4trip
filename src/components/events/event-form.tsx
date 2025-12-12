@@ -205,6 +205,9 @@ export function EventForm({
     if (!trimmedLocation) {
       issues.locationText = "Укажите локацию";
     }
+    if (!cityId) {
+      issues.cityId = "Выберите город";
+    }
     sortedFields.forEach((field, idx) => {
       if (!field.label.trim()) {
         issues[`customFieldsSchema.${idx}.label`] = "Введите название поля";
@@ -374,7 +377,7 @@ export function EventForm({
             {/* Город */}
             <div>
               <Label className="text-sm font-medium text-[#111827]">
-                Город
+                Город <span className="text-red-500">*</span>
               </Label>
               <CityAutocomplete
                 value={cityId}
@@ -394,11 +397,6 @@ export function EventForm({
                 error={!!fieldErrors.cityId}
                 errorMessage={fieldErrors.cityId}
               />
-              {!fieldErrors.cityId && (
-                <div className="mt-2 text-xs text-[#6B7280]">
-                  Поможет участникам найти события в их городе
-                </div>
-              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

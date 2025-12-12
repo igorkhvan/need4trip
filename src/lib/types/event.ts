@@ -89,7 +89,7 @@ export interface Event {
   description: string;
   category: EventCategory | null;
   dateTime: string;
-  cityId: string | null; // FK на cities table (normalized)
+  cityId: string | null; // FK на cities table (обязательно при создании, но может быть null для старых записей)
   city?: CityHydrated | null; // Hydrated city info
   locationText: string;
   locationLat: number | null;
@@ -138,7 +138,7 @@ export const eventCreateSchema = z
     description: z.string().trim().min(1).max(5000),
     category: eventCategorySchema.nullable().optional(),
     dateTime: eventDateSchema,
-    cityId: z.string().uuid().nullable().optional(), // FK на cities table (normalized)
+    cityId: z.string().uuid(), // FK на cities table (обязательное поле)
     locationText: z.string().trim().min(1),
     locationLat: z.number().finite().nullable().optional(),
     locationLng: z.number().finite().nullable().optional(),
@@ -170,7 +170,7 @@ const eventUpdateBaseSchema = z.object({
   description: z.string().trim().min(1).max(5000).optional(),
   category: eventCategorySchema.nullable().optional(),
   dateTime: eventDateSchema.optional(),
-  cityId: z.string().uuid().nullable().optional(), // FK на cities table (normalized)
+  cityId: z.string().uuid().optional(), // FK на cities table (обязательное при передаче)
   locationText: z.string().trim().min(1).optional(),
   locationLat: z.number().finite().nullable().optional(),
   locationLng: z.number().finite().nullable().optional(),
