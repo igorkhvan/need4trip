@@ -25,6 +25,8 @@ function mapRowToUser(data: DbUserRow): User {
     avatarUrl: data.avatar_url,
     carModel: data.car_model,
     experienceLevel: data.experience_level,
+    // TODO: Need4Trip: Regenerate supabase types after DB migration to include 'plan' field
+    plan: ((data as any).plan as "free" | "pro") ?? "free", // Personal subscription plan
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };

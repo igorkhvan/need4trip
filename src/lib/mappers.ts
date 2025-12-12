@@ -23,6 +23,7 @@ export interface DbEvent {
   vehicle_type_requirement: DomainEvent["vehicleTypeRequirement"];
   rules: string | null;
   is_club_event: boolean;
+  club_id: string | null; // ID клуба-организатора
   is_paid: boolean;
   price: number | null;
   currency: string | null;
@@ -67,6 +68,7 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     allowedBrands: [],
     rules: db.rules ?? null,
     isClubEvent: db.is_club_event ?? false,
+    clubId: db.club_id ?? null, // ID клуба-организатора
     isPaid: db.is_paid ?? false,
     price: db.price ?? null,
     currency: db.currency ?? null,
