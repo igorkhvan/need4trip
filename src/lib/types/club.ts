@@ -76,7 +76,7 @@ export interface ClubWithDetails extends Club {
 
 // Club with user's membership info (for "My Clubs" page)
 export interface ClubWithMembership extends Club {
-  userRole: ClubRole | null; // null if user is not a member
+  userRole: ClubRole; // Role of the user in this club
   subscription: ClubSubscription;
   memberCount: number;
 }
