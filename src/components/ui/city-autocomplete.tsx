@@ -136,7 +136,7 @@ export function CityAutocomplete({
     : placeholder;
 
   return (
-    <div className="space-y-2">
+    <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -212,6 +212,6 @@ export function CityAutocomplete({
       {errorMessage && (
         <div className="min-h-[28px] text-xs text-red-600">{errorMessage}</div>
       )}
-    </div>
+    </>
   );
 }

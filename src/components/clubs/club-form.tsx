@@ -108,7 +108,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       </div>
 
       {/* Город */}
-      <div>
+      <div className="space-y-2">
         <Label className="text-sm font-medium text-[#111827]">
           Город
         </Label>

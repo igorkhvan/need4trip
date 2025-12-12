@@ -375,7 +375,7 @@ export function EventForm({
             </div>
 
             {/* Город */}
-            <div>
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-[#111827]">
                 Город <span className="text-red-500">*</span>
               </Label>
