@@ -7,13 +7,17 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Crown, Users as UsersIcon, Clock, MoreVertical, Trash2, UserCog } from "lucide-react";
+import { Shield, Crown, Users as UsersIcon, Clock, MoreVertical, Trash2, UserCog, Download } from "lucide-react";
 import type { ClubMemberWithUser, ClubRole } from "@/lib/types/club";
 import { getClubRoleLabel } from "@/lib/types/club";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PaywallModal, usePaywall } from "@/components/ui/paywall-modal";
+import { isPaywallResponse } from "@/lib/types/paywall";
 
 interface ClubMembersListProps {
+  clubId: string;
   members: ClubMemberWithUser[];
   canManage: boolean;
   currentUserId?: string;
@@ -22,6 +26,7 @@ interface ClubMembersListProps {
 }
 
 export function ClubMembersList({
+  clubId,
   members,
   canManage,
   currentUserId,
@@ -31,6 +36,43 @@ export function ClubMembersList({
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { paywallOpen, paywallTrigger, showPaywall, hidePaywall } = usePaywall();
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/clubs/${clubId}/export`);
+      
+      if (!res.ok) {
+        if (res.status === 402) {
+          // Paywall hit
+          const data = await res.json();
+          if (isPaywallResponse(data)) {
+            showPaywall(data.paywall);
+          }
+          return;
+        }
+        throw new Error("Failed to export");
+      }
+
+      // Download CSV
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `club_members_${clubId}_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Failed to export:", err);
+      alert("Не удалось экспортировать участников");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const getRoleIcon = (role: ClubRole) => {
     switch (role) {
@@ -86,6 +128,23 @@ export function ClubMembersList({
 
   return (
     <>
+      {/* Export Button */}
+      {canManage && members.length > 0 && (
+        <div className="mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {exporting ? "Экспорт..." : "Экспортировать в CSV"}
+          </Button>
+        </div>
+      )}
+
+      {/* Members List */}
       <div className="space-y-2">
         {members.map((member) => (
           <div
@@ -207,6 +266,15 @@ export function ClubMembersList({
         confirmText="Удалить"
         loading={loading}
       />
+
+      {/* Paywall Modal */}
+      {paywallTrigger && (
+        <PaywallModal
+          open={paywallOpen}
+          onOpenChange={hidePaywall}
+          trigger={paywallTrigger}
+        />
+      )}
     </>
   );
 }

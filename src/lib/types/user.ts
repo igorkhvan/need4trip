@@ -83,3 +83,20 @@ export function getMaxActivePersonalEventsForPlan(plan: UserPlan): number | null
   };
   return limits[plan];
 }
+
+// ============================================================================
+// PROFILE UPDATE
+// ============================================================================
+
+/**
+ * Profile update input schema
+ */
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Имя обязательно").max(100),
+  cityId: z.string().uuid("Выберите город из списка"),
+  carBrandId: z.string().uuid().nullable(),
+  carModelText: z.string().trim().max(100).nullable(),
+  carYear: z.number().int().min(1900).max(2100).nullable().optional(),
+});
+
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

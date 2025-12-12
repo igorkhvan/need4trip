@@ -170,6 +170,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                 Участники ({club.memberCount})
               </h2>
               <ClubMembersList
+                clubId={club.id}
                 members={club.members ?? []}
                 canManage={isOwner}
                 currentUserId={user?.id}

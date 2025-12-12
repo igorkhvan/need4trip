@@ -145,3 +145,44 @@ export async function upsertTelegramUser(payload: {
 
   return mapRowToUser(data as DbUserRow);
 }
+
+/**
+ * Update user profile
+ */
+export async function updateUser(
+  id: string,
+  updates: {
+    name?: string;
+    cityId?: string;
+    carBrandId?: string | null;
+    carModelText?: string | null;
+    carYear?: number | null;
+  }
+): Promise<User> {
+  const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
+
+  const patch: any = {};
+  
+  if (updates.name !== undefined) patch.name = updates.name;
+  if (updates.cityId !== undefined) patch.city_id = updates.cityId;
+  if (updates.carBrandId !== undefined) patch.car_brand_id = updates.carBrandId;
+  if (updates.carModelText !== undefined) patch.car_model_text = updates.carModelText;
+  if (updates.carYear !== undefined) patch.car_year = updates.carYear;
+  
+  const { data, error } = await (client as any)
+    .from(table)
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("Failed to update user", error);
+    throw new InternalError("Failed to update user", error);
+  }
+
+  return mapRowToUser(data as DbUserRow);
+}

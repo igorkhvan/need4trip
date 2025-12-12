@@ -10,6 +10,8 @@ import { UserPlanCard } from "@/components/profile/user-plan-card";
 import { UserClubsList } from "@/components/profile/user-clubs-list";
 import { UserStatsCard } from "@/components/profile/user-stats-card";
 import { Settings, LogOut } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -55,11 +57,12 @@ export default async function ProfilePage() {
             </p>
           </div>
           <div className="flex gap-3">
-            {/* TODO: Link to settings */}
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              <Settings className="w-5 h-5" />
-              Настройки
-            </button>
+            <Button variant="outline" asChild>
+              <Link href="/profile/edit" className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Редактировать
+              </Link>
+            </Button>
           </div>
         </div>
 

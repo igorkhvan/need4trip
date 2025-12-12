@@ -280,3 +280,23 @@ export async function searchClubs(query: string): Promise<DbClub[]> {
   return (data ?? []) as DbClub[];
 }
 
+/**
+ * Count clubs created by user
+ */
+export async function countClubsByUserId(userId: string): Promise<number> {
+  const client = ensureClient();
+  if (!client) return 0;
+
+  const { count, error } = await (client as any)
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("created_by", userId);
+
+  if (error) {
+    console.error("Failed to count clubs by user", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+

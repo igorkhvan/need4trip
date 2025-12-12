@@ -12,6 +12,7 @@ import type { UserPlan } from "@/lib/types/user";
 import { getMember } from "@/lib/db/clubMemberRepo";
 import { getClubSubscription } from "@/lib/db/subscriptionRepo";
 import { listEvents } from "@/lib/db/eventRepo";
+import { getCachedClubPlanLimits } from "@/lib/services/planCache";
 
 // ============================================================================
 // Permission Result Types
@@ -126,16 +127,11 @@ async function canCreateClubEvent(
     };
   }
 
-  // Проверка лимита событий клуба
-  const limits: Record<ClubPlan, number | null> = {
-    club_free: 1,
-    club_basic: 3,
-    club_pro: null, // unlimited
-  };
-
-  const maxEvents = limits[clubPlan];
+  // Получить лимиты из БД (через кеш)
+  const planLimits = await getCachedClubPlanLimits(clubPlan);
+  const maxEvents = planLimits.maxActiveEvents;
   
-  // Безлимит для club_pro
+  // Безлимит (maxActiveEvents = null)
   if (maxEvents === null) {
     return { canCreate: true };
   }
@@ -288,17 +284,17 @@ export function canUseVisibility(
  * Правила:
  * - Free user: только бесплатные события
  * - Pro user: платные события разрешены
- * - Club free: только бесплатные события
- * - Club basic/pro: платные события разрешены
+ * - Club: проверяем allowPaidEvents в плане клуба
  */
-export function canCreatePaidEvent(
+export async function canCreatePaidEvent(
   userPlan: UserPlan,
   clubPlan?: ClubPlan | null,
   isClubEvent: boolean = false
-): PermissionResult {
-  // Для событий клубов - проверяем план клуба
+): Promise<PermissionResult> {
+  // Для событий клубов - проверяем план клуба через БД
   if (isClubEvent && clubPlan) {
-    if (clubPlan === "club_free") {
+    const planLimits = await getCachedClubPlanLimits(clubPlan);
+    if (!planLimits.features.paidEvents) {
       return {
         allowed: false,
         reason: "Платные события доступны только для клубов с тарифом Basic или Pro",
@@ -604,7 +600,7 @@ export async function validateEventCreation(
 
   // Проверка 3: Платные события
   if (data.isPaid) {
-    const paidCheck = canCreatePaidEvent(userPlan, clubPlan, !!clubId);
+    const paidCheck = await canCreatePaidEvent(userPlan, clubPlan, !!clubId);
     if (!paidCheck.allowed) {
       errors.push(paidCheck.reason ?? "Платные события недоступны");
     }
@@ -657,7 +653,7 @@ export async function validateEventUpdate(
         const subscription = await getClubSubscription(newClubId);
         clubPlan = subscription?.plan ?? "club_free";
       }
-      const paidCheck = canCreatePaidEvent(userPlan, clubPlan, !!newClubId);
+      const paidCheck = await canCreatePaidEvent(userPlan, clubPlan, !!newClubId);
       if (!paidCheck.allowed) {
         errors.push(paidCheck.reason ?? "Платные события недоступны");
       }
