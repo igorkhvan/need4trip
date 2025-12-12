@@ -12,6 +12,9 @@ function ensureClient() {
   return supabase;
 }
 
+// TODO: Need4Trip: Regenerate supabase types after DB migration to include clubs table
+// Using 'any' cast temporarily for all queries until types are regenerated
+
 // ============================================================================
 // Database Types (snake_case)
 // ============================================================================
@@ -48,7 +51,7 @@ export async function listClubs(): Promise<DbClub[]> {
   const client = ensureClient();
   if (!client) return [];
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .select("*")
     .order("created_at", { ascending: false });
@@ -68,7 +71,7 @@ export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
   const client = ensureClient();
   if (!client) return [];
 
-  const { data, error } = await client
+  const { data, error} = await (client as any)
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .order("created_at", { ascending: false });
@@ -93,7 +96,7 @@ export async function getClubById(id: string): Promise<DbClub | null> {
     return null;
   }
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .select("*")
     .eq("id", id)
@@ -119,7 +122,7 @@ export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | nu
     return null;
   }
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .eq("id", id)
@@ -156,7 +159,7 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
     updated_at: now,
   };
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -192,7 +195,7 @@ export async function updateClub(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -216,7 +219,7 @@ export async function deleteClub(id: string): Promise<boolean> {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error, count } = await client
+  const { error, count } = await (client as any)
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
@@ -240,7 +243,7 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
   const client = ensureClient();
   if (!client) return [];
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .select("*")
     .eq("created_by", userId)
@@ -263,7 +266,7 @@ export async function searchClubs(query: string): Promise<DbClub[]> {
 
   const searchPattern = `%${query}%`;
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(table)
     .select("*")
     .or(`name.ilike.${searchPattern},city.ilike.${searchPattern}`)

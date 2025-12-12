@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
-import type { ClubPlan, UserPlan } from "@/lib/types/club";
+import type { ClubPlan } from "@/lib/types/club";
+import type { UserPlan } from "@/lib/types/user";
 
 const clubSubsTable = "club_subscriptions";
 const usersTable = "users";
@@ -12,6 +13,9 @@ function ensureClient() {
   }
   return supabase;
 }
+
+// TODO: Need4Trip: Regenerate supabase types after DB migration to include club_subscriptions table
+// Using 'any' cast temporarily for all queries until types are regenerated
 
 // ============================================================================
 // Database Types (snake_case)
@@ -39,7 +43,7 @@ export async function getClubSubscription(
   const client = ensureClient();
   if (!client) return null;
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(clubSubsTable)
     .select("*")
     .eq("club_id", clubId)
@@ -77,7 +81,7 @@ export async function createClubSubscription(
     updated_at: now,
   };
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(clubSubsTable)
     .insert(insertPayload)
     .select("*")
@@ -112,7 +116,7 @@ export async function updateClubSubscription(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(clubSubsTable)
     .update(patch)
     .eq("club_id", clubId)
@@ -166,7 +170,7 @@ export async function deactivateClubSubscription(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(clubSubsTable)
     .update(patch)
     .eq("club_id", clubId)
@@ -193,7 +197,7 @@ export async function listExpiringSubscriptions(
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + daysAhead);
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(clubSubsTable)
     .select("*")
     .eq("active", true)
@@ -221,7 +225,7 @@ export async function getPersonalPlan(userId: string): Promise<UserPlan> {
   const client = ensureClient();
   if (!client) return "free"; // Default
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(usersTable)
     .select("plan")
     .eq("id", userId)
@@ -247,7 +251,7 @@ export async function updatePersonalPlan(
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error } = await client
+  const { error } = await (client as any)
     .from(usersTable)
     .update({ plan, updated_at: new Date().toISOString() })
     .eq("id", userId);
@@ -281,7 +285,7 @@ export async function listProUsers(): Promise<string[]> {
   const client = ensureClient();
   if (!client) return [];
 
-  const { data, error } = await client
+  const { data, error } = await (client as any)
     .from(usersTable)
     .select("id")
     .eq("plan", "pro");
@@ -291,6 +295,6 @@ export async function listProUsers(): Promise<string[]> {
     throw new InternalError("Failed to list pro users", error);
   }
 
-  return (data ?? []).map((row) => row.id);
+  return (data ?? []).map((row: any) => row.id);
 }
 
