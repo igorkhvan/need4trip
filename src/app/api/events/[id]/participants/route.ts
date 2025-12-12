@@ -5,7 +5,7 @@ import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { listParticipants, registerParticipant } from "@/lib/services/participants";
 
-type Params = { params: Promise<{ id: string }> } | { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_: Request, context: Params) {
   try {

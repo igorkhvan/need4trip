@@ -218,6 +218,78 @@ export async function getAllowedBrands(eventId: string) {
   return brands ?? [];
 }
 
+/**
+ * Batch load allowed brands for multiple events
+ * Returns Map<eventId, Brand[]> for efficient lookup
+ */
+export async function getAllowedBrandsByEventIds(
+  eventIds: string[]
+): Promise<Map<string, Array<{ id: string; name: string; slug: string }>>> {
+  if (eventIds.length === 0) {
+    return new Map();
+  }
+
+  const client = ensureClient();
+  if (!client) return new Map();
+
+  // Step 1: Get all event_allowed_brands links for these events
+  const { data: links, error: linkError } = await client
+    .from("event_allowed_brands")
+    .select("event_id, brand_id")
+    .in("event_id", eventIds);
+
+  if (linkError) {
+    console.error("Failed to load allowed brand links", linkError);
+    throw new InternalError("Failed to load allowed brand links", linkError);
+  }
+
+  if (!links || links.length === 0) {
+    return new Map();
+  }
+
+  // Step 2: Get unique brand IDs
+  const brandIds = Array.from(new Set(links.map(link => link.brand_id)));
+
+  // Step 3: Load all brands at once
+  const { data: brands, error: brandError } = await client
+    .from("car_brands")
+    .select("id, name, slug")
+    .in("id", brandIds);
+
+  if (brandError) {
+    console.error("Failed to load brands", brandError);
+    throw new InternalError("Failed to load brands", brandError);
+  }
+
+  // Step 4: Create brand lookup map
+  const brandMap = new Map<string, { id: string; name: string; slug: string }>();
+  (brands ?? []).forEach((brand: any) => {
+    brandMap.set(brand.id, {
+      id: brand.id,
+      name: brand.name,
+      slug: brand.slug ?? "",
+    });
+  });
+
+  // Step 5: Group brands by event_id
+  const result = new Map<string, Array<{ id: string; name: string; slug: string }>>();
+  
+  // Initialize empty arrays for all events
+  eventIds.forEach(id => result.set(id, []));
+  
+  // Fill with brands
+  links.forEach(link => {
+    const brand = brandMap.get(link.brand_id);
+    if (brand) {
+      const eventBrands = result.get(link.event_id) ?? [];
+      eventBrands.push(brand);
+      result.set(link.event_id, eventBrands);
+    }
+  });
+
+  return result;
+}
+
 export async function deleteEvent(id: string): Promise<boolean> {
   const client = ensureClient();
   if (!client) {

@@ -36,6 +36,7 @@ import {
 import { getClubSubscription } from "@/lib/db/subscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { listEvents } from "@/lib/db/eventRepo";
+import { hydrateCities } from "@/lib/utils/hydration";
 import {
   canCreateClub as canCreateClubPermission,
   canManageClub,
@@ -111,7 +112,8 @@ function mapDbClubMemberWithUserToDomain(db: DbClubMemberWithUser): ClubMemberWi
  */
 export async function listClubs(): Promise<Club[]> {
   const clubs = await listClubsRepo();
-  return clubs.map(mapDbClubToDomain);
+  const domainClubs = clubs.map(mapDbClubToDomain);
+  return hydrateCities(domainClubs);
 }
 
 /**
@@ -122,7 +124,8 @@ export async function searchClubs(query: string): Promise<Club[]> {
     return listClubs();
   }
   const clubs = await searchClubsRepo(query);
-  return clubs.map(mapDbClubToDomain);
+  const domainClubs = clubs.map(mapDbClubToDomain);
+  return hydrateCities(domainClubs);
 }
 
 /**

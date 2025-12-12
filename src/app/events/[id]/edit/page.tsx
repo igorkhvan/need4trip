@@ -194,6 +194,7 @@ export default function EditEventPage() {
           description: event.description,
           category: event.category,
           dateTime: event.dateTime,
+          cityId: event.cityId ?? null,
           locationText: event.locationText,
           maxParticipants: event.maxParticipants,
           customFieldsSchema: event.customFieldsSchema || [],

@@ -31,6 +31,13 @@ export interface CityBasic {
   region?: string | null;
 }
 
+// Hydrated city info (used in Event, Club, User interfaces)
+export interface CityHydrated {
+  id: string;
+  name: string;
+  region: string | null;
+}
+
 // ============================================================================
 // Zod Schemas
 // ============================================================================

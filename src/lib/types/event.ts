@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { CityHydrated } from "./city";
+import { CurrencyHydrated } from "./currency";
 
 export const eventCategorySchema = z.enum([
   "weekend_trip",
@@ -88,7 +90,7 @@ export interface Event {
   category: EventCategory | null;
   dateTime: string;
   cityId: string | null; // FK на cities table (normalized)
-  city?: { id: string; name: string; region: string | null } | null; // Hydrated city info
+  city?: CityHydrated | null; // Hydrated city info
   locationText: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -111,7 +113,7 @@ export interface Event {
   isPaid: boolean;
   price?: number | null;
   currencyCode?: string | null; // ISO 4217 code (normalized)
-  currency?: { code: string; symbol: string; nameRu: string } | null; // Hydrated currency info
+  currency?: CurrencyHydrated | null; // Hydrated currency info
   participantsCount?: number;
   ownerName?: string | null;
   ownerHandle?: string | null;

@@ -21,6 +21,13 @@ export interface Currency {
   createdAt: string;
 }
 
+// Hydrated currency info (used in Event interface)
+export interface CurrencyHydrated {
+  code: string;
+  symbol: string;
+  nameRu: string;
+}
+
 // ============================================================================
 // Zod Schema
 // ============================================================================

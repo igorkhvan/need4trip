@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CityHydrated } from "./city";
 
 // ============================================================================
 // Club Types
@@ -19,7 +20,7 @@ export interface Club {
   name: string;
   description: string | null;
   cityId: string | null; // FK на cities table (normalized)
-  city?: { id: string; name: string; region: string | null } | null; // Hydrated city info
+  city?: CityHydrated | null; // Hydrated city info
   logoUrl: string | null;
   telegramUrl: string | null;
   websiteUrl: string | null;

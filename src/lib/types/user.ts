@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CityHydrated } from "./city";
 
 export type ExperienceLevel = "beginner" | "intermediate" | "pro";
 
@@ -15,7 +16,7 @@ export interface User {
   telegramId?: string | null;
   avatarUrl?: string | null;
   cityId: string | null; // FK на cities table (normalized)
-  city?: { id: string; name: string; region: string | null } | null; // Hydrated city info
+  city?: CityHydrated | null; // Hydrated city info
   carBrandId: string | null; // FK на car_brands table (normalized)
   carBrand?: { id: string; name: string } | null; // Hydrated brand info
   carModelText: string | null; // Свободный текст модели (например: "Land Cruiser 200")

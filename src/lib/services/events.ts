@@ -6,6 +6,7 @@ import {
   updateEvent as updateEventRecord,
   replaceAllowedBrands,
   getAllowedBrands,
+  getAllowedBrandsByEventIds,
 } from "@/lib/db/eventRepo";
 import {
   countParticipants,
@@ -14,6 +15,7 @@ import {
   listParticipantEventIds,
 } from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
+import { hydrateCitiesAndCurrencies } from "@/lib/utils/hydration";
 import {
   mapDbEventToDomain,
   mapDbEventWithOwnerToDomain,
@@ -114,23 +116,20 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
   })();
 
   const eventIds = filtered.map((e) => e.id);
-  const counts = await getParticipantsCountByEventIds(eventIds);
 
-  const hydrated = await Promise.all(
-    filtered.map(async (event) => {
-      let allowedBrands = event.allowedBrands;
-      try {
-        allowedBrands = await getAllowedBrands(event.id);
-      } catch (err) {
-        console.error("[listVisibleEventsForUser] Failed to load allowed brands for event", err);
-      }
-      return {
-        ...event,
-        allowedBrands,
-        participantsCount: counts[event.id] ?? 0,
-      };
-    })
-  );
+  // Batch load all related data in parallel
+  const [counts, allowedBrandsMap, eventsWithHydration] = await Promise.all([
+    getParticipantsCountByEventIds(eventIds),
+    getAllowedBrandsByEventIds(eventIds),
+    hydrateCitiesAndCurrencies(filtered),
+  ]);
+
+  // Combine all hydrated data
+  const hydrated = eventsWithHydration.map((event) => ({
+    ...event,
+    allowedBrands: allowedBrandsMap.get(event.id) ?? [],
+    participantsCount: counts[event.id] ?? 0,
+  }));
 
   return hydrated;
 }
@@ -222,12 +221,19 @@ export async function getEventWithParticipantsVisibility(
   const dbEvent = await getEventById(id);
   if (!dbEvent) return { event: null, participants: [] };
   const participants = await listParticipants(dbEvent.id);
-  const event = mapDbEventToDomain(dbEvent);
+  let event = mapDbEventToDomain(dbEvent);
+  
+  // Hydrate all related data
   try {
     event.allowedBrands = await getAllowedBrands(id);
   } catch (err) {
     console.error("[getEventWithParticipants] Failed to load allowed brands", err);
   }
+  
+  // Hydrate city and currency
+  const [hydratedEvents] = await hydrateCitiesAndCurrencies([event]);
+  event = hydratedEvents;
+  
   await ensureEventVisibility(event, options);
   return {
     event,

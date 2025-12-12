@@ -148,3 +148,34 @@ export async function findCityByName(name: string): Promise<City | null> {
   if (!data) return null;
   return mapRowToCity(data);
 }
+
+/**
+ * Get cities by IDs (for batch hydration)
+ * Returns a Map<cityId, City> for efficient lookup
+ */
+export async function getCitiesByIds(cityIds: string[]): Promise<Map<string, City>> {
+  if (cityIds.length === 0) {
+    return new Map();
+  }
+
+  const client = ensureClient();
+  if (!client) return new Map();
+
+  const { data, error } = await (client as any)
+    .from(table)
+    .select("*")
+    .in("id", cityIds);
+
+  if (error) {
+    console.error("Failed to get cities by IDs", error);
+    throw new InternalError("Failed to get cities by IDs", error);
+  }
+
+  const cityMap = new Map<string, City>();
+  (data ?? []).forEach((row: any) => {
+    const city = mapRowToCity(row);
+    cityMap.set(city.id, city);
+  });
+
+  return cityMap;
+}
