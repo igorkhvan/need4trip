@@ -227,7 +227,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
             const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
             const priceLabel =
               event.isPaid && event.price
-                ? `${event.price} ${event.currency ?? ""}`.trim()
+                ? `${event.price} ${event.currency?.symbol ?? event.currencyCode ?? ""}`.trim()
                 : event.isPaid
                   ? "Платное"
                   : "Бесплатно";

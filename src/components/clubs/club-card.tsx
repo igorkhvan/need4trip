@@ -48,7 +48,10 @@ export function ClubCard({ club }: ClubCardProps) {
             {club.city && (
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <MapPin className="w-4 h-4" />
-                <span>{club.city}</span>
+                <span>
+                  {club.city.name}
+                  {club.city.region && `, ${club.city.region}`}
+                </span>
               </div>
             )}
           </div>

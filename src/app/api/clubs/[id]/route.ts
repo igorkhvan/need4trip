@@ -14,7 +14,7 @@ import { respondError } from "@/lib/api/response";
 export const dynamic = "force-dynamic";
 
 interface RouteContext {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -23,12 +23,14 @@ interface RouteContext {
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const user = await getCurrentUser();
-    const club = await getClubWithDetails(params.id, user);
+    const club = await getClubWithDetails(id, user);
 
     return NextResponse.json({ club });
   } catch (error) {
-    console.error(`[GET /api/clubs/${params.id}]`, error);
+    const { id } = await params;
+    console.error(`[GET /api/clubs/${id}]`, error);
     return respondError(error);
   }
 }
@@ -39,14 +41,16 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
  */
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const user = await getCurrentUser();
     const body = await req.json();
 
-    const club = await updateClub(params.id, body, user);
+    const club = await updateClub(id, body, user);
 
     return NextResponse.json({ club });
   } catch (error) {
-    console.error(`[PATCH /api/clubs/${params.id}]`, error);
+    const { id } = await params;
+    console.error(`[PATCH /api/clubs/${id}]`, error);
     return respondError(error);
   }
 }
@@ -57,12 +61,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
  */
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const user = await getCurrentUser();
-    await deleteClub(params.id, user);
+    await deleteClub(id, user);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(`[DELETE /api/clubs/${params.id}]`, error);
+    const { id } = await params;
+    console.error(`[DELETE /api/clubs/${id}]`, error);
     return respondError(error);
   }
 }

@@ -66,7 +66,7 @@ function mapDbClubToDomain(db: DbClub): Club {
     id: db.id,
     name: db.name,
     description: db.description,
-    city: db.city,
+    cityId: db.city_id, // FK на cities table (normalized)
     logoUrl: db.logo_url,
     telegramUrl: db.telegram_url,
     websiteUrl: db.website_url,

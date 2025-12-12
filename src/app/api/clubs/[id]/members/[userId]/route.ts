@@ -14,7 +14,7 @@ import type { ClubRole } from "@/lib/types/club";
 export const dynamic = "force-dynamic";
 
 interface RouteContext {
-  params: { id: string; userId: string };
+  params: Promise<{ id: string; userId: string }>;
 }
 
 /**
@@ -25,6 +25,7 @@ interface RouteContext {
  */
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id, userId } = await params;
     const user = await getCurrentUser();
     const body = await req.json();
     const { role } = body;
@@ -36,11 +37,12 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const member = await updateClubMemberRole(params.id, params.userId, role as ClubRole, user);
+    const member = await updateClubMemberRole(id, userId, role as ClubRole, user);
 
     return NextResponse.json({ member });
   } catch (error) {
-    console.error(`[PATCH /api/clubs/${params.id}/members/${params.userId}]`, error);
+    const { id, userId } = await params;
+    console.error(`[PATCH /api/clubs/${id}/members/${userId}]`, error);
     return respondError(error);
   }
 }
@@ -51,12 +53,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
  */
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id, userId } = await params;
     const user = await getCurrentUser();
-    await removeClubMember(params.id, params.userId, user);
+    await removeClubMember(id, userId, user);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(`[DELETE /api/clubs/${params.id}/members/${params.userId}]`, error);
+    const { id, userId } = await params;
+    console.error(`[DELETE /api/clubs/${id}/members/${userId}]`, error);
     return respondError(error);
   }
 }

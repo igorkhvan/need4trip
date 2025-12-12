@@ -15,21 +15,21 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   const cityFilter = searchParams?.city;
   const events = cityFilter
     ? allEvents.filter(event => 
-        event.city?.toLowerCase() === cityFilter.toLowerCase()
+        event.city?.name?.toLowerCase() === cityFilter.toLowerCase()
       )
     : allEvents;
 
   // Получить список уникальных городов
-  const cities = Array.from(new Set(
+  const cityNames = Array.from(new Set(
     allEvents
-      .map(e => e.city)
+      .map(e => e.city?.name)
       .filter((c): c is string => c !== null && c !== undefined && c.trim() !== "")
   )).sort();
 
   return (
     <div className="page-container py-12">
       {/* Фильтр по городам */}
-      {cities.length > 0 && (
+      {cityNames.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <MapPin className="w-5 h-5 text-gray-600" />
@@ -46,19 +46,19 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
             >
               Все города ({allEvents.length})
             </a>
-            {cities.map((city) => {
-              const count = allEvents.filter(e => e.city === city).length;
+            {cityNames.map((cityName) => {
+              const count = allEvents.filter(e => e.city?.name === cityName).length;
               return (
                 <a
-                  key={city}
-                  href={`/events?city=${encodeURIComponent(city)}`}
+                  key={cityName}
+                  href={`/events?city=${encodeURIComponent(cityName)}`}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    cityFilter === city
+                    cityFilter === cityName
                       ? "bg-primary-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  {city} ({count})
+                  {cityName} ({count})
                 </a>
               );
             })}

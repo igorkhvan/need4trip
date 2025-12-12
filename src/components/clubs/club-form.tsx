@@ -9,6 +9,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { getErrorMessage } from "@/lib/utils/errors";
 import type { Club, ClubCreateInput } from "@/lib/types/club";
 
@@ -28,7 +29,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   const [formData, setFormData] = useState<ClubCreateInput>({
     name: club?.name ?? "",
     description: club?.description ?? "",
-    city: club?.city ?? "",
+    cityId: club?.cityId ?? null,
     logoUrl: club?.logoUrl ?? "",
     telegramUrl: club?.telegramUrl ?? "",
     websiteUrl: club?.websiteUrl ?? "",
@@ -108,13 +109,12 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
         <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
           Город
         </label>
-        <input
-          type="text"
-          id="city"
-          value={formData.city ?? ""}
-          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="Москва"
+        <CityAutocomplete
+          value={formData.cityId}
+          onChange={(newCityId, city) => {
+            setFormData({ ...formData, cityId: newCityId });
+          }}
+          placeholder="Выберите город..."
           disabled={loading}
         />
       </div>

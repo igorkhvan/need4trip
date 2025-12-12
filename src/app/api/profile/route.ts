@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getUserClubs } from "@/lib/services/clubs";
 import { getPersonalPlan } from "@/lib/services/subscriptions";
+import { getCityById } from "@/lib/db/cityRepo";
 import { respondError } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
@@ -33,12 +34,23 @@ export async function GET(req: NextRequest) {
     // Получить личный план
     const plan = await getPersonalPlan(user.id);
 
+    // Hydrate city if cityId exists
+    let city = null;
+    if (user.cityId) {
+      try {
+        city = await getCityById(user.cityId);
+      } catch (err) {
+        console.error("[GET /api/profile] Failed to load city:", err);
+      }
+    }
+
     // TODO: Need4Trip: Load created events, joined events, statistics
 
     return NextResponse.json({
       user: {
         ...user,
         plan,
+        city: city ? { id: city.id, name: city.name, region: city.region } : null,
       },
       clubs,
       stats: {

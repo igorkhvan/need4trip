@@ -300,7 +300,7 @@ export default async function EventDetails({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-4xl font-bold text-[#111827]">
-                    {event.price ?? 0} {event.currency ?? ""}
+                    {event.price ?? 0} {event.currency?.symbol ?? event.currencyCode ?? ""}
                   </p>
                   <p className="text-sm text-[#6B7280]">за экипаж</p>
                 </CardContent>

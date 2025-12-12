@@ -378,8 +378,9 @@ export function EventForm({
               </Label>
               <CityAutocomplete
                 value={cityId}
-                onChange={(newCityId) => {
+                onChange={(newCityId, city) => {
                   setCityId(newCityId);
+                  // city object is available here if needed for future use
                   if (fieldErrors.cityId) {
                     setFieldErrors((prev) => {
                       const next = { ...prev };
@@ -390,7 +391,7 @@ export function EventForm({
                 }}
                 disabled={disabled}
                 placeholder="Выберите город..."
-                error={fieldErrors.cityId}
+                error={!!fieldErrors.cityId}
               />
               <div className="text-xs text-gray-500">
                 Поможет участникам найти события в их городе

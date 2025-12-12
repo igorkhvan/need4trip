@@ -18,7 +18,7 @@ import type { ClubPlan } from "@/lib/types/club";
 export const dynamic = "force-dynamic";
 
 interface RouteContext {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -27,11 +27,13 @@ interface RouteContext {
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
-    const subscription = await getClubSubscription(params.id);
+    const { id } = await params;
+    const subscription = await getClubSubscription(id);
 
     return NextResponse.json({ subscription });
   } catch (error) {
-    console.error(`[GET /api/clubs/${params.id}/subscription]`, error);
+    const { id } = await params;
+    console.error(`[GET /api/clubs/${id}/subscription]`, error);
     return respondError(error);
   }
 }
@@ -45,6 +47,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
  */
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const user = await getCurrentUser();
     const body = await req.json();
     const { plan, validUntil } = body;
@@ -59,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     let subscription;
     if (plan === "club_free") {
       // Downgrade
-      subscription = await downgradeClubSubscription(params.id, user);
+      subscription = await downgradeClubSubscription(id, user);
     } else {
       // Upgrade
       if (!validUntil) {
@@ -68,12 +71,13 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
           { status: 400 }
         );
       }
-      subscription = await upgradeClubSubscription(params.id, plan as ClubPlan, validUntil, user);
+      subscription = await upgradeClubSubscription(id, plan as ClubPlan, validUntil, user);
     }
 
     return NextResponse.json({ subscription });
   } catch (error) {
-    console.error(`[PATCH /api/clubs/${params.id}/subscription]`, error);
+    const { id } = await params;
+    console.error(`[PATCH /api/clubs/${id}/subscription]`, error);
     return respondError(error);
   }
 }

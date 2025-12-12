@@ -2,7 +2,8 @@
  * Currency Repository - Database operations for currencies table
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { supabase } from "@/lib/db/client";
+import { InternalError } from "@/lib/errors";
 import { Currency } from "@/lib/types/currency";
 
 // ============================================================================
@@ -41,13 +42,20 @@ function mapDbCurrencyToDomain(row: DbCurrency): Currency {
 // Repository Functions
 // ============================================================================
 
+function ensureClient() {
+  if (!supabase) {
+    throw new InternalError("Supabase client is not configured");
+  }
+  return supabase;
+}
+
 /**
  * Get all active currencies
  */
 export async function getActiveCurrencies(): Promise<Currency[]> {
-  const supabase = await createClient();
+  const client = ensureClient();
   
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (client as any)
     .from("currencies")
     .select("*")
     .eq("is_active", true)
@@ -66,9 +74,9 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
  * Get all currencies (including inactive)
  */
 export async function getAllCurrencies(): Promise<Currency[]> {
-  const supabase = await createClient();
+  const client = ensureClient();
   
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (client as any)
     .from("currencies")
     .select("*")
     .order("is_active", { ascending: false })
@@ -87,9 +95,9 @@ export async function getAllCurrencies(): Promise<Currency[]> {
  * Get currency by code
  */
 export async function getCurrencyByCode(code: string): Promise<Currency | null> {
-  const supabase = await createClient();
+  const client = ensureClient();
   
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (client as any)
     .from("currencies")
     .select("*")
     .eq("code", code.toUpperCase())
@@ -114,10 +122,10 @@ export async function getCurrenciesByCodes(codes: string[]): Promise<Map<string,
     return new Map();
   }
 
-  const supabase = await createClient();
+  const client = ensureClient();
   
   const upperCodes = codes.map(c => c.toUpperCase());
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (client as any)
     .from("currencies")
     .select("*")
     .in("code", upperCodes);

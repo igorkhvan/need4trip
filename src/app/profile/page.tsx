@@ -41,6 +41,7 @@ export default async function ProfilePage() {
 
   const clubs = profileData?.clubs ?? [];
   const stats = profileData?.stats ?? { clubsCount: 0 };
+  const profileUser = profileData?.user ?? user; // Use API user data if available (includes hydrated city)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,15 +99,22 @@ export default async function ProfilePage() {
 
                   {/* Дополнительная информация */}
                   <div className="mt-4 space-y-2 text-sm text-gray-600">
-                    {user.city && (
+                    {profileUser.city && (
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500">📍</span>
-                        <span className="font-medium">{user.city}</span>
+                        <span className="font-medium">
+                          {profileUser.city.name}
+                          {profileUser.city.region && `, ${profileUser.city.region}`}
+                        </span>
                       </div>
                     )}
                     {user.phone && <div>Телефон: {user.phone}</div>}
                     {user.email && <div>Email: {user.email}</div>}
-                    {user.carModel && <div>Автомобиль: {user.carModel}</div>}
+                    {profileUser.carModelText && (
+                      <div>
+                        Автомобиль: {profileUser.carModelText}
+                      </div>
+                    )}
                     {user.experienceLevel && (
                       <div>
                         Опыт:{" "}

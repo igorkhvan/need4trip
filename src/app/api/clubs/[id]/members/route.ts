@@ -14,7 +14,7 @@ import type { ClubRole } from "@/lib/types/club";
 export const dynamic = "force-dynamic";
 
 interface RouteContext {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 /**
@@ -23,11 +23,13 @@ interface RouteContext {
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
-    const members = await getClubMembers(params.id);
+    const { id } = await params;
+    const members = await getClubMembers(id);
 
     return NextResponse.json({ members });
   } catch (error) {
-    console.error(`[GET /api/clubs/${params.id}/members]`, error);
+    const { id } = await params;
+    console.error(`[GET /api/clubs/${id}/members]`, error);
     return respondError(error);
   }
 }
@@ -40,6 +42,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
  */
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const user = await getCurrentUser();
     const body = await req.json();
     const { userId, role } = body;
@@ -51,11 +54,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const member = await addClubMember(params.id, userId, role as ClubRole, user);
+    const member = await addClubMember(id, userId, role as ClubRole, user);
 
     return NextResponse.json({ member }, { status: 201 });
   } catch (error) {
-    console.error(`[POST /api/clubs/${params.id}/members]`, error);
+    const { id } = await params;
+    console.error(`[POST /api/clubs/${id}/members]`, error);
     return respondError(error);
   }
 }

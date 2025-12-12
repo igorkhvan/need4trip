@@ -70,3 +70,24 @@ export function getCityLabel(city: City | CityBasic | null): string {
   if (!city) return "Не указан";
   return formatCityName(city);
 }
+
+/**
+ * Get country flag emoji by country code
+ */
+export function getCountryFlag(countryCode: string): string {
+  const flags: Record<string, string> = {
+    RU: "🇷🇺",
+    KZ: "🇰🇿",
+    BY: "🇧🇾",
+    UA: "🇺🇦",
+    GE: "🇬🇪",
+    AM: "🇦🇲",
+    AZ: "🇦🇿",
+    UZ: "🇺🇿",
+    KG: "🇰🇬",
+    TJ: "🇹🇯",
+    TM: "🇹🇲",
+    MD: "🇲🇩",
+  };
+  return flags[countryCode] ?? "🌍";
+}

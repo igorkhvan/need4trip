@@ -17,6 +17,7 @@ type Event = {
   description: string;
   category: EventCategory | null;
   dateTime: string;
+  cityId?: string | null; // FK на cities table (normalized)
   locationText: string;
   maxParticipants: number | null;
   customFieldsSchema: any[];
@@ -27,7 +28,7 @@ type Event = {
   isClubEvent: boolean;
   isPaid: boolean;
   price?: number | null;
-  currency?: string | null;
+  currencyCode?: string | null; // ISO 4217 code (normalized)
   createdByUserId: string | null;
 };
 
@@ -203,7 +204,7 @@ export default function EditEventPage() {
           isClubEvent: event.isClubEvent,
           isPaid: event.isPaid,
           price: event.price ? String(event.price) : "",
-          currency: event.currency ?? "KZT",
+          currencyCode: event.currencyCode ?? "RUB",
         }}
         onSubmit={handleSubmit}
       />

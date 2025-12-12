@@ -5,7 +5,7 @@ import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { deleteParticipant, updateParticipant } from "@/lib/services/participants";
 
 type Params =
-  | { params: { id: string; participantId: string } }
+  | { params: Promise<{ id: string; participantId: string }> }
   | { params: Promise<{ id: string; participantId: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
