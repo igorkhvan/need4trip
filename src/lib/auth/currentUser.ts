@@ -11,6 +11,7 @@ export interface CurrentUser {
   telegramHandle?: string | null;
   telegramId?: string | null;
   avatarUrl?: string | null;
+  city?: string | null; // Город пользователя
   phone?: string | null;
   email?: string | null;
   carModel?: string | null;
@@ -116,6 +117,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     telegramHandle: user.telegramHandle,
     telegramId: user.telegramId ?? null,
     avatarUrl: user.avatarUrl,
+    city: user.city ?? null, // Добавлено поле город
     phone: user.phone ?? null,
     email: user.email ?? null,
     carModel: user.carModel ?? null,

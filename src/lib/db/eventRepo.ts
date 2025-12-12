@@ -82,6 +82,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
       payload.dateTime instanceof Date
         ? payload.dateTime.toISOString()
         : payload.dateTime,
+    city: payload.city ?? null, // Добавлено поле город
     location_text: payload.locationText,
     location_lat: payload.locationLat ?? null,
     location_lng: payload.locationLng ?? null,
@@ -133,6 +134,7 @@ export async function updateEvent(
               : payload.dateTime,
         }
       : {}),
+    ...(payload.city !== undefined ? { city: payload.city } : {}), // Добавлено поле город
     ...(payload.locationText !== undefined ? { location_text: payload.locationText } : {}),
     ...(payload.locationLat !== undefined ? { location_lat: payload.locationLat } : {}),
     ...(payload.locationLng !== undefined ? { location_lng: payload.locationLng } : {}),

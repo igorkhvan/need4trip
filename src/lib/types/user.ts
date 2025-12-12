@@ -14,6 +14,7 @@ export interface User {
   telegramHandle: string | null;
   telegramId?: string | null;
   avatarUrl?: string | null;
+  city: string | null; // Город проживания пользователя
   carModel: string | null;
   experienceLevel: ExperienceLevel | null;
   plan?: UserPlan; // Personal subscription plan (free by default)

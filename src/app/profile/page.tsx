@@ -98,6 +98,12 @@ export default async function ProfilePage() {
 
                   {/* Дополнительная информация */}
                   <div className="mt-4 space-y-2 text-sm text-gray-600">
+                    {user.city && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">📍</span>
+                        <span className="font-medium">{user.city}</span>
+                      </div>
+                    )}
                     {user.phone && <div>Телефон: {user.phone}</div>}
                     {user.email && <div>Email: {user.email}</div>}
                     {user.carModel && <div>Автомобиль: {user.carModel}</div>}

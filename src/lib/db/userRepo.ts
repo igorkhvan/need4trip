@@ -23,6 +23,7 @@ function mapRowToUser(data: DbUserRow): User {
     telegramHandle: data.telegram_handle,
     telegramId: data.telegram_id,
     avatarUrl: data.avatar_url,
+    city: (data as any).city ?? null, // TODO: Need4Trip: Regenerate supabase types
     carModel: data.car_model,
     experienceLevel: data.experience_level,
     // TODO: Need4Trip: Regenerate supabase types after DB migration to include 'plan' field

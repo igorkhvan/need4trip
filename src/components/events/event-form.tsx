@@ -43,6 +43,7 @@ export type EventFormValues = {
   description: string;
   category: EventCategory | null;
   dateTime: string;
+  city: string | null; // Город проведения события
   locationText: string;
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchema[];
@@ -97,6 +98,7 @@ export function EventForm({
     if (initialValues?.dateTime) return initialValues.dateTime.slice(0, 16);
     return "";
   });
+  const [city, setCity] = useState<string>(initialValues?.city ?? "");
   const [locationText, setLocationText] = useState(initialValues?.locationText ?? "");
   const [maxParticipants, setMaxParticipants] = useState<number | null>(
     initialValues?.maxParticipants ?? null
@@ -239,6 +241,7 @@ export function EventForm({
       description: trimmedDescription,
       category,
       dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
+      city: city.trim() || null, // Добавлено поле город
       locationText: trimmedLocation,
       maxParticipants,
       customFieldsSchema: sortedFields,
@@ -364,6 +367,24 @@ export function EventForm({
                 }
               />
               <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.description ?? ""}</div>
+            </div>
+
+            {/* Город */}
+            <div className="space-y-2">
+              <Label htmlFor="city" className="text-sm font-medium text-[#111827]">
+                Город
+              </Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={disabled}
+                placeholder="Например: Москва"
+                className="h-12 rounded-xl border-2"
+              />
+              <div className="text-xs text-gray-500">
+                Поможет участникам найти события в их городе
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

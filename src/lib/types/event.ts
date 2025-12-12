@@ -87,6 +87,7 @@ export interface Event {
   description: string;
   category: EventCategory | null;
   dateTime: string;
+  city: string | null; // Город проведения события
   locationText: string;
   locationLat: number | null;
   locationLng: number | null;
@@ -133,6 +134,7 @@ export const eventCreateSchema = z
     description: z.string().trim().min(1).max(5000),
     category: eventCategorySchema.nullable().optional(),
     dateTime: eventDateSchema,
+    city: z.string().trim().max(100).nullable().optional(), // Город проведения
     locationText: z.string().trim().min(1),
     locationLat: z.number().finite().nullable().optional(),
     locationLng: z.number().finite().nullable().optional(),
@@ -164,6 +166,7 @@ const eventUpdateBaseSchema = z.object({
   description: z.string().trim().min(1).max(5000).optional(),
   category: eventCategorySchema.nullable().optional(),
   dateTime: eventDateSchema.optional(),
+  city: z.string().trim().max(100).nullable().optional(), // Добавлено поле город
   locationText: z.string().trim().min(1).optional(),
   locationLat: z.number().finite().nullable().optional(),
   locationLng: z.number().finite().nullable().optional(),

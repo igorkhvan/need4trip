@@ -11,6 +11,7 @@ export interface DbEvent {
   description: string;
   category: DomainEvent["category"];
   date_time: string;
+  city: string | null; // Город проведения события
   location_text: string;
   location_lat: number | null;
   location_lng: number | null;
@@ -55,6 +56,7 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     description: db.description,
     category: db.category,
     dateTime: db.date_time,
+    city: db.city ?? null, // Маппинг города
     locationText: db.location_text,
     locationLat: db.location_lat,
     locationLng: db.location_lng,
