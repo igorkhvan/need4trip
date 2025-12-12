@@ -10,7 +10,8 @@ export const eventCategorySchema = z.enum([
 ]);
 export type EventCategory = z.infer<typeof eventCategorySchema>;
 
-export const visibilitySchema = z.enum(["public", "link_registered"]);
+// Event visibility levels (updated to match DB schema)
+export const visibilitySchema = z.enum(["public", "unlisted", "restricted"]);
 export type Visibility = z.infer<typeof visibilitySchema>;
 
 export const vehicleTypeRequirementSchema = z.enum(["any", "sedan", "crossover", "suv"]);
@@ -99,6 +100,12 @@ export interface Event {
   allowedBrands: CarBrand[];
   rules?: string | null;
   isClubEvent: boolean;
+  clubId?: string | null; // ID клуба-организатора (NULL = личное событие)
+  club?: {  // Hydrated club info (опционально)
+    id: string;
+    name: string;
+    logoUrl: string | null;
+  } | null;
   isPaid: boolean;
   price?: number | null;
   currency?: string | null;
@@ -137,6 +144,7 @@ export const eventCreateSchema = z
     allowedBrandIds: z.array(z.string().uuid()).default([]),
     rules: z.string().trim().max(10000).optional().nullable(),
     isClubEvent: z.boolean().default(false),
+    clubId: z.string().uuid().nullable().optional(), // ID клуба-организатора
     isPaid: z.boolean().default(false),
     price: z.number().finite().nonnegative().nullable().optional(),
     currency: z.string().trim().max(10).optional().nullable(),
@@ -167,6 +175,7 @@ const eventUpdateBaseSchema = z.object({
   allowedBrandIds: z.array(z.string().uuid()).optional(),
   rules: z.string().trim().max(10000).optional().nullable(),
   isClubEvent: z.boolean().optional(),
+  clubId: z.string().uuid().nullable().optional(),
   isPaid: z.boolean().optional(),
   price: z.number().finite().nonnegative().nullable().optional(),
   currency: z.string().trim().max(10).optional().nullable(),
