@@ -23,14 +23,14 @@ import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { Trash2 } from "lucide-react";
 import {
-  EventCategory,
   EventCustomFieldSchema,
   EventCustomFieldType,
   VehicleTypeRequirement,
   Visibility,
 } from "@/lib/types/event";
+import { EventCategoryDto } from "@/lib/types/eventCategory";
 import type { Club } from "@/lib/types/club";
-import { CATEGORY_OPTIONS } from "@/lib/utils/eventCategories";
+import { getCategoryIcon } from "@/lib/utils/eventCategories";
 import { getErrorMessage } from "@/lib/utils/errors";
 
 const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
@@ -44,7 +44,7 @@ type Mode = "create" | "edit";
 export type EventFormValues = {
   title: string;
   description: string;
-  category: EventCategory | null;
+  categoryId: string | null; // FK to event_categories
   dateTime: string;
   cityId: string | null; // FK на cities
   locationText: string;
@@ -98,7 +98,9 @@ export function EventForm({
   const router = useRouter();
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
-  const [category, setCategory] = useState<EventCategory | null>(initialValues?.category ?? null);
+  const [categoryId, setCategoryId] = useState<string | null>(initialValues?.categoryId ?? null);
+  const [categories, setCategories] = useState<EventCategoryDto[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [dateTime, setDateTime] = useState(() => {
     if (initialValues?.dateTime) return initialValues.dateTime.slice(0, 16);
     return "";
@@ -154,6 +156,24 @@ export function EventForm({
       }
     };
     loadBrands();
+  }, []);
+
+  // Load categories from API
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const res = await fetch("/api/event-categories");
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data.categories || []);
+        }
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+    loadCategories();
   }, []);
 
   const addField = () => {
@@ -247,7 +267,7 @@ export function EventForm({
     const payload = {
       title: trimmedTitle,
       description: trimmedDescription,
-      category,
+      categoryId,
       dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
       cityId: cityId || null, // FK на cities
       locationText: trimmedLocation,
@@ -493,17 +513,17 @@ export function EventForm({
                   Категория события
                 </Label>
                 <Select
-                  value={category ?? undefined}
-                  onValueChange={(val) => setCategory(val as EventCategory)}
-                  disabled={disabled}
+                  value={categoryId ?? undefined}
+                  onValueChange={(val) => setCategoryId(val || null)}
+                  disabled={disabled || loadingCategories}
                 >
                   <SelectTrigger id="category" className="h-12 rounded-xl border-2">
-                    <SelectValue placeholder="Выберите категорию" />
+                    <SelectValue placeholder={loadingCategories ? "Загрузка..." : "Выберите категорию"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.nameRu}
                       </SelectItem>
                     ))}
                   </SelectContent>

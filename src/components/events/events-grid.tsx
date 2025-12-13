@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -22,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
-import { Event, EventCategory } from "@/lib/types/event";
+import { Event } from "@/lib/types/event";
+import { EventCategoryDto } from "@/lib/types/eventCategory";
 import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort, formatDateShort, getDaysUntil } from "@/lib/utils/dates";
 
@@ -45,6 +46,26 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [categories, setCategories] = useState<EventCategoryDto[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // Load categories from API
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const res = await fetch("/api/event-categories");
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data.categories || []);
+        }
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+    loadCategories();
+  }, []);
 
   // Get unique cities from events
   const uniqueCities = useMemo(() => {
@@ -83,7 +104,7 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
 
     // Filter by category
     if (filterCategory !== "all") {
-      result = result.filter((e) => e.category === filterCategory);
+      result = result.filter((e) => e.category?.id === filterCategory);
     }
 
     // Filter by city
@@ -308,12 +329,11 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Все типы</SelectItem>
-                <SelectItem value="offroad">Внедорожники</SelectItem>
-                <SelectItem value="touring">Туризм</SelectItem>
-                <SelectItem value="sportcars">Спорткары</SelectItem>
-                <SelectItem value="classic">Классика</SelectItem>
-                <SelectItem value="track">Трек-дни</SelectItem>
-                <SelectItem value="other">Другое</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.nameRu}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
