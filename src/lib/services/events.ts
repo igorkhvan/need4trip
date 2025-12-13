@@ -16,6 +16,7 @@ import {
 } from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { hydrateCitiesAndCurrencies } from "@/lib/utils/hydration";
+import { hydrateEventCategories } from "@/lib/utils/eventCategoryHydration";
 import {
   mapDbEventToDomain,
   mapDbEventWithOwnerToDomain,
@@ -122,6 +123,7 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
     getParticipantsCountByEventIds(eventIds),
     getAllowedBrandsByEventIds(eventIds),
     hydrateCitiesAndCurrencies(filtered),
+    hydrateEventCategories(filtered),
   ]);
 
   // Combine all hydrated data
@@ -170,6 +172,14 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     hydratedEvent = hydrated;
   } catch (err) {
     console.error("[hydrateEvent] Failed to hydrate city/currency", err);
+  }
+  
+  // Hydrate category
+  try {
+    const [hydratedWithCategory] = await hydrateEventCategories([hydratedEvent]);
+    hydratedEvent = hydratedWithCategory;
+  } catch (err) {
+    console.error("[hydrateEvent] Failed to hydrate category", err);
   }
   
   return hydratedEvent;
@@ -243,6 +253,10 @@ export async function getEventWithParticipantsVisibility(
   // Hydrate city and currency
   const [hydratedEvents] = await hydrateCitiesAndCurrencies([event]);
   event = hydratedEvents;
+  
+  // Hydrate category
+  const [eventWithCategory] = await hydrateEventCategories([event]);
+  event = eventWithCategory;
   
   await ensureEventVisibility(event, options);
   return {
