@@ -85,6 +85,11 @@ export function AuthModal({
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   
+  // Debug: Log when modal state changes
+  useEffect(() => {
+    console.log("[auth-modal] Modal state changed:", { open, title, reason });
+  }, [open, title, reason]);
+  
   const username = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
     if (!raw) return null;
@@ -168,7 +173,23 @@ export function AuthModal({
   // Load Telegram widget when modal opens
   useEffect(() => {
     const container = containerRef.current;
-    if (!open || !container || !username || isAuthed) return;
+    
+    // Debug logging
+    console.log("[auth-modal] Widget init:", {
+      open,
+      hasContainer: !!container,
+      username,
+      authUrl,
+      isAuthed,
+      botUsername: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+    });
+    
+    if (!open || !container || !username || isAuthed) {
+      if (!username) {
+        console.error("[auth-modal] ❌ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set!");
+      }
+      return;
+    }
 
     container.innerHTML = "";
 
@@ -182,6 +203,8 @@ export function AuthModal({
     }
     script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
+    
+    console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
     container.appendChild(script);
 
     return () => {
@@ -202,12 +225,31 @@ export function AuthModal({
         </DialogHeader>
         
         <div className="flex flex-col gap-4 py-4">
+          {/* Debug Info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs">
+              <div>🔍 Debug:</div>
+              <div>• open: {String(open)}</div>
+              <div>• username: {username || '❌ NOT SET'}</div>
+              <div>• authUrl: {authUrl || 'auto'}</div>
+              <div>• isSubmitting: {String(isSubmitting)}</div>
+              <div>• hasContainer: {String(!!containerRef.current)}</div>
+            </div>
+          )}
+          
           {/* Telegram Widget Container */}
           <div className="flex justify-center">
             {isSubmitting ? (
               <div className="flex items-center gap-2 text-[15px] text-[#6B7280]">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#FF6F2C] border-t-transparent"></div>
                 <span>Авторизация...</span>
+              </div>
+            ) : !username ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
+                <div className="mb-2 text-red-600 font-semibold">⚠️ Конфигурация не завершена</div>
+                <div className="text-sm text-red-700">
+                  <code>NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code> не установлен
+                </div>
               </div>
             ) : (
               <div ref={containerRef} aria-label="Telegram Login" />
@@ -225,9 +267,11 @@ export function AuthModal({
           )}
           
           {/* Info */}
-          <div className="text-center text-[13px] text-[#6B7280]">
-            Войдите через Telegram, чтобы получить доступ ко всем возможностям Need4Trip
-          </div>
+          {!error && !isSubmitting && username && (
+            <div className="text-center text-[13px] text-[#6B7280]">
+              Войдите через Telegram, чтобы получить доступ ко всем возможностям Need4Trip
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
