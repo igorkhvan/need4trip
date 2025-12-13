@@ -53,11 +53,14 @@ function ensureClient() {
  * Get all active currencies
  */
 export async function getActiveCurrencies(): Promise<Currency[]> {
+  console.log("🔍 [currencyRepo] getActiveCurrencies called");
+  
   if (!supabase) {
-    console.warn("[currencyRepo] Supabase client is not configured");
+    console.warn("⚠️ [currencyRepo] Supabase client is not configured");
     return [];
   }
   
+  console.log("📡 [currencyRepo] Fetching from DB...");
   const { data, error } = await supabase
     .from("currencies")
     .select("*")
@@ -66,8 +69,19 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
     .order("code", { ascending: true });
 
   if (error) {
-    console.error("[currencyRepo] Error fetching currencies:", error);
+    console.error("❌ [currencyRepo] Error fetching currencies:", error);
+    console.error("Error details:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
     return [];
+  }
+
+  console.log(`✅ [currencyRepo] Fetched ${data?.length || 0} currencies from DB`);
+  if (data && data.length > 0) {
+    console.log("Sample currency:", data[0]);
   }
 
   return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
