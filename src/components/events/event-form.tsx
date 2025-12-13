@@ -101,6 +101,7 @@ export function EventForm({
   const [categoryId, setCategoryId] = useState<string | null>(initialValues?.categoryId ?? null);
   const [categories, setCategories] = useState<EventCategoryDto[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  console.log("🔍 Current categoryId state:", categoryId);
   const [dateTime, setDateTime] = useState(() => {
     if (initialValues?.dateTime) return initialValues.dateTime.slice(0, 16);
     return "";
@@ -525,9 +526,18 @@ export function EventForm({
                 <Label htmlFor="category" className="text-sm font-medium text-[#111827]">
                   Категория события
                 </Label>
+                {/* Debug info - remove after testing */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-gray-500">
+                    State: {categoryId || 'null'} | Categories loaded: {categories.length}
+                  </div>
+                )}
                 <Select
-                  value={categoryId || ""} 
-                  onValueChange={(val) => setCategoryId(val || null)}
+                  value={categoryId || ""}
+                  onValueChange={(val) => {
+                    console.log("📝 Category changed to:", val);
+                    setCategoryId(val || null);
+                  }}
                   disabled={disabled || loadingCategories}
                 >
                   <SelectTrigger id="category" className="h-12 rounded-xl border-2">
