@@ -16,8 +16,9 @@ ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 100;
 -- STEP 2: Update sort_order for existing currencies
 -- ============================================================================
 
-UPDATE public.currencies SET sort_order = 1 WHERE code = 'RUB';
-UPDATE public.currencies SET sort_order = 2 WHERE code = 'KZT';
+-- Priority: KZT (тенге) first as default for Kazakhstan
+UPDATE public.currencies SET sort_order = 1 WHERE code = 'KZT';
+UPDATE public.currencies SET sort_order = 2 WHERE code = 'RUB';
 UPDATE public.currencies SET sort_order = 3 WHERE code = 'BYN';
 UPDATE public.currencies SET sort_order = 10 WHERE code = 'USD';
 UPDATE public.currencies SET sort_order = 11 WHERE code = 'EUR';

@@ -44,10 +44,20 @@ export function CurrencySelect({
   const [currencies, setCurrencies] = React.useState<Currency[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  // Load active currencies on mount
+  // Load active currencies on mount and set KZT as default if no value
   React.useEffect(() => {
     loadCurrencies();
   }, []);
+
+  // Set KZT as default when currencies load (only if value is null and not disabled)
+  React.useEffect(() => {
+    if (currencies.length > 0 && value === null && !disabled) {
+      const kzt = currencies.find(c => c.code === 'KZT');
+      if (kzt) {
+        onChange('KZT');
+      }
+    }
+  }, [currencies, value, onChange, disabled]);
 
   async function loadCurrencies() {
     setLoading(true);
@@ -59,10 +69,10 @@ export function CurrencySelect({
         setCurrencies(data);
       } else {
         console.error("❌ Failed to load currencies, status:", res.status);
-        // Fallback to hardcoded popular currencies
+        // Fallback to hardcoded popular currencies (KZT first as default)
         const fallback = [
-          { code: "RUB", symbol: "₽", nameRu: "Российский рубль", nameEn: "Russian Ruble", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
-          { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
+          { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
+          { code: "RUB", symbol: "₽", nameRu: "Российский рубль", nameEn: "Russian Ruble", decimalPlaces: 2, isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
           { code: "USD", symbol: "$", nameRu: "Доллар США", nameEn: "US Dollar", decimalPlaces: 2, isActive: true, sortOrder: 10, createdAt: new Date().toISOString() },
           { code: "EUR", symbol: "€", nameRu: "Евро", nameEn: "Euro", decimalPlaces: 2, isActive: true, sortOrder: 11, createdAt: new Date().toISOString() },
         ];
@@ -71,10 +81,10 @@ export function CurrencySelect({
       }
     } catch (error) {
       console.error("❌ Failed to load currencies:", error);
-      // Fallback currencies
+      // Fallback currencies (KZT first as default)
       const fallback = [
-        { code: "RUB", symbol: "₽", nameRu: "Российский рубль", nameEn: "Russian Ruble", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
-        { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
+        { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
+        { code: "RUB", symbol: "₽", nameRu: "Российский рубль", nameEn: "Russian Ruble", decimalPlaces: 2, isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
         { code: "USD", symbol: "$", nameRu: "Доллар США", nameEn: "US Dollar", decimalPlaces: 2, isActive: true, sortOrder: 10, createdAt: new Date().toISOString() },
         { code: "EUR", symbol: "€", nameRu: "Евро", nameEn: "Euro", decimalPlaces: 2, isActive: true, sortOrder: 11, createdAt: new Date().toISOString() },
       ];

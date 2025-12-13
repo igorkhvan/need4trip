@@ -61,11 +61,12 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
   
   console.log("📡 [currencyRepo] Fetching from DB...");
   
-  // Try without sort_order first (column might not exist)
+  // Order by sort_order, then by code
   const { data, error } = await supabase
     .from("currencies")
     .select("*")
     .eq("is_active", true)
+    .order("sort_order", { ascending: true })
     .order("code", { ascending: true });
 
   if (error) {
@@ -100,6 +101,7 @@ export async function getAllCurrencies(): Promise<Currency[]> {
     .from("currencies")
     .select("*")
     .eq("is_active", false)
+    .order("sort_order", { ascending: true })
     .order("code", { ascending: true });
 
   if (error) {
