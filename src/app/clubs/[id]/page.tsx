@@ -173,7 +173,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                       </h2>
                       <div className="flex flex-wrap gap-2">
                         {club.cities.map((city: any) => (
-                          <Badge key={city.id} variant="secondary" size="default">
+                          <Badge key={city.id} variant="secondary" size="md">
                             {city.region ? `${city.name}, ${city.region}` : city.name}
                           </Badge>
                         ))}
