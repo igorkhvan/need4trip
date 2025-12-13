@@ -113,6 +113,7 @@ function mapDbToEventCategory(row: any): EventCategory {
     icon: row.icon,
     displayOrder: row.display_order,
     isActive: row.is_active,
+    isDefault: row.is_default ?? false, // Added
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

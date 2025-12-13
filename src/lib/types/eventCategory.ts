@@ -11,6 +11,7 @@ export interface EventCategory {
   icon: string;
   displayOrder: number;
   isActive: boolean;
+  isDefault: boolean; // Added: indicates default category
   createdAt: string;
   updatedAt: string;
 }
@@ -23,10 +24,11 @@ export const eventCategorySchema = z.object({
   icon: z.string(),
   displayOrder: z.number(),
   isActive: z.boolean(),
+  isDefault: z.boolean(), // Added
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 // For API responses and client-side usage
-export type EventCategoryDto = Pick<EventCategory, "id" | "code" | "nameRu" | "nameEn" | "icon">;
+export type EventCategoryDto = Pick<EventCategory, "id" | "code" | "nameRu" | "nameEn" | "icon" | "isDefault">;
 

@@ -168,12 +168,12 @@ export function EventForm({
           const loadedCategories = data.categories || [];
           setCategories(loadedCategories);
           
-          // Set "other" category as default ONLY if creating new event
+          // Set default category from DB (marked with is_default=true)
           if (!initialValues?.categoryId && loadedCategories.length > 0) {
-            const otherCategory = loadedCategories.find((cat: EventCategoryDto) => cat.code === "other");
-            if (otherCategory) {
-              setCategoryId(otherCategory.id);
-              console.log("✅ Default category set to 'other':", otherCategory.id);
+            const defaultCategory = loadedCategories.find((cat: EventCategoryDto) => cat.isDefault === true);
+            if (defaultCategory) {
+              setCategoryId(defaultCategory.id);
+              console.log("✅ Default category set:", defaultCategory.code, defaultCategory.id);
             }
           }
         }

@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
       nameRu: cat.nameRu,
       nameEn: cat.nameEn,
       icon: cat.icon,
+      isDefault: cat.isDefault, // Added
     }));
 
     return NextResponse.json({ categories: dtoCategories });
