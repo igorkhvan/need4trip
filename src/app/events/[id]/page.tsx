@@ -89,8 +89,8 @@ export default async function EventDetails({
       : null;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-6 md:py-8">
-      <div className="page-container max-w-6xl px-4 md:px-6">
+    <div className="min-h-screen bg-[#F9FAFB] py-8 md:py-12">
+      <div className="page-container">
         {/* Back button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link href="/events">← Назад к событиям</Link>
@@ -100,7 +100,7 @@ export default async function EventDetails({
         <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="flex-1">
             {/* Title */}
-            <h1 className="mb-4 text-[32px] font-bold leading-tight text-[#1F2937] md:text-[36px]">
+            <h1 className="mb-4 text-[32px] font-bold leading-[1.2] text-[#1F2937] md:text-[36px]">
               {event.title}
             </h1>
 
@@ -128,7 +128,7 @@ export default async function EventDetails({
             </div>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-1 gap-3 text-[15px] text-[#6B7280] md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 text-[15px] text-[#6B7280] md:grid-cols-2">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5 flex-shrink-0" />
                 <span>{formattedDateTime}</span>
@@ -186,10 +186,10 @@ export default async function EventDetails({
             {/* Description Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-[#111827]">Описание</CardTitle>
+                <CardTitle>Описание</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-line text-[15px] leading-relaxed text-[#374151]">
+                <p className="whitespace-pre-line text-[15px] leading-[1.6] text-[#374151]">
                   {event.description}
                 </p>
               </CardContent>
@@ -199,10 +199,10 @@ export default async function EventDetails({
             {event.rules && event.rules.trim().length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">Правила участия</CardTitle>
+                  <CardTitle>Правила участия</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line text-[15px] leading-relaxed text-[#374151]">
+                  <p className="whitespace-pre-line text-[15px] leading-[1.6] text-[#374151]">
                     {event.rules}
                   </p>
                 </CardContent>
@@ -212,10 +212,10 @@ export default async function EventDetails({
             {/* Participants Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-[#111827]">
+                <CardTitle>
                   Участники ({participants.length})
                 </CardTitle>
-                <CardDescription className="text-sm text-[#6B7280]">
+                <CardDescription>
                   {participantsCountLabel}
                 </CardDescription>
               </CardHeader>
@@ -342,13 +342,13 @@ export default async function EventDetails({
             {event.isPaid && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">Стоимость участия</CardTitle>
+                  <CardTitle>Стоимость участия</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-4xl font-bold text-[#111827]">
+                  <p className="text-[32px] font-bold leading-none text-[#1F2937]">
                     {event.price ?? 0} {event.currency?.symbol ?? event.currencyCode ?? ""}
                   </p>
-                  <p className="text-sm text-[#6B7280]">за экипаж</p>
+                  <p className="text-[13px] text-[#6B7280]">за экипаж</p>
                 </CardContent>
               </Card>
             )}
@@ -356,18 +356,18 @@ export default async function EventDetails({
             {/* Vehicle Requirements Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-[#111827]">Требования к авто</CardTitle>
+                <CardTitle>Требования к авто</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <p className="text-sm font-medium text-[#6B7280]">Тип автомобиля</p>
-                  <p className="text-[15px] font-semibold text-[#111827]">
+                  <p className="text-[13px] font-medium text-[#6B7280]">Тип автомобиля</p>
+                  <p className="text-[15px] font-semibold text-[#1F2937]">
                     {vehicleTypeLabel}
                   </p>
                 </div>
                 {event.allowedBrands.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-[#6B7280]">Рекомендуемые марки</p>
+                    <p className="text-[13px] font-medium text-[#6B7280]">Рекомендуемые марки</p>
                     <div className="flex flex-wrap gap-2">
                       {event.allowedBrands.map((brand) => (
                         <Badge 
@@ -389,14 +389,14 @@ export default async function EventDetails({
             {ownerUser && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-[#111827]">Организатор</CardTitle>
+                  <CardTitle>Организатор</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-[15px] font-semibold text-[#111827]">
+                <CardContent className="space-y-1">
+                  <p className="text-[15px] font-semibold text-[#1F2937]">
                     {ownerUser.name || ownerUser.telegramHandle || "Организатор"}
                   </p>
                   {ownerUser.telegramHandle && (
-                    <p className="text-sm text-[#6B7280]">@{ownerUser.telegramHandle}</p>
+                    <p className="text-[13px] text-[#6B7280]">@{ownerUser.telegramHandle}</p>
                   )}
                 </CardContent>
               </Card>
