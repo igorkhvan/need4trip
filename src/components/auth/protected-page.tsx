@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 
@@ -21,15 +20,8 @@ export function ProtectedPage({
 }: ProtectedPageProps) {
   const { openModal } = useAuthModalContext();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // Open modal after a small delay to avoid hydration mismatch
-      const timer = setTimeout(() => {
-        openModal({ reason, title, description });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, openModal, reason, title, description]);
+  // Removed auto-open useEffect - let user click button instead
+  // This provides better UX as the placeholder is already clear
 
   if (!isAuthenticated) {
     return (
