@@ -12,8 +12,6 @@
 ALTER TABLE public.currencies 
 ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 100;
 
-RAISE NOTICE '✅ Added sort_order column (if not exists)';
-
 -- ============================================================================
 -- STEP 2: Update sort_order for existing currencies
 -- ============================================================================
@@ -27,8 +25,6 @@ UPDATE public.currencies SET sort_order = 12 WHERE code = 'GBP';
 UPDATE public.currencies SET sort_order = 13 WHERE code = 'CNY';
 UPDATE public.currencies SET sort_order = 14 WHERE code = 'UAH';
 
-RAISE NOTICE '✅ Updated sort_order values';
-
 -- ============================================================================
 -- STEP 3: Create index for performance
 -- ============================================================================
@@ -36,8 +32,6 @@ RAISE NOTICE '✅ Updated sort_order values';
 CREATE INDEX IF NOT EXISTS idx_currencies_active 
 ON public.currencies(is_active, sort_order) 
 WHERE is_active = TRUE;
-
-RAISE NOTICE '✅ Created index on (is_active, sort_order)';
 
 -- ============================================================================
 -- STEP 4: Enable RLS and create policy
@@ -53,8 +47,6 @@ CREATE POLICY "Enable read access for all users"
 ON public.currencies 
 FOR SELECT 
 USING (true);
-
-RAISE NOTICE '✅ Enabled RLS and created read policy';
 
 -- ============================================================================
 -- STEP 5: Verify setup
@@ -100,11 +92,10 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- Sample currencies for reference
+-- Sample query to view results
 -- ============================================================================
 
--- If you need to view current currencies:
+-- Uncomment to see current currencies:
 -- SELECT code, symbol, name_ru, is_active, sort_order 
 -- FROM public.currencies 
 -- ORDER BY sort_order, code;
-
