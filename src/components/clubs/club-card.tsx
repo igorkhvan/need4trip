@@ -45,12 +45,15 @@ export function ClubCard({ club }: ClubCardProps) {
             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors mb-1 truncate">
               {club.name}
             </h3>
-            {club.city && (
+            {club.cities && club.cities.length > 0 && (
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <MapPin className="w-4 h-4" />
                 <span>
-                  {club.city.name}
-                  {club.city.region && `, ${club.city.region}`}
+                  {club.cities.length === 1
+                    ? club.cities[0].region
+                      ? `${club.cities[0].name}, ${club.cities[0].region}`
+                      : club.cities[0].name
+                    : `${club.cities.length} городов`}
                 </span>
               </div>
             )}
