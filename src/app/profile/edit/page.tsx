@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
-import { MultiBrandSelect } from "@/components/multi-brand-select";
+import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { City } from "@/lib/types/city";
@@ -32,6 +32,7 @@ export default function ProfileEditPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
   
   const [formData, setFormData] = useState<ProfileEditForm>({
     name: "",
@@ -40,6 +41,21 @@ export default function ProfileEditPage() {
     carBrandId: null,
     carModelText: "",
   });
+
+  // Load car brands
+  useEffect(() => {
+    async function loadBrands() {
+      try {
+        const res = await fetch("/api/car-brands");
+        if (!res.ok) throw new Error("Failed to load brands");
+        const data = await res.json();
+        setBrands(data.brands || []);
+      } catch (err) {
+        console.error("Failed to load brands:", err);
+      }
+    }
+    loadBrands();
+  }, []);
 
   // Load current profile
   useEffect(() => {
@@ -186,7 +202,6 @@ export default function ProfileEditPage() {
               </Label>
               <CityAutocomplete
                 value={formData.cityId}
-                selectedCity={formData.city}
                 onChange={(cityId, city) => {
                   setFormData({ ...formData, cityId, city });
                   if (fieldErrors.cityId) {
@@ -198,19 +213,17 @@ export default function ProfileEditPage() {
             </div>
 
             {/* Car Brand */}
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">
-                Марка автомобиля
-              </Label>
+            <div>
               <MultiBrandSelect
-                selectedBrandIds={formData.carBrandId ? [formData.carBrandId] : []}
+                label="Марка автомобиля"
+                placeholder="Выберите марку автомобиля"
+                options={brands}
+                value={formData.carBrandId ? [formData.carBrandId] : []}
                 onChange={(brandIds) => {
                   setFormData({ ...formData, carBrandId: brandIds[0] || null });
                 }}
-                mode="single"
-                placeholder="Выберите марку автомобиля"
               />
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mt-2">
                 Необязательно. Поможет другим участникам
               </p>
             </div>
