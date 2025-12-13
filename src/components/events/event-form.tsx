@@ -128,7 +128,7 @@ export function EventForm({
   const [isClubEvent, setIsClubEvent] = useState<boolean>(initialValues?.isClubEvent ?? false);
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
-  const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? "RUB");
+  const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
