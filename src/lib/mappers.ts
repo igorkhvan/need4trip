@@ -9,7 +9,7 @@ export interface DbEvent {
   id: string;
   title: string;
   description: string;
-  category: DomainEvent["category"];
+  category_id: string | null; // FK to event_categories
   date_time: string;
   city_id: string | null; // FK на cities (normalized)
   location_text: string;
@@ -54,7 +54,7 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     id: db.id,
     title: db.title,
     description: db.description,
-    category: db.category,
+    categoryId: db.category_id ?? null, // FK to event_categories
     dateTime: db.date_time,
     cityId: db.city_id ?? null, // FK на cities (normalized)
     locationText: db.location_text,

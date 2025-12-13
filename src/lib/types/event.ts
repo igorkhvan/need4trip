@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { CityHydrated } from "./city";
 import { CurrencyHydrated } from "./currency";
+import { EventCategoryDto } from "./eventCategory";
 
-export const eventCategorySchema = z.enum([
+// Legacy enum - kept for backward compatibility during migration
+// Will be removed after full migration to event_categories table
+export const eventCategoryLegacySchema = z.enum([
   "weekend_trip",
   "technical_ride",
   "meeting",
@@ -10,7 +13,7 @@ export const eventCategorySchema = z.enum([
   "service_day",
   "other",
 ]);
-export type EventCategory = z.infer<typeof eventCategorySchema>;
+export type EventCategoryLegacy = z.infer<typeof eventCategoryLegacySchema>;
 
 // Event visibility levels (updated to match DB schema)
 export const visibilitySchema = z.enum(["public", "unlisted", "restricted"]);
@@ -87,7 +90,8 @@ export interface Event {
   id: string;
   title: string;
   description: string;
-  category: EventCategory | null;
+  categoryId: string | null; // FK to event_categories
+  category?: EventCategoryDto | null; // Hydrated category info
   dateTime: string;
   cityId: string | null; // FK на cities table (обязательно при создании, но может быть null для старых записей)
   city?: CityHydrated | null; // Hydrated city info
@@ -136,7 +140,7 @@ export const eventCreateSchema = z
   .object({
     title: z.string().trim().min(3).max(150),
     description: z.string().trim().min(1).max(5000),
-    category: eventCategorySchema.nullable().optional(),
+    categoryId: z.string().uuid().nullable().optional(), // Changed from category enum
     dateTime: eventDateSchema,
     cityId: z.string().uuid(), // FK на cities table (обязательное поле)
     locationText: z.string().trim().min(1),
@@ -168,7 +172,7 @@ export const eventCreateSchema = z
 const eventUpdateBaseSchema = z.object({
   title: z.string().trim().min(3).max(150).optional(),
   description: z.string().trim().min(1).max(5000).optional(),
-  category: eventCategorySchema.nullable().optional(),
+  categoryId: z.string().uuid().nullable().optional(), // Changed from category enum
   dateTime: eventDateSchema.optional(),
   cityId: z.string().uuid().optional(), // FK на cities table (обязательное при передаче)
   locationText: z.string().trim().min(1).optional(),

@@ -77,7 +77,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
   const insertPayload = {
     title: payload.title,
     description: payload.description,
-    category: payload.category ?? null,
+    category_id: payload.categoryId ?? null, // FK to event_categories
     date_time:
       payload.dateTime instanceof Date
         ? payload.dateTime.toISOString()
@@ -125,7 +125,7 @@ export async function updateEvent(
   const patch = {
     ...(payload.title !== undefined ? { title: payload.title } : {}),
     ...(payload.description !== undefined ? { description: payload.description } : {}),
-    ...(payload.category !== undefined ? { category: payload.category } : {}),
+    ...(payload.categoryId !== undefined ? { category_id: payload.categoryId } : {}), // FK to event_categories
     ...(payload.dateTime !== undefined
       ? {
           date_time:
