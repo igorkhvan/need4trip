@@ -639,7 +639,7 @@ export function EventForm({
                 </label>
               </div>
               {isPaid && (
-                <div className="grid gap-3 md:grid-cols-[1fr,140px]">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="price" className="text-sm font-medium text-[#111827]">
                       Цена
