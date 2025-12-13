@@ -15,7 +15,7 @@ import type { City } from "@/lib/types/city";
 import type { Club } from "@/lib/types/club";
 
 export default function ClubsPage() {
-  const [clubs, setClubs] = useState<Club[]>([]);
+  const [clubs, setClubs] = useState<(Club & { memberCount?: number; eventCount?: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
@@ -71,43 +71,78 @@ export default function ClubsPage() {
     }
   };
 
+  // Calculate stats
+  const totalMembers = clubs.reduce((sum, club) => sum + (club.memberCount || 0), 0);
+  const totalEvents = clubs.reduce((sum, club) => sum + (club.eventCount || 0), 0);
+  const totalCities = new Set(clubs.flatMap(club => club.cities?.map(c => c.id) || [])).size;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <div className="page-container">
         {/* Заголовок и кнопка создания */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Клубы</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="mb-1 text-[28px] font-bold leading-tight text-[#1F2937] md:text-[32px]">
+              Автомобильные клубы
+            </h1>
+            <p className="text-[14px] text-[#6B7280] md:text-[15px]">
               Найдите клуб по интересам или создайте свой
             </p>
           </div>
           <Link
             href="/clubs/create"
-            className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="h-4 w-4" />
             Создать клуб
           </Link>
         </div>
 
+        {/* Статистика */}
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+            <div className="mb-1 text-[13px] text-[#6B7280]">Всего клубов</div>
+            <div className="text-[24px] font-bold text-[#1F2937] md:text-[28px]">
+              {clubs.length}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+            <div className="mb-1 text-[13px] text-[#6B7280]">Участников</div>
+            <div className="text-[24px] font-bold text-[#1F2937] md:text-[28px]">
+              {totalMembers}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+            <div className="mb-1 text-[13px] text-[#6B7280]">Событий</div>
+            <div className="text-[24px] font-bold text-[#1F2937] md:text-[28px]">
+              {totalEvents}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+            <div className="mb-1 text-[13px] text-[#6B7280]">Городов</div>
+            <div className="text-[24px] font-bold text-[#1F2937] md:text-[28px]">
+              {totalCities}
+            </div>
+          </div>
+        </div>
+
         {/* Фильтры */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-12">
           {/* Поиск по названию */}
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+          <form onSubmit={handleSearchSubmit} className="relative md:col-span-6">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6B7280]" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по названию клуба..."
-              className="w-full h-12 pl-12 pr-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Поиск клубов..."
+              className="h-12 w-full rounded-xl border-2 border-[#E5E7EB] bg-white pl-12 pr-4 text-[15px] placeholder:text-[#6B7280] hover:border-[#6B7280] focus:border-[#FF6F2C] focus:outline-none focus:ring-4 focus:ring-[rgba(255,111,44,0.1)]"
               disabled={!!selectedCityId}
             />
           </form>
 
           {/* Фильтр по городу */}
-          <div>
+          <div className="md:col-span-6">
             <CityAutocomplete
               value={selectedCityId}
               onChange={handleCityChange}
@@ -119,10 +154,10 @@ export default function ClubsPage() {
 
         {/* Active filters */}
         {(selectedCity || searchQuery) && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+          <div className="mb-4 flex items-center gap-2 text-[14px] text-[#6B7280]">
             {selectedCity && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary-50 text-primary-700 rounded-full">
-                <MapPin className="w-4 h-4" />
+              <div className="flex items-center gap-2 rounded-full bg-[rgba(255,111,44,0.1)] px-3 py-1 text-[#FF6F2C]">
+                <MapPin className="h-4 w-4" />
                 <span>
                   {selectedCity.region
                     ? `${selectedCity.name}, ${selectedCity.region}`
@@ -133,19 +168,19 @@ export default function ClubsPage() {
                     setSelectedCityId(null);
                     setSelectedCity(null);
                   }}
-                  className="ml-1 hover:text-primary-900"
+                  className="ml-1 hover:text-[#E55A1A]"
                 >
                   ×
                 </button>
               </div>
             )}
             {searchQuery && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary-50 text-primary-700 rounded-full">
-                <Search className="w-4 h-4" />
+              <div className="flex items-center gap-2 rounded-full bg-[rgba(255,111,44,0.1)] px-3 py-1 text-[#FF6F2C]">
+                <Search className="h-4 w-4" />
                 <span>"{searchQuery}"</span>
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="ml-1 hover:text-primary-900"
+                  className="ml-1 hover:text-[#E55A1A]"
                 >
                   ×
                 </button>
@@ -157,26 +192,26 @@ export default function ClubsPage() {
 
         {/* Список клубов */}
         {loading ? (
-          <div className="text-center py-16">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <p className="mt-4 text-gray-600">Загрузка...</p>
+          <div className="py-16 text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[#FF6F2C]"></div>
+            <p className="mt-4 text-[#6B7280]">Загрузка...</p>
           </div>
         ) : clubs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {clubs.map((club) => (
               <ClubCard key={club.id} club={club} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-gray-300">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                <Search className="w-8 h-8 text-gray-400" />
+          <div className="rounded-lg border-2 border-dashed border-[#E5E7EB] bg-white py-16 text-center">
+            <div className="mx-auto max-w-md">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F9FAFB]">
+                <Search className="h-8 w-8 text-[#6B7280]" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="mb-2 text-[18px] font-semibold text-[#1F2937]">
                 {searchQuery || selectedCity ? "Клубы не найдены" : "Пока нет клубов"}
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="mb-6 text-[15px] text-[#6B7280]">
                 {searchQuery || selectedCity
                   ? "Попробуйте изменить поисковый запрос или фильтр"
                   : "Создайте первый клуб и соберите единомышленников"}
@@ -184,9 +219,9 @@ export default function ClubsPage() {
               {!searchQuery && !selectedCity && (
                 <Link
                   href="/clubs/create"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="h-4 w-4" />
                   Создать клуб
                 </Link>
               )}
