@@ -89,98 +89,97 @@ export default async function EventDetails({
       : null;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-8 md:py-12">
-      <div className="page-container">
-        {/* Back button */}
-        <Button variant="ghost" asChild className="mb-6">
-          <Link href="/events">← Назад к событиям</Link>
-        </Button>
+    <>
+      {/* Back button */}
+      <Button variant="ghost" asChild className="mb-6">
+        <Link href="/events">← Назад к событиям</Link>
+      </Button>
 
-        {/* Header Section */}
-        <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div className="flex-1">
-            {/* Title */}
-            <h1 className="mb-4 text-[32px] font-bold leading-[1.2] text-[#1F2937] md:text-[36px]">
-              {event.title}
-            </h1>
+      {/* Header Section */}
+      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1">
+          {/* Title */}
+          <h1 className="mb-4 text-[32px] font-bold leading-[1.2] text-[#1F2937] md:text-[36px]">
+            {event.title}
+          </h1>
 
-            {/* Badges */}
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              {categoryLabel && event.category ? (
-                <Badge variant={categoryBadgeVariant} size="md">
-                  {categoryLabel}
-                </Badge>
-              ) : null}
-              {event.isClubEvent && <Badge variant="club" size="md">Клубное событие</Badge>}
-              <Badge variant={event.isPaid ? "paid" : "free"} size="md">
-                {event.isPaid ? "Платное" : "Бесплатное"}
+          {/* Badges */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {categoryLabel && event.category ? (
+              <Badge variant={categoryBadgeVariant} size="md">
+                {categoryLabel}
               </Badge>
-              {isRegistered && (
-                <Badge variant="success" size="md">
-                  ✓ Вы зарегистрированы
-                </Badge>
-              )}
-              {isFull && !isRegistered && (
-                <Badge variant="warning" size="md">
-                  Лимит достигнут
-                </Badge>
-              )}
-            </div>
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 gap-4 text-[15px] text-[#6B7280] md:grid-cols-2">
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5 flex-shrink-0" />
-                <span>{formattedDateTime}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 flex-shrink-0" />
-                <span>{event.locationText}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 flex-shrink-0" />
-                <span>{participantsCountLabel}</span>
-              </div>
-              {event.city && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 flex-shrink-0" />
-                  <span>{event.city.name}{event.city.region && `, ${event.city.region}`}</span>
-                </div>
-              )}
-            </div>
+            ) : null}
+            {event.isClubEvent && <Badge variant="club" size="md">Клубное событие</Badge>}
+            <Badge variant={event.isPaid ? "paid" : "free"} size="md">
+              {event.isPaid ? "Платное" : "Бесплатное"}
+            </Badge>
+            {isRegistered && (
+              <Badge variant="success" size="md">
+                ✓ Вы зарегистрированы
+              </Badge>
+            )}
+            {isFull && !isRegistered && (
+              <Badge variant="warning" size="md">
+                Лимит достигнут
+              </Badge>
+            )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col md:w-auto">
-            {!isRegistered && !isFull && (
-              <ParticipantModal
-                mode="create"
-                eventId={event.id}
-                customFieldsSchema={event.customFieldsSchema}
-                event={event}
-                triggerLabel="Присоединиться"
-              />
-            )}
-            {isOwner && (
-              <Button variant="secondary" asChild className="w-full sm:w-auto">
-                <Link href={`/events/${event.id}/edit`}>
-                  <PencilLine className="mr-2 h-4 w-4" />
-                  Редактировать
-                </Link>
-              </Button>
+          {/* Info Grid */}
+          <div className="grid grid-cols-1 gap-4 text-[15px] text-[#6B7280] md:grid-cols-2">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 flex-shrink-0" />
+              <span>{formattedDateTime}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 flex-shrink-0" />
+              <span>{event.locationText}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 flex-shrink-0" />
+              <span>{participantsCountLabel}</span>
+            </div>
+            {event.city && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 flex-shrink-0" />
+                <span>{event.city.name}{event.city.region && `, ${event.city.region}`}</span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Progress Bar */}
-        {fillPercent !== null && (
-          <div className="mb-8">
-            <ProgressBar value={fillPercent} label="Заполнено мест" />
-          </div>
-        )}
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 sm:flex-row md:flex-col md:w-auto">
+          {!isRegistered && !isFull && (
+            <ParticipantModal
+              mode="create"
+              eventId={event.id}
+              customFieldsSchema={event.customFieldsSchema}
+              event={event}
+              triggerLabel="Присоединиться"
+            />
+          )}
+          {isOwner && (
+            <Button variant="secondary" asChild className="w-full sm:w-auto">
+              <Link href={`/events/${event.id}/edit`}>
+                <PencilLine className="mr-2 h-4 w-4" />
+                Редактировать
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
 
-        {/* Main Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+      {/* Progress Bar */}
+      {fillPercent !== null && (
+        <div className="mb-8">
+          <ProgressBar value={fillPercent} label="Заполнено мест" />
+        </div>
+      )}
+
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
           {/* Left Column - Description, Rules, Participants */}
           <div className="space-y-6">
             {/* Description Card */}
@@ -403,7 +402,6 @@ export default async function EventDetails({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </>
   );
 }

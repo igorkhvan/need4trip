@@ -23,11 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.className}>
-      <body className="min-h-screen bg-background text-foreground antialiased">
-        <div className="flex min-h-screen flex-col bg-muted/20">
+      <body className="min-h-screen bg-[#F9FAFB] text-foreground antialiased">
+        <div className="flex min-h-screen flex-col">
           <MainHeader />
-          <main className="flex-1 py-10">
-            <div className="page-container">{children}</div>
+          <main className="flex-1">
+            <div className="page-container py-10">{children}</div>
           </main>
           <MainFooter />
           <Toaster />
