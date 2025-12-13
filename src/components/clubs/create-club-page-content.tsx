@@ -6,11 +6,33 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ClubForm } from "@/components/clubs/club-form";
+import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 
-export function CreateClubPageContent() {
+export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const { execute } = useProtectedAction(isAuthenticated);
+
+  // Protect page access
+  useEffect(() => {
+    execute(
+      () => {}, // Do nothing if authenticated (already on page)
+      {
+        reason: "REQUIRED",
+        title: "Создание клуба",
+        description: "Для создания клуба необходимо войти через Telegram.",
+        redirectTo: '/clubs/create',
+      }
+    );
+  }, [isAuthenticated, execute]);
+
+  // Don't render form if not authenticated
+  if (!isAuthenticated) {
+    return null; // Modal will show, don't render anything
+  }
+
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -39,4 +61,3 @@ export function CreateClubPageContent() {
     </div>
   );
 }
-

@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
+import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 
 export function HeaderActions({ isAuthenticated }: { isAuthenticated: boolean }) {
-  const { openModal } = useAuthModalContext();
+  const { navigateTo } = useProtectedAction(isAuthenticated);
 
   if (isAuthenticated) {
     return null; // Authenticated UI renders in MainHeader (server component)
@@ -13,12 +12,20 @@ export function HeaderActions({ isAuthenticated }: { isAuthenticated: boolean })
 
   return (
     <div className="flex items-center gap-3">
-      <Button asChild>
-        <Link href="/events/create">Создать событие</Link>
+      <Button 
+        onClick={() => navigateTo('/events/create', {
+          reason: "REQUIRED",
+          title: "Создание события",
+          description: "Для создания события необходимо войти через Telegram.",
+        })}
+      >
+        Создать событие
       </Button>
       <Button 
         variant="secondary"
-        onClick={() => openModal({ reason: "REQUIRED" })}
+        onClick={() => navigateTo('/', {
+          reason: "REQUIRED",
+        })}
       >
         Войти
       </Button>

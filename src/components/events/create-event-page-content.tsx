@@ -1,21 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
 import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
+import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 
-export function CreateEventPageContent() {
+export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const clubId = searchParams?.get("clubId");
   
   const [club, setClub] = useState<Club | null>(null);
   const [loading, setLoading] = useState(!!clubId);
+  
+  const { execute } = useProtectedAction(isAuthenticated);
+
+  // Protect page access
+  useEffect(() => {
+    execute(
+      () => {}, // Do nothing if authenticated (already on page)
+      {
+        reason: "REQUIRED",
+        title: "Создание события",
+        description: "Для создания события необходимо войти через Telegram.",
+        redirectTo: clubId ? `/events/create?clubId=${clubId}` : '/events/create',
+      }
+    );
+  }, [isAuthenticated, execute, clubId]);
 
   // Load club data if clubId is provided
   useEffect(() => {
-    if (!clubId) return;
+    if (!clubId || !isAuthenticated) return;
     
     const loadClub = async () => {
       try {
@@ -31,7 +48,7 @@ export function CreateEventPageContent() {
     };
     
     loadClub();
-  }, [clubId]);
+  }, [clubId, isAuthenticated]);
 
   const handleSubmit = async (payload: Record<string, unknown>) => {
     const res = await fetch("/api/events", {
@@ -43,6 +60,11 @@ export function CreateEventPageContent() {
       await handleApiError(res);
     }
   };
+
+  // Show loading or empty state while auth check happens
+  if (!isAuthenticated) {
+    return null; // Modal will show, don't render anything
+  }
 
   if (loading) {
     return (
@@ -74,4 +96,3 @@ export function CreateEventPageContent() {
     />
   );
 }
-
