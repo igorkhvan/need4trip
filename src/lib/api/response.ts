@@ -38,6 +38,11 @@ export function respondSuccess<T>(
 }
 
 /**
+ * Alias for respondSuccess (backward compatibility)
+ */
+export const respondJSON = respondSuccess;
+
+/**
  * Return standardized error response
  */
 export function respondError(
