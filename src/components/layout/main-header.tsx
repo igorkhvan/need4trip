@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Car, User } from "lucide-react";
+import { Car } from "lucide-react";
 
-import { LoginButton } from "@/components/auth/login-button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { HeaderActions } from "@/components/layout/header-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -66,12 +66,7 @@ export async function MainHeader() {
                 </div>
               </>
             ) : (
-              <>
-                <Button asChild>
-                  <Link href="/events/create">Создать событие</Link>
-                </Button>
-                <LoginButton isAuthenticated={false} />
-              </>
+              <HeaderActions isAuthenticated={false} />
             )}
           </div>
         </div>

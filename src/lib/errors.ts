@@ -40,6 +40,20 @@ export class AuthError extends AppError {
   }
 }
 
+export class UnauthorizedError extends AppError {
+  constructor(message: string = "Login required", details?: unknown) {
+    super(message, { statusCode: 401, code: "UNAUTHORIZED", details });
+    this.name = "UnauthorizedError";
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message: string = "Not allowed", details?: unknown) {
+    super(message, { statusCode: 403, code: "FORBIDDEN", details });
+    this.name = "ForbiddenError";
+  }
+}
+
 export class InternalError extends AppError {
   constructor(message: string, details?: unknown) {
     super(message, { statusCode: 500, code: "InternalError", details });

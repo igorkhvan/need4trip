@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { MainHeader } from "@/components/layout/main-header";
 import { MainFooter } from "@/components/layout/main-footer";
+import { AuthModalProvider } from "@/components/auth/auth-modal-provider";
+import { AuthModalHost } from "@/components/auth/auth-modal-host";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -24,14 +26,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body className="min-h-screen bg-[#F9FAFB] text-foreground antialiased">
-        <div className="flex min-h-screen flex-col">
-          <MainHeader />
-          <main className="flex-1">
-            <div className="page-container py-10">{children}</div>
-          </main>
-          <MainFooter />
-          <Toaster />
-        </div>
+        <AuthModalProvider>
+          <div className="flex min-h-screen flex-col">
+            <MainHeader />
+            <main className="flex-1">
+              <div className="page-container py-10">{children}</div>
+            </main>
+            <MainFooter />
+            <Toaster />
+            <AuthModalHost />
+          </div>
+        </AuthModalProvider>
       </body>
     </html>
   );
