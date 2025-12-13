@@ -526,7 +526,7 @@ export function EventForm({
                   Категория события
                 </Label>
                 <Select
-                  value={categoryId ?? undefined}
+                  value={categoryId || ""} 
                   onValueChange={(val) => setCategoryId(val || null)}
                   disabled={disabled || loadingCategories}
                 >
