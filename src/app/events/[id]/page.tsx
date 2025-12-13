@@ -225,16 +225,22 @@ export default async function EventDetails({
                     <Table>
                       <TableHeader className="bg-[#F9FAFB]">
                         <TableRow className="border-b border-[#E5E7EB]">
-                          <TableHead className="text-[13px] font-semibold text-[#6B7280]">Экипаж</TableHead>
-                          <TableHead className="text-[13px] font-semibold text-[#6B7280]">Роль</TableHead>
-                          <TableHead className="text-[13px] font-semibold text-[#6B7280]">Контакт</TableHead>
-                          {sortedCustomFields.map((field) => (
-                            <TableHead key={field.id} className="text-[13px] font-semibold text-[#6B7280]">
-                              {field.label}
+                          <TableHead className="w-16 text-center text-[13px] font-semibold uppercase text-[#6B7280]">
+                            №
+                          </TableHead>
+                          <TableHead className="text-[13px] font-semibold uppercase text-[#6B7280]">
+                            Экипаж
+                          </TableHead>
+                          <TableHead className="text-[13px] font-semibold uppercase text-[#6B7280]">
+                            Роль
+                          </TableHead>
+                          {sortedCustomFields.length > 0 && (
+                            <TableHead className="text-[13px] font-semibold uppercase text-[#6B7280]">
+                              Доп. поля
                             </TableHead>
-                          ))}
+                          )}
                           {(isOwner || currentUser || guestSessionId) && (
-                            <TableHead className="text-right text-[13px] font-semibold text-[#6B7280]">
+                            <TableHead className="w-24 text-right text-[13px] font-semibold uppercase text-[#6B7280]">
                               Действия
                             </TableHead>
                           )}
@@ -246,49 +252,63 @@ export default async function EventDetails({
                             key={participant.id} 
                             className="border-b border-[#E5E7EB] last:border-0 hover:bg-[#F9FAFB]/50 transition-colors"
                           >
+                            {/* Номер */}
+                            <TableCell className="text-center">
+                              <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-full bg-[#FF6F2C]/10 text-[#FF6F2C] text-sm font-semibold">
+                                {index + 1}
+                              </div>
+                            </TableCell>
+
+                            {/* Экипаж */}
                             <TableCell className="font-medium text-[#111827]">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C]/10 text-[#FF6F2C] text-sm font-semibold flex-shrink-0">
-                                  {index + 1}
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-[15px]">{participant.displayName}</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {participant.userId ? (
-                                      <Badge variant="neutral" size="sm">
-                                        Пользователь
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="neutral" size="sm">
-                                        Гость
-                                      </Badge>
-                                    )}
-                                    {participant.userId === event.createdByUserId && (
-                                      <Badge variant="attention" size="sm">Владелец</Badge>
-                                    )}
-                                  </div>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[15px]">{participant.displayName}</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {participant.userId ? (
+                                    <Badge variant="neutral" size="sm">
+                                      Пользователь
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="neutral" size="sm">
+                                      Гость
+                                    </Badge>
+                                  )}
+                                  {participant.userId === event.createdByUserId && (
+                                    <Badge variant="attention" size="sm">Владелец</Badge>
+                                  )}
                                 </div>
                               </div>
                             </TableCell>
+
+                            {/* Роль */}
                             <TableCell className="text-[15px] text-[#6B7280]">
                               {formatParticipantRole(participant.role)}
                             </TableCell>
-                            <TableCell className="text-[15px] text-[#6B7280]">
-                              {participant.user?.telegramHandle 
-                                ? `@${participant.user.telegramHandle}` 
-                                : participant.userId 
-                                ? "Пользователь" 
-                                : "Гость"
-                              }
-                            </TableCell>
-                            {sortedCustomFields.map((field) => (
-                              <TableCell key={field.id} className="text-[15px] text-[#6B7280]">
-                                {formatCustomFieldValue(
-                                  participant.customFieldValues?.[field.id],
-                                  field.type
-                                )}
+
+                            {/* Дополнительные поля (все в одной колонке) */}
+                            {sortedCustomFields.length > 0 && (
+                              <TableCell className="text-[13px]">
+                                <div className="space-y-1.5">
+                                  {sortedCustomFields.map((field) => {
+                                    const value = formatCustomFieldValue(
+                                      participant.customFieldValues?.[field.id],
+                                      field.type
+                                    );
+                                    
+                                    if (!value || value === "—") return null;
+                                    
+                                    return (
+                                      <div key={field.id}>
+                                        <span className="text-[#6B7280]">{field.label}:</span>{" "}
+                                        <span className="text-[#111827]">{value}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </TableCell>
-                            ))}
+                            )}
+
+                            {/* Действия */}
                             {(isOwner || currentUser || guestSessionId) && (
                               <TableCell className="text-right">
                                 <ParticipantActions
