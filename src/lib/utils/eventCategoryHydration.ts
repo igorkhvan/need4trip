@@ -29,6 +29,7 @@ export async function hydrateEventCategories<T extends { categoryId: string | nu
           nameRu: cat.nameRu,
           nameEn: cat.nameEn,
           icon: cat.icon,
+          isDefault: cat.isDefault, // Added
         });
       });
     } catch (err) {
