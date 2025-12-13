@@ -165,13 +165,15 @@ export function EventForm({
         const res = await fetch("/api/event-categories");
         if (res.ok) {
           const data = await res.json();
-          setCategories(data.categories || []);
+          const loadedCategories = data.categories || [];
+          setCategories(loadedCategories);
           
-          // Set "other" category as default if no category is selected
-          if (!initialValues?.categoryId && data.categories) {
-            const otherCategory = data.categories.find((cat: EventCategoryDto) => cat.code === "other");
+          // Set "other" category as default ONLY if creating new event
+          if (!initialValues?.categoryId && loadedCategories.length > 0) {
+            const otherCategory = loadedCategories.find((cat: EventCategoryDto) => cat.code === "other");
             if (otherCategory) {
               setCategoryId(otherCategory.id);
+              console.log("✅ Default category set to 'other':", otherCategory.id);
             }
           }
         }
@@ -182,7 +184,8 @@ export function EventForm({
       }
     }
     loadCategories();
-  }, [initialValues?.categoryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   const addField = () => {
     setCustomFields((prev) => [...prev, buildEmptyField(prev.length + 1)]);
@@ -406,34 +409,28 @@ export function EventForm({
             </div>
 
             {/* Город */}
-            <div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#111827]">
-                  Город <span className="text-red-500">*</span>
-                </Label>
-                <CityAutocomplete
-                  value={cityId}
-                  onChange={(newCityId, city) => {
-                    setCityId(newCityId);
-                    // city object is available here if needed for future use
-                    if (fieldErrors.cityId) {
-                      setFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.cityId;
-                        return next;
-                      });
-                    }
-                  }}
-                  disabled={disabled}
-                  placeholder="Выберите город..."
-                  error={!!fieldErrors.cityId}
-                  errorMessage={fieldErrors.cityId}
-                />
-              </div>
-              {/* Резервное место для ошибки */}
-              <div className="min-h-[28px] text-xs text-red-600">
-                {/* Ошибка уже отображается внутри CityAutocomplete через errorMessage */}
-              </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#111827]">
+                Город <span className="text-red-500">*</span>
+              </Label>
+              <CityAutocomplete
+                value={cityId}
+                onChange={(newCityId, city) => {
+                  setCityId(newCityId);
+                  // city object is available here if needed for future use
+                  if (fieldErrors.cityId) {
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.cityId;
+                      return next;
+                    });
+                  }
+                }}
+                disabled={disabled}
+                placeholder="Выберите город..."
+                error={!!fieldErrors.cityId}
+                errorMessage={fieldErrors.cityId}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
