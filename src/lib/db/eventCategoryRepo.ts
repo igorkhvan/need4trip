@@ -1,11 +1,16 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabase } from "./client";
 import { EventCategory } from "@/lib/types/eventCategory";
 
 /**
  * Get all active event categories
  */
 export async function getActiveEventCategories(): Promise<EventCategory[]> {
-  const { data, error } = await supabaseAdmin
+  if (!supabase) {
+    console.error("[getActiveEventCategories] Supabase client not initialized");
+    return [];
+  }
+
+  const { data, error } = await supabase
     .from("event_categories")
     .select("*")
     .eq("is_active", true)
@@ -23,7 +28,12 @@ export async function getActiveEventCategories(): Promise<EventCategory[]> {
  * Get event category by ID
  */
 export async function getEventCategoryById(id: string): Promise<EventCategory | null> {
-  const { data, error } = await supabaseAdmin
+  if (!supabase) {
+    console.error("[getEventCategoryById] Supabase client not initialized");
+    return null;
+  }
+
+  const { data, error } = await supabase
     .from("event_categories")
     .select("*")
     .eq("id", id)
@@ -42,7 +52,12 @@ export async function getEventCategoryById(id: string): Promise<EventCategory | 
  * Get event category by code
  */
 export async function getEventCategoryByCode(code: string): Promise<EventCategory | null> {
-  const { data, error } = await supabaseAdmin
+  if (!supabase) {
+    console.error("[getEventCategoryByCode] Supabase client not initialized");
+    return null;
+  }
+
+  const { data, error } = await supabase
     .from("event_categories")
     .select("*")
     .eq("code", code)
@@ -63,7 +78,12 @@ export async function getEventCategoryByCode(code: string): Promise<EventCategor
 export async function getEventCategoriesByIds(ids: string[]): Promise<Map<string, EventCategory>> {
   if (ids.length === 0) return new Map();
 
-  const { data, error } = await supabaseAdmin
+  if (!supabase) {
+    console.error("[getEventCategoriesByIds] Supabase client not initialized");
+    return new Map();
+  }
+
+  const { data, error } = await supabase
     .from("event_categories")
     .select("*")
     .in("id", ids);
