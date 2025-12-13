@@ -1,6 +1,6 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser, getCurrentUserSafe } from "@/lib/auth/currentUser";
-import { AuthError } from "@/lib/errors";
+import { UnauthorizedError } from "@/lib/errors";
 import { createEvent, hydrateEvent, listVisibleEventsForUser } from "@/lib/services/events";
 
 export async function GET() {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
+      throw new UnauthorizedError("Авторизация обязательна для создания события");
     }
     const payload = await request.json();
     const event = await createEvent(payload, currentUser);

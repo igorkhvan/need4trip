@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { listClubs, listClubsByCity, searchClubs, createClub } from "@/lib/services/clubs";
 import { respondError } from "@/lib/api/response";
+import { UnauthorizedError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +48,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    const body = await req.json();
+    
+    if (!user) {
+      throw new UnauthorizedError("Авторизация обязательна для создания клуба");
+    }
 
+    const body = await req.json();
     const club = await createClub(body, user);
 
     return NextResponse.json({ club }, { status: 201 });
