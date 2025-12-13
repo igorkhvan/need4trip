@@ -166,6 +166,14 @@ export function EventForm({
         if (res.ok) {
           const data = await res.json();
           setCategories(data.categories || []);
+          
+          // Set "other" category as default if no category is selected
+          if (!initialValues?.categoryId && data.categories) {
+            const otherCategory = data.categories.find((cat: EventCategoryDto) => cat.code === "other");
+            if (otherCategory) {
+              setCategoryId(otherCategory.id);
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to load categories:", error);
@@ -174,7 +182,7 @@ export function EventForm({
       }
     }
     loadCategories();
-  }, []);
+  }, [initialValues?.categoryId]);
 
   const addField = () => {
     setCustomFields((prev) => [...prev, buildEmptyField(prev.length + 1)]);
@@ -398,28 +406,34 @@ export function EventForm({
             </div>
 
             {/* Город */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#111827]">
-                Город <span className="text-red-500">*</span>
-              </Label>
-              <CityAutocomplete
-                value={cityId}
-                onChange={(newCityId, city) => {
-                  setCityId(newCityId);
-                  // city object is available here if needed for future use
-                  if (fieldErrors.cityId) {
-                    setFieldErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.cityId;
-                      return next;
-                    });
-                  }
-                }}
-                disabled={disabled}
-                placeholder="Выберите город..."
-                error={!!fieldErrors.cityId}
-                errorMessage={fieldErrors.cityId}
-              />
+            <div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#111827]">
+                  Город <span className="text-red-500">*</span>
+                </Label>
+                <CityAutocomplete
+                  value={cityId}
+                  onChange={(newCityId, city) => {
+                    setCityId(newCityId);
+                    // city object is available here if needed for future use
+                    if (fieldErrors.cityId) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.cityId;
+                        return next;
+                      });
+                    }
+                  }}
+                  disabled={disabled}
+                  placeholder="Выберите город..."
+                  error={!!fieldErrors.cityId}
+                  errorMessage={fieldErrors.cityId}
+                />
+              </div>
+              {/* Резервное место для ошибки */}
+              <div className="min-h-[28px] text-xs text-red-600">
+                {/* Ошибка уже отображается внутри CityAutocomplete через errorMessage */}
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

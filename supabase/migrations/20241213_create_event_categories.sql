@@ -38,6 +38,18 @@ CREATE INDEX idx_event_categories_active ON public.event_categories(is_active) W
 ALTER TABLE public.events 
   ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES public.event_categories(id) ON DELETE SET NULL;
 
+-- Set default value to "other" category
+DO $$
+DECLARE
+  other_category_id UUID;
+BEGIN
+  SELECT id INTO other_category_id FROM public.event_categories WHERE code = 'other';
+  
+  IF other_category_id IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE public.events ALTER COLUMN category_id SET DEFAULT %L', other_category_id);
+  END IF;
+END $$;
+
 -- Migrate existing category data (if column exists)
 -- Map old string/enum values to new category IDs
 DO $$
