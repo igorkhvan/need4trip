@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Car } from "lucide-react";
 
 import { HeaderUserSection } from "@/components/layout/header-user-section";
@@ -6,6 +7,8 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const navItems = [
   { href: "/events", label: "События" },
+  { href: "/clubs", label: "Клубы" },
+  { href: "/pricing", label: "Тарифы" },
 ];
 
 export async function MainHeader() {
@@ -44,7 +47,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="rounded-lg px-4 py-2 font-medium text-[#111827] transition-all hover:bg-[#F7F7F8]"
+      className="rounded-lg px-4 py-2 font-medium text-[#111827] transition-all hover:bg-[#F9FAFB]"
     >
       {children}
     </Link>
