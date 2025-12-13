@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { CityMultiSelect } from "@/components/ui/city-multi-select";
 import { getErrorMessage } from "@/lib/utils/errors";
-import type { Club, ClubCreateInput } from "@/lib/types/club";
+import type { Club, ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
+import type { City } from "@/lib/types/city";
 
 interface ClubFormProps {
   mode: "create" | "edit";
@@ -27,12 +28,14 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Form state
-  const [formData, setFormData] = useState<ClubCreateInput>({
+  const [formData, setFormData] = useState({
     name: club?.name ?? "",
     description: club?.description ?? "",
-    cityId: club?.cityId ?? null,
+    cityIds: club?.cityIds ?? [],
+    cities: club?.cities ?? [],
     logoUrl: club?.logoUrl ?? "",
     telegramUrl: club?.telegramUrl ?? "",
     websiteUrl: club?.websiteUrl ?? "",
@@ -41,16 +44,41 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setLoading(true);
+
+    // Validate
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) {
+      errors.name = "Название обязательно";
+    }
+    if (formData.cityIds.length === 0) {
+      errors.cityIds = "Выберите хотя бы один город";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setLoading(false);
+      return;
+    }
 
     try {
       const url = mode === "create" ? "/api/clubs" : `/api/clubs/${club!.id}`;
       const method = mode === "create" ? "POST" : "PATCH";
 
+      const payload = {
+        name: formData.name,
+        description: formData.description || null,
+        cityIds: formData.cityIds,
+        logoUrl: formData.logoUrl || null,
+        telegramUrl: formData.telegramUrl || null,
+        websiteUrl: formData.websiteUrl || null,
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -85,10 +113,13 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="h-12 rounded-xl border-2"
+          className={`h-12 rounded-xl border-2 ${fieldErrors.name ? "border-red-500" : ""}`}
           placeholder="Например: OFF-ROAD Москва"
           disabled={loading}
         />
+        {fieldErrors.name && (
+          <p className="text-sm text-red-500">{fieldErrors.name}</p>
+        )}
       </div>
 
       {/* Описание */}
@@ -107,19 +138,28 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
         />
       </div>
 
-      {/* Город */}
+      {/* Города */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-[#111827]">
-          Город
+          Города клуба <span className="text-red-500">*</span>
         </Label>
-        <CityAutocomplete
-          value={formData.cityId}
-          onChange={(newCityId, city) => {
-            setFormData({ ...formData, cityId: newCityId });
+        <CityMultiSelect
+          value={formData.cityIds}
+          onChange={(cityIds, cities) => {
+            setFormData({ ...formData, cityIds, cities });
+            if (fieldErrors.cityIds) {
+              setFieldErrors({ ...fieldErrors, cityIds: "" });
+            }
           }}
-          placeholder="Выберите город..."
+          placeholder="Выберите города..."
           disabled={loading}
+          error={!!fieldErrors.cityIds}
+          errorMessage={fieldErrors.cityIds}
+          maxItems={10}
         />
+        <p className="text-sm text-gray-500">
+          Выберите города, в которых действует ваш клуб (до 10 городов)
+        </p>
       </div>
 
       {/* URL логотипа */}
@@ -193,7 +233,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"
-          disabled={loading || !formData.name.trim()}
+          disabled={loading || !formData.name.trim() || formData.cityIds.length === 0}
           className="flex-1"
         >
           {loading ? "Сохранение..." : mode === "create" ? "Создать клуб" : "Сохранить изменения"}

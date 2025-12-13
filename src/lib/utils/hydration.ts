@@ -48,6 +48,41 @@ export async function hydrateCities<T extends { cityId: string | null }>(
   });
 }
 
+/**
+ * Batch load cities by IDs and return as Map
+ * Useful for manual hydration
+ * 
+ * @example
+ * const cityIds = ['id1', 'id2', 'id3'];
+ * const citiesMap = await hydrateCitiesByIds(cityIds);
+ * const city = citiesMap.get('id1');
+ */
+export async function hydrateCitiesByIds(
+  cityIds: string[]
+): Promise<Map<string, CityHydrated>> {
+  if (cityIds.length === 0) return new Map();
+  
+  const uniqueCityIds = Array.from(new Set(cityIds));
+  
+  try {
+    const citiesMap = await getCitiesByIds(uniqueCityIds);
+    const hydratedMap = new Map<string, CityHydrated>();
+    
+    citiesMap.forEach((city, id) => {
+      hydratedMap.set(id, {
+        id: city.id,
+        name: city.name,
+        region: city.region,
+      });
+    });
+    
+    return hydratedMap;
+  } catch (err) {
+    console.error("[hydrateCitiesByIds] Failed to load cities", err);
+    return new Map();
+  }
+}
+
 // ============================================================================
 // Currency Hydration
 // ============================================================================

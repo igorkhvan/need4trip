@@ -4,20 +4,30 @@
  * GET /api/cities - List all cities (or search)
  * GET /api/cities?q=Москва - Search cities by name
  * GET /api/cities?popular=true - Get popular cities only
+ * GET /api/cities?ids=id1,id2,id3 - Get cities by IDs
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { searchCities, getPopularCities, getAllCities } from "@/lib/db/cityRepo";
+import { searchCities, getPopularCities, getAllCities, getCitiesByIds } from "@/lib/db/cityRepo";
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const query = searchParams.get("q");
   const popularOnly = searchParams.get("popular") === "true";
+  const idsParam = searchParams.get("ids");
 
   try {
     let cities;
 
-    if (query) {
+    if (idsParam) {
+      // Get cities by IDs
+      const ids = idsParam.split(",").filter(Boolean);
+      if (ids.length === 0) {
+        return NextResponse.json({ cities: [] });
+      }
+      const citiesMap = await getCitiesByIds(ids);
+      cities = Array.from(citiesMap.values());
+    } else if (query) {
       // Search by name
       cities = await searchCities(query, 20);
     } else if (popularOnly) {

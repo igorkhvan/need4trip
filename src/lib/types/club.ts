@@ -19,8 +19,8 @@ export interface Club {
   id: string;
   name: string;
   description: string | null;
-  cityId: string | null; // FK на cities table (normalized)
-  city?: CityHydrated | null; // Hydrated city info
+  cityIds?: string[]; // FK array на cities table (from club_cities)
+  cities?: CityHydrated[]; // Hydrated cities info
   logoUrl: string | null;
   telegramUrl: string | null;
   websiteUrl: string | null;
@@ -91,7 +91,7 @@ export interface ClubWithMembership extends Club {
 export const clubCreateSchema = z.object({
   name: z.string().trim().min(2, "Название должно быть не короче 2 символов").max(100, "Название слишком длинное"),
   description: z.string().trim().max(5000, "Описание слишком длинное").optional().nullable(),
-  cityId: z.string().uuid().nullable().optional(), // FK на cities table (normalized)
+  cityIds: z.array(z.string().uuid("Некорректный ID города")).min(1, "Выберите хотя бы один город").max(10, "Максимум 10 городов"),
   logoUrl: z.string().trim().url("Некорректный URL логотипа").max(500).optional().nullable(),
   telegramUrl: z.string().trim().url("Некорректный URL Telegram").max(500).optional().nullable(),
   websiteUrl: z.string().trim().url("Некорректный URL сайта").max(500).optional().nullable(),
@@ -104,7 +104,7 @@ export type ClubCreateInput = z.infer<typeof clubCreateSchema>;
 export const clubUpdateSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
   description: z.string().trim().max(5000).optional().nullable(),
-  cityId: z.string().uuid().nullable().optional(), // FK на cities table (normalized)
+  cityIds: z.array(z.string().uuid("Некорректный ID города")).min(1, "Выберите хотя бы один город").max(10, "Максимум 10 городов").optional(),
   logoUrl: z.string().trim().url().max(500).optional().nullable(),
   telegramUrl: z.string().trim().url().max(500).optional().nullable(),
   websiteUrl: z.string().trim().url().max(500).optional().nullable(),

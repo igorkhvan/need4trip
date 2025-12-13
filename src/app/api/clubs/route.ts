@@ -7,24 +7,30 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { listClubs, searchClubs, createClub } from "@/lib/services/clubs";
+import { listClubs, listClubsByCity, searchClubs, createClub } from "@/lib/services/clubs";
 import { respondError } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/clubs?q=searchQuery
- * Список клубов с опциональным поиском
+ * GET /api/clubs?q=searchQuery&cityId=cityId
+ * Список клубов с опциональным поиском и фильтром по городу
  */
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const query = searchParams.get("q");
+    const cityId = searchParams.get("cityId");
 
     let clubs;
-    if (query) {
+    if (cityId) {
+      // Filter by city
+      clubs = await listClubsByCity(cityId);
+    } else if (query) {
+      // Search by name
       clubs = await searchClubs(query);
     } else {
+      // List all
       clubs = await listClubs();
     }
 

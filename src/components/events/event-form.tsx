@@ -29,6 +29,7 @@ import {
   VehicleTypeRequirement,
   Visibility,
 } from "@/lib/types/event";
+import type { Club } from "@/lib/types/club";
 import { CATEGORY_OPTIONS } from "@/lib/utils/eventCategories";
 import { getErrorMessage } from "@/lib/utils/errors";
 
@@ -69,6 +70,7 @@ export type EventFormProps = {
   disabled?: boolean;
   headerTitle: string;
   headerDescription: string;
+  club?: Club | null; // Клуб, если событие создается от клуба
 };
 
 function buildEmptyField(order: number): EventCustomFieldSchema {
@@ -91,6 +93,7 @@ export function EventForm({
   disabled,
   headerTitle,
   headerDescription,
+  club,
 }: EventFormProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialValues?.title ?? "");

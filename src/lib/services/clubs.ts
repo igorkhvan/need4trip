@@ -13,7 +13,10 @@ import {
   listClubs as listClubsRepo,
   listClubsWithOwner,
   listClubsByCreator,
+  listClubsByCity as listClubsByCityRepo,
   searchClubs as searchClubsRepo,
+  getClubCityIds,
+  getClubsCityIds,
   type DbClub,
   type DbClubWithOwner,
 } from "@/lib/db/clubRepo";
@@ -36,7 +39,7 @@ import {
 import { getClubSubscription } from "@/lib/db/subscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { listEvents } from "@/lib/db/eventRepo";
-import { hydrateCities } from "@/lib/utils/hydration";
+import { hydrateCities, hydrateCitiesByIds } from "@/lib/utils/hydration";
 import {
   canCreateClub as canCreateClubPermission,
   canManageClub,
@@ -67,7 +70,6 @@ function mapDbClubToDomain(db: DbClub): Club {
     id: db.id,
     name: db.name,
     description: db.description,
-    cityId: db.city_id, // FK на cities table (normalized)
     logoUrl: db.logo_url,
     telegramUrl: db.telegram_url,
     websiteUrl: db.website_url,
@@ -85,6 +87,53 @@ function mapDbClubMemberToDomain(db: DbClubMember): ClubMember {
     invitedBy: db.invited_by,
     joinedAt: db.joined_at,
   };
+}
+
+// ============================================================================
+// HYDRATION
+// ============================================================================
+
+/**
+ * Hydrate clubs with their cities
+ */
+async function hydrateClubsWithCities(clubs: Club[]): Promise<Club[]> {
+  if (clubs.length === 0) return clubs;
+
+  // Batch load city IDs for all clubs
+  const clubIds = clubs.map((c) => c.id);
+  const clubCityIdsMap = await getClubsCityIds(clubIds);
+
+  // Collect all unique city IDs
+  const allCityIds = new Set<string>();
+  clubCityIdsMap.forEach((cityIds) => {
+    cityIds.forEach((cityId) => allCityIds.add(cityId));
+  });
+
+  // Batch load city data
+  const cityIdsArray = Array.from(allCityIds);
+  const citiesMap = await hydrateCitiesByIds(cityIdsArray);
+
+  // Attach cities to clubs
+  return clubs.map((club) => {
+    const cityIds = clubCityIdsMap.get(club.id) ?? [];
+    const cities = cityIds
+      .map((cityId) => citiesMap.get(cityId))
+      .filter((city): city is NonNullable<typeof city> => city !== undefined && city !== null);
+
+    return {
+      ...club,
+      cityIds,
+      cities,
+    };
+  });
+}
+
+/**
+ * Hydrate single club with cities
+ */
+async function hydrateClubWithCities(club: Club): Promise<Club> {
+  const [hydrated] = await hydrateClubsWithCities([club]);
+  return hydrated;
 }
 
 function mapDbClubMemberWithUserToDomain(db: DbClubMemberWithUser): ClubMemberWithUser {
@@ -113,7 +162,16 @@ function mapDbClubMemberWithUserToDomain(db: DbClubMemberWithUser): ClubMemberWi
 export async function listClubs(): Promise<Club[]> {
   const clubs = await listClubsRepo();
   const domainClubs = clubs.map(mapDbClubToDomain);
-  return hydrateCities(domainClubs);
+  return hydrateClubsWithCities(domainClubs);
+}
+
+/**
+ * Список клубов по городу
+ */
+export async function listClubsByCity(cityId: string): Promise<Club[]> {
+  const clubs = await listClubsByCityRepo(cityId);
+  const domainClubs = clubs.map(mapDbClubToDomain);
+  return hydrateClubsWithCities(domainClubs);
 }
 
 /**
@@ -125,7 +183,7 @@ export async function searchClubs(query: string): Promise<Club[]> {
   }
   const clubs = await searchClubsRepo(query);
   const domainClubs = clubs.map(mapDbClubToDomain);
-  return hydrateCities(domainClubs);
+  return hydrateClubsWithCities(domainClubs);
 }
 
 /**
@@ -136,7 +194,8 @@ export async function getClub(id: string): Promise<Club> {
   if (!dbClub) {
     throw new NotFoundError("Club not found");
   }
-  return mapDbClubToDomain(dbClub);
+  const club = mapDbClubToDomain(dbClub);
+  return hydrateClubWithCities(club);
 }
 
 /**
@@ -152,6 +211,7 @@ export async function getClubWithDetails(
   }
 
   const club = mapDbClubToDomain(dbClub);
+  const hydratedClub = await hydrateClubWithCities(club);
 
   // Load subscription
   const dbSubscription = await getClubSubscription(id);
@@ -181,7 +241,7 @@ export async function getClubWithDetails(
   const memberCount = await countMembers(id);
 
   return {
-    ...club,
+    ...hydratedClub,
     subscription,
     members,
     memberCount,
@@ -201,6 +261,7 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
       if (!dbClub) return null;
 
       const club = mapDbClubToDomain(dbClub);
+      const hydratedClub = await hydrateClubWithCities(club);
       
       const dbSubscription = await getClubSubscription(membership.club_id);
       const subscription = dbSubscription
@@ -224,7 +285,7 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
       const memberCount = await countMembers(membership.club_id);
 
       return {
-        ...club,
+        ...hydratedClub,
         userRole: membership.role,
         subscription,
         memberCount,

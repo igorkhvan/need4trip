@@ -109,10 +109,16 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
 
                   {/* Метаинформация */}
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    {club.city && (
+                    {club.cities && club.cities.length > 0 && (
                       <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>{club.city}</span>
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                          {club.cities.length === 1
+                            ? club.cities[0].region
+                              ? `${club.cities[0].name}, ${club.cities[0].region}`
+                              : club.cities[0].name
+                            : `${club.cities.length} городов`}
+                        </span>
                       </div>
                     )}
                     <div className="flex items-center gap-1">
@@ -155,11 +161,33 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                 </div>
               </div>
 
-              {/* Описание */}
-              {club.description && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-3">О клубе</h2>
-                  <p className="text-gray-700 whitespace-pre-wrap">{club.description}</p>
+              {/* Описание и Города */}
+              {(club.description || (club.cities && club.cities.length > 0)) && (
+                <div className="mt-6 pt-6 border-t border-gray-200 space-y-6">
+                  {/* Города клуба */}
+                  {club.cities && club.cities.length > 0 && (
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-gray-600" />
+                        Города клуба
+                      </h2>
+                      <div className="flex flex-wrap gap-2">
+                        {club.cities.map((city: any) => (
+                          <Badge key={city.id} variant="secondary" size="default">
+                            {city.region ? `${city.name}, ${city.region}` : city.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Описание */}
+                  {club.description && (
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-3">О клубе</h2>
+                      <p className="text-gray-700 whitespace-pre-wrap">{club.description}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

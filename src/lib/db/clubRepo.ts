@@ -23,7 +23,6 @@ export interface DbClub {
   id: string;
   name: string;
   description: string | null;
-  city_id: string | null; // FK на cities (normalized)
   logo_url: string | null;
   telegram_url: string | null;
   website_url: string | null;
@@ -150,7 +149,6 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
   const insertPayload = {
     name: payload.name,
     description: payload.description ?? null,
-    city_id: payload.cityId ?? null, // FK на cities (normalized)
     logo_url: payload.logoUrl ?? null,
     telegram_url: payload.telegramUrl ?? null,
     website_url: payload.websiteUrl ?? null,
@@ -170,7 +168,14 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
     throw new InternalError("Failed to create club", error);
   }
 
-  return data as DbClub;
+  const club = data as DbClub;
+  
+  // Insert city associations
+  if (payload.cityIds && payload.cityIds.length > 0) {
+    await updateClubCities(club.id, payload.cityIds);
+  }
+
+  return club;
 }
 
 /**
@@ -188,7 +193,6 @@ export async function updateClub(
   const patch = {
     ...(payload.name !== undefined ? { name: payload.name } : {}),
     ...(payload.description !== undefined ? { description: payload.description } : {}),
-    ...(payload.cityId !== undefined ? { city_id: payload.cityId } : {}), // FK на cities (normalized)
     ...(payload.logoUrl !== undefined ? { logo_url: payload.logoUrl } : {}),
     ...(payload.telegramUrl !== undefined ? { telegram_url: payload.telegramUrl } : {}),
     ...(payload.websiteUrl !== undefined ? { website_url: payload.websiteUrl } : {}),
@@ -205,6 +209,11 @@ export async function updateClub(
   if (error) {
     console.error(`Failed to update club ${id}`, error);
     throw new InternalError("Failed to update club", error);
+  }
+
+  // Update city associations if provided
+  if (payload.cityIds !== undefined) {
+    await updateClubCities(id, payload.cityIds);
   }
 
   return data ? (data as DbClub) : null;
@@ -258,7 +267,7 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
 }
 
 /**
- * Search clubs by name or city
+ * Search clubs by name
  */
 export async function searchClubs(query: string): Promise<DbClub[]> {
   const client = ensureClient();
@@ -269,7 +278,7 @@ export async function searchClubs(query: string): Promise<DbClub[]> {
   const { data, error } = await (client as any)
     .from(table)
     .select("*")
-    .or(`name.ilike.${searchPattern},city.ilike.${searchPattern}`)
+    .ilike("name", searchPattern)
     .order("name", { ascending: true });
 
   if (error) {
@@ -299,4 +308,140 @@ export async function countClubsByUserId(userId: string): Promise<number> {
 
   return count ?? 0;
 }
+
+// ============================================================================
+// Club Cities (Many-to-Many)
+// ============================================================================
+
+/**
+ * Get city IDs for a club
+ */
+export async function getClubCityIds(clubId: string): Promise<string[]> {
+  const client = ensureClient();
+  if (!client) return [];
+
+  const { data, error } = await (client as any)
+    .from("club_cities")
+    .select("city_id")
+    .eq("club_id", clubId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error(`Failed to get city IDs for club ${clubId}`, error);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => row.city_id);
+}
+
+/**
+ * Get city IDs for multiple clubs (batch)
+ */
+export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, string[]>> {
+  const client = ensureClient();
+  if (!client || clubIds.length === 0) return new Map();
+
+  const { data, error } = await (client as any)
+    .from("club_cities")
+    .select("club_id, city_id")
+    .in("club_id", clubIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Failed to batch get club city IDs", error);
+    return new Map();
+  }
+
+  // Group by club_id
+  const map = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const clubId = row.club_id;
+    const cityId = row.city_id;
+    if (!map.has(clubId)) {
+      map.set(clubId, []);
+    }
+    map.get(clubId)!.push(cityId);
+  }
+
+  return map;
+}
+
+/**
+ * Update club cities (replace all)
+ */
+export async function updateClubCities(clubId: string, cityIds: string[]): Promise<void> {
+  const client = ensureClient();
+  if (!client) {
+    throw new InternalError("Supabase client is not configured");
+  }
+
+  // Delete existing associations
+  const { error: deleteError } = await (client as any)
+    .from("club_cities")
+    .delete()
+    .eq("club_id", clubId);
+
+  if (deleteError) {
+    console.error(`Failed to delete club cities for ${clubId}`, deleteError);
+    throw new InternalError("Failed to update club cities", deleteError);
+  }
+
+  // Insert new associations if any
+  if (cityIds.length > 0) {
+    const insertPayload = cityIds.map((cityId) => ({
+      club_id: clubId,
+      city_id: cityId,
+      created_at: new Date().toISOString(),
+    }));
+
+    const { error: insertError } = await (client as any)
+      .from("club_cities")
+      .insert(insertPayload);
+
+    if (insertError) {
+      console.error(`Failed to insert club cities for ${clubId}`, insertError);
+      throw new InternalError("Failed to update club cities", insertError);
+    }
+  }
+}
+
+/**
+ * List clubs by city (filter)
+ */
+export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
+  const client = ensureClient();
+  if (!client) return [];
+
+  // Get club IDs that have this city
+  const { data: clubCitiesData, error: clubCitiesError } = await (client as any)
+    .from("club_cities")
+    .select("club_id")
+    .eq("city_id", cityId);
+
+  if (clubCitiesError) {
+    console.error("Failed to get clubs by city", clubCitiesError);
+    throw new InternalError("Failed to list clubs by city", clubCitiesError);
+  }
+
+  if (!clubCitiesData || clubCitiesData.length === 0) {
+    return [];
+  }
+
+  const clubIds = clubCitiesData.map((row: any) => row.club_id);
+
+  // Get clubs by IDs
+  const { data, error } = await (client as any)
+    .from(table)
+    .select("*")
+    .in("id", clubIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to list clubs by city", error);
+    throw new InternalError("Failed to list clubs by city", error);
+  }
+
+  return (data ?? []) as DbClub[];
+}
+
 
