@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
     const payload = await request.json();
     const event = await createEvent(payload, currentUser);
-    return respondJSON({ event }, 201);
+    return respondJSON({ event }, undefined, 201);
   } catch (err) {
     return respondError(err);
   }

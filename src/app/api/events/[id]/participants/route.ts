@@ -33,7 +33,7 @@ export async function POST(request: Request, context: Params) {
     // Revalidate event page to show updated participants list
     revalidatePath(`/events/${id}`);
     
-    return respondJSON({ participant }, 201);
+    return respondJSON({ participant }, undefined, 201);
   } catch (err: unknown) {
     return respondError(err);
   }
