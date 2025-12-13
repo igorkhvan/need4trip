@@ -6,9 +6,9 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
-    const res = NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    clearAuthCookie(res);
-    return res;
+    // Return null user instead of error for unauthenticated state
+    // This prevents 401 errors in browser console
+    return NextResponse.json({ user: null }, { status: 200 });
   }
   return NextResponse.json({ user });
 }

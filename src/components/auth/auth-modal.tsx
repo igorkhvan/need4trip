@@ -88,7 +88,9 @@ export function AuthModal({
   
   // Debug: Log when modal state changes
   useEffect(() => {
-    console.log("[auth-modal] Modal state changed:", { open, title, reason });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[auth-modal] Modal state changed:", { open, title, reason });
+    }
   }, [open, title, reason]);
   
   const username = useMemo(() => {
@@ -105,7 +107,9 @@ export function AuthModal({
   const setContainerRef = useCallback((node: HTMLDivElement | null) => {
     containerRef.current = node;
     setContainerReady(!!node);
-    console.log("[auth-modal] Container ref set:", { hasNode: !!node });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[auth-modal] Container ref set:", { hasNode: !!node });
+    }
   }, []);
 
   const handleAuth = useCallback(
@@ -184,7 +188,7 @@ export function AuthModal({
       if (open && !username) {
         console.error("[auth-modal] ❌ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set!");
       }
-      if (open && !containerReady) {
+      if (open && !containerReady && process.env.NODE_ENV === 'development') {
         console.log("[auth-modal] ⏳ Waiting for container to be ready...");
       }
       return;
@@ -194,16 +198,18 @@ export function AuthModal({
     const timeoutId = setTimeout(() => {
       const container = containerRef.current;
       
-      // Debug logging
-      console.log("[auth-modal] Widget init:", {
-        open,
-        hasContainer: !!container,
-        username,
-        authUrl,
-        isAuthed,
-        containerReady,
-        botUsername: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
-      });
+      // Debug logging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log("[auth-modal] Widget init:", {
+          open,
+          hasContainer: !!container,
+          username,
+          authUrl,
+          isAuthed,
+          containerReady,
+          botUsername: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+        });
+      }
       
       if (!container) {
         console.error("[auth-modal] ❌ Container ref is null!");
@@ -223,7 +229,9 @@ export function AuthModal({
       script.setAttribute("data-request-access", "write");
       script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
       
-      console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
+      if (process.env.NODE_ENV === 'development') {
+        console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
+      }
       container.appendChild(script);
     }, 100); // Small delay to ensure DOM is ready
 
