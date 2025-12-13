@@ -532,25 +532,36 @@ export function EventForm({
                     State: {categoryId || 'null'} | Categories loaded: {categories.length}
                   </div>
                 )}
-                <Select
-                  value={categoryId || ""}
-                  onValueChange={(val) => {
-                    console.log("📝 Category changed to:", val);
-                    setCategoryId(val || null);
-                  }}
-                  disabled={disabled || loadingCategories}
-                >
-                  <SelectTrigger id="category" className="h-12 rounded-xl border-2">
-                    <SelectValue placeholder={loadingCategories ? "Загрузка..." : "Выберите категорию"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.nameRu}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {loadingCategories ? (
+                  <div className="h-12 w-full rounded-xl border-2 border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
+                    Загрузка категорий...
+                  </div>
+                ) : (
+                  <Select
+                    value={categoryId || ""}
+                    onValueChange={(val) => {
+                      // Ignore empty string changes (Radix UI bug)
+                      if (val === "" && categoryId) {
+                        console.log("⚠️ Ignoring empty value change");
+                        return;
+                      }
+                      console.log("📝 Category changed to:", val);
+                      setCategoryId(val || null);
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger id="category" className="h-12 rounded-xl border-2">
+                      <SelectValue placeholder="Выберите категорию" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.nameRu}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <div className="min-h-[28px]" />
               </div>
             </div>
