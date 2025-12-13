@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Search, MapPin } from "lucide-react";
 import { ClubCard } from "@/components/clubs/club-card";
+import { CreateClubButton } from "@/components/clubs/create-club-button";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import type { City } from "@/lib/types/city";
 import type { Club } from "@/lib/types/club";
@@ -20,11 +21,20 @@ export default function ClubsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Load clubs
   useEffect(() => {
     loadClubs();
   }, [selectedCityId, searchQuery]);
+
+  // Check authentication
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setIsAuthenticated(!!data?.user))
+      .catch(() => setIsAuthenticated(false));
+  }, []);
 
   const loadClubs = async () => {
     setLoading(true);
@@ -89,13 +99,13 @@ export default function ClubsPage() {
               Найдите клуб по интересам или создайте свой
             </p>
           </div>
-          <Link
-            href="/clubs/create"
+          <CreateClubButton
+            isAuthenticated={isAuthenticated}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
           >
             <Plus className="h-4 w-4" />
             Создать клуб
-          </Link>
+          </CreateClubButton>
         </div>
 
         {/* Статистика */}
@@ -217,13 +227,13 @@ export default function ClubsPage() {
                   : "Создайте первый клуб и соберите единомышленников"}
               </p>
               {!searchQuery && !selectedCity && (
-                <Link
-                  href="/clubs/create"
+                <CreateClubButton
+                  isAuthenticated={isAuthenticated}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
                 >
                   <Plus className="h-4 w-4" />
                   Создать клуб
-                </Link>
+                </CreateClubButton>
               )}
             </div>
           </div>

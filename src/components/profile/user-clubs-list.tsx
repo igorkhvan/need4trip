@@ -11,12 +11,14 @@ import { Crown, Shield, Users, Plus } from "lucide-react";
 import type { ClubWithMembership } from "@/lib/types/club";
 import { getClubRoleLabel } from "@/lib/types/club";
 import { Badge } from "@/components/ui/badge";
+import { CreateClubButton } from "@/components/clubs/create-club-button";
 
 interface UserClubsListProps {
   clubs: ClubWithMembership[];
+  isAuthenticated?: boolean;
 }
 
-export function UserClubsList({ clubs }: UserClubsListProps) {
+export function UserClubsList({ clubs, isAuthenticated = true }: UserClubsListProps) {
   const getRoleIcon = (role: ClubWithMembership["userRole"]) => {
     switch (role) {
       case "owner":
@@ -38,13 +40,13 @@ export function UserClubsList({ clubs }: UserClubsListProps) {
         <p className="text-gray-600 mb-6">
           Создайте свой клуб или присоединитесь к существующему
         </p>
-        <Link
-          href="/clubs/create"
+        <CreateClubButton
+          isAuthenticated={isAuthenticated}
           className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
         >
           <Plus className="w-5 h-5" />
           Создать клуб
-        </Link>
+        </CreateClubButton>
       </div>
     );
   }

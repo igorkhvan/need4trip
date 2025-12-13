@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
 import { getAllClubPlans } from "@/lib/db/clubPlanRepo";
+import { getCurrentUser } from "@/lib/auth/currentUser";
+import { PricingCardButton } from "@/components/pricing/pricing-card-button";
 import type { ClubPlan } from "@/lib/types/clubPlan";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +19,8 @@ export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const plans = await getAllClubPlans();
+  const currentUser = await getCurrentUser();
+  const isAuthenticated = !!currentUser;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12">
@@ -37,7 +41,7 @@ export default async function PricingPage() {
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {plans.map((plan) => (
-            <PricingCard key={plan.id} plan={plan} />
+            <PricingCard key={plan.id} plan={plan} isAuthenticated={isAuthenticated} />
           ))}
         </div>
         
@@ -60,7 +64,7 @@ export default async function PricingPage() {
   );
 }
 
-function PricingCard({ plan }: { plan: ClubPlan }) {
+function PricingCard({ plan, isAuthenticated }: { plan: ClubPlan; isAuthenticated: boolean }) {
   const isPro = plan.id === 'club_pro';
   const isBasic = plan.id === 'club_basic';
   const isFree = plan.id === 'club_free';
@@ -172,27 +176,7 @@ function PricingCard({ plan }: { plan: ClubPlan }) {
       </ul>
       
       {/* CTA Button */}
-      <Button
-        variant={isPro ? "default" : isBasic ? "secondary" : "outline"}
-        className="w-full"
-        size="lg"
-        asChild={isFree}
-      >
-        {isFree ? (
-          <Link href="/clubs/create">
-            Начать бесплатно
-          </Link>
-        ) : (
-          <span>Выбрать {plan.name}</span>
-        )}
-      </Button>
-      
-      {/* Additional info */}
-      {!isFree && (
-        <p className="text-xs text-center text-[#9CA3AF] mt-4">
-          Отменить можно в любое время
-        </p>
-      )}
+      <PricingCardButton plan={plan} isAuthenticated={isAuthenticated} />
     </Card>
   );
 }
