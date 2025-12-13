@@ -908,13 +908,13 @@ export function EventForm({
 
           <div className="mt-4 flex justify-end">
             <Button
-              variant="ghost"
+              variant="secondary"
               type="button"
               onClick={addField}
               disabled={disabled}
               className="h-11 px-4"
             >
-              {hasLockedFields ? "Добавить новое поле" : "Добавить поле"}
+              + Добавить поле
             </Button>
           </div>
           {hasLockedFields && (
