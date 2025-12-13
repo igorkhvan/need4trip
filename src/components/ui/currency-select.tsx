@@ -44,20 +44,30 @@ export function CurrencySelect({
   const [currencies, setCurrencies] = React.useState<Currency[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  // Load active currencies on mount and set KZT as default if no value
+  // Track if default was set to avoid infinite loops
+  const defaultSetRef = React.useRef(false);
+
+  // Load active currencies on mount
   React.useEffect(() => {
     loadCurrencies();
   }, []);
 
   // Set KZT as default when currencies load (only if value is null and not disabled)
   React.useEffect(() => {
-    if (currencies.length > 0 && value === null && !disabled) {
+    if (
+      currencies.length > 0 && 
+      value === null && 
+      !disabled && 
+      !defaultSetRef.current
+    ) {
       const kzt = currencies.find(c => c.code === 'KZT');
       if (kzt) {
+        console.log('🇰🇿 Setting default currency to KZT');
+        defaultSetRef.current = true;
         onChange('KZT');
       }
     }
-  }, [currencies, value, onChange, disabled]);
+  }, [currencies, value, disabled, onChange]);
 
   async function loadCurrencies() {
     setLoading(true);

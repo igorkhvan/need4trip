@@ -207,7 +207,7 @@ export default function EditEventPage() {
           isClubEvent: event.isClubEvent,
           isPaid: event.isPaid,
           price: event.price ? String(event.price) : "",
-          currencyCode: event.currencyCode ?? "RUB",
+          currencyCode: event.currencyCode ?? null,
         }}
         onSubmit={handleSubmit}
       />
