@@ -10,8 +10,20 @@ export function LogoutButton() {
   const [isPending, startTransition] = useTransition();
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    startTransition(() => router.refresh());
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      
+      // Dispatch auth change event
+      window.dispatchEvent(new Event("auth-changed"));
+      
+      // Redirect to home
+      startTransition(() => {
+        router.push("/");
+        router.refresh();
+      });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
 
   return (
