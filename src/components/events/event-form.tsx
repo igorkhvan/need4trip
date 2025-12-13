@@ -640,59 +640,61 @@ export function EventForm({
               </div>
               {isPaid && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price" className="text-sm font-medium text-[#111827]">
-                      Цена
-                    </Label>
-                    <Input
-                      id="price"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      min={0}
-                      step={1}
-                      value={price}
-                      onChange={(e) => {
-                        const digitsOnly = e.target.value.replace(/\D/g, "");
-                        setPrice(digitsOnly);
-                        if (fieldErrors.price) {
-                          setFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.price;
-                            return next;
-                          });
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="price" className="text-sm font-medium text-[#111827]">
+                        Цена
+                      </Label>
+                      <Input
+                        id="price"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        min={0}
+                        step={1}
+                        value={price}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "");
+                          setPrice(digitsOnly);
+                          if (fieldErrors.price) {
+                            setFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.price;
+                              return next;
+                            });
+                          }
+                        }}
+                        disabled={disabled}
+                        placeholder="5000"
+                        className={
+                          fieldErrors.price
+                            ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
+                            : "h-12 rounded-xl border-2"
                         }
-                      }}
-                      disabled={disabled}
-                      placeholder="5000"
-                      className={
-                        fieldErrors.price
-                          ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                          : "h-12 rounded-xl border-2"
-                      }
-                    />
-                    <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#111827]">
-                      Валюта
-                    </Label>
-                    <CurrencySelect
-                      value={currencyCode}
-                      onChange={(newCode) => {
-                        setCurrencyCode(newCode);
-                        if (fieldErrors.currencyCode) {
-                          setFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.currencyCode;
-                            return next;
-                          });
-                        }
-                      }}
-                      disabled={disabled}
-                      placeholder="Выберите валюту..."
-                      error={fieldErrors.currencyCode}
-                    />
+                      />
+                      <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-[#111827]">
+                        Валюта
+                      </Label>
+                      <CurrencySelect
+                        value={currencyCode}
+                        onChange={(newCode) => {
+                          setCurrencyCode(newCode);
+                          if (fieldErrors.currencyCode) {
+                            setFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.currencyCode;
+                              return next;
+                            });
+                          }
+                        }}
+                        disabled={disabled}
+                        placeholder="Выберите валюту..."
+                        error={fieldErrors.currencyCode}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

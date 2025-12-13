@@ -55,10 +55,31 @@ export function CurrencySelect({
       const res = await fetch("/api/currencies");
       if (res.ok) {
         const data = await res.json();
+        console.log("✅ Loaded currencies:", data);
         setCurrencies(data);
+      } else {
+        console.error("❌ Failed to load currencies, status:", res.status);
+        // Fallback to hardcoded popular currencies
+        const fallback = [
+          { code: "RUB", symbol: "₽", nameRu: "Российский рубль", nameEn: "Russian Ruble", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
+          { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
+          { code: "USD", symbol: "$", nameRu: "Доллар США", nameEn: "US Dollar", decimalPlaces: 2, isActive: true, sortOrder: 10, createdAt: new Date().toISOString() },
+          { code: "EUR", symbol: "€", nameRu: "Евро", nameEn: "Euro", decimalPlaces: 2, isActive: true, sortOrder: 11, createdAt: new Date().toISOString() },
+        ];
+        console.log("⚠️ Using fallback currencies");
+        setCurrencies(fallback);
       }
     } catch (error) {
-      console.error("Failed to load currencies:", error);
+      console.error("❌ Failed to load currencies:", error);
+      // Fallback currencies
+      const fallback = [
+        { code: "RUB", symbol: "₽", nameRu: "Российский рубль", nameEn: "Russian Ruble", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
+        { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
+        { code: "USD", symbol: "$", nameRu: "Доллар США", nameEn: "US Dollar", decimalPlaces: 2, isActive: true, sortOrder: 10, createdAt: new Date().toISOString() },
+        { code: "EUR", symbol: "€", nameRu: "Евро", nameEn: "Euro", decimalPlaces: 2, isActive: true, sortOrder: 11, createdAt: new Date().toISOString() },
+      ];
+      console.log("⚠️ Using fallback currencies");
+      setCurrencies(fallback);
     } finally {
       setLoading(false);
     }
