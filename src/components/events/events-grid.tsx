@@ -12,14 +12,17 @@ import {
   Mountain,
   MapPin,
   Clock,
+  Filter,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination } from "@/components/ui/pagination";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
-import { Event } from "@/lib/types/event";
+import { Event, EventCategory } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort, formatDateShort, getDaysUntil } from "@/lib/utils/dates";
 
@@ -29,13 +32,27 @@ interface EventsGridProps {
 }
 
 type TabType = "all" | "upcoming" | "my";
-
-// Удалено: используем централизованные утилиты из @/lib/utils/dates
+type PriceFilter = "all" | "free" | "paid";
+type SortBy = "date" | "participants" | "name";
 
 export function EventsGrid({ events, currentUserId }: EventsGridProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+  const [filterPrice, setFilterPrice] = useState<PriceFilter>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+
+  // Get unique cities from events
+  const uniqueCities = useMemo(() => {
+    const cities = events
+      .map((e) => e.city?.name)
+      .filter((c): c is string => c !== null && c !== undefined && c.trim() !== "");
+    return Array.from(new Set(cities)).sort();
+  }, [events]);
 
   const filteredByTab = useMemo(() => {
     if (activeTab === "upcoming") {
@@ -61,6 +78,45 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
     );
   }, [filteredByTab, searchQuery]);
 
+  const filteredAndSorted = useMemo(() => {
+    let result = [...filteredBySearch];
+
+    // Filter by category
+    if (filterCategory !== "all") {
+      result = result.filter((e) => e.category === filterCategory);
+    }
+
+    // Filter by city
+    if (filterCity !== "all") {
+      result = result.filter((e) => e.city?.name === filterCity);
+    }
+
+    // Filter by price
+    if (filterPrice !== "all") {
+      result = result.filter((e) => {
+        if (filterPrice === "free") return !e.isPaid;
+        if (filterPrice === "paid") return e.isPaid;
+        return true;
+      });
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "date":
+          return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+        case "participants":
+          return (b.participantsCount ?? 0) - (a.participantsCount ?? 0);
+        case "name":
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [filteredBySearch, filterCategory, filterCity, filterPrice, sortBy]);
+
   const stats = useMemo(() => {
     const now = new Date();
     const activeRegistrations = events.filter((e) => new Date(e.dateTime) > now).length;
@@ -71,6 +127,18 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
       totalParticipants,
     };
   }, [events]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEvents = filteredAndSorted.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
 
   const getStatusBadge = (event: Event) => {
     const daysUntil = getDaysUntil(event.dateTime);
@@ -209,16 +277,121 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
             type="text"
             placeholder="Поиск по названию, организатору или месту..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="h-12 rounded-xl border-2 pl-12 text-[15px] placeholder:text-[#6B7280]"
           />
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="rounded-xl bg-[#F9FAFB] p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Filter className="h-4 w-4 text-[#6B7280]" />
+          <span className="text-[13px] font-medium text-[#6B7280]">Фильтры и сортировка</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          {/* Category filter */}
+          <div className="space-y-1">
+            <label className="text-[13px] text-[#6B7280]">Тип события</label>
+            <Select
+              value={filterCategory}
+              onValueChange={(value) => {
+                setFilterCategory(value);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Все типы" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все типы</SelectItem>
+                <SelectItem value="offroad">Внедорожники</SelectItem>
+                <SelectItem value="touring">Туризм</SelectItem>
+                <SelectItem value="sportcars">Спорткары</SelectItem>
+                <SelectItem value="classic">Классика</SelectItem>
+                <SelectItem value="track">Трек-дни</SelectItem>
+                <SelectItem value="other">Другое</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* City filter */}
+          <div className="space-y-1">
+            <label className="text-[13px] text-[#6B7280]">Город</label>
+            <Select
+              value={filterCity}
+              onValueChange={(value) => {
+                setFilterCity(value);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Все города" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все города</SelectItem>
+                {uniqueCities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Price filter */}
+          <div className="space-y-1">
+            <label className="text-[13px] text-[#6B7280]">Стоимость</label>
+            <Select
+              value={filterPrice}
+              onValueChange={(value: PriceFilter) => {
+                setFilterPrice(value);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Любая" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Любая</SelectItem>
+                <SelectItem value="free">Бесплатно</SelectItem>
+                <SelectItem value="paid">Платно</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Sort by */}
+          <div className="space-y-1">
+            <label className="text-[13px] text-[#6B7280]">Сортировка</label>
+            <Select value={sortBy} onValueChange={(value: SortBy) => setSortBy(value)}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="По дате" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">По дате</SelectItem>
+                <SelectItem value="participants">По участникам</SelectItem>
+                <SelectItem value="name">По названию</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Results count */}
+      {filteredAndSorted.length > 0 && (
+        <div className="text-[14px] text-[#6B7280]">
+          Найдено событий: <span className="font-medium text-[#111827]">{filteredAndSorted.length}</span>
+        </div>
+      )}
+
       {/* Events Grid */}
-      {filteredBySearch.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {filteredBySearch.map((event) => {
+      {paginatedEvents.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {paginatedEvents.map((event) => {
             const fillPercentage = calculateEventFillPercentage(
               event.participantsCount ?? 0,
               event.maxParticipants
@@ -297,8 +470,24 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
                 </CardContent>
               </Card>
             );
-          })}
-        </div>
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredAndSorted.length}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={(value) => {
+                setItemsPerPage(value);
+                setCurrentPage(1);
+              }}
+            />
+          )}
+        </>
       ) : (
         // Empty State
         <div className="py-16 text-center">
