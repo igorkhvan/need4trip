@@ -53,9 +53,12 @@ function ensureClient() {
  * Get all active currencies
  */
 export async function getActiveCurrencies(): Promise<Currency[]> {
-  const client = ensureClient();
+  if (!supabase) {
+    console.warn("[currencyRepo] Supabase client is not configured");
+    return [];
+  }
   
-  const { data, error } = await (client as any)
+  const { data, error } = await supabase
     .from("currencies")
     .select("*")
     .eq("is_active", true)
@@ -64,7 +67,7 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
 
   if (error) {
     console.error("[currencyRepo] Error fetching currencies:", error);
-    throw new Error(`Failed to fetch currencies: ${error.message}`);
+    return [];
   }
 
   return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
@@ -74,9 +77,12 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
  * Get all currencies (including inactive)
  */
 export async function getAllCurrencies(): Promise<Currency[]> {
-  const client = ensureClient();
+  if (!supabase) {
+    console.warn("[currencyRepo] Supabase client is not configured");
+    return [];
+  }
   
-  const { data, error } = await (client as any)
+  const { data, error } = await supabase
     .from("currencies")
     .select("*")
     .order("is_active", { ascending: false })
@@ -85,7 +91,7 @@ export async function getAllCurrencies(): Promise<Currency[]> {
 
   if (error) {
     console.error("[currencyRepo] Error fetching all currencies:", error);
-    throw new Error(`Failed to fetch currencies: ${error.message}`);
+    return [];
   }
 
   return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
@@ -95,9 +101,12 @@ export async function getAllCurrencies(): Promise<Currency[]> {
  * Get currency by code
  */
 export async function getCurrencyByCode(code: string): Promise<Currency | null> {
-  const client = ensureClient();
+  if (!supabase) {
+    console.warn("[currencyRepo] Supabase client is not configured");
+    return null;
+  }
   
-  const { data, error } = await (client as any)
+  const { data, error } = await supabase
     .from("currencies")
     .select("*")
     .eq("code", code.toUpperCase())
@@ -108,7 +117,7 @@ export async function getCurrencyByCode(code: string): Promise<Currency | null> 
       return null; // Not found
     }
     console.error("[currencyRepo] Error fetching currency:", error);
-    throw new Error(`Failed to fetch currency: ${error.message}`);
+    return null;
   }
 
   return data ? mapDbCurrencyToDomain(data as DbCurrency) : null;
@@ -122,17 +131,20 @@ export async function getCurrenciesByCodes(codes: string[]): Promise<Map<string,
     return new Map();
   }
 
-  const client = ensureClient();
+  if (!supabase) {
+    console.warn("[currencyRepo] Supabase client is not configured");
+    return new Map();
+  }
   
   const upperCodes = codes.map(c => c.toUpperCase());
-  const { data, error } = await (client as any)
+  const { data, error } = await supabase
     .from("currencies")
     .select("*")
     .in("code", upperCodes);
 
   if (error) {
     console.error("[currencyRepo] Error fetching currencies by codes:", error);
-    throw new Error(`Failed to fetch currencies: ${error.message}`);
+    return new Map();
   }
 
   const currencyMap = new Map<string, Currency>();
