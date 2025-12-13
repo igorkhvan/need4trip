@@ -209,9 +209,10 @@ export function CityAutocomplete({
           )}
         </PopoverContent>
       </Popover>
-      {errorMessage && (
-        <div className="min-h-[28px] text-xs text-red-600">{errorMessage}</div>
-      )}
+      {/* Always reserve space for error message to prevent layout shift */}
+      <div className="min-h-[28px] text-xs text-red-600">
+        {errorMessage || ""}
+      </div>
     </>
   );
 }

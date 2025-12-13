@@ -169,11 +169,14 @@ export function EventForm({
           setCategories(loadedCategories);
           
           // Set default category from DB (marked with is_default=true)
+          // Only for new events (not editing)
           if (!initialValues?.categoryId && loadedCategories.length > 0) {
             const defaultCategory = loadedCategories.find((cat: EventCategoryDto) => cat.isDefault === true);
             if (defaultCategory) {
               setCategoryId(defaultCategory.id);
-              console.log("✅ Default category set:", defaultCategory.code, defaultCategory.id);
+              console.log("✅ Default category set:", defaultCategory.nameRu, defaultCategory.id);
+            } else {
+              console.warn("⚠️ No default category found in database");
             }
           }
         }
@@ -184,8 +187,7 @@ export function EventForm({
       }
     }
     loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []); // Empty deps - run only once on mount
 
   const addField = () => {
     setCustomFields((prev) => [...prev, buildEmptyField(prev.length + 1)]);
