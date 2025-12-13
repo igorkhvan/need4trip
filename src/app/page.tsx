@@ -235,7 +235,7 @@ export default async function HomePage() {
     id: e.id,
     title: e.title,
     startsAt: e.dateTime,
-    typeLabel: e.category ? getCategoryLabel(e.category as EventCategory) : "Событие",
+    typeLabel: e.category ? getCategoryLabel(e.category) : "Событие",
     description: e.description ?? null,
     participantsCount: e.participantsCount ?? null,
     maxParticipants: e.maxParticipants ?? null,

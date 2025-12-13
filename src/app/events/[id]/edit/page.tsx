@@ -194,7 +194,7 @@ export default function EditEventPage() {
         initialValues={{
           title: event.title,
           description: event.description,
-          category: event.category,
+          categoryId: event.categoryId,
           dateTime: event.dateTime,
           cityId: event.cityId ?? null,
           locationText: event.locationText,
