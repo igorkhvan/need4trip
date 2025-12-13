@@ -84,6 +84,7 @@ export function AuthModal({
   const [isAuthed, setIsAuthed] = useState(false);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerReady, setContainerReady] = useState(false);
   
   // Debug: Log when modal state changes
   useEffect(() => {
@@ -99,6 +100,13 @@ export function AuthModal({
   const authUrl = useMemo(() => resolveAuthUrl(), []);
 
   const finalDescription = description || getReasonDescription(reason);
+  
+  // Callback ref to know when container is mounted
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    containerRef.current = node;
+    setContainerReady(!!node);
+    console.log("[auth-modal] Container ref set:", { hasNode: !!node });
+  }, []);
 
   const handleAuth = useCallback(
     async (payload: TelegramAuthPayload) => {
@@ -172,45 +180,61 @@ export function AuthModal({
 
   // Load Telegram widget when modal opens
   useEffect(() => {
-    const container = containerRef.current;
-    
-    // Debug logging
-    console.log("[auth-modal] Widget init:", {
-      open,
-      hasContainer: !!container,
-      username,
-      authUrl,
-      isAuthed,
-      botUsername: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
-    });
-    
-    if (!open || !container || !username || isAuthed) {
-      if (!username) {
+    if (!open || !username || isAuthed || !containerReady) {
+      if (open && !username) {
         console.error("[auth-modal] ❌ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set!");
+      }
+      if (open && !containerReady) {
+        console.log("[auth-modal] ⏳ Waiting for container to be ready...");
       }
       return;
     }
 
-    container.innerHTML = "";
+    // Wait for DOM to be ready with a small delay
+    const timeoutId = setTimeout(() => {
+      const container = containerRef.current;
+      
+      // Debug logging
+      console.log("[auth-modal] Widget init:", {
+        open,
+        hasContainer: !!container,
+        username,
+        authUrl,
+        isAuthed,
+        containerReady,
+        botUsername: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+      });
+      
+      if (!container) {
+        console.error("[auth-modal] ❌ Container ref is null!");
+        return;
+      }
 
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", username);
-    script.setAttribute("data-size", "large");
-    if (authUrl) {
-      script.setAttribute("data-auth-url", authUrl);
-    }
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
-    
-    console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
-    container.appendChild(script);
+      container.innerHTML = "";
+
+      const script = document.createElement("script");
+      script.src = "https://telegram.org/js/telegram-widget.js?22";
+      script.async = true;
+      script.setAttribute("data-telegram-login", username);
+      script.setAttribute("data-size", "large");
+      if (authUrl) {
+        script.setAttribute("data-auth-url", authUrl);
+      }
+      script.setAttribute("data-request-access", "write");
+      script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
+      
+      console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
+      container.appendChild(script);
+    }, 100); // Small delay to ensure DOM is ready
 
     return () => {
-      container.innerHTML = "";
+      clearTimeout(timeoutId);
+      const container = containerRef.current;
+      if (container) {
+        container.innerHTML = "";
+      }
     };
-  }, [open, authUrl, username, isAuthed]);
+  }, [open, authUrl, username, isAuthed, containerReady]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,6 +257,7 @@ export function AuthModal({
               <div>• username: {username || '❌ NOT SET'}</div>
               <div>• authUrl: {authUrl || 'auto'}</div>
               <div>• isSubmitting: {String(isSubmitting)}</div>
+              <div>• containerReady: {String(containerReady)}</div>
               <div>• hasContainer: {String(!!containerRef.current)}</div>
             </div>
           )}
@@ -252,7 +277,7 @@ export function AuthModal({
                 </div>
               </div>
             ) : (
-              <div ref={containerRef} aria-label="Telegram Login" />
+              <div ref={setContainerRef} aria-label="Telegram Login" className="min-h-[46px]" />
             )}
           </div>
           
