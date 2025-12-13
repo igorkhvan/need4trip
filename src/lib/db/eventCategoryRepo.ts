@@ -94,7 +94,7 @@ export async function getEventCategoriesByIds(ids: string[]): Promise<Map<string
   }
 
   const map = new Map<string, EventCategory>();
-  (data || []).forEach((row) => {
+  (data || []).forEach((row: any) => {
     map.set(row.id, mapDbToEventCategory(row));
   });
 
