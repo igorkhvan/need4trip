@@ -1,5 +1,5 @@
 /**
- * Profile Edit Page
+ * Profile Edit Page - Точное соответствие Figma дизайну
  * 
  * Edit user profile (name, city, car)
  */
@@ -13,7 +13,6 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 import type { City } from "@/lib/types/city";
@@ -33,6 +32,7 @@ export default function ProfileEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<ProfileEditForm>({
     name: "",
@@ -75,6 +75,7 @@ export default function ProfileEditPage() {
           carBrandId: user.carBrandId || null,
           carModelText: user.carModelText || "",
         });
+        setAvatarUrl(user.avatarUrl || null);
       } catch (err) {
         console.error("Failed to load profile:", err);
         setError("Не удалось загрузить профиль");
@@ -98,10 +99,6 @@ export default function ProfileEditPage() {
     
     if (!formData.name.trim()) {
       errors.name = "Имя обязательно";
-    }
-    
-    if (!formData.cityId) {
-      errors.cityId = "Выберите город";
     }
     
     if (Object.keys(errors).length > 0) {
@@ -140,7 +137,7 @@ export default function ProfileEditPage() {
 
   if (loading) {
     return (
-      <div className="page-container py-12">
+      <div className="container-custom py-12">
         <div className="flex justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
@@ -150,60 +147,95 @@ export default function ProfileEditPage() {
 
   return (
     <div className="py-6 md:py-12">
-      <div className="page-container max-w-3xl">
-        {/* Header */}
+      <div className="container-custom max-w-3xl">
+        {/* Header - точно по Figma */}
         <div className="mb-6">
-          <Link
-            href="/profile"
-            className="inline-flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors mb-4"
+          <button
+            onClick={() => router.push("/profile")}
+            className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-[14px]">Назад к профилю</span>
-          </Link>
-          <h1 className="text-[32px] font-bold text-[#111827] mb-1">Редактировать профиль</h1>
-          <p className="text-[#6B7280] text-[14px]">
+          </button>
+          {/* h1 - используем глобальные стили по Figma */}
+          <h1 className="mb-1">Редактировать профиль</h1>
+          <p className="text-[var(--color-text-muted)] text-[14px]">
             Обновите свою личную информацию и настройки
           </p>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 bg-[#FEF2F2] border border-[#FEE2E2] rounded-xl text-[#991B1B]">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit}>
-          {/* Personal Information */}
+          {/* Avatar Section - padding="lg" по Figma */}
+          <Card className="mb-6">
+            <CardContent className="p-5 md:p-6">
+              {/* h3 - используем глобальные стили по Figma */}
+              <h3 className="mb-4">Фото профиля</h3>
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  {/* Avatar - 96x96px, rounded-2xl по Figma */}
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[var(--color-bg-subtle)]">
+                    {avatarUrl ? (
+                      <img 
+                        src={avatarUrl}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-white text-3xl font-bold">
+                        {(formData.name || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  {/* Camera button - точно по Figma */}
+                  <button
+                    type="button"
+                    className="absolute bottom-0 right-0 p-2 bg-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-hover)] transition-colors shadow-lg"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+                <div>
+                  <p className="text-[14px] text-[var(--color-text-muted)] mb-2">
+                    Рекомендуемый размер: 400x400 пикселей
+                  </p>
+                  <Button type="button" variant="secondary" size="sm">
+                    Загрузить фото
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Personal Information - padding="md" по Figma */}
           <Card className="mb-4">
             <CardContent className="p-4">
-              <h3 className="text-[18px] font-semibold text-[#111827] mb-3">Личная информация</h3>
+              {/* h3 - используем глобальные стили по Figma */}
+              <h3 className="mb-3">Личная информация</h3>
               <div className="space-y-3">
-                {/* Name */}
+                {/* Name - точно по Figma */}
                 <div>
-                  <label className="text-[13px] font-medium mb-2 block text-[#111827]">
-                    Имя <span className="text-[#EF4444]">*</span>
+                  <label className="text-[13px] font-medium mb-2 block">
+                    Имя <span className="text-[var(--color-danger)]">*</span>
                   </label>
                   <Input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Введите имя"
-                    className={fieldErrors.name ? "border-[#EF4444]" : ""}
                     required
                   />
                   {fieldErrors.name && (
-                    <p className="text-[13px] text-[#EF4444] mt-1">{fieldErrors.name}</p>
+                    <p className="text-[13px] text-[var(--color-danger)] mt-1">{fieldErrors.name}</p>
                   )}
                 </div>
 
-                {/* City */}
+                {/* City - точно по Figma с "Опционально" */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[13px] font-medium text-[#111827]">
+                    <label className="text-[13px] font-medium">
                       Город
                     </label>
-                    <span className="text-[12px] text-[#6B7280]">Опционально</span>
+                    <span className="text-[12px] text-[var(--color-text-muted)]">Опционально</span>
                   </div>
                   <CityAutocomplete
                     value={formData.cityId}
@@ -220,63 +252,51 @@ export default function ProfileEditPage() {
             </CardContent>
           </Card>
 
-          {/* Car Information */}
+          {/* Car Information - padding="md" по Figma */}
           <Card className="mb-4">
             <CardContent className="p-4">
-              <h3 className="text-[18px] font-semibold text-[#111827] mb-3">Информация об автомобиле</h3>
+              <h3 className="mb-3">Информация об автомобиле</h3>
               <div className="space-y-3">
-                {/* Brand */}
+                {/* Brand - точно по Figma */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[13px] font-medium text-[#111827]">
+                    <label className="text-[13px] font-medium">
                       Марка
                     </label>
-                    <span className="text-[12px] text-[#6B7280]">Опционально</span>
+                    <span className="text-[12px] text-[var(--color-text-muted)]">Опционально</span>
                   </div>
-                  <MultiBrandSelect
-                    label=""
-                    placeholder="Выберите марку автомобиля"
-                    options={brands}
-                    value={formData.carBrandId ? [formData.carBrandId] : []}
-                    onChange={(brandIds) => {
-                      setFormData({ ...formData, carBrandId: brandIds[0] || null });
-                    }}
+                  <Input
+                    type="text"
+                    value={formData.carBrandId || ""}
+                    onChange={(e) => setFormData({ ...formData, carBrandId: e.target.value || null })}
+                    placeholder="Например: Toyota"
                   />
                 </div>
 
-                {/* Model */}
+                {/* Model - точно по Figma */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-[13px] font-medium text-[#111827]">
+                    <label className="text-[13px] font-medium">
                       Модель
                     </label>
-                    <span className="text-[12px] text-[#6B7280]">Опционально</span>
+                    <span className="text-[12px] text-[var(--color-text-muted)]">Опционально</span>
                   </div>
                   <Input
                     type="text"
                     value={formData.carModelText || ""}
                     onChange={(e) => setFormData({ ...formData, carModelText: e.target.value })}
-                    placeholder="Например: Land Cruiser 200"
+                    placeholder="Например: Land Cruiser"
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - точно по Figma */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button type="submit" size="lg" disabled={saving} className="sm:flex-1">
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Сохранение...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Сохранить изменения
-                </>
-              )}
+            <Button type="submit" size="lg" className="sm:flex-1">
+              <Save className="w-4 h-4" />
+              Сохранить изменения
             </Button>
             <Button
               type="button"
@@ -290,11 +310,6 @@ export default function ProfileEditPage() {
             </Button>
           </div>
         </form>
-
-        {/* Help text */}
-        <p className="text-[13px] text-center text-[#6B7280] mt-6">
-          Ваша информация видна только участникам ваших событий
-        </p>
       </div>
     </div>
   );

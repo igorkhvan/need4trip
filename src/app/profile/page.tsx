@@ -1,5 +1,5 @@
 /**
- * User Profile Page
+ * User Profile Page - Точное соответствие Figma дизайну
  * 
  * Страница профиля пользователя
  */
@@ -42,20 +42,19 @@ export default async function ProfilePage() {
   }
 
   const clubs = profileData?.clubs ?? [];
-  const stats = profileData?.stats ?? { clubsCount: 0 };
   const profileUser = profileData?.user ?? user;
 
   return (
     <div className="py-6 md:py-12">
-      <div className="page-container max-w-5xl">
-        {/* User Header */}
+      <div className="container-custom max-w-5xl">
+        {/* User Header Card - padding="lg" (20px) по Figma */}
         <Card className="mb-6">
-          <CardContent className="p-6">
+          <CardContent className="p-5 md:p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Left: Avatar and Main Info */}
               <div className="flex flex-col items-center md:items-start gap-4">
-                {/* Avatar */}
-                <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[#F9FAFB]">
+                {/* Avatar - 96x96px, rounded-2xl по Figma */}
+                <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[var(--color-bg-subtle)]">
                   {user.avatarUrl ? (
                     <img 
                       src={user.avatarUrl} 
@@ -71,22 +70,25 @@ export default async function ProfilePage() {
                 
                 {/* User Info */}
                 <div className="text-center md:text-left">
-                  <h2 className="text-[28px] font-bold text-[#111827] mb-1">
-                    {user.name ?? "Пользователь"}
-                  </h2>
+                  {/* h2 - используем глобальные стили по Figma */}
+                  <h2 className="mb-1">{user.name ?? "Пользователь"}</h2>
+                  
+                  {/* Username - 14px по Figma */}
                   {user.telegramHandle && (
-                    <a
-                      href={`https://t.me/${user.telegramHandle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[14px] text-[#6B7280] hover:text-[#FF6F2C] mb-2 inline-block"
-                    >
-                      @{user.telegramHandle}
-                    </a>
+                    <p className="text-[14px] text-[var(--color-text-muted)] mb-2">
+                      <a
+                        href={`https://t.me/${user.telegramHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-[var(--color-primary)] transition-colors"
+                      >
+                        {user.telegramHandle}
+                      </a>
+                    </p>
                   )}
                   
-                  {/* Meta Info */}
-                  <div className="flex flex-col gap-1 text-[13px] text-[#6B7280] mt-2">
+                  {/* Meta Info - 13px по Figma */}
+                  <div className="flex flex-col gap-1 text-[13px] text-[var(--color-text-muted)]">
                     {profileUser.city && (
                       <div className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
@@ -112,11 +114,12 @@ export default async function ProfilePage() {
               {profileUser.carModelText && (
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-3">
-                    <h4 className="text-[15px] font-semibold text-[#111827]">Основной автомобиль</h4>
+                    {/* h4 - 15px по Figma */}
+                    <h4 className="text-[15px]">Основной автомобиль</h4>
                     <Button
                       size="sm"
                       variant="ghost"
-                      asChild
+                      onClick={() => {}}
                     >
                       <Link href="/profile/edit">
                         <Edit2 className="w-4 h-4" />
@@ -124,11 +127,12 @@ export default async function ProfilePage() {
                     </Button>
                   </div>
                   
-                  <div className="relative rounded-xl overflow-hidden bg-[#F9FAFB] h-48">
-                    {/* Placeholder gradient background */}
+                  {/* Car Card - h-48, rounded-xl по Figma */}
+                  <div className="relative rounded-xl overflow-hidden bg-[var(--color-bg-subtle)] h-48">
+                    {/* Если есть фото - показываем, иначе bg-subtle */}
                     <div className="absolute inset-0 bg-gradient-to-br from-[#FF6F2C]/20 to-[#E86223]/20" />
                     
-                    {/* Car Info Overlay */}
+                    {/* Car Info Overlay - точно по Figma */}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                       <div className="flex items-center gap-2 text-white mb-1">
                         <CarIcon className="w-4 h-4" />
@@ -144,30 +148,34 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* My Clubs */}
+        {/* My Clubs - точно по Figma */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[20px] font-semibold text-[#111827]">Мои клубы</h3>
+            {/* h3 - используем глобальные стили по Figma */}
+            <h3>Мои клубы</h3>
             <Button
               size="sm"
               variant="ghost"
-              asChild
+              onClick={() => {}}
             >
               <Link href="/clubs">Все клубы</Link>
             </Button>
           </div>
           
+          {/* Grid - md:grid-cols-3 по Figma */}
           {clubs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {clubs.map((club: any) => (
                 <Card
                   key={club.id}
                   className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md"
+                  onClick={() => {}}
                 >
                   <CardContent className="p-4">
                     <Link href={`/clubs/${club.id}`}>
+                      {/* Club Info - точно по Figma */}
                       <div className="flex items-start gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#F9FAFB] flex-shrink-0">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-[var(--color-bg-subtle)] flex-shrink-0">
                           {club.logo ? (
                             <img 
                               src={club.logo}
@@ -182,16 +190,16 @@ export default async function ProfilePage() {
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-[15px] font-semibold text-[#111827] mb-1 truncate">
-                            {club.name}
-                          </h4>
-                          <div className="flex items-center gap-1 text-[13px] text-[#6B7280]">
+                          {/* h4 - 15px по Figma */}
+                          <h4 className="text-[15px] mb-1 truncate">{club.name}</h4>
+                          <div className="flex items-center gap-1 text-[13px] text-[var(--color-text-muted)]">
                             <Users className="w-3.5 h-3.5" />
                             <span>{club.memberCount ?? 0} участников</span>
                           </div>
                         </div>
                       </div>
                       
+                      {/* Badge - variant="primary" для Admin по Figma */}
                       <Badge variant={club.role === 'owner' ? 'default' : 'secondary'}>
                         {club.role === 'owner' ? 'Владелец' : club.role === 'organizer' ? 'Организатор' : 'Участник'}
                       </Badge>
@@ -203,8 +211,8 @@ export default async function ProfilePage() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
-                <p className="text-[#6B7280] mb-4">Вы пока не состоите в клубах</p>
-                <Button asChild>
+                <p className="text-[var(--color-text-muted)] mb-4">Вы пока не состоите в клубах</p>
+                <Button>
                   <Link href="/clubs/create">Создать клуб</Link>
                 </Button>
               </CardContent>
@@ -212,9 +220,28 @@ export default async function ProfilePage() {
           )}
         </div>
 
-        {/* Logout Button */}
-        <div className="flex justify-center pt-6">
-          <LogoutButton />
+        {/* My Events - отсутствует в текущей версии, но есть в Figma */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3>Мои события</h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {}}
+            >
+              <Link href="/events">Все события</Link>
+            </Button>
+          </div>
+          
+          {/* Заглушка для будущей реализации */}
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-[var(--color-text-muted)] mb-4">Вы ещё не участвовали в событиях</p>
+              <Button>
+                <Link href="/events">Найти событие</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
