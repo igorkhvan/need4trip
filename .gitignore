@@ -39,6 +39,9 @@ yarn-error.log*
 # design showcase (not part of app build)
 src/figma-design
 
+# figma design files (design reference only, not for compilation)
+/figma
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
