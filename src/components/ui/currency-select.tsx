@@ -77,27 +77,27 @@ export function CurrencySelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-12 rounded-xl border-2",
-              error && "border-red-500 focus-visible:ring-red-500",
-              !selectedCurrency && "text-muted-foreground"
+              "h-12 w-full justify-between rounded-xl border-2 text-left font-normal shadow-none hover:bg-white",
+              error ? "border-red-500 focus-visible:ring-red-500" : "border-[#E5E7EB]",
+              !selectedCurrency && "text-[#9CA3AF]"
             )}
           >
             <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-gray-500" />
+              <DollarSign className={cn("h-4 w-4", selectedCurrency ? "text-[#6B7280]" : "text-[#9CA3AF]")} />
               {selectedCurrency ? (
-                <span className="truncate">
+                <span className="truncate text-[15px] text-[#111827]">
                   {selectedCurrency.symbol} {selectedCurrency.nameRu} ({selectedCurrency.code})
                 </span>
               ) : (
-                <span>{placeholder}</span>
+                <span className="text-[15px]">{placeholder}</span>
               )}
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Поиск валюты..." />
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput placeholder="Поиск валюты..." className="h-10" />
             <CommandList>
               {loading ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
@@ -110,11 +110,13 @@ export function CurrencySelect({
                     {currencies.map((currency) => (
                       <CommandItem
                         key={currency.code}
-                        value={currency.code}
+                        value={`${currency.code} ${currency.nameRu} ${currency.nameEn}`}
+                        keywords={[currency.code, currency.nameRu, currency.nameEn, currency.symbol]}
                         onSelect={() => {
                           onChange(currency.code === value ? null : currency.code);
                           setOpen(false);
                         }}
+                        className="cursor-pointer"
                       >
                         <Check
                           className={cn(
@@ -126,7 +128,7 @@ export function CurrencySelect({
                           <span className="text-lg font-semibold">{currency.symbol}</span>
                           <div className="flex flex-col">
                             <span className="font-medium">{currency.nameRu}</span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-[#6B7280]">
                               {currency.code}
                             </span>
                           </div>
@@ -141,10 +143,10 @@ export function CurrencySelect({
         </PopoverContent>
       </Popover>
 
-      {/* Error message */}
-      {error && (
-        <p className="mt-2 text-xs text-red-600">{error}</p>
-      )}
+      {/* Error message with fixed height */}
+      <div className="min-h-[28px] text-xs text-red-600">
+        {error || ""}
+      </div>
     </div>
   );
 }
