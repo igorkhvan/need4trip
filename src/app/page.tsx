@@ -6,7 +6,6 @@ import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEventsSafe } from "@/lib/services/events";
-import { EventCategory } from "@/lib/types/event";
 import { getCategoryLabel } from "@/lib/utils/eventCategories";
 import { formatDate } from "@/lib/utils/dates";
 

@@ -9,13 +9,15 @@ import { EventForm } from "@/components/events/event-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { handleApiError } from "@/lib/utils/errors";
-import { EventCategory, VehicleTypeRequirement, Visibility } from "@/lib/types/event";
+import { VehicleTypeRequirement, Visibility } from "@/lib/types/event";
+import { EventCategoryDto } from "@/lib/types/eventCategory";
 
 type Event = {
   id: string;
   title: string;
   description: string;
-  category: EventCategory | null;
+  categoryId: string | null; // FK to event_categories
+  category?: EventCategoryDto | null; // Hydrated category
   dateTime: string;
   cityId?: string | null; // FK на cities table (normalized)
   locationText: string;

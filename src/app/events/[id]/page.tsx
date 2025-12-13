@@ -20,7 +20,6 @@ import {
 import { ParticipantModal } from "@/components/events/participant-modal";
 import { ParticipantActions } from "@/components/events/participant-actions";
 import { getEventWithParticipantsVisibility } from "@/lib/services/events";
-import { EventCategory } from "@/lib/types/event";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
