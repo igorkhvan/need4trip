@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { Car } from "lucide-react";
 
-import { LogoutButton } from "@/components/auth/logout-button";
-import { HeaderActions } from "@/components/layout/header-actions";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { HeaderUserSection } from "@/components/layout/header-user-section";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const navItems = [
@@ -36,39 +33,7 @@ export async function MainHeader() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
-            {currentUser ? (
-              <>
-                <Button asChild>
-                  <Link href="/events/create">Создать событие</Link>
-                </Button>
-                <div className="hidden items-center gap-3 lg:flex">
-                  <Avatar className="h-9 w-9 border">
-                    <AvatarImage
-                      src={currentUser.avatarUrl ?? undefined}
-                      alt={currentUser.name ?? "Пользователь"}
-                    />
-                    <AvatarFallback>
-                      {currentUser.name?.slice(0, 2).toUpperCase() ??
-                        currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
-                        "TG"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-sm font-semibold">
-                      {currentUser.name || currentUser.telegramHandle || "Пользователь"}
-                    </span>
-                    {currentUser.telegramHandle && (
-                      <span className="text-xs text-[#6B7280]">@{currentUser.telegramHandle}</span>
-                    )}
-                  </div>
-                  <LogoutButton />
-                </div>
-              </>
-            ) : (
-              <HeaderActions isAuthenticated={false} />
-            )}
-          </div>
+          <HeaderUserSection currentUser={currentUser} />
         </div>
       </div>
     </header>

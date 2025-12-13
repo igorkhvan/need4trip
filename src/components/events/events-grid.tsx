@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
+import { CreateEventButton } from "@/components/events/create-event-button";
 import { Event } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
@@ -30,13 +31,14 @@ import { formatDateTimeShort, formatDateShort, getDaysUntil } from "@/lib/utils/
 interface EventsGridProps {
   events: Event[];
   currentUserId: string | null;
+  isAuthenticated: boolean;
 }
 
 type TabType = "all" | "upcoming" | "my";
 type PriceFilter = "all" | "free" | "paid";
 type SortBy = "date" | "participants" | "name";
 
-export function EventsGrid({ events, currentUserId }: EventsGridProps) {
+export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGridProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("all");
@@ -204,9 +206,10 @@ export function EventsGrid({ events, currentUserId }: EventsGridProps) {
             Найдите подходящую автомобильную поездку или создайте свою
           </p>
         </div>
-        <Button asChild className="h-12 rounded-xl px-6 text-base shadow-sm">
-          <Link href="/events/create">Создать событие</Link>
-        </Button>
+        <CreateEventButton 
+          isAuthenticated={isAuthenticated}
+          className="h-12 rounded-xl px-6 text-base shadow-sm"
+        />
       </div>
 
       {/* Stats Cards */}

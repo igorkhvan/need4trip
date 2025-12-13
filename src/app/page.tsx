@@ -5,6 +5,9 @@ import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-rea
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Hero } from "@/components/landing/hero";
+import { CreateEventButton } from "@/components/events/create-event-button";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { listEventsSafe } from "@/lib/services/events";
 import { getCategoryLabel } from "@/lib/utils/eventCategories";
 import { formatDate } from "@/lib/utils/dates";
@@ -72,32 +75,6 @@ const steps = [
     description: "Следите за регистрациями, формируйте колонну и управляйте участниками",
   },
 ];
-
-function Hero() {
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white py-24 md:py-40">
-      <div className="page-container">
-        <div className="mx-auto max-w-4xl text-center">
-          <h1 className="heading-hero mb-6">
-            Организация автомобильных поездок и учёт экипажей в пару кликов
-          </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-[#374151]">
-            Need4Trip помогает клубам и организаторам поездок собирать экипажи, настраивать регистрацию
-            и управлять колонной в удобном интерфейсе.
-          </p>
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild>
-              <Link href="/events/create">Создать событие</Link>
-            </Button>
-            <Button size="lg" variant="secondary" asChild>
-              <Link href="/events">Посмотреть события</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function HowItWorksSection() {
   return (
@@ -230,6 +207,9 @@ function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
 }
 
 export default async function HomePage() {
+  const currentUser = await getCurrentUser();
+  const isAuthenticated = !!currentUser;
+  
   const eventsData = await listEventsSafe();
   const events: EventSummary[] = eventsData.slice(0, 3).map((e) => ({
     id: e.id,
@@ -245,7 +225,7 @@ export default async function HomePage() {
     <div
       className={`${inter.className} relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] min-h-screen bg-white text-[#111827]`}
     >
-      <Hero />
+      <Hero isAuthenticated={isAuthenticated} />
       <HowItWorksSection />
       <Features />
       <UpcomingEventsSection events={events} />
@@ -263,9 +243,13 @@ export default async function HomePage() {
           <p className="mx-auto mb-10 max-w-2xl text-lg text-white/90">
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
-          <Button size="lg" variant="secondary" asChild>
-            <Link href="/events/create">Создать событие бесплатно</Link>
-          </Button>
+          <CreateEventButton 
+            isAuthenticated={isAuthenticated}
+            size="lg" 
+            variant="secondary"
+          >
+            Создать событие бесплатно
+          </CreateEventButton>
         </div>
       </section>
     </div>

@@ -11,6 +11,7 @@ interface EventsPageProps {
 export default function EventsPage({ searchParams }: EventsPageProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
         if (userRes.ok) {
           const userData = await userRes.json();
           setCurrentUserId(userData.user?.id || null);
+          setIsAuthenticated(!!userData.user);
         }
       } catch (error) {
         console.error("Failed to load events:", error);
@@ -57,7 +59,11 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
 
   return (
     <div className="page-container py-12">
-      <EventsGrid events={events} currentUserId={currentUserId} />
+      <EventsGrid 
+        events={events} 
+        currentUserId={currentUserId} 
+        isAuthenticated={isAuthenticated}
+      />
     </div>
   );
 }
