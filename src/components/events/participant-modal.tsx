@@ -70,7 +70,8 @@ export function ParticipantModal({
         <Button 
           onClick={() => setOpen(true)} 
           variant="ghost" 
-          size="icon" 
+          size="icon"
+          className="h-8 w-8"
           title="Редактировать участника"
         >
           <Pencil className="h-4 w-4" />

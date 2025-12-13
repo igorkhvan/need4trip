@@ -80,45 +80,44 @@ export function ParticipantActions({
   if (!canEdit && !canRemove && !isOwner) return null;
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        {canEdit && participantData ? (
-          <ParticipantModal
-            mode="edit"
-            eventId={eventId}
-            participantId={participantId}
-            customFieldsSchema={customFieldsSchema}
-            event={event}
-            initialValues={participantData}
-            iconOnly
-          />
-        ) : null}
-        {canRemove && (
-          <ConfirmDialog
-            trigger={
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={isDeleting || authMissing}
-                title={authMissing ? "Требуется авторизация через Telegram" : "Удалить участника"}
-              >
-                <Trash2 className="h-4 w-4 text-red-600" />
-              </Button>
-            }
-            title="Удалить участника?"
-            description={
-              participantData?.displayName
-                ? `${participantData.displayName} будет удалён из списка участников. Это действие нельзя отменить.`
-                : "Участник будет удалён из списка. Это действие нельзя отменить."
-            }
-            confirmText="Удалить"
-            cancelText="Отмена"
-            onConfirm={handleDelete}
-            destructive
-          />
-        )}
-      </div>
-      {error && <div className="text-xs text-red-600">{error}</div>}
+    <div className="flex items-center justify-end gap-1.5">
+      {canEdit && participantData ? (
+        <ParticipantModal
+          mode="edit"
+          eventId={eventId}
+          participantId={participantId}
+          customFieldsSchema={customFieldsSchema}
+          event={event}
+          initialValues={participantData}
+          iconOnly
+        />
+      ) : null}
+      {canRemove && (
+        <ConfirmDialog
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isDeleting || authMissing}
+              title={authMissing ? "Требуется авторизация через Telegram" : "Удалить участника"}
+              className="h-8 w-8"
+            >
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </Button>
+          }
+          title="Удалить участника?"
+          description={
+            participantData?.displayName
+              ? `${participantData.displayName} будет удалён из списка участников. Это действие нельзя отменить.`
+              : "Участник будет удалён из списка. Это действие нельзя отменить."
+          }
+          confirmText="Удалить"
+          cancelText="Отмена"
+          onConfirm={handleDelete}
+          destructive
+        />
+      )}
+      {error && <div className="absolute top-full right-0 mt-1 text-xs text-red-600 whitespace-nowrap">{error}</div>}
     </div>
   );
 }

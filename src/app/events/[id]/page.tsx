@@ -89,18 +89,18 @@ export default async function EventDetails({
       : null;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-8 md:py-12">
-      <div className="page-container max-w-6xl">
+    <div className="min-h-screen bg-[#F9FAFB] py-6 md:py-8">
+      <div className="page-container max-w-6xl px-4 md:px-6">
         {/* Back button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link href="/events">← Назад к событиям</Link>
         </Button>
 
         {/* Header Section */}
-        <div className="mb-6 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="flex-1">
             {/* Title */}
-            <h1 className="mb-4 text-3xl font-bold leading-tight text-[#111827] md:text-4xl">
+            <h1 className="mb-4 text-[32px] font-bold leading-tight text-[#1F2937] md:text-[36px]">
               {event.title}
             </h1>
 
@@ -174,7 +174,7 @@ export default async function EventDetails({
 
         {/* Progress Bar */}
         {fillPercent !== null && (
-          <div className="mb-6">
+          <div className="mb-8">
             <ProgressBar value={fillPercent} label="Заполнено мест" />
           </div>
         )}
