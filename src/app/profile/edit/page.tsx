@@ -1,21 +1,21 @@
 /**
  * Profile Edit Page
  * 
- * Edit user profile (name, city, car)
+ * Edit user profile (по дизайну Figma)
  */
 
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Save, Loader2, Camera } from "lucide-react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
-import Link from "next/link";
 import type { City } from "@/lib/types/city";
 
 interface ProfileEditForm {
@@ -33,6 +33,7 @@ export default function ProfileEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<ProfileEditForm>({
     name: "",
@@ -75,6 +76,7 @@ export default function ProfileEditPage() {
           carBrandId: user.carBrandId || null,
           carModelText: user.carModelText || "",
         });
+        setAvatarUrl(user.avatarUrl || null);
       } catch (err) {
         console.error("Failed to load profile:", err);
         setError("Не удалось загрузить профиль");
@@ -89,7 +91,6 @@ export default function ProfileEditPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear previous errors
     setError(null);
     setFieldErrors({});
     
@@ -128,7 +129,6 @@ export default function ProfileEditPage() {
         throw new Error(errorData.error || "Failed to update profile");
       }
       
-      // Redirect to profile page
       router.push("/profile");
     } catch (err: any) {
       console.error("Failed to update profile:", err);
@@ -140,151 +140,215 @@ export default function ProfileEditPage() {
 
   if (loading) {
     return (
-      <div className="page-container py-12">
-        <div className="flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#9CA3AF]" />
       </div>
     );
   }
 
   return (
-    <div className="page-container py-12">
-      <div className="max-w-2xl mx-auto">
+    <div className="bg-[#F9FAFB] py-6 md:py-12">
+      <div className="page-container max-w-3xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Link
             href="/profile"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+            className="mb-4 inline-flex items-center gap-2 text-[14px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Назад в профиль
+            Назад к профилю
           </Link>
-          <h1 className="text-4xl font-bold text-[#0F172A]">
+          <h1 className="mb-1 text-[28px] font-bold text-[#1F2937] md:text-[32px]">
             Редактировать профиль
           </h1>
-          <p className="text-[#6B7280] mt-2">
-            Обновите вашу информацию
+          <p className="text-[14px] text-[#6B7280]">
+            Обновите свою личную информацию и настройки
           </p>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          <div className="mb-6 rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-4 text-[14px] text-[#991B1B]">
             {error}
           </div>
         )}
 
-        {/* Form */}
-        <Card className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-base font-semibold">
-                Имя <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Введите ваше имя"
-                className={fieldErrors.name ? "border-red-500" : ""}
-              />
-              {fieldErrors.name && (
-                <p className="text-sm text-red-500">{fieldErrors.name}</p>
-              )}
-            </div>
-
-            {/* City */}
-            <div className="space-y-2">
-              <Label className="text-base font-semibold">
-                Город <span className="text-red-500">*</span>
-              </Label>
-              <CityAutocomplete
-                value={formData.cityId}
-                onChange={(cityId, city) => {
-                  setFormData({ ...formData, cityId, city });
-                  if (fieldErrors.cityId) {
-                    setFieldErrors({ ...fieldErrors, cityId: "" });
-                  }
-                }}
-                errorMessage={fieldErrors.cityId}
-              />
-            </div>
-
-            {/* Car Brand */}
-            <div>
-              <MultiBrandSelect
-                label="Марка автомобиля"
-                placeholder="Выберите марку автомобиля"
-                options={brands}
-                value={formData.carBrandId ? [formData.carBrandId] : []}
-                onChange={(brandIds) => {
-                  setFormData({ ...formData, carBrandId: brandIds[0] || null });
-                }}
-              />
-              <p className="text-sm text-gray-500 mt-2">
-                Необязательно. Поможет другим участникам
-              </p>
-            </div>
-
-            {/* Car Model */}
-            {formData.carBrandId && (
-              <div className="space-y-2">
-                <Label htmlFor="carModelText" className="text-base font-semibold">
-                  Модель автомобиля
-                </Label>
-                <Input
-                  id="carModelText"
-                  value={formData.carModelText || ""}
-                  onChange={(e) => setFormData({ ...formData, carModelText: e.target.value })}
-                  placeholder="Например: Land Cruiser 200"
-                />
-                <p className="text-sm text-gray-500">
-                  Укажите модель и комплектацию
+        <form onSubmit={handleSubmit}>
+          {/* Avatar Section */}
+          <Card className="mb-4 border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
+            <h3 className="mb-4 text-[18px] font-semibold text-[#1F2937]">
+              Фото профиля
+            </h3>
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <div className="h-24 w-24 overflow-hidden rounded-2xl bg-[#F9FAFB]">
+                  {avatarUrl ? (
+                    <img 
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-2xl font-bold text-white">
+                      {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="absolute bottom-0 right-0 flex items-center justify-center rounded-lg bg-[#FF6F2C] p-2 shadow-lg transition-colors hover:bg-[#E55A1A]"
+                  title="Изменить фото"
+                >
+                  <Camera className="h-4 w-4 text-white" />
+                </button>
+              </div>
+              <div>
+                <p className="mb-2 text-[14px] text-[#6B7280]">
+                  Рекомендуемый размер: 400x400 пикселей
+                </p>
+                <Button type="button" variant="secondary" size="sm" disabled>
+                  Загрузить фото
+                </Button>
+                <p className="mt-2 text-[12px] text-[#9CA3AF]">
+                  Обновление через Telegram
                 </p>
               </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/profile")}
-                disabled={saving}
-                className="flex-1"
-              >
-                Отмена
-              </Button>
-              
-              <Button
-                type="submit"
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Сохранение...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Сохранить
-                  </>
-                )}
-              </Button>
             </div>
-          </form>
-        </Card>
+          </Card>
+
+          {/* Personal Information */}
+          <Card className="mb-4 border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
+            <h3 className="mb-4 text-[18px] font-semibold text-[#1F2937]">
+              Личная информация
+            </h3>
+            <div className="space-y-4">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-[13px] font-medium text-[#1F2937]">
+                  Имя <span className="text-[#EF4444]">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Введите ваше имя"
+                  className={fieldErrors.name ? "border-[#EF4444]" : ""}
+                />
+                {fieldErrors.name && (
+                  <p className="text-[13px] text-[#EF4444]">{fieldErrors.name}</p>
+                )}
+              </div>
+
+              {/* City */}
+              <div className="space-y-2">
+                <Label className="text-[13px] font-medium text-[#1F2937]">
+                  Город <span className="text-[#EF4444]">*</span>
+                </Label>
+                <CityAutocomplete
+                  value={formData.cityId}
+                  onChange={(cityId, city) => {
+                    setFormData({ ...formData, cityId, city });
+                    if (fieldErrors.cityId) {
+                      setFieldErrors({ ...fieldErrors, cityId: "" });
+                    }
+                  }}
+                  errorMessage={fieldErrors.cityId}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Car Information */}
+          <Card className="mb-6 border-[#E5E7EB] bg-white p-6 shadow-sm md:p-8">
+            <h3 className="mb-4 text-[18px] font-semibold text-[#1F2937]">
+              Информация об автомобиле
+            </h3>
+            <div className="space-y-4">
+              {/* Car Brand */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[13px] font-medium text-[#1F2937]">
+                    Марка
+                  </label>
+                  <span className="text-[12px] text-[#9CA3AF]">
+                    Опционально
+                  </span>
+                </div>
+                <MultiBrandSelect
+                  label=""
+                  placeholder="Выберите марку автомобиля"
+                  options={brands}
+                  value={formData.carBrandId ? [formData.carBrandId] : []}
+                  onChange={(brandIds) => {
+                    setFormData({ ...formData, carBrandId: brandIds[0] || null });
+                  }}
+                />
+              </div>
+
+              {/* Car Model */}
+              {formData.carBrandId && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="carModelText" className="text-[13px] font-medium text-[#1F2937]">
+                      Модель
+                    </Label>
+                    <span className="text-[12px] text-[#9CA3AF]">
+                      Опционально
+                    </span>
+                  </div>
+                  <Input
+                    id="carModelText"
+                    value={formData.carModelText || ""}
+                    onChange={(e) => setFormData({ ...formData, carModelText: e.target.value })}
+                    placeholder="Например: Land Cruiser 200"
+                  />
+                  <p className="text-[13px] text-[#6B7280]">
+                    Укажите модель и комплектацию
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              type="submit"
+              disabled={saving}
+              size="lg"
+              className="sm:flex-1"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Сохранить изменения
+                </>
+              )}
+            </Button>
+            
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => router.push("/profile")}
+              disabled={saving}
+              size="lg"
+              className="sm:flex-1"
+            >
+              Отмена
+            </Button>
+          </div>
+        </form>
 
         {/* Help text */}
-        <p className="text-sm text-center text-gray-500 mt-6">
+        <p className="mt-6 text-center text-[13px] text-[#6B7280]">
           Ваша информация видна только участникам ваших событий
         </p>
       </div>
     </div>
   );
 }
-
