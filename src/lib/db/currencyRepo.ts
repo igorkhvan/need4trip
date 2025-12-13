@@ -17,7 +17,6 @@ interface DbCurrency {
   name_en: string;
   decimal_places: number;
   is_active: boolean;
-  sort_order: number;
   created_at: string;
 }
 
@@ -25,7 +24,7 @@ interface DbCurrency {
 // Mapper Function
 // ============================================================================
 
-function mapDbCurrencyToDomain(row: DbCurrency): Currency {
+function mapDbCurrencyToDomain(row: any): Currency {
   return {
     code: row.code,
     symbol: row.symbol,
@@ -33,7 +32,7 @@ function mapDbCurrencyToDomain(row: DbCurrency): Currency {
     nameEn: row.name_en,
     decimalPlaces: row.decimal_places,
     isActive: row.is_active,
-    sortOrder: row.sort_order,
+    sortOrder: row.sort_order || 0, // fallback if column doesn't exist
     createdAt: row.created_at,
   };
 }
@@ -61,11 +60,12 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
   }
   
   console.log("📡 [currencyRepo] Fetching from DB...");
+  
+  // Try without sort_order first (column might not exist)
   const { data, error } = await supabase
     .from("currencies")
     .select("*")
     .eq("is_active", true)
-    .order("sort_order", { ascending: true })
     .order("code", { ascending: true });
 
   if (error) {
@@ -84,7 +84,7 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
     console.log("Sample currency:", data[0]);
   }
 
-  return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
+  return (data || []).map((row: any) => mapDbCurrencyToDomain(row));
 }
 
 /**
@@ -99,8 +99,7 @@ export async function getAllCurrencies(): Promise<Currency[]> {
   const { data, error } = await supabase
     .from("currencies")
     .select("*")
-    .order("is_active", { ascending: false })
-    .order("sort_order", { ascending: true })
+    .eq("is_active", false)
     .order("code", { ascending: true });
 
   if (error) {
@@ -108,7 +107,7 @@ export async function getAllCurrencies(): Promise<Currency[]> {
     return [];
   }
 
-  return (data || []).map((row: DbCurrency) => mapDbCurrencyToDomain(row));
+  return (data || []).map((row: any) => mapDbCurrencyToDomain(row));
 }
 
 /**
