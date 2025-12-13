@@ -17,7 +17,9 @@ export const dynamic = "force-dynamic";
 
 async function getProfile() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/profile`, {
+    // Используем абсолютный URL для серверного рендеринга
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/profile`, {
       cache: "no-store",
     });
     
