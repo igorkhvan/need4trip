@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Car } from "lucide-react";
 
 import { HeaderUserSection } from "@/components/layout/header-user-section";

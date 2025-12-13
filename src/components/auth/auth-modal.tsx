@@ -141,6 +141,9 @@ export function AuthModal({
         const container = containerRef.current;
         if (container) container.innerHTML = "";
         
+        // Dispatch auth change event for components listening
+        window.dispatchEvent(new Event("auth-changed"));
+        
         // Refresh to get new currentUser
         router.refresh();
         

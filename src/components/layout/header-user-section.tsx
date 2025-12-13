@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,42 @@ import { CreateEventButton } from "@/components/events/create-event-button";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
-export function HeaderUserSection({ currentUser }: { currentUser: CurrentUser | null }) {
+interface HeaderUserSectionProps {
+  currentUser: CurrentUser | null;
+}
+
+export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectionProps) {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
   const isAuthenticated = !!currentUser;
   const { openModal } = useAuthModalContext();
+
+  // Sync with auth state changes
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data.user || null);
+        }
+      } catch (err) {
+        console.error("[header] Failed to check auth:", err);
+      }
+    };
+
+    // Check auth on mount if no initial user
+    if (!initialUser) {
+      checkAuth();
+    }
+
+    // Listen for auth changes (e.g., after login)
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener("auth-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-changed", handleAuthChange);
+  }, [initialUser]);
 
   return (
     <div className="flex items-center gap-3">
