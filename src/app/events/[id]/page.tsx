@@ -261,23 +261,7 @@ export default async function EventDetails({
 
                             {/* Экипаж */}
                             <TableCell className="font-medium text-[#111827]">
-                              <div className="flex flex-col gap-1.5">
-                                <span className="text-[15px]">{participant.displayName}</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {participant.userId ? (
-                                    <Badge variant="neutral" size="sm">
-                                      Пользователь
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="neutral" size="sm">
-                                      Гость
-                                    </Badge>
-                                  )}
-                                  {participant.userId === event.createdByUserId && (
-                                    <Badge variant="attention" size="sm">Владелец</Badge>
-                                  )}
-                                </div>
-                              </div>
+                              <span className="text-[15px]">{participant.displayName}</span>
                             </TableCell>
 
                             {/* Роль */}
