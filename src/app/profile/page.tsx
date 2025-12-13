@@ -8,43 +8,34 @@ import { redirect } from "next/navigation";
 import { MapPin, Calendar, Edit2, Users, Car as CarIcon } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getUserClubs } from "@/lib/services/clubs";
+import { getCityById } from "@/lib/db/cityRepo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogoutButton } from "@/components/auth/logout-button";
 
 export const dynamic = "force-dynamic";
 
-async function getProfile() {
-  try {
-    // Используем абсолютный URL для серверного рендеринга
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/profile`, {
-      cache: "no-store",
-    });
-    
-    if (!res.ok) return null;
-    
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.error("[getProfile] Failed", err);
-    return null;
-  }
-}
-
 export default async function ProfilePage() {
-  const [user, profileData] = await Promise.all([
-    getCurrentUser(),
-    getProfile(),
-  ]);
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/");
   }
 
-  const clubs = profileData?.clubs ?? [];
-  const profileUser = profileData?.user ?? user;
+  // Получаем данные напрямую из репозиториев
+  const clubs = await getUserClubs(user.id).catch(() => []);
+  
+  // Hydrate city if cityId exists
+  let city = null;
+  if (user.cityId) {
+    city = await getCityById(user.cityId).catch(() => null);
+  }
+
+  const profileUser = {
+    ...user,
+    city: city ? { id: city.id, name: city.name, region: city.region } : null,
+  };
 
   return (
     <div className="py-6 md:py-12">
@@ -121,7 +112,7 @@ export default async function ProfilePage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {}}
+                      asChild
                     >
                       <Link href="/profile/edit">
                         <Edit2 className="w-4 h-4" />
@@ -158,7 +149,7 @@ export default async function ProfilePage() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => {}}
+              asChild
             >
               <Link href="/clubs">Все клубы</Link>
             </Button>
@@ -168,13 +159,9 @@ export default async function ProfilePage() {
           {clubs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {clubs.map((club: any) => (
-                <Card
-                  key={club.id}
-                  className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md"
-                  onClick={() => {}}
-                >
-                  <CardContent className="p-4">
-                    <Link href={`/clubs/${club.id}`}>
+                <Link key={club.id} href={`/clubs/${club.id}`}>
+                  <Card className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md">
+                    <CardContent className="p-4">
                       {/* Club Info - точно по Figma */}
                       <div className="flex items-start gap-3 mb-3">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-[var(--color-bg-subtle)] flex-shrink-0">
@@ -205,16 +192,16 @@ export default async function ProfilePage() {
                       <Badge variant={club.role === 'owner' ? 'default' : 'secondary'}>
                         {club.role === 'owner' ? 'Владелец' : club.role === 'organizer' ? 'Организатор' : 'Участник'}
                       </Badge>
-                    </Link>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-[var(--color-text-muted)] mb-4">Вы пока не состоите в клубах</p>
-                <Button>
+                <Button asChild>
                   <Link href="/clubs/create">Создать клуб</Link>
                 </Button>
               </CardContent>
@@ -229,7 +216,7 @@ export default async function ProfilePage() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => {}}
+              asChild
             >
               <Link href="/events">Все события</Link>
             </Button>
@@ -239,7 +226,7 @@ export default async function ProfilePage() {
           <Card>
             <CardContent className="p-8 text-center">
               <p className="text-[var(--color-text-muted)] mb-4">Вы ещё не участвовали в событиях</p>
-              <Button>
+              <Button asChild>
                 <Link href="/events">Найти событие</Link>
               </Button>
             </CardContent>
