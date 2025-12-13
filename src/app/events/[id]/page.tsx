@@ -64,6 +64,7 @@ export default async function EventDetails({
   );
 
   const categoryLabel = event.category ? getCategoryLabel(event.category) : null;
+  const categoryBadgeVariant = event.category ? getCategoryBadgeVariant(event.category) : "solid-gray";
   const formattedDateTime = formatDateTime(event.dateTime);
   const participantsCountLabel = `${participants.length} / ${event.maxParticipants ?? "∞"} участников`;
   const vehicleTypeLabelMap: Record<string, string> = {
@@ -88,48 +89,25 @@ export default async function EventDetails({
       : null;
 
   return (
-    <div className="py-10 md:py-16">
-      <div className="page-container space-y-8">
-        <div className="flex flex-col gap-6">
-          <Button variant="ghost" asChild className="w-fit">
-            <Link href="/events">← Назад к событиям</Link>
-          </Button>
+    <div className="min-h-screen bg-[#F9FAFB] py-8 md:py-12">
+      <div className="page-container max-w-6xl">
+        {/* Back button */}
+        <Button variant="ghost" asChild className="mb-6">
+          <Link href="/events">← Назад к событиям</Link>
+        </Button>
 
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <h1 className="text-4xl font-bold leading-tight text-[#111827] md:text-5xl">{event.title}</h1>
-              <div className="flex flex-wrap items-center gap-3">
-                {isRegistered ? (
-                  <Badge variant="success" className="w-fit">
-                    Вы зарегистрированы
-                  </Badge>
-                ) : isFull ? (
-                  <Badge variant="warning" className="w-fit">
-                    Лимит участников достигнут
-                  </Badge>
-                ) : (
-                  <ParticipantModal
-                    mode="create"
-                    eventId={event.id}
-                    customFieldsSchema={event.customFieldsSchema}
-                    event={event}
-                    triggerLabel="Присоединиться"
-                  />
-                )}
-                {isOwner && (
-                  <Button variant="secondary" asChild>
-                    <Link href={`/events/${event.id}/edit`} className="inline-flex items-center gap-2">
-                      <PencilLine className="h-4 w-4" />
-                      Редактировать событие
-                    </Link>
-                  </Button>
-                )}
-              </div>
-            </div>
+        {/* Header Section */}
+        <div className="mb-6 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div className="flex-1">
+            {/* Title */}
+            <h1 className="mb-4 text-3xl font-bold leading-tight text-[#111827] md:text-4xl">
+              {event.title}
+            </h1>
 
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Badges */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               {categoryLabel && event.category ? (
-                <Badge variant={getCategoryBadgeVariant(event.category)} size="md">
+                <Badge variant={categoryBadgeVariant} size="md">
                   {categoryLabel}
                 </Badge>
               ) : null}
@@ -137,111 +115,174 @@ export default async function EventDetails({
               <Badge variant={event.isPaid ? "paid" : "free"} size="md">
                 {event.isPaid ? "Платное" : "Бесплатное"}
               </Badge>
+              {isRegistered && (
+                <Badge variant="success" size="md">
+                  ✓ Вы зарегистрированы
+                </Badge>
+              )}
+              {isFull && !isRegistered && (
+                <Badge variant="warning" size="md">
+                  Лимит достигнут
+                </Badge>
+              )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 text-base text-[#6B7280]">
-              <div className="flex items-center gap-3">
+            {/* Info Grid */}
+            <div className="grid grid-cols-1 gap-3 text-[15px] text-[#6B7280] md:grid-cols-2">
+              <div className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5 flex-shrink-0" />
                 <span>{formattedDateTime}</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 flex-shrink-0" />
                 <span>{event.locationText}</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 flex-shrink-0" />
                 <span>{participantsCountLabel}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Car className="h-5 w-5 flex-shrink-0" />
-                <span>{ownerUser?.telegramHandle ? `@${ownerUser.telegramHandle}` : ownerUser?.name ?? "Организатор"}</span>
-              </div>
+              {event.city && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 flex-shrink-0" />
+                  <span>{event.city.name}{event.city.region && `, ${event.city.region}`}</span>
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3 sm:flex-row md:flex-col md:w-auto">
+            {!isRegistered && !isFull && (
+              <ParticipantModal
+                mode="create"
+                eventId={event.id}
+                customFieldsSchema={event.customFieldsSchema}
+                event={event}
+                triggerLabel="Присоединиться"
+              />
+            )}
+            {isOwner && (
+              <Button variant="secondary" asChild className="w-full sm:w-auto">
+                <Link href={`/events/${event.id}/edit`}>
+                  <PencilLine className="mr-2 h-4 w-4" />
+                  Редактировать
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
+        {/* Progress Bar */}
         {fillPercent !== null && (
-          <ProgressBar value={fillPercent} label="Заполнено мест" />
+          <div className="mb-6">
+            <ProgressBar value={fillPercent} label="Заполнено мест" />
+          </div>
         )}
 
+        {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          {/* Left Column - Description, Rules, Participants */}
           <div className="space-y-6">
+            {/* Description Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Описание</CardTitle>
+                <CardTitle className="text-xl font-semibold text-[#111827]">Описание</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-base leading-relaxed text-[#374151]">{event.description}</p>
+              <CardContent>
+                <p className="whitespace-pre-line text-[15px] leading-relaxed text-[#374151]">
+                  {event.description}
+                </p>
               </CardContent>
             </Card>
 
+            {/* Rules Card */}
             {event.rules && event.rules.trim().length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Правила участия</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-[#111827]">Правила участия</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line text-base leading-relaxed text-[#374151]">
+                  <p className="whitespace-pre-line text-[15px] leading-relaxed text-[#374151]">
                     {event.rules}
                   </p>
                 </CardContent>
               </Card>
             )}
 
+            {/* Participants Card */}
             <Card>
-              <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <CardTitle>Участники ({participants.length})</CardTitle>
-                  <CardDescription className="text-sm text-[#6B7280]">{participantsCountLabel}</CardDescription>
-                </div>
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold text-[#111827]">
+                  Участники ({participants.length})
+                </CardTitle>
+                <CardDescription className="text-sm text-[#6B7280]">
+                  {participantsCountLabel}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 {participants.length ? (
-                  <div className="overflow-x-auto rounded-lg border">
+                  <div className="overflow-hidden rounded-xl border border-[#E5E7EB]">
                     <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead>Экипаж</TableHead>
-                          <TableHead>Роль</TableHead>
-                          <TableHead>Пользователь</TableHead>
+                      <TableHeader className="bg-[#F9FAFB]">
+                        <TableRow className="border-b border-[#E5E7EB]">
+                          <TableHead className="text-[13px] font-semibold text-[#6B7280]">Экипаж</TableHead>
+                          <TableHead className="text-[13px] font-semibold text-[#6B7280]">Роль</TableHead>
+                          <TableHead className="text-[13px] font-semibold text-[#6B7280]">Контакт</TableHead>
                           {sortedCustomFields.map((field) => (
-                            <TableHead key={field.id}>{field.label}</TableHead>
+                            <TableHead key={field.id} className="text-[13px] font-semibold text-[#6B7280]">
+                              {field.label}
+                            </TableHead>
                           ))}
                           {(isOwner || currentUser || guestSessionId) && (
-                            <TableHead className="text-right">Действия</TableHead>
+                            <TableHead className="text-right text-[13px] font-semibold text-[#6B7280]">
+                              Действия
+                            </TableHead>
                           )}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {participants.map((participant) => (
-                          <TableRow key={participant.id} className="hover:bg-muted/30">
-                            <TableCell className="font-medium">
-                              <div className="flex flex-col gap-1">
-                                <span>{participant.displayName}</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {participant.userId ? (
-                                    <Badge variant="neutral" size="sm">
-                                      Пользователь
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="neutral" size="sm">
-                                      Гость
-                                    </Badge>
-                                  )}
-                                  {participant.userId === event.createdByUserId && (
-                                    <Badge variant="attention" size="sm">Владелец</Badge>
-                                  )}
+                        {participants.map((participant, index) => (
+                          <TableRow 
+                            key={participant.id} 
+                            className="border-b border-[#E5E7EB] last:border-0 hover:bg-[#F9FAFB]/50 transition-colors"
+                          >
+                            <TableCell className="font-medium text-[#111827]">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C]/10 text-[#FF6F2C] text-sm font-semibold flex-shrink-0">
+                                  {index + 1}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-[15px]">{participant.displayName}</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {participant.userId ? (
+                                      <Badge variant="neutral" size="sm">
+                                        Пользователь
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="neutral" size="sm">
+                                        Гость
+                                      </Badge>
+                                    )}
+                                    {participant.userId === event.createdByUserId && (
+                                      <Badge variant="attention" size="sm">Владелец</Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-[15px] text-[#6B7280]">
                               {formatParticipantRole(participant.role)}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {participant.user?.telegramHandle ?? participant.userId ?? "Гость"}
+                            <TableCell className="text-[15px] text-[#6B7280]">
+                              {participant.user?.telegramHandle 
+                                ? `@${participant.user.telegramHandle}` 
+                                : participant.userId 
+                                ? "Пользователь" 
+                                : "Гость"
+                              }
                             </TableCell>
                             {sortedCustomFields.map((field) => (
-                              <TableCell key={field.id} className="text-muted-foreground">
+                              <TableCell key={field.id} className="text-[15px] text-[#6B7280]">
                                 {formatCustomFieldValue(
                                   participant.customFieldValues?.[field.id],
                                   field.type
@@ -250,31 +291,29 @@ export default async function EventDetails({
                             ))}
                             {(isOwner || currentUser || guestSessionId) && (
                               <TableCell className="text-right">
-                                <div className="flex justify-end">
-                                  <ParticipantActions
-                                    eventId={event.id}
-                                    participantId={participant.id}
-                                    canEdit={
-                                      Boolean(isOwner) ||
-                                      Boolean(currentUser && participant.userId === currentUser.id) ||
-                                      Boolean(guestSessionId && participant.guestSessionId === guestSessionId)
-                                    }
-                                    canRemove={
-                                      Boolean(isOwner) ||
-                                      Boolean(currentUser && participant.userId === currentUser.id) ||
-                                      Boolean(guestSessionId && participant.guestSessionId === guestSessionId)
-                                    }
-                                    isOwner={Boolean(isOwner)}
-                                    authMissing={false}
-                                    customFieldsSchema={event.customFieldsSchema}
-                                    event={event}
-                                    participantData={{
-                                      displayName: participant.displayName,
-                                      role: participant.role,
-                                      customFieldValues: participant.customFieldValues,
-                                    }}
-                                  />
-                                </div>
+                                <ParticipantActions
+                                  eventId={event.id}
+                                  participantId={participant.id}
+                                  canEdit={
+                                    Boolean(isOwner) ||
+                                    Boolean(currentUser && participant.userId === currentUser.id) ||
+                                    Boolean(guestSessionId && participant.guestSessionId === guestSessionId)
+                                  }
+                                  canRemove={
+                                    Boolean(isOwner) ||
+                                    Boolean(currentUser && participant.userId === currentUser.id) ||
+                                    Boolean(guestSessionId && participant.guestSessionId === guestSessionId)
+                                  }
+                                  isOwner={Boolean(isOwner)}
+                                  authMissing={false}
+                                  customFieldsSchema={event.customFieldsSchema}
+                                  event={event}
+                                  participantData={{
+                                    displayName: participant.displayName,
+                                    role: participant.role,
+                                    customFieldValues: participant.customFieldValues,
+                                  }}
+                                />
                               </TableCell>
                             )}
                           </TableRow>
@@ -283,21 +322,25 @@ export default async function EventDetails({
                     </Table>
                   </div>
                 ) : (
-                  <div className="rounded-lg border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-                    Пока никто не зарегистрировался. Будьте первым!
+                  <div className="rounded-xl border-2 border-dashed border-[#E5E7EB] bg-white px-4 py-12 text-center">
+                    <p className="text-[15px] text-[#6B7280]">
+                      Пока никто не зарегистрировался. Будьте первым!
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
+          {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Price Card */}
             {event.isPaid && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Стоимость участия</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-[#111827]">Стоимость участия</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-2">
                   <p className="text-4xl font-bold text-[#111827]">
                     {event.price ?? 0} {event.currency?.symbol ?? event.currencyCode ?? ""}
                   </p>
@@ -306,28 +349,31 @@ export default async function EventDetails({
               </Card>
             )}
 
+            {/* Vehicle Requirements Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Требования к авто</CardTitle>
+                <CardTitle className="text-xl font-semibold text-[#111827]">Требования к авто</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-[#6B7280]">Тип автомобиля</p>
-                  <p className="text-base font-medium text-[#111827]">
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-[#6B7280]">Тип автомобиля</p>
+                  <p className="text-[15px] font-semibold text-[#111827]">
                     {vehicleTypeLabel}
                   </p>
                 </div>
                 {event.allowedBrands.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm text-[#6B7280]">Рекомендуемые марки</p>
+                    <p className="text-sm font-medium text-[#6B7280]">Рекомендуемые марки</p>
                     <div className="flex flex-wrap gap-2">
                       {event.allowedBrands.map((brand) => (
-                        <span
+                        <Badge 
                           key={brand.id}
-                          className="rounded-full bg-[#F7F7F8] px-3 py-1 text-sm font-medium text-[#374151]"
+                          variant="secondary" 
+                          size="md"
+                          className="rounded-full"
                         >
                           {brand.name}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                   </div>
@@ -335,13 +381,14 @@ export default async function EventDetails({
               </CardContent>
             </Card>
 
+            {/* Organizer Card */}
             {ownerUser && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Организатор</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-[#111827]">Организатор</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-1">
-                  <p className="text-base font-semibold text-[#111827]">
+                <CardContent className="space-y-2">
+                  <p className="text-[15px] font-semibold text-[#111827]">
                     {ownerUser.name || ownerUser.telegramHandle || "Организатор"}
                   </p>
                   {ownerUser.telegramHandle && (
