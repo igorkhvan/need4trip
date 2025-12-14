@@ -8,14 +8,10 @@ import { CityHydrated } from "./city";
 export const clubRoleSchema = z.enum(["owner", "organizer", "member", "pending"]);
 export type ClubRole = z.infer<typeof clubRoleSchema>;
 
-// DEPRECATED: Old billing system plan types (STRING UNION)
-// Use @/lib/types/billing for new v2.0 types
+// DEPRECATED: Old billing system plan types (STRING UNION) - for legacy only
+// Use PlanId from @/lib/types/billing for new v2.0 types
 export const clubPlanSchema = z.enum(["club_free", "club_basic", "club_pro", "free", "club_50", "club_500", "club_unlimited"]);
 export type ClubPlan = z.infer<typeof clubPlanSchema>;
-
-// Re-export new v2.0 types with different names to avoid conflicts
-export type { ClubSubscription } from "@/lib/types/billing";
-export type { ClubPlan as ClubPlanObject } from "@/lib/types/billing";
 
 export interface Club {
   id: string;
@@ -54,21 +50,12 @@ export interface ClubMemberWithUser extends ClubMember {
 }
 
 // ============================================================================
-// Club Subscription Interface (DEPRECATED - use @/lib/types/billing)
+// Club Subscription Interface
 // ============================================================================
 
-// DEPRECATED: Old subscription type
-// Use ClubSubscription from @/lib/types/billing for new v2.0
-/*
-export interface ClubSubscription {
-  clubId: string;
-  plan: ClubPlan;
-  validUntil: string | null;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-*/
+// Import new v2.0 types
+export type { ClubSubscription } from "@/lib/types/billing";
+export type { ClubPlan as ClubPlanObject } from "@/lib/types/billing";
 
 // ============================================================================
 // Composite Types

@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { Crown, CheckCircle, XCircle, Calendar } from "lucide-react";
-import type { ClubSubscription, ClubPlan } from "@/lib/types/club";
+import type { ClubSubscription } from "@/lib/types/billing";
 import { getClubPlanLabel, getClubPlanFeatures } from "@/lib/types/club";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/dates";
@@ -16,7 +16,7 @@ import { formatDate } from "@/lib/utils/dates";
 interface ClubSubscriptionCardProps {
   subscription: ClubSubscription;
   canManage: boolean;
-  onUpgrade?: (plan: ClubPlan) => Promise<void>;
+  onUpgrade?: () => Promise<void>;
   onDowngrade?: () => Promise<void>;
 }
 
@@ -28,39 +28,20 @@ export function ClubSubscriptionCard({
 }: ClubSubscriptionCardProps) {
   const [loading, setLoading] = useState(false);
 
-  const isActive = subscription.active && 
-    (!subscription.validUntil || new Date(subscription.validUntil) > new Date());
+  // NEW: billing v2.0 uses status field
+  const isActive = subscription.status === "active" || subscription.status === "pending";
 
-  const daysUntilExpiration = subscription.validUntil
-    ? Math.ceil((new Date(subscription.validUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+  // Calculate days until end (if currentPeriodEnd exists)
+  const daysUntilExpiration = subscription.currentPeriodEnd
+    ? Math.ceil((new Date(subscription.currentPeriodEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const handleUpgrade = async (plan: ClubPlan) => {
-    if (!onUpgrade) return;
-    
-    setLoading(true);
-    try {
-      // В реальном приложении здесь будет интеграция с платежной системой
-      const validUntil = new Date();
-      validUntil.setFullYear(validUntil.getFullYear() + 1);
-      await onUpgrade(plan);
-    } catch (err) {
-      console.error("Failed to upgrade subscription", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getPlanColor = (plan: any) => {
-    // Legacy support - all new plans get default color
-    if (plan === "club_unlimited") return "text-purple-600";
-    if (plan === "club_500") return "text-blue-600";
-    if (plan === "club_50") return "text-blue-600";
-    if (plan === "free") return "text-gray-600";
-    // Old plans (backward compatibility)
-    if (plan === "club_pro") return "text-purple-600";
-    if (plan === "club_basic") return "text-blue-600";
-    if (plan === "club_free") return "text-gray-600";
+  const getPlanColor = (planId: string) => {
+    // Support new v2.0 plan IDs
+    if (planId === "club_unlimited") return "text-purple-600";
+    if (planId === "club_500") return "text-blue-600";
+    if (planId === "club_50") return "text-blue-600";
+    if (planId === "free") return "text-gray-600";
     return "text-gray-600";
   };
 
@@ -69,9 +50,9 @@ export function ClubSubscriptionCard({
       {/* Заголовок */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className={`text-2xl font-bold ${getPlanColor(subscription.plan)} flex items-center gap-2`}>
-            {(subscription.plan === "club_pro" || subscription.plan === "club_unlimited") && <Crown className="w-6 h-6" />}
-            {getClubPlanLabel(subscription.plan as any)}
+          <h3 className={`text-2xl font-bold ${getPlanColor(subscription.planId)} flex items-center gap-2`}>
+            {subscription.planId === "club_unlimited" && <Crown className="w-6 h-6" />}
+            {getClubPlanLabel(subscription.planId)}
           </h3>
           <p className="text-sm text-gray-500 mt-1">
             Текущий тариф клуба
@@ -93,14 +74,14 @@ export function ClubSubscriptionCard({
       </div>
 
       {/* Срок действия */}
-      {subscription.validUntil && (
+      {subscription.currentPeriodEnd && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
             <Calendar className="w-4 h-4" />
             <span>Действует до</span>
           </div>
           <div className="text-lg font-semibold text-gray-900">
-            {formatDate(subscription.validUntil)}
+            {formatDate(subscription.currentPeriodEnd)}
           </div>
           {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && (
             <div className="mt-2 text-sm text-orange-600">
@@ -114,17 +95,23 @@ export function ClubSubscriptionCard({
       <div className="mb-6">
         <h4 className="text-sm font-medium text-gray-700 mb-3">Возможности тарифа:</h4>
         <ul className="space-y-2">
-          {getClubPlanFeatures(subscription.plan).map((feature, index) => (
-            <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-              <span>{feature}</span>
-            </li>
-          ))}
+          <li className="flex items-start gap-2 text-sm text-gray-600">
+            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+            <span>Управление клубом</span>
+          </li>
+          <li className="flex items-start gap-2 text-sm text-gray-600">
+            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+            <span>Создание событий</span>
+          </li>
+          <li className="flex items-start gap-2 text-sm text-gray-600">
+            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+            <span>Управление участниками</span>
+          </li>
         </ul>
       </div>
 
-      {/* Действия - DEPRECATED: redirect to /pricing for new billing v2.0 */}
-      {canManage && (subscription.plan === "club_free" || subscription.plan === "free") && (
+      {/* Действия */}
+      {canManage && subscription.planId === "free" && (
         <div className="space-y-3 pt-4 border-t border-gray-200">
           <a
             href="/pricing"

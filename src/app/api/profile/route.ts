@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getUserClubs } from "@/lib/services/clubs";
-import { getPersonalPlan } from "@/lib/services/subscriptions";
 import { getCityById } from "@/lib/db/cityRepo";
 import { respondError } from "@/lib/api/response";
 import { updateUser } from "@/lib/db/userRepo";
@@ -34,8 +33,8 @@ export async function GET(req: NextRequest) {
     // Получить клубы пользователя
     const clubs = await getUserClubs(user.id);
 
-    // Получить личный план
-    const plan = await getPersonalPlan(user.id);
+    // NOTE: Personal plans removed in billing v2.0 - only club plans exist
+    // If needed in future, implement via user_subscriptions table
 
     // Hydrate city if cityId exists
     let city = null;

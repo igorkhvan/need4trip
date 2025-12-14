@@ -8,7 +8,8 @@
 
 import Link from "next/link";
 import { Users, Calendar, MapPin } from "lucide-react";
-import type { Club, ClubPlan } from "@/lib/types/club";
+import type { Club } from "@/lib/types/club";
+import type { PlanId } from "@/lib/types/billing";
 import { Badge } from "@/components/ui/badge";
 import { getClubPlanLabel } from "@/lib/types/club";
 
@@ -16,7 +17,7 @@ interface ClubCardProps {
   club: Club & {
     memberCount?: number;
     eventCount?: number;
-    plan?: ClubPlan;
+    planId?: PlanId | "free";
   };
 }
 
@@ -44,9 +45,9 @@ export function ClubCard({ club }: ClubCardProps) {
           <h4 className="mb-1 truncate text-[16px] font-semibold text-[#1F2937] transition-colors group-hover:text-[#FF6F2C]">
             {club.name}
           </h4>
-          {club.plan && club.plan !== "free" && (
+          {club.planId && club.planId !== "free" && (
             <Badge variant="default" size="sm" className="text-[12px]">
-              {getClubPlanLabel(club.plan)}
+              {getClubPlanLabel(club.planId)}
             </Badge>
           )}
         </div>

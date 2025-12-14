@@ -36,7 +36,8 @@ import {
   type DbClubMember,
   type DbClubMemberWithUser,
 } from "@/lib/db/clubMemberRepo";
-import { getClubSubscription } from "@/lib/db/subscriptionRepo";
+// NEW: Use billing v2.0 system
+import { getClubSubscription as getClubSubscriptionV2 } from "@/lib/db/clubSubscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { listEvents } from "@/lib/db/eventRepo";
 import { hydrateCities, hydrateCitiesByIds } from "@/lib/utils/hydration";
@@ -221,20 +222,11 @@ export async function getClubWithDetails(
   const club = mapDbClubToDomain(dbClub);
   const hydratedClub = await hydrateClubWithCities(club);
 
-  // Load subscription
-  const dbSubscription = await getClubSubscription(id);
-  if (!dbSubscription) {
+  // Load subscription (NEW: billing v2.0)
+  const subscription = await getClubSubscriptionV2(id);
+  if (!subscription) {
     throw new InternalError("Club subscription not found");
   }
-
-  const subscription = {
-    clubId: dbSubscription.club_id,
-    plan: dbSubscription.plan,
-    validUntil: dbSubscription.valid_until,
-    active: dbSubscription.active,
-    createdAt: dbSubscription.created_at,
-    updatedAt: dbSubscription.updated_at,
-  };
 
   // Load members
   const dbMembers = await listMembersWithUser(id);
@@ -271,24 +263,11 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
       const club = mapDbClubToDomain(dbClub);
       const hydratedClub = await hydrateClubWithCities(club);
       
-      const dbSubscription = await getClubSubscription(membership.club_id);
-      const subscription = dbSubscription
-        ? {
-            clubId: dbSubscription.club_id,
-            plan: dbSubscription.plan,
-            validUntil: dbSubscription.valid_until,
-            active: dbSubscription.active,
-            createdAt: dbSubscription.created_at,
-            updatedAt: dbSubscription.updated_at,
-          }
-        : {
-            clubId: membership.club_id,
-            plan: "club_free" as const,
-            validUntil: null,
-            active: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
+      // Load subscription (NEW: billing v2.0)
+      const subscription = await getClubSubscriptionV2(membership.club_id);
+      if (!subscription) {
+        throw new InternalError(`Club subscription not found for club ${membership.club_id}`);
+      }
 
       const memberCount = await countMembers(membership.club_id);
 
@@ -330,7 +309,7 @@ export async function createClub(
   });
 
   // Триггеры БД автоматически:
-  // 1. Создадут club_subscription (club_free)
+  // 1. Создадут club_subscription (v2.0 format, status='active')
   // 2. Добавят created_by как owner в club_members
 
   return mapDbClubToDomain(dbClub);
