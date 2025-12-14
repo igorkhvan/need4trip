@@ -4,6 +4,8 @@
  * Карточка подписки клуба с возможностью апгрейда
  */
 
+"use client";
+
 import { useState } from "react";
 import { Crown, CheckCircle, XCircle, Calendar } from "lucide-react";
 import type { ClubSubscription } from "@/lib/types/billing";
