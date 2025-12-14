@@ -8,8 +8,10 @@ import { CityHydrated } from "./city";
 export const clubRoleSchema = z.enum(["owner", "organizer", "member", "pending"]);
 export type ClubRole = z.infer<typeof clubRoleSchema>;
 
-export const clubPlanSchema = z.enum(["club_free", "club_basic", "club_pro"]);
-export type ClubPlan = z.infer<typeof clubPlanSchema>;
+// DEPRECATED: Old billing system plan types
+// Use @/lib/types/billing for new v2.0 types
+// export const clubPlanSchema = z.enum(["club_free", "club_basic", "club_pro"]);
+// export type ClubPlan = z.infer<typeof clubPlanSchema>;
 
 // ============================================================================
 // Club Interface
@@ -52,9 +54,12 @@ export interface ClubMemberWithUser extends ClubMember {
 }
 
 // ============================================================================
-// Club Subscription Interface
+// Club Subscription Interface (DEPRECATED - use @/lib/types/billing)
 // ============================================================================
 
+// DEPRECATED: Old subscription type
+// Use ClubSubscription from @/lib/types/billing for new v2.0
+/*
 export interface ClubSubscription {
   clubId: string;
   plan: ClubPlan;
@@ -63,6 +68,10 @@ export interface ClubSubscription {
   createdAt: string;
   updatedAt: string;
 }
+*/
+
+// Re-export new types for backward compatibility
+export type { ClubSubscription, ClubPlan } from "@/lib/types/billing";
 
 // ============================================================================
 // Composite Types
@@ -156,55 +165,39 @@ export function getClubRoleLabel(role: ClubRole): string {
 }
 
 /**
- * Get localized label for club plan
+ * Get localized label for club plan (DEPRECATED)
+ * Use new billing v2.0 system
  */
-export function getClubPlanLabel(plan: ClubPlan): string {
-  const labels: Record<ClubPlan, string> = {
+export function getClubPlanLabel(plan: string): string {
+  // Legacy support for old plan IDs
+  const labels: Record<string, string> = {
     club_free: "Бесплатный",
     club_basic: "Базовый",
     club_pro: "Про",
+    // New v2.0 plan IDs
+    free: "Бесплатный",
+    club_50: "Club 50",
+    club_500: "Club 500",
+    club_unlimited: "Unlimited",
   };
-  return labels[plan];
+  return labels[plan] || plan;
 }
 
 /**
- * Get plan features description
+ * Get plan features description (DEPRECATED)
+ * Use new billing v2.0 system
  */
-export function getClubPlanFeatures(plan: ClubPlan): string[] {
-  const features: Record<ClubPlan, string[]> = {
-    club_free: [
-      "Максимум 1 активное событие",
-      "Неограниченное число участников",
-      "Базовые настройки видимости",
-    ],
-    club_basic: [
-      "Максимум 3 активных события",
-      "Неограниченное число участников",
-      "Все настройки видимости",
-      "Брендирование клуба",
-    ],
-    club_pro: [
-      "Безлимит активных событий",
-      "Неограниченное число участников",
-      "Все настройки видимости",
-      "Брендирование клуба",
-      "Платные события",
-      "Приоритетная поддержка",
-    ],
-  };
-  return features[plan];
+export function getClubPlanFeatures(plan: string): string[] {
+  // Legacy support - return empty for now
+  return [];
 }
 
 /**
- * Get max active events for plan
+ * Get max active events for plan (DEPRECATED)
+ * Use new billing v2.0 system with maxEventParticipants
  */
-export function getMaxActiveEventsForPlan(plan: ClubPlan): number | null {
-  const limits: Record<ClubPlan, number | null> = {
-    club_free: 1,
-    club_basic: 3,
-    club_pro: null, // unlimited
-  };
-  return limits[plan];
+export function getMaxActiveEventsForPlan(plan: string): number | null {
+  return null; // Deprecated
 }
 
 /**
@@ -229,11 +222,17 @@ export function canManageMembers(role: ClubRole | null): boolean {
 }
 
 /**
- * Check if subscription is active and not expired
+ * Check if subscription is active and not expired (DEPRECATED - legacy support)
  */
-export function isSubscriptionActive(subscription: ClubSubscription): boolean {
+export function isSubscriptionActive(subscription: any): boolean {
+  // Legacy support
+  if (subscription.status) {
+    // New v2.0 format
+    return subscription.status === 'active' || subscription.status === 'grace';
+  }
+  // Old format
   if (!subscription.active) return false;
-  if (!subscription.validUntil) return true; // No expiration (club_free)
+  if (!subscription.validUntil) return true;
   return new Date(subscription.validUntil) > new Date();
 }
 
