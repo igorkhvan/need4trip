@@ -63,7 +63,7 @@ export type { ClubPlan as ClubPlanObject } from "@/lib/types/billing";
 
 // Full club details with members and subscription
 export interface ClubWithDetails extends Club {
-  subscription: ClubSubscription;
+  subscription: ClubSubscription | null;  // null = free plan (no subscription)
   members: ClubMemberWithUser[];
   memberCount: number;
   eventCount: number;
@@ -72,7 +72,7 @@ export interface ClubWithDetails extends Club {
 // Club with user's membership info (for "My Clubs" page)
 export interface ClubWithMembership extends Club {
   userRole: ClubRole; // Role of the user in this club
-  subscription: ClubSubscription;
+  subscription: ClubSubscription | null;  // null = free plan (no subscription)
   memberCount: number;
 }
 

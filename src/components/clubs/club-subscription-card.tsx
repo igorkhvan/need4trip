@@ -4,8 +4,6 @@
  * Карточка подписки клуба с возможностью апгрейда
  */
 
-"use client";
-
 import { useState } from "react";
 import { Crown, CheckCircle, XCircle, Calendar } from "lucide-react";
 import type { ClubSubscription } from "@/lib/types/billing";
@@ -14,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/dates";
 
 interface ClubSubscriptionCardProps {
-  subscription: ClubSubscription;
+  subscription: ClubSubscription | null;  // null = free plan
   canManage: boolean;
   onUpgrade?: () => Promise<void>;
   onDowngrade?: () => Promise<void>;
@@ -28,11 +26,12 @@ export function ClubSubscriptionCard({
 }: ClubSubscriptionCardProps) {
   const [loading, setLoading] = useState(false);
 
-  // NEW: billing v2.0 uses status field
-  const isActive = subscription.status === "active" || subscription.status === "pending";
+  // If no subscription, club is on free plan
+  const planId = subscription?.planId || "free";
+  const isActive = subscription ? (subscription.status === "active" || subscription.status === "pending") : true;
 
   // Calculate days until end (if currentPeriodEnd exists)
-  const daysUntilExpiration = subscription.currentPeriodEnd
+  const daysUntilExpiration = subscription?.currentPeriodEnd
     ? Math.ceil((new Date(subscription.currentPeriodEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
@@ -50,9 +49,9 @@ export function ClubSubscriptionCard({
       {/* Заголовок */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className={`text-2xl font-bold ${getPlanColor(subscription.planId)} flex items-center gap-2`}>
-            {subscription.planId === "club_unlimited" && <Crown className="w-6 h-6" />}
-            {getClubPlanLabel(subscription.planId)}
+          <h3 className={`text-2xl font-bold ${getPlanColor(planId)} flex items-center gap-2`}>
+            {planId === "club_unlimited" && <Crown className="w-6 h-6" />}
+            {getClubPlanLabel(planId)}
           </h3>
           <p className="text-sm text-gray-500 mt-1">
             Текущий тариф клуба
@@ -81,7 +80,7 @@ export function ClubSubscriptionCard({
             <span>Действует до</span>
           </div>
           <div className="text-lg font-semibold text-gray-900">
-            {formatDate(subscription.currentPeriodEnd)}
+            {formatDate(subscription.currentPeriodEnd!)}
           </div>
           {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && (
             <div className="mt-2 text-sm text-orange-600">
@@ -111,7 +110,7 @@ export function ClubSubscriptionCard({
       </div>
 
       {/* Действия */}
-      {canManage && subscription.planId === "free" && (
+      {canManage && planId === "free" && (
         <div className="space-y-3 pt-4 border-t border-gray-200">
           <a
             href="/pricing"

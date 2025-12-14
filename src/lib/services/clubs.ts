@@ -223,10 +223,9 @@ export async function getClubWithDetails(
   const hydratedClub = await hydrateClubWithCities(club);
 
   // Load subscription (NEW: billing v2.0)
+  // Free clubs don't have subscriptions
   const subscription = await getClubSubscriptionV2(id);
-  if (!subscription) {
-    throw new InternalError("Club subscription not found");
-  }
+  // If no subscription, club is on free plan (implicit)
 
   // Load members
   const dbMembers = await listMembersWithUser(id);
@@ -264,10 +263,8 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
       const hydratedClub = await hydrateClubWithCities(club);
       
       // Load subscription (NEW: billing v2.0)
+      // Free clubs don't have subscriptions
       const subscription = await getClubSubscriptionV2(membership.club_id);
-      if (!subscription) {
-        throw new InternalError(`Club subscription not found for club ${membership.club_id}`);
-      }
 
       const memberCount = await countMembers(membership.club_id);
 
