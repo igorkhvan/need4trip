@@ -15,7 +15,7 @@ import { getUserById } from "@/lib/db/userRepo";
 
 // Temporary stubs until migration
 const checkPaywall = async (...args: any[]) => null;
-const canManageClub = async (...args: any[]) => ({ allowed: true });
+const canManageClub = async (...args: any[]) => ({ allowed: true, reason: "" });
 
 import { respondError } from "@/lib/api/response";
 import { AuthError, NotFoundError } from "@/lib/errors";

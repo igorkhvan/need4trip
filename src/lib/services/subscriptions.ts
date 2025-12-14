@@ -20,7 +20,7 @@ import {
 // import { canManageClubSubscription } from "@/lib/services/permissions";
 
 // Temporary stub until migration
-const canManageClubSubscription = async (...args: any[]) => ({ allowed: true });
+const canManageClubSubscription = async (...args: any[]) => ({ allowed: true, reason: "" });
 
 import type { ClubSubscription, ClubPlan } from "@/lib/types/club";
 import type { UserPlan } from "@/lib/types/user";
