@@ -253,7 +253,7 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    log.error("Failed to list clubs by creator", { creatorId, error });
+    log.error("Failed to list clubs by creator", { userId, error });
     throw new InternalError("Failed to list clubs", error);
   }
 
