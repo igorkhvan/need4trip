@@ -16,6 +16,7 @@ export async function upsertEventAccess(eventId: string, userId: string, source:
   if (!client) {
     throw new InternalError("Supabase client is not configured");
   }
+  // @ts-ignore - event_user_access table types not yet generated
   const { error } = await client.from(table).upsert(
     {
       event_id: eventId,
