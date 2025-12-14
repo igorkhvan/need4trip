@@ -1,6 +1,6 @@
 import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
-import { User } from "@/lib/types/user";
+import { User, ExperienceLevel } from "@/lib/types/user";
 import { Database } from "@/lib/types/supabase";
 import { log } from "@/lib/utils/logger";
 
