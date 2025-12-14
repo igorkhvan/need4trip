@@ -25,6 +25,16 @@ export const supabase = supabaseUrl && supabaseAnonKey
     })
   : null;
 
+/**
+ * Ensure Supabase client is initialized
+ * Throws error if client is not available
+ */
+export function ensureClient(): void {
+  if (!supabase) {
+    throw new Error("Supabase client is not initialized. Check your environment variables.");
+  }
+}
+
 if (supabase) {
   console.log("✅ [Supabase Client] Client created successfully");
 } else {

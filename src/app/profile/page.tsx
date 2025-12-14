@@ -16,23 +16,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import type { UserCar, CarType } from "@/lib/types/userCar";
+import { CAR_TYPES } from "@/lib/types/userCar";
 
-interface CarData {
-  id: number;
-  brand: string;
-  model: string;
-  year: string;
-  plate: string;
-  color: string;
-  type: string;
-  isPrimary: boolean;
+interface CarBrand {
+  id: string;
+  name: string;
+  slug: string | null;
+}
+
+interface UserData {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  bio: string;
+  joined: string;
+  avatar: string;
+}
+
+interface Stats {
+  totalEvents: number;
+  completedEvents: number;
+  organizedEvents: number;
 }
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'settings'>('overview');
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState({
+  const [userData, setUserData] = useState<UserData>({
     name: '',
     email: '',
     phone: '',
@@ -42,74 +56,170 @@ export default function ProfilePage() {
     avatar: ''
   });
 
-  const [cars, setCars] = useState<CarData[]>([
-    {
-      id: 1,
-      brand: 'Toyota',
-      model: 'Land Cruiser 200',
-      year: '2018',
-      plate: 'A 123 BC 01',
-      color: 'Белый',
-      type: 'Внедорожник',
-      isPrimary: true
-    },
-    {
-      id: 2,
-      brand: 'Nissan',
-      model: 'Patrol',
-      year: '2020',
-      plate: 'B 456 CD 01',
-      color: 'Черный',
-      type: 'Внедорожник',
-      isPrimary: false
-    }
-  ]);
+  const [stats, setStats] = useState<Stats>({
+    totalEvents: 0,
+    completedEvents: 0,
+    organizedEvents: 0
+  });
 
-  // Statistics
-  const stats = {
-    totalEvents: 24,
-    completedEvents: 18,
-    organizedEvents: 3
+  const [cars, setCars] = useState<UserCar[]>([]);
+  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [showAddCar, setShowAddCar] = useState(false);
+  const [newCar, setNewCar] = useState({
+    carBrandId: '',
+    type: '' as CarType | '',
+    plate: '',
+    color: ''
+  });
+  const [savingCar, setSavingCar] = useState(false);
+
+  // Load data
+  useEffect(() => {
+    loadProfileData();
+    loadCars();
+    loadBrands();
+  }, []);
+
+  const loadProfileData = async () => {
+    try {
+      // TODO: Real API call
+      // const res = await fetch('/api/auth/me');
+      // const { user } = await res.json();
+      
+      // Mock data for now
+      setUserData({
+        name: 'Алексей Иванов',
+        email: 'alexey.ivanov@email.com',
+        phone: '+7 (701) 234-56-78',
+        location: 'Алматы, Казахстан',
+        bio: 'Любитель автомобильных приключений и бездорожья.',
+        joined: 'Январь 2020',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
+      });
+
+      // TODO: Real stats API call
+      setStats({
+        totalEvents: 24,
+        completedEvents: 18,
+        organizedEvents: 3
+      });
+
+      setLoading(false);
+    } catch (error) {
+      console.error('[loadProfileData] Error:', error);
+      setLoading(false);
+    }
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // TODO: Save to API
+  const loadCars = async () => {
+    try {
+      const res = await fetch('/api/profile/cars');
+      const data = await res.json();
+      if (data.cars) {
+        setCars(data.cars);
+      }
+    } catch (error) {
+      console.error('[loadCars] Error:', error);
+    }
+  };
+
+  const loadBrands = async () => {
+    try {
+      const res = await fetch('/api/car-brands');
+      const data = await res.json();
+      if (data.brands) {
+        setBrands(data.brands);
+      }
+    } catch (error) {
+      console.error('[loadBrands] Error:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      // TODO: Save profile data
+      setIsEditing(false);
+    } catch (error) {
+      console.error('[handleSave] Error:', error);
+    }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
   };
 
-  const handleSetPrimary = (id: number) => {
-    setCars(cars.map(car => ({
-      ...car,
-      isPrimary: car.id === id
-    })));
-  };
-
-  const handleDeleteCar = (id: number) => {
-    const updatedCars = cars.filter(car => car.id !== id);
-    if (updatedCars.length > 0 && !updatedCars.some(c => c.isPrimary)) {
-      updatedCars[0].isPrimary = true;
+  const handleAddCar = async () => {
+    if (!newCar.carBrandId || !newCar.type) {
+      alert('Выберите марку и тип автомобиля');
+      return;
     }
-    setCars(updatedCars);
+
+    setSavingCar(true);
+    try {
+      const res = await fetch('/api/profile/cars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCar)
+      });
+
+      if (!res.ok) throw new Error('Failed to add car');
+
+      const data = await res.json();
+      if (data.car) {
+        setCars([...cars, data.car]);
+        setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+        setShowAddCar(false);
+      }
+    } catch (error) {
+      console.error('[handleAddCar] Error:', error);
+      alert('Не удалось добавить автомобиль');
+    } finally {
+      setSavingCar(false);
+    }
   };
 
-  // TODO: Load user data from API
-  useEffect(() => {
-    // Mock data
-    setUserData({
-      name: 'Алексей Иванов',
-      email: 'alexey.ivanov@email.com',
-      phone: '+7 (701) 234-56-78',
-      location: 'Алматы, Казахстан',
-      bio: 'Любитель автомобильных приключений и бездорожья. Участник клуба OFF-ROAD с 2020 года.',
-      joined: 'Январь 2020',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
-    });
-    setLoading(false);
-  }, []);
+  const handleSetPrimary = async (carId: string) => {
+    try {
+      const res = await fetch(`/api/profile/cars?id=${carId}`, {
+        method: 'PATCH'
+      });
+
+      if (!res.ok) throw new Error('Failed to set primary');
+
+      // Update local state
+      setCars(cars.map(car => ({
+        ...car,
+        isPrimary: car.id === carId
+      })));
+    } catch (error) {
+      console.error('[handleSetPrimary] Error:', error);
+      alert('Не удалось изменить основной автомобиль');
+    }
+  };
+
+  const handleDeleteCar = async (carId: string) => {
+    if (!confirm('Удалить этот автомобиль?')) return;
+
+    try {
+      const res = await fetch(`/api/profile/cars?id=${carId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error('Failed to delete car');
+
+      // Remove from local state
+      const updatedCars = cars.filter(car => car.id !== carId);
+      setCars(updatedCars);
+
+      // If deleted car was primary, set first car as primary
+      if (updatedCars.length > 0 && !updatedCars.some(c => c.isPrimary)) {
+        handleSetPrimary(updatedCars[0].id);
+      }
+    } catch (error) {
+      console.error('[handleDeleteCar] Error:', error);
+      alert('Не удалось удалить автомобиль');
+    }
+  };
 
   if (loading) {
     return (
@@ -346,12 +456,90 @@ export default function ProfilePage() {
                     <span className="text-[13px] text-[var(--color-text-muted)]">
                       {cars.length} {cars.length === 1 ? 'автомобиль' : 'автомобиля'}
                     </span>
-                    <Button size="sm">
+                    <Button 
+                      size="sm"
+                      onClick={() => setShowAddCar(!showAddCar)}
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Добавить
                     </Button>
                   </div>
                 </div>
+
+                {/* Add Car Form */}
+                {showAddCar && (
+                  <div className="mb-4 p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-3">
+                    <div>
+                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                        Марка <span className="text-[var(--color-danger)]">*</span>
+                      </label>
+                      <Select
+                        value={newCar.carBrandId}
+                        onValueChange={(value) => setNewCar({ ...newCar, carBrandId: value })}
+                      >
+                        <option value="">Выберите марку</option>
+                        {brands.map(brand => (
+                          <option key={brand.id} value={brand.id}>{brand.name}</option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                        Тип <span className="text-[var(--color-danger)]">*</span>
+                      </label>
+                      <Select
+                        value={newCar.type}
+                        onValueChange={(value) => setNewCar({ ...newCar, type: value as CarType })}
+                      >
+                        <option value="">Выберите тип</option>
+                        {CAR_TYPES.map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                        Гос номер <span className="text-[12px]">(опционально)</span>
+                      </label>
+                      <Input
+                        placeholder="A 123 BC 01"
+                        value={newCar.plate}
+                        onChange={(e) => setNewCar({ ...newCar, plate: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                        Цвет <span className="text-[12px]">(опционально)</span>
+                      </label>
+                      <Input
+                        placeholder="Белый"
+                        value={newCar.color}
+                        onChange={(e) => setNewCar({ ...newCar, color: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        onClick={handleAddCar}
+                        disabled={savingCar || !newCar.carBrandId || !newCar.type}
+                      >
+                        {savingCar ? 'Сохранение...' : 'Сохранить'}
+                      </Button>
+                      <Button 
+                        variant="ghost"
+                        onClick={() => {
+                          setShowAddCar(false);
+                          setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+                        }}
+                      >
+                        Отмена
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Cars List */}
                 {cars.length === 0 ? (
@@ -381,23 +569,27 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h4 className="text-[16px]">{car.brand} {car.model}</h4>
+                                <h4 className="text-[16px]">
+                                  {car.carBrand?.name || 'Неизвестная марка'}
+                                </h4>
                                 {car.isPrimary && (
                                   <Badge variant="default">Основной</Badge>
                                 )}
                               </div>
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--color-text-muted)]">
-                                <span>{car.year} г.</span>
-                                <span>•</span>
-                                <span>{car.plate}</span>
+                                <span>{CAR_TYPES.find(t => t.value === car.type)?.label || car.type}</span>
+                                {car.plate && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{car.plate}</span>
+                                  </>
+                                )}
                                 {car.color && (
                                   <>
                                     <span>•</span>
                                     <span>{car.color}</span>
                                   </>
                                 )}
-                                <span>•</span>
-                                <span>{car.type}</span>
                               </div>
                             </div>
                           </div>
