@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_policy: {
+        Row: {
+          created_at: string
+          grace_period_days: number
+          id: string
+          pending_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grace_period_days?: number
+          id: string
+          pending_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grace_period_days?: number
+          id?: string
+          pending_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_policy_actions: {
+        Row: {
+          action: string
+          is_allowed: boolean
+          policy_id: string
+          status: string
+        }
+        Insert: {
+          action: string
+          is_allowed?: boolean
+          policy_id: string
+          status: string
+        }
+        Update: {
+          action?: string
+          is_allowed?: boolean
+          policy_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_policy_actions_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "billing_policy"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_transactions: {
+        Row: {
+          amount_kzt: number
+          club_id: string
+          created_at: string
+          currency: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          plan_id: string
+          provider: string
+          provider_payment_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_kzt: number
+          club_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          plan_id: string
+          provider: string
+          provider_payment_id?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          amount_kzt?: number
+          club_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          plan_id?: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_transactions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_transactions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "club_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       car_brands: {
         Row: {
           created_at: string
@@ -156,30 +269,78 @@ export type Database = {
           },
         ]
       }
-      club_subscriptions: {
+      club_plans: {
         Row: {
-          active: boolean
-          club_id: string
+          allow_csv_export: boolean
+          allow_paid_events: boolean
           created_at: string
-          plan: string
+          currency: string
+          id: string
+          is_public: boolean
+          max_event_participants: number | null
+          max_members: number | null
+          price_monthly_kzt: number
+          title: string
           updated_at: string
-          valid_until: string | null
         }
         Insert: {
-          active?: boolean
-          club_id: string
+          allow_csv_export: boolean
+          allow_paid_events: boolean
           created_at?: string
-          plan: string
+          currency?: string
+          id: string
+          is_public?: boolean
+          max_event_participants?: number | null
+          max_members?: number | null
+          price_monthly_kzt: number
+          title: string
           updated_at?: string
-          valid_until?: string | null
         }
         Update: {
-          active?: boolean
+          allow_csv_export?: boolean
+          allow_paid_events?: boolean
+          created_at?: string
+          currency?: string
+          id?: string
+          is_public?: boolean
+          max_event_participants?: number | null
+          max_members?: number | null
+          price_monthly_kzt?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      club_subscriptions: {
+        Row: {
+          club_id: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          grace_until: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_until?: string | null
+          plan_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
           club_id?: string
           created_at?: string
-          plan?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_until?: string | null
+          plan_id?: string
+          status?: string
           updated_at?: string
-          valid_until?: string | null
         }
         Relationships: [
           {
@@ -187,6 +348,13 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: true
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "club_plans"
             referencedColumns: ["id"]
           },
         ]
