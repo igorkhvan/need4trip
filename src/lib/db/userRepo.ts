@@ -20,7 +20,7 @@ function mapRowToUser(data: DbUserRow): User {
     cityId: data.city_id ?? null,
     carBrandId: data.car_brand_id ?? null,
     carModelText: data.car_model_text ?? null,
-    experienceLevel: data.experience_level,
+    experienceLevel: data.experience_level as ExperienceLevel | null,
     plan: (data.plan as "free" | "pro") ?? "free",
     createdAt: data.created_at,
     updatedAt: data.updated_at,
