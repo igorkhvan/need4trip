@@ -61,6 +61,72 @@ export class InternalError extends AppError {
   }
 }
 
+/**
+ * PaywallError - специальная ошибка для ограничений биллинга
+ * 
+ * Возвращает 402 Payment Required с machine-readable payload.
+ * Frontend должен показать PaywallModal с призывом к апгрейду.
+ * 
+ * Spec: docs/BILLING_AND_LIMITS.md
+ */
+export class PaywallError extends AppError {
+  reason: string;
+  currentPlanId?: string;
+  requiredPlanId?: string;
+  meta?: Record<string, unknown>;
+  cta: {
+    type: "OPEN_PRICING";
+    href: "/pricing";
+  };
+
+  constructor(params: {
+    message: string;
+    reason: string;
+    currentPlanId?: string;
+    requiredPlanId?: string;
+    meta?: Record<string, unknown>;
+  }) {
+    super(params.message, { 
+      statusCode: 402, 
+      code: "PAYWALL",
+      details: {
+        reason: params.reason,
+        currentPlanId: params.currentPlanId,
+        requiredPlanId: params.requiredPlanId,
+        meta: params.meta,
+      }
+    });
+    this.name = "PaywallError";
+    this.reason = params.reason;
+    this.currentPlanId = params.currentPlanId;
+    this.requiredPlanId = params.requiredPlanId;
+    this.meta = params.meta;
+    this.cta = {
+      type: "OPEN_PRICING",
+      href: "/pricing",
+    };
+  }
+
+  /**
+   * Serialize to API response format
+   */
+  toJSON() {
+    return {
+      code: this.code,
+      message: this.message,
+      reason: this.reason,
+      currentPlanId: this.currentPlanId,
+      requiredPlanId: this.requiredPlanId,
+      meta: this.meta,
+      cta: this.cta,
+    };
+  }
+}
+
 export function isAppError(err: unknown): err is AppError {
   return err instanceof AppError;
+}
+
+export function isPaywallError(err: unknown): err is PaywallError {
+  return err instanceof PaywallError;
 }
