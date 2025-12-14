@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       user: {
         ...user,
-        plan,
+        // NOTE: Personal plans removed in billing v2.0
         city: city ? { id: city.id, name: city.name, region: city.region } : null,
       },
       clubs,
