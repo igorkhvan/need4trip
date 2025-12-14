@@ -68,7 +68,13 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
     throw new InternalError("Failed to get event", error);
   }
 
-  return data ? (data as DbEvent) : null;
+  if (!data) return null;
+
+  // Cast custom_fields_schema
+  return {
+    ...data,
+    custom_fields_schema: data.custom_fields_schema ?? [],
+  } as DbEvent;
 }
 
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
@@ -116,7 +122,11 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     throw new InternalError("Failed to create event", error);
   }
 
-  return data as DbEvent;
+  // Cast custom_fields_schema
+  return {
+    ...data,
+    custom_fields_schema: data.custom_fields_schema ?? [],
+  } as DbEvent;
 }
 
 export async function updateEvent(
@@ -177,7 +187,13 @@ export async function updateEvent(
     throw new InternalError("Failed to update event", error);
   }
 
-  return data ? (data as DbEvent) : null;
+  if (!data) return null;
+
+  // Cast custom_fields_schema
+  return {
+    ...data,
+    custom_fields_schema: data.custom_fields_schema ?? [],
+  } as DbEvent;
 }
 
 export async function replaceAllowedBrands(eventId: string, brandIds: string[]): Promise<void> {
