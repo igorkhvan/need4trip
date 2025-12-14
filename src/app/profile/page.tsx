@@ -473,32 +473,30 @@ export default function ProfilePage() {
                       <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
                         Марка <span className="text-[var(--color-danger)]">*</span>
                       </label>
-                      <select
+                      <SimpleSelect
                         value={newCar.carBrandId}
                         onChange={(e) => setNewCar({ ...newCar, carBrandId: e.target.value })}
-                        className="flex h-12 w-full items-center justify-between rounded-xl border-2 border-[#E5E7EB] bg-white px-4 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-[#FF6F2C]/60 focus:ring-offset-2"
                       >
                         <option value="">Выберите марку</option>
                         {brands.map(brand => (
                           <option key={brand.id} value={brand.id}>{brand.name}</option>
                         ))}
-                      </select>
+                      </SimpleSelect>
                     </div>
 
                     <div>
                       <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
                         Тип <span className="text-[var(--color-danger)]">*</span>
                       </label>
-                      <select
+                      <SimpleSelect
                         value={newCar.type}
                         onChange={(e) => setNewCar({ ...newCar, type: e.target.value as CarType })}
-                        className="flex h-12 w-full items-center justify-between rounded-xl border-2 border-[#E5E7EB] bg-white px-4 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-[#FF6F2C]/60 focus:ring-offset-2"
                       >
                         <option value="">Выберите тип</option>
                         {CAR_TYPES.map(type => (
                           <option key={type.value} value={type.value}>{type.label}</option>
                         ))}
-                      </select>
+                      </SimpleSelect>
                     </div>
 
                     <div>
