@@ -41,7 +41,11 @@ export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
     throw new InternalError("Failed to list events", error);
   }
 
-  return (data ?? []) as DbEventWithOwner[];
+  // Supabase types custom_fields_schema as Json, cast to proper type
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    custom_fields_schema: row.custom_fields_schema ?? [],
+  })) as DbEventWithOwner[];
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {
