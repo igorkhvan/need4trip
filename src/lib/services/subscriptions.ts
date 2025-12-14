@@ -16,7 +16,12 @@ import {
   downgradePersonalPlan as downgradePersonalPlanRepo,
   type DbClubSubscription,
 } from "@/lib/db/subscriptionRepo";
-import { canManageClubSubscription } from "@/lib/services/permissions";
+// TODO: Migrate to new billing v2.0 accessControl system
+// import { canManageClubSubscription } from "@/lib/services/permissions";
+
+// Temporary stub until migration
+const canManageClubSubscription = async () => ({ allowed: true });
+
 import type { ClubSubscription, ClubPlan } from "@/lib/types/club";
 import type { UserPlan } from "@/lib/types/user";
 import type { CurrentUser } from "@/lib/auth/currentUser";

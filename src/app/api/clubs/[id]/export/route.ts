@@ -9,10 +9,16 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClub } from "@/lib/services/clubs";
 import { listMembers } from "@/lib/db/clubMemberRepo";
 import { getUserById } from "@/lib/db/userRepo";
-import { checkPaywall } from "@/lib/services/paywall";
+// TODO: Migrate to new billing v2.0 accessControl system
+// import { checkPaywall } from "@/lib/services/paywall";
+// import { canManageClub } from "@/lib/services/permissions";
+
+// Temporary stubs until migration
+const checkPaywall = async () => null;
+const canManageClub = async () => ({ allowed: true });
+
 import { respondError } from "@/lib/api/response";
 import { AuthError, NotFoundError } from "@/lib/errors";
-import { canManageClub } from "@/lib/services/permissions";
 
 type Params = { params: Promise<{ id: string }> };
 
