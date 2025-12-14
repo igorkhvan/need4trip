@@ -32,6 +32,7 @@ import { DomainParticipant } from "@/lib/types/participant";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { CurrentUser } from "@/lib/auth/currentUser";
 import { upsertEventAccess, listAccessibleEventIds } from "@/lib/db/eventAccessRepo";
+import { enforceClubAction } from "@/lib/services/accessControl";
 
 type EventAccessOptions = {
   currentUser?: CurrentUser | null;
@@ -270,6 +271,20 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
   }
   const parsed = eventCreateSchema.parse(input);
+  
+  // ⚡ Billing v2.0 Enforcement
+  // Check if club can create event with given parameters
+  if (parsed.clubId) {
+    await enforceClubAction({
+      clubId: parsed.clubId,
+      action: parsed.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
+      context: {
+        eventParticipantsCount: parsed.maxParticipants,
+        isPaidEvent: parsed.isPaid,
+      },
+    });
+  }
+  
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
   const db = await createEventRecord({
     ...parsed,

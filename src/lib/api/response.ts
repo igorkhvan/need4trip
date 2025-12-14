@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAppError, type AppError } from "@/lib/errors";
+import { isAppError, isPaywallError, type AppError, type PaywallError } from "@/lib/errors";
 
 /**
  * API Response Types
@@ -49,6 +49,21 @@ export function respondError(
   error: AppError | Error | unknown,
   fallbackMessage: string = "Internal Server Error"
 ): NextResponse<ApiErrorResponse> {
+  // Special handling for PaywallError (402 Payment Required)
+  if (isPaywallError(error)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.toJSON(), // Include full paywall payload
+        },
+      },
+      { status: 402 }
+    );
+  }
+
   if (isAppError(error)) {
     return NextResponse.json(
       {
