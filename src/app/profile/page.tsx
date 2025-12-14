@@ -88,26 +88,39 @@ export default function ProfilePage() {
 
   const loadProfileData = async () => {
     try {
-      // TODO: Real API call
-      // const res = await fetch('/api/auth/me');
-      // const { user } = await res.json();
+      const res = await fetch('/api/profile');
       
-      // Mock data for now
+      if (!res.ok) {
+        throw new Error('Failed to load profile');
+      }
+
+      const data = await res.json();
+      
+      // Map user data
+      const user = data.user;
+      const cityName = user.city ? `${user.city.name}, ${user.city.region}` : '';
+      
+      // Format joined date
+      const joinedDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('ru-RU', {
+        year: 'numeric',
+        month: 'long'
+      }) : '';
+      
       setUserData({
-        name: 'Алексей Иванов',
-        email: 'alexey.ivanov@email.com',
-        phone: '+7 (701) 234-56-78',
-        location: 'Алматы, Казахстан',
-        bio: 'Любитель автомобильных приключений и бездорожья.',
-        joined: 'Январь 2020',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
+        name: user.name || 'Пользователь',
+        email: user.email || '',
+        phone: user.phone || '',
+        location: cityName || '',
+        bio: user.bio || '',
+        joined: joinedDate,
+        avatar: user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
       });
 
-      // TODO: Real stats API call
+      // Set stats from API
       setStats({
-        totalEvents: 24,
-        completedEvents: 18,
-        organizedEvents: 3
+        totalEvents: data.stats?.totalEvents || 0,
+        completedEvents: data.stats?.completedEvents || 0,
+        organizedEvents: data.stats?.organizedEvents || 0
       });
 
       setLoading(false);
@@ -143,10 +156,35 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     try {
-      // TODO: Save profile data
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userData.name,
+          // TODO: Add other fields when needed (bio, etc.)
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save profile');
+      }
+
+      const data = await res.json();
+      
+      // Update local state with saved data
+      const user = data.user;
+      const cityName = user.city ? `${user.city.name}, ${user.city.region}` : '';
+      
+      setUserData({
+        ...userData,
+        name: user.name || userData.name,
+        location: cityName || userData.location,
+      });
+
       setIsEditing(false);
     } catch (error) {
       console.error('[handleSave] Error:', error);
+      alert('Не удалось сохранить профиль');
     }
   };
 

@@ -12,6 +12,7 @@ import { respondError } from "@/lib/api/response";
 import { updateUser } from "@/lib/db/userRepo";
 import { profileUpdateSchema } from "@/lib/types/user";
 import { AuthError, ValidationError } from "@/lib/errors";
+import { getUserEventStats } from "@/lib/services/userStats";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // TODO: Need4Trip: Load created events, joined events, statistics
+    // Получить статистику событий
+    const eventStats = await getUserEventStats(user.id);
 
     return NextResponse.json({
       user: {
@@ -57,7 +59,9 @@ export async function GET(req: NextRequest) {
       clubs,
       stats: {
         clubsCount: clubs.length,
-        // TODO: eventsCreated, eventsJoined, etc.
+        totalEvents: eventStats.totalEvents,
+        completedEvents: eventStats.completedEvents,
+        organizedEvents: eventStats.organizedEvents,
       },
     });
   } catch (error) {
