@@ -94,9 +94,11 @@ export function UserClubsList({ clubs, isAuthenticated = true }: UserClubsListPr
             </div>
 
             {/* Бейдж подписки */}
-            {club.subscription.plan !== "club_free" && (
+            {club.subscription.plan !== "free" && (
               <Badge variant="premium" size="sm">
-                {club.subscription.plan === "club_basic" ? "Basic" : "Pro"}
+                {club.subscription.plan === "club_50" ? "Club 50" : 
+                 club.subscription.plan === "club_500" ? "Club 500" : 
+                 "Unlimited"}
               </Badge>
             )}
           </div>

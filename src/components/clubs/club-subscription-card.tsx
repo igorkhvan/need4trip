@@ -51,15 +51,17 @@ export function ClubSubscriptionCard({
     }
   };
 
-  const getPlanColor = (plan: ClubPlan) => {
-    switch (plan) {
-      case "club_free":
-        return "text-gray-600";
-      case "club_basic":
-        return "text-blue-600";
-      case "club_pro":
-        return "text-purple-600";
-    }
+  const getPlanColor = (plan: any) => {
+    // Legacy support - all new plans get default color
+    if (plan === "club_unlimited") return "text-purple-600";
+    if (plan === "club_500") return "text-blue-600";
+    if (plan === "club_50") return "text-blue-600";
+    if (plan === "free") return "text-gray-600";
+    // Old plans (backward compatibility)
+    if (plan === "club_pro") return "text-purple-600";
+    if (plan === "club_basic") return "text-blue-600";
+    if (plan === "club_free") return "text-gray-600";
+    return "text-gray-600";
   };
 
   return (
@@ -68,8 +70,8 @@ export function ClubSubscriptionCard({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className={`text-2xl font-bold ${getPlanColor(subscription.plan)} flex items-center gap-2`}>
-            {subscription.plan === "club_pro" && <Crown className="w-6 h-6" />}
-            {getClubPlanLabel(subscription.plan)}
+            {(subscription.plan === "club_pro" || subscription.plan === "club_unlimited") && <Crown className="w-6 h-6" />}
+            {getClubPlanLabel(subscription.plan as any)}
           </h3>
           <p className="text-sm text-gray-500 mt-1">
             Текущий тариф клуба

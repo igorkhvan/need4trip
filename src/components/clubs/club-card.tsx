@@ -44,7 +44,7 @@ export function ClubCard({ club }: ClubCardProps) {
           <h4 className="mb-1 truncate text-[16px] font-semibold text-[#1F2937] transition-colors group-hover:text-[#FF6F2C]">
             {club.name}
           </h4>
-          {club.plan && club.plan !== "club_free" && (
+          {club.plan && club.plan !== "free" && (
             <Badge variant="default" size="sm" className="text-[12px]">
               {getClubPlanLabel(club.plan)}
             </Badge>
