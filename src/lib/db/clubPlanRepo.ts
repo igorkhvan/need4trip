@@ -10,11 +10,6 @@ import { mapDbClubPlanToDomain, extractPlanLimits } from "@/lib/types/clubPlan";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import { log } from "@/lib/utils/logger";
 
-// NOTE: Table 'club_plans' exists in database (migration 20241213_create_club_plans.sql)
-// but missing from Supabase generated types.
-// Root cause: Types were regenerated before migration was applied.
-// TODO: Apply migration in Supabase Dashboard and regenerate types to fix this properly.
-
 // ============================================================================
 // READ OPERATIONS
 // ============================================================================
@@ -28,7 +23,6 @@ export async function getAllClubPlans(): Promise<ClubPlan[]> {
     throw new InternalError("Supabase client is not configured");
   }
   
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -51,7 +45,6 @@ export async function getClubPlanById(id: ClubPlanIdType): Promise<ClubPlan> {
     throw new InternalError("Supabase client is not configured");
   }
   
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -86,7 +79,6 @@ export async function getClubPlansByPriceRange(
     throw new InternalError("Supabase client is not configured");
   }
   
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -109,7 +101,6 @@ export async function clubPlanExists(id: ClubPlanIdType): Promise<boolean> {
   ensureClient();
   if (!supabase) return false;
   
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('id')

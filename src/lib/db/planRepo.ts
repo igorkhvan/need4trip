@@ -61,7 +61,6 @@ export async function listPublicPlans(): Promise<ClubPlan[]> {
     throw new InternalError("Supabase client is not configured");
   }
 
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -85,7 +84,6 @@ export async function getPlanById(planId: PlanId): Promise<ClubPlan> {
     throw new InternalError("Supabase client is not configured");
   }
 
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -107,7 +105,6 @@ export async function planExists(planId: PlanId): Promise<boolean> {
   ensureClient();
   if (!supabase) return false;
 
-  // @ts-expect-error - club_plans table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_plans')
     .select('id')

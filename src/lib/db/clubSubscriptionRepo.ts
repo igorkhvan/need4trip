@@ -55,7 +55,6 @@ export async function getClubSubscription(
   ensureClient();
   if (!supabase) return null;
 
-  // @ts-expect-error - club_subscriptions table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_subscriptions')
     .select('*')
@@ -95,7 +94,6 @@ export async function upsertClubSubscription(
     updated_at: new Date().toISOString(),
   };
 
-  // @ts-expect-error - club_subscriptions table exists but missing from generated types
   const { data, error } = await supabase
     .from('club_subscriptions')
     .upsert(dbData, { onConflict: 'club_id' })
@@ -132,7 +130,6 @@ export async function setClubSubscriptionStatus(
     updates.grace_until = graceUntil;
   }
 
-  // @ts-expect-error - club_subscriptions table exists but missing from generated types
   const { error } = await supabase
     .from('club_subscriptions')
     .update(updates)

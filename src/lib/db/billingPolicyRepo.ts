@@ -70,7 +70,6 @@ export async function getDefaultBillingPolicy(): Promise<BillingPolicy> {
     throw new InternalError("Supabase client is not configured");
   }
 
-  // @ts-expect-error - billing_policy table exists but missing from generated types
   const { data, error } = await supabase
     .from('billing_policy')
     .select('*')
@@ -97,7 +96,6 @@ export async function getPolicyActionsMap(
     throw new InternalError("Supabase client is not configured");
   }
 
-  // @ts-expect-error - billing_policy_actions table exists but missing from generated types
   const { data, error } = await supabase
     .from('billing_policy_actions')
     .select('*')
@@ -149,7 +147,6 @@ export async function isActionAllowed(
     return false;
   }
 
-  // @ts-expect-error - billing_policy_actions table exists but missing from generated types
   const { data, error } = await supabase
     .from('billing_policy_actions')
     .select('is_allowed')

@@ -83,7 +83,6 @@ export async function createPendingTransaction(params: {
     period_end: params.periodEnd ?? null,
   };
 
-  // @ts-expect-error - billing_transactions table exists but missing from generated types
   const { data, error } = await supabase
     .from('billing_transactions')
     .insert(dbData)
@@ -119,7 +118,6 @@ export async function markTransactionPaid(
     updates.provider_payment_id = providerPaymentId;
   }
 
-  // @ts-expect-error - billing_transactions table exists but missing from generated types
   const { error } = await supabase
     .from('billing_transactions')
     .update(updates)
@@ -140,7 +138,6 @@ export async function markTransactionFailed(transactionId: string): Promise<void
     throw new InternalError("Supabase client is not configured");
   }
 
-  // @ts-expect-error - billing_transactions table exists but missing from generated types
   const { error } = await supabase
     .from('billing_transactions')
     .update({
@@ -165,7 +162,6 @@ export async function getClubTransactions(
   ensureClient();
   if (!supabase) return [];
 
-  // @ts-expect-error - billing_transactions table exists but missing from generated types
   const { data, error } = await supabase
     .from('billing_transactions')
     .select('*')
