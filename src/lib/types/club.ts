@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CityHydrated } from "./city";
+import { ClubSubscription } from "./billing";
 
 // ============================================================================
 // Club Types
