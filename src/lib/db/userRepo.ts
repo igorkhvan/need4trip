@@ -17,12 +17,11 @@ function mapRowToUser(data: DbUserRow): User {
     telegramHandle: data.telegram_handle,
     telegramId: data.telegram_id,
     avatarUrl: data.avatar_url,
-    cityId: (data as any).city_id ?? null, // FK на cities (normalized)
-    carBrandId: (data as any).car_brand_id ?? null, // FK на car_brands (normalized)
-    carModelText: (data as any).car_model_text ?? null, // Свободный текст модели
+    cityId: data.city_id ?? null,
+    carBrandId: data.car_brand_id ?? null,
+    carModelText: data.car_model_text ?? null,
     experienceLevel: data.experience_level,
-    // TODO: Need4Trip: Regenerate supabase types after DB migration to include 'plan' field
-    plan: ((data as any).plan as "free" | "pro") ?? "free", // Personal subscription plan
+    plan: (data.plan as "free" | "pro") ?? "free",
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -164,7 +163,7 @@ export async function updateUser(
   if (updates.carBrandId !== undefined) patch.car_brand_id = updates.carBrandId;
   if (updates.carModelText !== undefined) patch.car_model_text = updates.carModelText;
   
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .update(patch)
     .eq("id", id)

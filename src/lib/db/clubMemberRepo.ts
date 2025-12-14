@@ -62,7 +62,7 @@ export async function addMember(
   };
 
   // TODO: Need4Trip: Regenerate supabase types after DB migration
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -86,7 +86,7 @@ export async function getMember(
   ensureClient();
   if (!supabase) return null;
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("club_id", clubId)
@@ -111,7 +111,7 @@ export async function getMemberWithUser(
   ensureClient();
   if (!supabase) return null;
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -133,7 +133,7 @@ export async function listMembers(clubId: string): Promise<DbClubMember[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("club_id", clubId)
@@ -156,7 +156,7 @@ export async function listMembersWithUser(
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -177,7 +177,7 @@ export async function listUserClubs(userId: string): Promise<string[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("club_id")
     .eq("user_id", userId)
@@ -198,7 +198,7 @@ export async function listUserClubsWithRole(userId: string): Promise<DbClubMembe
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("user_id", userId)
@@ -226,7 +226,7 @@ export async function updateMemberRole(
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .update({ role: role as string })
     .eq("club_id", clubId)
@@ -251,7 +251,7 @@ export async function removeMember(clubId: string, userId: string): Promise<bool
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error, count } = await (supabase as any)
+  const { error, count } = await supabase
     .from(table)
     .delete({ count: "exact" })
     .eq("club_id", clubId)
@@ -276,7 +276,7 @@ export async function listPendingMembers(clubId: string): Promise<DbClubMemberWi
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -311,7 +311,7 @@ export async function countMembersByRole(
   ensureClient();
   if (!supabase) return 0;
 
-  const { count, error } = await (supabase as any)
+  const { count, error } = await supabase
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
@@ -332,7 +332,7 @@ export async function countMembers(clubId: string): Promise<number> {
   ensureClient();
   if (!supabase) return 0;
 
-  const { count, error } = await (supabase as any)
+  const { count, error } = await supabase
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)

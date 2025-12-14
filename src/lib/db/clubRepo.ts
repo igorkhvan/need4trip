@@ -44,7 +44,7 @@ export async function listClubs(): Promise<DbClub[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .order("created_at", { ascending: false });
@@ -64,7 +64,7 @@ export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error} = await (supabase as any)
+  const { data, error} = await supabase
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .order("created_at", { ascending: false });
@@ -89,7 +89,7 @@ export async function getClubById(id: string): Promise<DbClub | null> {
     return null;
   }
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("id", id)
@@ -115,7 +115,7 @@ export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | nu
     return null;
   }
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .eq("id", id)
@@ -151,7 +151,7 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
     updated_at: now,
   };
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -193,7 +193,7 @@ export async function updateClub(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -222,7 +222,7 @@ export async function deleteClub(id: string): Promise<boolean> {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error, count } = await (supabase as any)
+  const { error, count } = await supabase
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
@@ -246,7 +246,7 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("created_by", userId)
@@ -269,7 +269,7 @@ export async function searchClubs(query: string): Promise<DbClub[]> {
 
   const searchPattern = `%${query}%`;
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .ilike("name", searchPattern)
@@ -290,7 +290,7 @@ export async function countClubsByUserId(userId: string): Promise<number> {
   ensureClient();
   if (!supabase) return 0;
 
-  const { count, error } = await (supabase as any)
+  const { count, error } = await supabase
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("created_by", userId);
@@ -314,7 +314,7 @@ export async function getClubCityIds(clubId: string): Promise<string[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("club_cities")
     .select("city_id")
     .eq("club_id", clubId)
@@ -335,7 +335,7 @@ export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, st
   ensureClient();
   if (!supabase || clubIds.length === 0) return new Map();
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("club_cities")
     .select("club_id, city_id")
     .in("club_id", clubIds)
@@ -370,7 +370,7 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
   }
 
   // Delete existing associations
-  const { error: deleteError } = await (supabase as any)
+  const { error: deleteError } = await supabase
     .from("club_cities")
     .delete()
     .eq("club_id", clubId);
@@ -388,7 +388,7 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
       created_at: new Date().toISOString(),
     }));
 
-    const { error: insertError } = await (supabase as any)
+    const { error: insertError } = await supabase
       .from("club_cities")
       .insert(insertPayload);
 
@@ -407,7 +407,7 @@ export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
   if (!supabase) return [];
 
   // Get club IDs that have this city
-  const { data: clubCitiesData, error: clubCitiesError } = await (supabase as any)
+  const { data: clubCitiesData, error: clubCitiesError } = await supabase
     .from("club_cities")
     .select("club_id")
     .eq("city_id", cityId);
@@ -424,7 +424,7 @@ export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
   const clubIds = clubCitiesData.map((row: any) => row.club_id);
 
   // Get clubs by IDs
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .in("id", clubIds)

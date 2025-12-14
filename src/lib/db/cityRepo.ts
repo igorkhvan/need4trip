@@ -35,7 +35,7 @@ export async function getCityById(id: string): Promise<City | null> {
   ensureClient();
   if (!supabase) return null;
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("id", id)
@@ -59,7 +59,7 @@ export async function searchCities(query: string, limit: number = 20): Promise<C
   if (!supabase) return [];
 
   // Поиск по началу названия (case-insensitive)
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .ilike("name", `${query}%`)
@@ -83,7 +83,7 @@ export async function getPopularCities(limit: number = 25): Promise<City[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("is_popular", true)
@@ -106,7 +106,7 @@ export async function getAllCities(): Promise<City[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .order("is_popular", { ascending: false })
@@ -128,7 +128,7 @@ export async function findCityByName(name: string): Promise<City | null> {
   ensureClient();
   if (!supabase) return null;
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .ilike("name", name)
@@ -155,7 +155,7 @@ export async function getCitiesByIds(cityIds: string[]): Promise<Map<string, Cit
   ensureClient();
   if (!supabase) return new Map();
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .in("id", cityIds);

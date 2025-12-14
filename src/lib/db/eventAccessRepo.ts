@@ -4,16 +4,6 @@ import { log } from "@/lib/utils/logger";
 
 const table = "event_user_access";
 
-// TODO: Regenerate Supabase types to include event_user_access table
-// Using 'any' temporarily until types are regenerated
-interface DbEventAccess {
-  id?: string;
-  event_id: string;
-  user_id: string;
-  source: "owner" | "participant" | "link";
-  created_at?: string;
-}
-
 export async function upsertEventAccess(
   eventId: string, 
   userId: string, 
@@ -30,7 +20,7 @@ export async function upsertEventAccess(
     source,
   };
   
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from(table)
     .upsert(insertData, { onConflict: "event_id,user_id" });
     
@@ -44,7 +34,7 @@ export async function listAccessibleEventIds(userId: string): Promise<string[]> 
   ensureClient();
   if (!supabase) return [];
   
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(table)
     .select("event_id")
     .eq("user_id", userId);
@@ -54,5 +44,5 @@ export async function listAccessibleEventIds(userId: string): Promise<string[]> 
     throw new InternalError("Failed to list accessible events", error);
   }
   
-  return (data || []).map((row: DbEventAccess) => row.event_id);
+  return (data || []).map((row) => row.event_id);
 }

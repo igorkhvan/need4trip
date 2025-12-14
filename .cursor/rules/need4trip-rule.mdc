@@ -13,6 +13,19 @@ Deployment: Vercel
 Domain: event / trip / off-road management platform
 You must preserve architectural intent, existing behavior, and authorization guarantees.
 All changes must be incremental, reviewable, and production-safe.
+
+Code Quality & Architecture Principles
+CRITICAL: Always prioritize architectural correctness over speed of implementation
+Never create temporary solutions, workarounds, or "quick fixes" that will need refactoring later
+When faced with "quick fix" vs "proper architectural solution", ALWAYS choose the proper solution
+Examples:
+- Don't create custom components (SimpleSelect) when proper shadcn/ui components exist
+- Don't use 'as any' to skip type errors - fix the types properly
+- Don't mix different component libraries/APIs (e.g., Radix UI + native HTML)
+- Don't create duplicate functionality that exists in the design system
+Proper architecture today saves refactoring time and technical debt tomorrow
+This principle applies to ALL decisions: components, types, patterns, abstractions
+
 Code Review Rules (Mandatory)
 Before proposing or applying changes:
 Review the full relevant code path

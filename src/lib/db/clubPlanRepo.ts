@@ -18,7 +18,7 @@ import { log } from "@/lib/utils/logger";
  * Get all club plans
  */
 export async function getAllClubPlans(): Promise<ClubPlan[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('club_plans')
     .select('*')
     .order('price_monthly', { ascending: true });
@@ -35,7 +35,7 @@ export async function getAllClubPlans(): Promise<ClubPlan[]> {
  * Get club plan by ID
  */
 export async function getClubPlanById(id: ClubPlanIdType): Promise<ClubPlan> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('club_plans')
     .select('*')
     .eq('id', id)
@@ -64,7 +64,7 @@ export async function getClubPlansByPriceRange(
   minPrice: number,
   maxPrice: number
 ): Promise<ClubPlan[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('club_plans')
     .select('*')
     .gte('price_monthly', minPrice)
@@ -83,7 +83,7 @@ export async function getClubPlansByPriceRange(
  * Check if plan exists
  */
 export async function clubPlanExists(id: ClubPlanIdType): Promise<boolean> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('club_plans')
     .select('id')
     .eq('id', id)

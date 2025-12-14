@@ -37,7 +37,7 @@ export async function getClubSubscription(
   ensureClient();
   if (!supabase) return null;
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(clubSubsTable)
     .select("*")
     .eq("club_id", clubId)
@@ -75,7 +75,7 @@ export async function createClubSubscription(
     updated_at: now,
   };
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(clubSubsTable)
     .insert(insertPayload)
     .select("*")
@@ -110,7 +110,7 @@ export async function updateClubSubscription(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(clubSubsTable)
     .update(patch)
     .eq("club_id", clubId)
@@ -164,7 +164,7 @@ export async function deactivateClubSubscription(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(clubSubsTable)
     .update(patch)
     .eq("club_id", clubId)
@@ -191,7 +191,7 @@ export async function listExpiringSubscriptions(
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + daysAhead);
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(clubSubsTable)
     .select("*")
     .eq("active", true)
@@ -219,7 +219,7 @@ export async function getPersonalPlan(userId: string): Promise<UserPlan> {
   ensureClient();
   if (!supabase) return "free"; // Default
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(usersTable)
     .select("plan")
     .eq("id", userId)
@@ -245,7 +245,7 @@ export async function updatePersonalPlan(
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from(usersTable)
     .update({ plan, updated_at: new Date().toISOString() })
     .eq("id", userId);
@@ -279,7 +279,7 @@ export async function listProUsers(): Promise<string[]> {
   ensureClient();
   if (!supabase) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from(usersTable)
     .select("id")
     .eq("plan", "pro");
