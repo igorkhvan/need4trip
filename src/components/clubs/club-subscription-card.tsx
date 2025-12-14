@@ -75,14 +75,14 @@ export function ClubSubscriptionCard({
       </div>
 
       {/* Срок действия */}
-      {subscription.currentPeriodEnd && (
+      {subscription?.currentPeriodEnd && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
             <Calendar className="w-4 h-4" />
             <span>Действует до</span>
           </div>
           <div className="text-lg font-semibold text-gray-900">
-            {formatDate(subscription.currentPeriodEnd!)}
+            {formatDate(subscription.currentPeriodEnd)}
           </div>
           {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && (
             <div className="mt-2 text-sm text-orange-600">
