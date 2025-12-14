@@ -4,7 +4,7 @@
  * Database operations for club_plans table
  */
 
-import { supabase } from "./client";
+import { supabase, ensureClient } from "./client";
 import type { DbClubPlan, ClubPlan, ClubPlanIdType, ClubPlanLimits } from "@/lib/types/clubPlan";
 import { mapDbClubPlanToDomain, extractPlanLimits } from "@/lib/types/clubPlan";
 import { InternalError, NotFoundError } from "@/lib/errors";
@@ -18,6 +18,11 @@ import { log } from "@/lib/utils/logger";
  * Get all club plans
  */
 export async function getAllClubPlans(): Promise<ClubPlan[]> {
+  ensureClient();
+  if (!supabase) {
+    throw new InternalError("Supabase client is not configured");
+  }
+  
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -35,6 +40,11 @@ export async function getAllClubPlans(): Promise<ClubPlan[]> {
  * Get club plan by ID
  */
 export async function getClubPlanById(id: ClubPlanIdType): Promise<ClubPlan> {
+  ensureClient();
+  if (!supabase) {
+    throw new InternalError("Supabase client is not configured");
+  }
+  
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -64,6 +74,11 @@ export async function getClubPlansByPriceRange(
   minPrice: number,
   maxPrice: number
 ): Promise<ClubPlan[]> {
+  ensureClient();
+  if (!supabase) {
+    throw new InternalError("Supabase client is not configured");
+  }
+  
   const { data, error } = await supabase
     .from('club_plans')
     .select('*')
@@ -83,6 +98,9 @@ export async function getClubPlansByPriceRange(
  * Check if plan exists
  */
 export async function clubPlanExists(id: ClubPlanIdType): Promise<boolean> {
+  ensureClient();
+  if (!supabase) return false;
+  
   const { data, error } = await supabase
     .from('club_plans')
     .select('id')
