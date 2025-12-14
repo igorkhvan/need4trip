@@ -70,11 +70,11 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
 
   if (!data) return null;
 
-  // Cast custom_fields_schema
+  // Cast custom_fields_schema from Json
   return {
     ...data,
     custom_fields_schema: data.custom_fields_schema ?? [],
-  } as DbEvent;
+  } as unknown as DbEvent;
 }
 
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
