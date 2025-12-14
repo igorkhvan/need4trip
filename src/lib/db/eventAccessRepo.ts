@@ -1,12 +1,18 @@
 import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
-import type { Database } from "@/lib/types/supabase";
 import { log } from "@/lib/utils/logger";
 
 const table = "event_user_access";
 
-type DbEventAccess = Database["public"]["Tables"]["event_user_access"]["Row"];
-type DbEventAccessInsert = Database["public"]["Tables"]["event_user_access"]["Insert"];
+// TODO: Regenerate Supabase types to include event_user_access table
+// Using 'any' temporarily until types are regenerated
+interface DbEventAccess {
+  id?: string;
+  event_id: string;
+  user_id: string;
+  source: "owner" | "participant" | "link";
+  created_at?: string;
+}
 
 export async function upsertEventAccess(
   eventId: string, 
@@ -18,13 +24,13 @@ export async function upsertEventAccess(
     throw new InternalError("Supabase client is not configured");
   }
   
-  const insertData: DbEventAccessInsert = {
+  const insertData = {
     event_id: eventId,
     user_id: userId,
     source,
   };
   
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from(table)
     .upsert(insertData, { onConflict: "event_id,user_id" });
     
@@ -38,7 +44,7 @@ export async function listAccessibleEventIds(userId: string): Promise<string[]> 
   ensureClient();
   if (!supabase) return [];
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("event_id")
     .eq("user_id", userId);
