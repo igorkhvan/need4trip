@@ -341,7 +341,7 @@ export default function ProfilePage() {
                 {/* Name and Location */}
                 <div className="flex-1 min-w-0">
                   <h1 className="mb-1 text-white drop-shadow-lg">{userData.name}</h1>
-                  <div className="flex flex-wrap items-center gap-2 md:gap-3 text-[13px] md:text-[14px] text-white/90">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 text-sm md:text-base text-white/90">
                     <div className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       <span>{userData.location}</span>
@@ -362,20 +362,20 @@ export default function ProfilePage() {
         <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-[24px] md:text-[32px] text-[var(--color-primary)] mb-1">{stats.totalEvents}</div>
-              <div className="text-[12px] md:text-[13px] text-[var(--color-text-muted)]">Всего событий</div>
+              <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.totalEvents}</div>
+              <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Всего событий</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-[24px] md:text-[32px] text-[var(--color-success)] mb-1">{stats.completedEvents}</div>
-              <div className="text-[12px] md:text-[13px] text-[var(--color-text-muted)]">Завершено</div>
+              <div className="text-2xl md:text-3xl font-bold text-[var(--color-success)] mb-1">{stats.completedEvents}</div>
+              <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Завершено</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-[24px] md:text-[32px] text-[var(--color-primary)] mb-1">{stats.organizedEvents}</div>
-              <div className="text-[12px] md:text-[13px] text-[var(--color-text-muted)]">Организовано</div>
+              <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.organizedEvents}</div>
+              <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Организовано</div>
             </CardContent>
           </Card>
         </div>
@@ -384,7 +384,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-0 md:gap-1 mb-6 md:mb-8 border-b border-[var(--color-border)]">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 md:px-5 py-3 text-[14px] md:text-[15px] border-b-2 transition-colors ${
+            className={`px-4 md:px-5 py-3 text-sm md:text-base border-b-2 transition-colors ${
               activeTab === 'overview'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -394,7 +394,7 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('events')}
-            className={`px-4 md:px-5 py-3 text-[14px] md:text-[15px] border-b-2 transition-colors ${
+            className={`px-4 md:px-5 py-3 text-sm md:text-base border-b-2 transition-colors ${
               activeTab === 'events'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -404,7 +404,7 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-4 md:px-5 py-3 text-[14px] md:text-[15px] border-b-2 transition-colors ${
+            className={`px-4 md:px-5 py-3 text-sm md:text-base border-b-2 transition-colors ${
               activeTab === 'settings'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Имя и фамилия
                       </label>
                       <Input
@@ -437,7 +437,7 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Email
                       </label>
                       <Input
@@ -447,7 +447,7 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Телефон
                       </label>
                       <Input
@@ -456,7 +456,7 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         О себе
                       </label>
                       <textarea
@@ -474,20 +474,20 @@ export default function ProfilePage() {
                     <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                       <Mail className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-[13px] text-[var(--color-text-muted)] mb-0.5">Email</div>
-                        <div className="text-[15px]">{userData.email}</div>
+                        <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Email</div>
+                        <div className="text-base">{userData.email}</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                       <Phone className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-[13px] text-[var(--color-text-muted)] mb-0.5">Телефон</div>
-                        <div className="text-[15px]">{userData.phone}</div>
+                        <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Телефон</div>
+                        <div className="text-base">{userData.phone}</div>
                       </div>
                     </div>
                     <div className="p-3 bg-[var(--color-bg-subtle)] rounded-xl">
-                      <div className="text-[13px] text-[var(--color-text-muted)] mb-1">О себе</div>
-                      <div className="text-[15px]">{userData.bio}</div>
+                      <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
+                      <div className="text-base">{userData.bio}</div>
                     </div>
                   </div>
                 )}
@@ -500,7 +500,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between mb-5">
                   <h3>Мои автомобили</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-[var(--color-text-muted)]">
+                    <span className="text-sm text-[var(--color-text-muted)]">
                       {cars.length} {cars.length === 1 ? 'автомобиль' : 'автомобиля'}
                     </span>
                     <Button 
@@ -517,7 +517,7 @@ export default function ProfilePage() {
                 {showAddCar && (
                   <div className="mb-4 p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-3">
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Марка <span className="text-[var(--color-danger)]">*</span>
                       </label>
                       <Select
@@ -538,7 +538,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Тип <span className="text-[var(--color-danger)]">*</span>
                       </label>
                       <Select
@@ -559,8 +559,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
-                        Гос номер <span className="text-[12px]">(опционально)</span>
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                        Гос номер <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
                       </label>
                       <Input
                         placeholder="A 123 BC 01"
@@ -570,8 +570,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
-                        Цвет <span className="text-[12px]">(опционально)</span>
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                        Цвет <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
                       </label>
                       <Input
                         placeholder="Белый"
@@ -628,14 +628,14 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h4 className="text-[16px]">
+                                <h4 className="text-base font-semibold">
                                   {car.carBrand?.name || 'Неизвестная марка'}
                                 </h4>
                                 {car.isPrimary && (
                                   <Badge variant="default">Основной</Badge>
                                 )}
                               </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--color-text-muted)]">
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-muted)]">
                                 <span>{CAR_TYPES.find(t => t.value === car.type)?.label || car.type}</span>
                                 {car.plate && (
                                   <>
