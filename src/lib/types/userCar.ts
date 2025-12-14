@@ -38,7 +38,7 @@ export interface UserCar {
   carBrand?: {
     id: string;
     name: string;
-    slug: string | null;
+    slug?: string | null;
   } | null;
 }
 
