@@ -464,7 +464,7 @@ export default function ProfilePage() {
                         onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
                         rows={3}
                         className="w-full px-4 py-3 rounded-xl border-2 border-[var(--color-border)] 
-                          focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[rgba(255,111,44,0.1)]
+                          focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-bg)]
                           transition-all duration-200 resize-none"
                       />
                     </div>
