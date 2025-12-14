@@ -26,6 +26,25 @@ Examples:
 Proper architecture today saves refactoring time and technical debt tomorrow
 This principle applies to ALL decisions: components, types, patterns, abstractions
 
+CRITICAL: Never Spread Technical Debt
+If you see bad patterns, workarounds, or technical debt in existing code:
+- DO NOT copy or replicate them for "consistency"
+- DO NOT add more instances of the same anti-pattern
+- DO identify the root cause and fix it properly
+- DO eliminate ALL instances of the bad pattern, not just the new code
+
+Examples of what NOT to do:
+- BAD: "I see (supabase as any) in 3 files, so I'll add it to 5 more files to be consistent"
+- GOOD: "I see (supabase as any) in 3 files, this indicates missing types - let me regenerate types and remove all 8 instances"
+- BAD: "There's a TODO comment here, so I'll add more TODO comments"
+- GOOD: "There's a TODO comment here, let me address the underlying issue and remove the TODO"
+- BAD: "This file uses console.log, so I'll use it too"
+- GOOD: "This file uses console.log, let me migrate to the logger utility and fix all files"
+
+"Consistency" means following GOOD patterns, not replicating BAD patterns
+Technical debt should shrink with every commit, never grow
+When you encounter workarounds, ask: "Why does this exist?" and fix the root cause
+
 Code Review Rules (Mandatory)
 Before proposing or applying changes:
 Review the full relevant code path
