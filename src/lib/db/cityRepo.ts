@@ -4,19 +4,13 @@
  * Репозиторий для работы со справочником городов
  */
 
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { City } from "@/lib/types/city";
+import { log } from "@/lib/utils/logger";
 
 const table = "cities";
 
-function ensureClient() {
-  if (!supabase) {
-    console.warn("Supabase client is not configured");
-    return null;
-  }
-  return supabase;
-}
 
 function mapRowToCity(data: any): City {
   return {
@@ -38,17 +32,17 @@ function mapRowToCity(data: any): City {
  * Get city by ID
  */
 export async function getCityById(id: string): Promise<City | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("id", id)
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to fetch city by id", error);
+    log.error("Failed to fetch city by id", { cityId: id, error });
     throw new InternalError("Failed to fetch city by id", error);
   }
 
@@ -61,11 +55,11 @@ export async function getCityById(id: string): Promise<City | null> {
  * Возвращает до 20 городов, популярные первыми
  */
 export async function searchCities(query: string, limit: number = 20): Promise<City[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
   // Поиск по началу названия (case-insensitive)
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .ilike("name", `${query}%`)
@@ -75,7 +69,7 @@ export async function searchCities(query: string, limit: number = 20): Promise<C
     .limit(limit);
 
   if (error) {
-    console.error("Failed to search cities", error);
+    log.error("Failed to search cities", { query, error });
     throw new InternalError("Failed to search cities", error);
   }
 
@@ -86,10 +80,10 @@ export async function searchCities(query: string, limit: number = 20): Promise<C
  * Get all popular cities (for UI filters and quick select)
  */
 export async function getPopularCities(limit: number = 25): Promise<City[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("is_popular", true)
@@ -98,7 +92,7 @@ export async function getPopularCities(limit: number = 25): Promise<City[]> {
     .limit(limit);
 
   if (error) {
-    console.error("Failed to fetch popular cities", error);
+    log.error("Failed to fetch popular cities", { limit, error });
     throw new InternalError("Failed to fetch popular cities", error);
   }
 
@@ -109,10 +103,10 @@ export async function getPopularCities(limit: number = 25): Promise<City[]> {
  * Get all cities (for admin/management)
  */
 export async function getAllCities(): Promise<City[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .order("is_popular", { ascending: false })
@@ -120,7 +114,7 @@ export async function getAllCities(): Promise<City[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Failed to fetch all cities", error);
+    log.error("Failed to fetch all cities", { error });
     throw new InternalError("Failed to fetch all cities", error);
   }
 
@@ -131,17 +125,17 @@ export async function getAllCities(): Promise<City[]> {
  * Find city by exact name (case-insensitive)
  */
 export async function findCityByName(name: string): Promise<City | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .ilike("name", name)
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to find city by name", error);
+    log.error("Failed to find city by name", { name, error });
     throw new InternalError("Failed to find city by name", error);
   }
 
@@ -158,16 +152,16 @@ export async function getCitiesByIds(cityIds: string[]): Promise<Map<string, Cit
     return new Map();
   }
 
-  const client = ensureClient();
-  if (!client) return new Map();
+  ensureClient();
+  if (!supabase) return new Map();
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .in("id", cityIds);
 
   if (error) {
-    console.error("Failed to get cities by IDs", error);
+    log.error("Failed to get cities by IDs", { count: cityIds.length, error });
     throw new InternalError("Failed to get cities by IDs", error);
   }
 

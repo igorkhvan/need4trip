@@ -1,28 +1,22 @@
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import { DbEvent, DbEventWithOwner } from "@/lib/mappers";
 import { EventCreateInput, EventUpdateInput } from "@/lib/types/event";
+import { log } from "@/lib/utils/logger";
 
 const table = "events";
 
-function ensureClient() {
-  if (!supabase) {
-    console.warn("Supabase client is not configured");
-    return null;
-  }
-  return supabase;
-}
-
 export async function listEvents(): Promise<DbEvent[]> {
-  const client = ensureClient();
-  if (!client) return [];
-  const { data, error } = await client
+  ensureClient();
+  if (!supabase) return [];
+  
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .order("date_time", { ascending: true });
 
   if (error) {
-    console.error("Failed to list events", error);
+    log.error("Failed to list events", { error });
     throw new InternalError("Failed to list events", error);
   }
 
@@ -30,15 +24,16 @@ export async function listEvents(): Promise<DbEvent[]> {
 }
 
 export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
-  const client = ensureClient();
-  if (!client) return [];
-  const { data, error } = await client
+  ensureClient();
+  if (!supabase) return [];
+  
+  const { data, error } = await supabase
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)")
     .order("date_time", { ascending: true });
 
   if (error) {
-    console.error("Failed to list events with owner", error);
+    log.error("Failed to list events with owner", { error });
     throw new InternalError("Failed to list events", error);
   }
 
@@ -46,21 +41,22 @@ export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
+  
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
-    console.warn("Invalid event id provided", id);
+    log.warn("Invalid event id provided", { id });
     return null;
   }
 
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("id", id)
     .maybeSingle();
 
   if (error) {
-    console.error(`Failed to get event ${id}`, error);
+    log.error("Failed to get event", { eventId: id, error });
     throw new InternalError("Failed to get event", error);
   }
 
@@ -68,10 +64,11 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
 }
 
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
+  
   const now = new Date().toISOString();
 
   const insertPayload = {
@@ -100,14 +97,14 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     currency_code: payload.currencyCode ?? null, // ISO 4217 (normalized)
   };
 
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from(table)
     .insert(insertPayload)
     .select("*")
     .single();
 
   if (error) {
-    console.error("Failed to create event", error);
+    log.error("Failed to create event", { error });
     throw new InternalError("Failed to create event", error);
   }
 
@@ -118,10 +115,11 @@ export async function updateEvent(
   id: string,
   payload: EventUpdateInput
 ): Promise<DbEvent | null> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
+  
   const patch = {
     ...(payload.title !== undefined ? { title: payload.title } : {}),
     ...(payload.description !== undefined ? { description: payload.description } : {}),
@@ -159,7 +157,7 @@ export async function updateEvent(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -167,7 +165,7 @@ export async function updateEvent(
     .maybeSingle();
 
   if (error) {
-    console.error(`Failed to update event ${id}`, error);
+    log.error("Failed to update event", { eventId: id, error });
     throw new InternalError("Failed to update event", error);
   }
 
@@ -175,44 +173,46 @@ export async function updateEvent(
 }
 
 export async function replaceAllowedBrands(eventId: string, brandIds: string[]): Promise<void> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
+  
   // delete existing
-  const { error: delError } = await client.from("event_allowed_brands").delete().eq("event_id", eventId);
+  const { error: delError } = await supabase.from("event_allowed_brands").delete().eq("event_id", eventId);
   if (delError) {
-    console.error("Failed to clear allowed brands", delError);
+    log.error("Failed to clear allowed brands", { eventId, error: delError });
     throw new InternalError("Failed to clear allowed brands", delError);
   }
   if (!brandIds.length) return;
   const rows = brandIds.map((brandId) => ({ event_id: eventId, brand_id: brandId }));
-  const { error: insError } = await client.from("event_allowed_brands").insert(rows);
+  const { error: insError } = await supabase.from("event_allowed_brands").insert(rows);
   if (insError) {
-    console.error("Failed to insert allowed brands", insError);
+    log.error("Failed to insert allowed brands", { eventId, error: insError });
     throw new InternalError("Failed to insert allowed brands", insError);
   }
 }
 
 export async function getAllowedBrands(eventId: string) {
-  const client = ensureClient();
-  if (!client) return [];
-  const { data: links, error: linkError } = await client
+  ensureClient();
+  if (!supabase) return [];
+  
+  const { data: links, error: linkError } = await supabase
     .from("event_allowed_brands")
     .select("brand_id")
     .eq("event_id", eventId);
   if (linkError) {
-    console.error("Failed to load allowed brand ids", linkError);
+    log.error("Failed to load allowed brand ids", { eventId, error: linkError });
     throw new InternalError("Failed to load allowed brands", linkError);
   }
   const ids = (links ?? []).map((row) => row.brand_id);
   if (!ids.length) return [];
-  const { data: brands, error: brandError } = await client
+  const { data: brands, error: brandError } = await supabase
     .from("car_brands")
     .select("id, name, slug")
     .in("id", ids);
   if (brandError) {
-    console.error("Failed to load allowed brands", brandError);
+    log.error("Failed to load allowed brands", { eventId, error: brandError });
     throw new InternalError("Failed to load allowed brands", brandError);
   }
   return brands ?? [];
@@ -229,17 +229,17 @@ export async function getAllowedBrandsByEventIds(
     return new Map();
   }
 
-  const client = ensureClient();
-  if (!client) return new Map();
+  ensureClient();
+  if (!supabase) return new Map();
 
   // Step 1: Get all event_allowed_brands links for these events
-  const { data: links, error: linkError } = await client
+  const { data: links, error: linkError } = await supabase
     .from("event_allowed_brands")
     .select("event_id, brand_id")
     .in("event_id", eventIds);
 
   if (linkError) {
-    console.error("Failed to load allowed brand links", linkError);
+    log.error("Failed to load allowed brand links", { eventCount: eventIds.length, error: linkError });
     throw new InternalError("Failed to load allowed brand links", linkError);
   }
 
@@ -251,13 +251,13 @@ export async function getAllowedBrandsByEventIds(
   const brandIds = Array.from(new Set(links.map(link => link.brand_id)));
 
   // Step 3: Load all brands at once
-  const { data: brands, error: brandError } = await client
+  const { data: brands, error: brandError } = await supabase
     .from("car_brands")
     .select("id, name, slug")
     .in("id", brandIds);
 
   if (brandError) {
-    console.error("Failed to load brands", brandError);
+    log.error("Failed to load brands", { brandCount: brandIds.length, error: brandError });
     throw new InternalError("Failed to load brands", brandError);
   }
 
@@ -291,17 +291,18 @@ export async function getAllowedBrandsByEventIds(
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
-  const { error, count } = await client
+  
+  const { error, count } = await supabase
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
 
   if (error) {
-    console.error(`Failed to delete event ${id}`, error);
+    log.error("Failed to delete event", { eventId: id, error });
     throw new InternalError("Failed to delete event", error);
   }
 

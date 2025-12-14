@@ -1,19 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { Database } from "@/lib/types/supabase";
+import { log } from "@/lib/utils/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log("🔧 [Supabase Client] Configuration:");
-console.log("  - URL:", supabaseUrl ? "✅ Set" : "❌ Missing");
-console.log("  - Anon Key:", supabaseAnonKey ? "✅ Set" : "❌ Missing");
+log.info("Supabase client configuration", {
+  url: !!supabaseUrl,
+  anonKey: !!supabaseAnonKey,
+});
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "⚠️ [Supabase Client] URL or anon key is missing. API calls will fail until env vars are set."
-  );
-  console.warn("Please check .env.local file");
+  log.warn("Supabase configuration incomplete", {
+    message: "URL or anon key is missing. API calls will fail until env vars are set.",
+    hint: "Please check .env.local file",
+  });
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey
@@ -36,7 +38,7 @@ export function ensureClient(): void {
 }
 
 if (supabase) {
-  console.log("✅ [Supabase Client] Client created successfully");
+  log.info("Supabase client created successfully");
 } else {
-  console.error("❌ [Supabase Client] Failed to create client");
+  log.error("Failed to create Supabase client");
 }

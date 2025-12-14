@@ -9,6 +9,29 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      event_user_access: {
+        Row: {
+          id: string
+          event_id: string
+          user_id: string
+          source: "owner" | "participant" | "link"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          user_id: string
+          source: "owner" | "participant" | "link"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          user_id?: string
+          source?: "owner" | "participant" | "link"
+          created_at?: string
+        }
+      }
       user_cars: {
         Row: {
           id: string

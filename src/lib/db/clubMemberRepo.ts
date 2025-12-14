@@ -1,16 +1,10 @@
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
+import { log } from "@/lib/utils/logger";
 
 const table = "club_members";
 
-function ensureClient() {
-  if (!supabase) {
-    console.warn("Supabase client is not configured");
-    return null;
-  }
-  return supabase;
-}
 
 // TODO: Need4Trip: Regenerate supabase types after DB migration to include club_members table
 // Using 'any' cast temporarily for all queries until types are regenerated
@@ -49,8 +43,8 @@ export async function addMember(
   role: ClubRole,
   invitedBy: string | null = null
 ): Promise<DbClubMember> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -68,14 +62,14 @@ export async function addMember(
   };
 
   // TODO: Need4Trip: Regenerate supabase types after DB migration
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .insert(insertPayload)
     .select("*")
     .single();
 
   if (error) {
-    console.error("Failed to add club member", error);
+    log.error("Failed to add club member", { error });
     throw new InternalError("Failed to add club member", error);
   }
 
@@ -89,10 +83,10 @@ export async function getMember(
   clubId: string,
   userId: string
 ): Promise<DbClubMember | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("club_id", clubId)
@@ -100,7 +94,7 @@ export async function getMember(
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to get club member", error);
+    log.error("Failed to get club member", { clubId, userId, error });
     throw new InternalError("Failed to get club member", error);
   }
 
@@ -114,10 +108,10 @@ export async function getMemberWithUser(
   clubId: string,
   userId: string
 ): Promise<DbClubMemberWithUser | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -125,7 +119,7 @@ export async function getMemberWithUser(
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to get club member with user", error);
+    log.error("Failed to get club member with user", { clubId, userId, error });
     throw new InternalError("Failed to get club member", error);
   }
 
@@ -136,17 +130,17 @@ export async function getMemberWithUser(
  * List all members of a club
  */
 export async function listMembers(clubId: string): Promise<DbClubMember[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("club_id", clubId)
     .order("joined_at", { ascending: true });
 
   if (error) {
-    console.error("Failed to list club members", error);
+    log.error("Failed to list club members", { clubId, error });
     throw new InternalError("Failed to list club members", error);
   }
 
@@ -159,17 +153,17 @@ export async function listMembers(clubId: string): Promise<DbClubMember[]> {
 export async function listMembersWithUser(
   clubId: string
 ): Promise<DbClubMemberWithUser[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
     .order("joined_at", { ascending: true });
 
   if (error) {
-    console.error("Failed to list club members with users", error);
+    log.error("Failed to list club members with users", { clubId, error });
     throw new InternalError("Failed to list club members", error);
   }
 
@@ -180,17 +174,17 @@ export async function listMembersWithUser(
  * List clubs for a user
  */
 export async function listUserClubs(userId: string): Promise<string[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("club_id")
     .eq("user_id", userId)
     .neq("role", "pending"); // Exclude pending memberships
 
   if (error) {
-    console.error("Failed to list user clubs", error);
+    log.error("Failed to list user clubs", { userId, error });
     throw new InternalError("Failed to list user clubs", error);
   }
 
@@ -201,10 +195,10 @@ export async function listUserClubs(userId: string): Promise<string[]> {
  * List clubs for a user with role info
  */
 export async function listUserClubsWithRole(userId: string): Promise<DbClubMember[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("user_id", userId)
@@ -212,7 +206,7 @@ export async function listUserClubsWithRole(userId: string): Promise<DbClubMembe
     .order("joined_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to list user clubs with role", error);
+    log.error("Failed to list user clubs with role", { userId, error });
     throw new InternalError("Failed to list user clubs", error);
   }
 
@@ -227,12 +221,12 @@ export async function updateMemberRole(
   userId: string,
   role: ClubRole
 ): Promise<DbClubMember | null> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .update({ role: role as string })
     .eq("club_id", clubId)
@@ -241,7 +235,7 @@ export async function updateMemberRole(
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to update member role", error);
+    log.error("Failed to update member role", { clubId, userId, role, error });
     throw new InternalError("Failed to update member role", error);
   }
 
@@ -252,19 +246,19 @@ export async function updateMemberRole(
  * Remove member from club
  */
 export async function removeMember(clubId: string, userId: string): Promise<boolean> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error, count } = await (client as any)
+  const { error, count } = await (supabase as any)
     .from(table)
     .delete({ count: "exact" })
     .eq("club_id", clubId)
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Failed to remove club member", error);
+    log.error("Failed to remove club member", { clubId, userId, error });
     throw new InternalError("Failed to remove club member", error);
   }
 
@@ -279,10 +273,10 @@ export async function removeMember(clubId: string, userId: string): Promise<bool
  * List pending members (waiting for approval)
  */
 export async function listPendingMembers(clubId: string): Promise<DbClubMemberWithUser[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -290,7 +284,7 @@ export async function listPendingMembers(clubId: string): Promise<DbClubMemberWi
     .order("joined_at", { ascending: true });
 
   if (error) {
-    console.error("Failed to list pending members", error);
+    log.error("Failed to list pending members", { clubId, error });
     throw new InternalError("Failed to list pending members", error);
   }
 
@@ -314,17 +308,17 @@ export async function countMembersByRole(
   clubId: string,
   role: ClubRole
 ): Promise<number> {
-  const client = ensureClient();
-  if (!client) return 0;
+  ensureClient();
+  if (!supabase) return 0;
 
-  const { count, error } = await (client as any)
+  const { count, error } = await (supabase as any)
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
     .eq("role", role as string);
 
   if (error) {
-    console.error("Failed to count members by role", error);
+    log.error("Failed to count members by role", { clubId, role, error });
     return 0;
   }
 
@@ -335,17 +329,17 @@ export async function countMembersByRole(
  * Count total members (excluding pending)
  */
 export async function countMembers(clubId: string): Promise<number> {
-  const client = ensureClient();
-  if (!client) return 0;
+  ensureClient();
+  if (!supabase) return 0;
 
-  const { count, error } = await (client as any)
+  const { count, error } = await (supabase as any)
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
     .neq("role", "pending");
 
   if (error) {
-    console.error("Failed to count club members", error);
+    log.error("Failed to count club members", { clubId, error });
     return 0;
   }
 

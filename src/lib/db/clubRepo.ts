@@ -1,16 +1,10 @@
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import type { ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
+import { log } from "@/lib/utils/logger";
 
 const table = "clubs";
 
-function ensureClient() {
-  if (!supabase) {
-    console.warn("Supabase client is not configured");
-    return null;
-  }
-  return supabase;
-}
 
 // TODO: Need4Trip: Regenerate supabase types after DB migration to include clubs table
 // Using 'any' cast temporarily for all queries until types are regenerated
@@ -47,16 +41,16 @@ export interface DbClubWithOwner extends DbClub {
  * List all clubs
  */
 export async function listClubs(): Promise<DbClub[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to list clubs", error);
+    log.error("Failed to list clubs", { error });
     throw new InternalError("Failed to list clubs", error);
   }
 
@@ -67,16 +61,16 @@ export async function listClubs(): Promise<DbClub[]> {
  * List clubs with owner info
  */
 export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error} = await (client as any)
+  const { data, error} = await (supabase as any)
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to list clubs with owner", error);
+    log.error("Failed to list clubs with owner", { error });
     throw new InternalError("Failed to list clubs", error);
   }
 
@@ -87,22 +81,22 @@ export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
  * Get club by ID
  */
 export async function getClubById(id: string): Promise<DbClub | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
 
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
-    console.warn("Invalid club id provided", id);
+    log.warn("Invalid club id provided", { id });
     return null;
   }
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("id", id)
     .maybeSingle();
 
   if (error) {
-    console.error(`Failed to get club ${id}`, error);
+    log.error("Failed to get club", { clubId: id, error });
     throw new InternalError("Failed to get club", error);
   }
 
@@ -113,22 +107,22 @@ export async function getClubById(id: string): Promise<DbClub | null> {
  * Get club with owner info
  */
 export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | null> {
-  const client = ensureClient();
-  if (!client) return null;
+  ensureClient();
+  if (!supabase) return null;
 
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
-    console.warn("Invalid club id provided", id);
+    log.warn("Invalid club id provided", { id });
     return null;
   }
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .eq("id", id)
     .maybeSingle();
 
   if (error) {
-    console.error(`Failed to get club with owner ${id}`, error);
+    log.error("Failed to get club with owner", { clubId: id, error });
     throw new InternalError("Failed to get club", error);
   }
 
@@ -139,8 +133,8 @@ export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | nu
  * Create new club
  */
 export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -157,14 +151,14 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
     updated_at: now,
   };
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .insert(insertPayload)
     .select("*")
     .single();
 
   if (error) {
-    console.error("Failed to create club", error);
+    log.error("Failed to create club", { error });
     throw new InternalError("Failed to create club", error);
   }
 
@@ -185,8 +179,8 @@ export async function updateClub(
   id: string,
   payload: ClubUpdateInput
 ): Promise<DbClub | null> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -199,7 +193,7 @@ export async function updateClub(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -207,7 +201,7 @@ export async function updateClub(
     .maybeSingle();
 
   if (error) {
-    console.error(`Failed to update club ${id}`, error);
+    log.error("Failed to update club", { clubId: id, error });
     throw new InternalError("Failed to update club", error);
   }
 
@@ -223,18 +217,18 @@ export async function updateClub(
  * Delete club
  */
 export async function deleteClub(id: string): Promise<boolean> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error, count } = await (client as any)
+  const { error, count } = await (supabase as any)
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
 
   if (error) {
-    console.error(`Failed to delete club ${id}`, error);
+    log.error("Failed to delete club", { clubId: id, error });
     throw new InternalError("Failed to delete club", error);
   }
 
@@ -249,17 +243,17 @@ export async function deleteClub(id: string): Promise<boolean> {
  * List clubs created by user
  */
 export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("created_by", userId)
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to list clubs by creator", error);
+    log.error("Failed to list clubs by creator", { creatorId, error });
     throw new InternalError("Failed to list clubs", error);
   }
 
@@ -270,19 +264,19 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
  * Search clubs by name
  */
 export async function searchClubs(query: string): Promise<DbClub[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
   const searchPattern = `%${query}%`;
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .ilike("name", searchPattern)
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Failed to search clubs", error);
+    log.error("Failed to search clubs", { query, error });
     throw new InternalError("Failed to search clubs", error);
   }
 
@@ -293,16 +287,16 @@ export async function searchClubs(query: string): Promise<DbClub[]> {
  * Count clubs created by user
  */
 export async function countClubsByUserId(userId: string): Promise<number> {
-  const client = ensureClient();
-  if (!client) return 0;
+  ensureClient();
+  if (!supabase) return 0;
 
-  const { count, error } = await (client as any)
+  const { count, error } = await (supabase as any)
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("created_by", userId);
 
   if (error) {
-    console.error("Failed to count clubs by user", error);
+    log.error("Failed to count clubs by user", { userId, error });
     return 0;
   }
 
@@ -317,17 +311,17 @@ export async function countClubsByUserId(userId: string): Promise<number> {
  * Get city IDs for a club
  */
 export async function getClubCityIds(clubId: string): Promise<string[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from("club_cities")
     .select("city_id")
     .eq("club_id", clubId)
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error(`Failed to get city IDs for club ${clubId}`, error);
+    log.error("Failed to get city IDs for club", { clubId, error });
     return [];
   }
 
@@ -338,17 +332,17 @@ export async function getClubCityIds(clubId: string): Promise<string[]> {
  * Get city IDs for multiple clubs (batch)
  */
 export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, string[]>> {
-  const client = ensureClient();
-  if (!client || clubIds.length === 0) return new Map();
+  ensureClient();
+  if (!supabase || clubIds.length === 0) return new Map();
 
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from("club_cities")
     .select("club_id, city_id")
     .in("club_id", clubIds)
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("Failed to batch get club city IDs", error);
+    log.error("Failed to batch get club city IDs", { clubCount: clubIds.length, error });
     return new Map();
   }
 
@@ -370,19 +364,19 @@ export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, st
  * Update club cities (replace all)
  */
 export async function updateClubCities(clubId: string, cityIds: string[]): Promise<void> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
   // Delete existing associations
-  const { error: deleteError } = await (client as any)
+  const { error: deleteError } = await (supabase as any)
     .from("club_cities")
     .delete()
     .eq("club_id", clubId);
 
   if (deleteError) {
-    console.error(`Failed to delete club cities for ${clubId}`, deleteError);
+    log.error("Failed to delete club cities", { clubId, error: deleteError });
     throw new InternalError("Failed to update club cities", deleteError);
   }
 
@@ -394,12 +388,12 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
       created_at: new Date().toISOString(),
     }));
 
-    const { error: insertError } = await (client as any)
+    const { error: insertError } = await (supabase as any)
       .from("club_cities")
       .insert(insertPayload);
 
     if (insertError) {
-      console.error(`Failed to insert club cities for ${clubId}`, insertError);
+      log.error("Failed to insert club cities", { clubId, cityCount: cityIds.length, error: insertError });
       throw new InternalError("Failed to update club cities", insertError);
     }
   }
@@ -409,17 +403,17 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
  * List clubs by city (filter)
  */
 export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
 
   // Get club IDs that have this city
-  const { data: clubCitiesData, error: clubCitiesError } = await (client as any)
+  const { data: clubCitiesData, error: clubCitiesError } = await (supabase as any)
     .from("club_cities")
     .select("club_id")
     .eq("city_id", cityId);
 
   if (clubCitiesError) {
-    console.error("Failed to get clubs by city", clubCitiesError);
+    log.error("Failed to get clubs by city", { cityId, error: clubCitiesError });
     throw new InternalError("Failed to list clubs by city", clubCitiesError);
   }
 
@@ -430,14 +424,14 @@ export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
   const clubIds = clubCitiesData.map((row: any) => row.club_id);
 
   // Get clubs by IDs
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .in("id", clubIds)
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to list clubs by city", error);
+    log.error("Failed to list clubs by city", { cityId, error });
     throw new InternalError("Failed to list clubs by city", error);
   }
 

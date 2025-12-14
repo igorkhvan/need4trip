@@ -8,6 +8,7 @@ import { supabase } from "./client";
 import type { DbClubPlan, ClubPlan, ClubPlanIdType, ClubPlanLimits } from "@/lib/types/clubPlan";
 import { mapDbClubPlanToDomain, extractPlanLimits } from "@/lib/types/clubPlan";
 import { InternalError, NotFoundError } from "@/lib/errors";
+import { log } from "@/lib/utils/logger";
 
 // ============================================================================
 // READ OPERATIONS
@@ -23,7 +24,7 @@ export async function getAllClubPlans(): Promise<ClubPlan[]> {
     .order('price_monthly', { ascending: true });
   
   if (error) {
-    console.error('[clubPlanRepo.getAllClubPlans] Error:', error);
+    log.error("Failed to fetch club plans", { error });
     throw new InternalError('Failed to fetch club plans');
   }
   
@@ -41,7 +42,7 @@ export async function getClubPlanById(id: ClubPlanIdType): Promise<ClubPlan> {
     .single();
   
   if (error || !data) {
-    console.error('[clubPlanRepo.getClubPlanById] Error:', error);
+    log.error("Failed to fetch club plan by ID", { planId: id, error });
     throw new NotFoundError(`Club plan '${id}' not found`);
   }
   
@@ -71,7 +72,7 @@ export async function getClubPlansByPriceRange(
     .order('price_monthly', { ascending: true });
   
   if (error) {
-    console.error('[clubPlanRepo.getClubPlansByPriceRange] Error:', error);
+    log.error("Failed to fetch club plans by price range", { minPrice, maxPrice, error });
     throw new InternalError('Failed to fetch club plans by price');
   }
   

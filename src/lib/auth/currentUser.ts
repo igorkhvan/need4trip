@@ -3,7 +3,8 @@ import crypto from "crypto";
 
 import { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getUserById } from "@/lib/db/userRepo";
-import { ExperienceLevel } from "@/lib/types/user";
+import { ExperienceLevel, UserPlan } from "@/lib/types/user";
+import { log } from "@/lib/utils/logger";
 
 export interface CurrentUser {
   id: string;
@@ -17,6 +18,7 @@ export interface CurrentUser {
   carBrandId?: string | null; // FK на car_brands (normalized)
   carModelText?: string | null; // Свободный текст модели
   experienceLevel?: ExperienceLevel | null;
+  plan?: UserPlan; // Personal subscription plan (free | pro)
   createdAt?: string;
   updatedAt?: string;
 }
@@ -106,7 +108,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
     user = await getUserById(String(payload.userId));
   } catch (err) {
-    console.error("[getCurrentUser] Failed to load user from DB", err);
+    log.errorWithStack("Failed to load user from DB", err);
     return null;
   }
 
@@ -124,6 +126,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     carBrandId: user.carBrandId ?? null, // FK на car_brands (normalized)
     carModelText: user.carModelText ?? null, // Свободный текст модели
     experienceLevel: user.experienceLevel ?? null,
+    plan: user.plan ?? "free", // Personal subscription plan
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -133,7 +136,7 @@ export async function getCurrentUserSafe(): Promise<CurrentUser | null> {
   try {
     return await getCurrentUser();
   } catch (err) {
-    console.error("[getCurrentUserSafe] Failed to resolve current user", err);
+    log.errorWithStack("Failed to resolve current user", err);
     return null;
   }
 }

@@ -576,7 +576,7 @@ export async function validateEventCreation(
     return { valid: false, errors };
   }
 
-  const userPlan = (user as any).plan ?? "free"; // TODO: Need4Trip: Add plan to CurrentUser type
+  const userPlan = user.plan ?? "free";
   const clubId = data.clubId ?? null;
   
   // Получить план клуба если это событие клуба
@@ -633,7 +633,7 @@ export async function validateEventUpdate(
     return { valid: false, errors };
   }
 
-  const userPlan = (user! as any).plan ?? "free"; // TODO: Need4Trip: Add plan to CurrentUser type
+  const userPlan = user!.plan ?? "free";
 
   // Проверка изменения visibility
   if (updates.visibility && updates.visibility !== event.visibility) {

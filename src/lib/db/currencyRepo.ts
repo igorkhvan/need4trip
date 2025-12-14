@@ -2,9 +2,10 @@
  * Currency Repository - Database operations for currencies table
  */
 
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { Currency } from "@/lib/types/currency";
+import { log } from "@/lib/utils/logger";
 
 // ============================================================================
 // Database Row Type
@@ -41,25 +42,19 @@ function mapDbCurrencyToDomain(row: any): Currency {
 // Repository Functions
 // ============================================================================
 
-function ensureClient() {
-  if (!supabase) {
-    throw new InternalError("Supabase client is not configured");
-  }
-  return supabase;
-}
 
 /**
  * Get all active currencies
  */
 export async function getActiveCurrencies(): Promise<Currency[]> {
-  console.log("🔍 [currencyRepo] getActiveCurrencies called");
+  log.debug("getActiveCurrencies called");
   
   if (!supabase) {
-    console.warn("⚠️ [currencyRepo] Supabase client is not configured");
+    log.warn("Supabase client is not configured");
     return [];
   }
   
-  console.log("📡 [currencyRepo] Fetching from DB...");
+  log.debug("Fetching currencies from DB");
   
   // Order by sort_order, then by code
   const { data, error } = await supabase
@@ -70,20 +65,18 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
     .order("code", { ascending: true });
 
   if (error) {
-    console.error("❌ [currencyRepo] Error fetching currencies:", error);
-    console.error("Error details:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
+    log.error("Error fetching currencies", { 
+      error: {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      }
     });
     return [];
   }
 
-  console.log(`✅ [currencyRepo] Fetched ${data?.length || 0} currencies from DB`);
-  if (data && data.length > 0) {
-    console.log("Sample currency:", data[0]);
-  }
+  log.debug("Fetched currencies from DB", { count: data?.length || 0 });
 
   return (data || []).map((row: any) => mapDbCurrencyToDomain(row));
 }
@@ -93,19 +86,20 @@ export async function getActiveCurrencies(): Promise<Currency[]> {
  */
 export async function getAllCurrencies(): Promise<Currency[]> {
   if (!supabase) {
-    console.warn("[currencyRepo] Supabase client is not configured");
+    log.warn("Supabase client is not configured");
     return [];
   }
   
+  // Получаем ВСЕ валюты (активные и неактивные)
   const { data, error } = await supabase
     .from("currencies")
     .select("*")
-    .eq("is_active", false)
+    .order("is_active", { ascending: false }) // Активные первыми
     .order("sort_order", { ascending: true })
     .order("code", { ascending: true });
 
   if (error) {
-    console.error("[currencyRepo] Error fetching all currencies:", error);
+    log.error("Error fetching all currencies", { error });
     return [];
   }
 
@@ -117,7 +111,7 @@ export async function getAllCurrencies(): Promise<Currency[]> {
  */
 export async function getCurrencyByCode(code: string): Promise<Currency | null> {
   if (!supabase) {
-    console.warn("[currencyRepo] Supabase client is not configured");
+    log.warn("Supabase client is not configured");
     return null;
   }
   
@@ -131,7 +125,7 @@ export async function getCurrencyByCode(code: string): Promise<Currency | null> 
     if (error.code === "PGRST116") {
       return null; // Not found
     }
-    console.error("[currencyRepo] Error fetching currency:", error);
+    log.error("Error fetching currency", { code, error });
     return null;
   }
 
@@ -147,7 +141,7 @@ export async function getCurrenciesByCodes(codes: string[]): Promise<Map<string,
   }
 
   if (!supabase) {
-    console.warn("[currencyRepo] Supabase client is not configured");
+    log.warn("Supabase client is not configured");
     return new Map();
   }
   
@@ -158,7 +152,7 @@ export async function getCurrenciesByCodes(codes: string[]): Promise<Map<string,
     .in("code", upperCodes);
 
   if (error) {
-    console.error("[currencyRepo] Error fetching currencies by codes:", error);
+    log.error("Error fetching currencies by codes", { codes: upperCodes, error });
     return new Map();
   }
 

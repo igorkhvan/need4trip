@@ -1,18 +1,12 @@
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { User } from "@/lib/types/user";
 import { Database } from "@/lib/types/supabase";
+import { log } from "@/lib/utils/logger";
 
 const table = "users" satisfies keyof Database["public"]["Tables"];
 type DbUserRow = Database["public"]["Tables"]["users"]["Row"];
 
-function ensureClient() {
-  if (!supabase) {
-    console.warn("Supabase client is not configured");
-    return null;
-  }
-  return supabase;
-}
 
 function mapRowToUser(data: DbUserRow): User {
   return {
@@ -35,20 +29,20 @@ function mapRowToUser(data: DbUserRow): User {
 }
 
 export async function ensureUserExists(id: string, name?: string): Promise<DbUserRow> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
   
   // 1. Проверяем существует ли пользователь
-  const { data: existing, error: findError } = await client
+  const { data: existing, error: findError } = await supabase
     .from(table)
     .select("*")
     .eq("id", id)
     .maybeSingle();
 
   if (findError) {
-    console.error("Failed to check if user exists", findError);
+    log.error("Failed to check if user exists", { userId: id, error: findError });
     throw new InternalError("Failed to check if user exists", findError);
   }
 
@@ -70,27 +64,27 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
     experience_level: null,
   };
 
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from(table)
     .insert(payload)
     .select("*")
     .single();
 
   if (error) {
-    console.error("Failed to create user", error);
+    log.error("Failed to create user", { userId: id, error });
     throw new InternalError("Failed to create user", error);
   }
 
-  console.log("[ensureUserExists] Created new user (dev mode):", { id, name });
+  log.debug("Created new user in dev mode", { userId: id, name });
   return data as DbUserRow;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const client = ensureClient();
-  if (!client) return null;
-  const { data, error } = await client.from(table).select("*").eq("id", id).maybeSingle();
+  ensureClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
   if (error) {
-    console.error("Failed to fetch user", error);
+    log.error("Failed to fetch user", { userId: id, error });
     throw new InternalError("Failed to fetch user", error);
   }
   if (!data) return null;
@@ -98,16 +92,16 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function findUserByTelegramId(telegramId: string): Promise<User | null> {
-  const client = ensureClient();
-  if (!client) return null;
-  const { data, error } = await client
+  ensureClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
     .from(table)
     .select("*")
     .eq("telegram_id", telegramId)
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to find user by telegram id", error);
+    log.error("Failed to find user by telegram id", { telegramId, error });
     throw new InternalError("Failed to find user by telegram id", error);
   }
 
@@ -121,8 +115,8 @@ export async function upsertTelegramUser(payload: {
   telegramHandle?: string | null;
   avatarUrl?: string | null;
 }): Promise<User> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
   const insertPayload = {
@@ -132,14 +126,14 @@ export async function upsertTelegramUser(payload: {
     avatar_url: payload.avatarUrl ?? null,
   };
 
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from(table)
     .upsert(insertPayload, { onConflict: "telegram_id" })
     .select("*")
     .single();
 
   if (error) {
-    console.error("Failed to upsert telegram user", error);
+    log.error("Failed to upsert telegram user", { telegramId: payload.telegramId, error });
     throw new InternalError("Failed to upsert telegram user", error);
   }
 
@@ -158,8 +152,8 @@ export async function updateUser(
     carModelText?: string | null;
   }
 ): Promise<User> {
-  const client = ensureClient();
-  if (!client) {
+  ensureClient();
+  if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -170,7 +164,7 @@ export async function updateUser(
   if (updates.carBrandId !== undefined) patch.car_brand_id = updates.carBrandId;
   if (updates.carModelText !== undefined) patch.car_model_text = updates.carModelText;
   
-  const { data, error } = await (client as any)
+  const { data, error } = await (supabase as any)
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -178,7 +172,7 @@ export async function updateUser(
     .single();
 
   if (error) {
-    console.error("Failed to update user", error);
+    log.error("Failed to update user", { userId: id, error });
     throw new InternalError("Failed to update user", error);
   }
 

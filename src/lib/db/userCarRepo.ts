@@ -1,10 +1,16 @@
 import { supabase, ensureClient } from "./client";
 import type { UserCar, UserCarCreateInput } from "../types/userCar";
+import type { Database } from "../types/supabase";
+import { log } from "@/lib/utils/logger";
+
+type DbUserCar = Database["public"]["Tables"]["user_cars"]["Row"];
+type DbUserCarInsert = Database["public"]["Tables"]["user_cars"]["Insert"];
+type DbUserCarUpdate = Database["public"]["Tables"]["user_cars"]["Update"];
 
 /**
  * Mapper: DB → DTO
  */
-function mapUserCar(row: any): UserCar {
+function mapUserCar(row: DbUserCar): UserCar {
   return {
     id: row.id,
     userId: row.user_id,
@@ -33,7 +39,7 @@ export async function getUserCars(userId: string): Promise<UserCar[]> {
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("[getUserCars] Error:", error);
+    log.error("Failed to get user cars", { userId, error });
     return [];
   }
 
@@ -54,16 +60,15 @@ export async function createUserCar(
   const existingCars = await getUserCars(userId);
   const isFirstCar = existingCars.length === 0;
 
-  const insertData = {
+  const insertData: DbUserCarInsert = {
     user_id: userId,
     car_brand_id: input.carBrandId,
     type: input.type,
     plate: input.plate || null,
     color: input.color || null,
-    is_primary: isFirstCar, // Первый автомобиль автоматически основной
+    is_primary: isFirstCar,
   };
 
-  // @ts-ignore - user_cars table types not yet generated
   const { data, error } = await supabase
     .from("user_cars")
     .insert(insertData)
@@ -71,7 +76,7 @@ export async function createUserCar(
     .single();
 
   if (error) {
-    console.error("[createUserCar] Error:", error);
+    log.error("Failed to create user car", { userId, input, error });
     throw new Error("Не удалось создать автомобиль");
   }
 
@@ -89,10 +94,10 @@ export async function deleteUserCar(userId: string, carId: string): Promise<void
     .from("user_cars")
     .delete()
     .eq("id", carId)
-    .eq("user_id", userId); // Проверка владельца
+    .eq("user_id", userId);
 
   if (error) {
-    console.error("[deleteUserCar] Error:", error);
+    log.error("Failed to delete user car", { userId, carId, error });
     throw new Error("Не удалось удалить автомобиль");
   }
 }
@@ -105,21 +110,19 @@ export async function setPrimaryUserCar(userId: string, carId: string): Promise<
   if (!supabase) throw new Error("Supabase client not initialized");
 
   // 1. Снять флаг is_primary со всех автомобилей пользователя
-  const resetUpdate = { is_primary: false };
-  // @ts-ignore - user_cars table types not yet generated
+  const resetUpdate: DbUserCarUpdate = { is_primary: false };
   const { error: resetError } = await supabase
     .from("user_cars")
     .update(resetUpdate)
     .eq("user_id", userId);
 
   if (resetError) {
-    console.error("[setPrimaryUserCar] Reset error:", resetError);
+    log.error("Failed to reset primary user car", { userId, error: resetError });
     throw new Error("Не удалось сбросить основной автомобиль");
   }
 
   // 2. Установить is_primary для выбранного автомобиля
-  const setUpdate = { is_primary: true };
-  // @ts-ignore - user_cars table types not yet generated
+  const setUpdate: DbUserCarUpdate = { is_primary: true };
   const { error: setError } = await supabase
     .from("user_cars")
     .update(setUpdate)
@@ -127,7 +130,7 @@ export async function setPrimaryUserCar(userId: string, carId: string): Promise<
     .eq("user_id", userId);
 
   if (setError) {
-    console.error("[setPrimaryUserCar] Set error:", setError);
+    log.error("Failed to set primary user car", { userId, carId, error: setError });
     throw new Error("Не удалось установить основной автомобиль");
   }
 }
@@ -152,4 +155,3 @@ export async function getPrimaryUserCar(userId: string): Promise<UserCar | null>
 
   return mapUserCar(data);
 }
-

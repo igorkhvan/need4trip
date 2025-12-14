@@ -1,27 +1,21 @@
-import { supabase } from "@/lib/db/client";
+import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { CarBrand } from "@/lib/types/event";
+import { log } from "@/lib/utils/logger";
 
 const table = "car_brands";
 
-function ensureClient() {
-  if (!supabase) {
-    console.warn("Supabase client is not configured");
-    return null;
-  }
-  return supabase;
-}
-
 export async function listCarBrands(): Promise<CarBrand[]> {
-  const client = ensureClient();
-  if (!client) return [];
-  const { data, error } = await client
+  ensureClient();
+  if (!supabase) return [];
+  
+  const { data, error } = await supabase
     .from(table)
     .select("id, name, slug")
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("[listCarBrands] Failed to list car brands", error);
+    log.error("Failed to list car brands", { error });
     throw new InternalError("Failed to list car brands", error);
   }
 
@@ -34,16 +28,16 @@ export async function listCarBrands(): Promise<CarBrand[]> {
 export async function getCarBrandsByIds(ids: string[]): Promise<CarBrand[]> {
   if (ids.length === 0) return [];
   
-  const client = ensureClient();
-  if (!client) return [];
+  ensureClient();
+  if (!supabase) return [];
   
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from(table)
     .select("id, name, slug")
     .in("id", ids);
 
   if (error) {
-    console.error("[getCarBrandsByIds] Failed to get car brands", error);
+    log.error("Failed to get car brands by IDs", { count: ids.length, error });
     return [];
   }
 

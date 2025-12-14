@@ -71,7 +71,7 @@ async function checkEventCreationPaywall(
   context: Partial<PaywallCheckContext>
 ): Promise<PaywallTrigger | null> {
   const { clubId } = context;
-  const userPlan = (user as any).plan ?? 'free';
+  const userPlan = user.plan ?? 'free';
   
   // Personal event
   if (!clubId) {
@@ -142,7 +142,7 @@ async function checkPaidEventPaywall(
   context: Partial<PaywallCheckContext>
 ): Promise<PaywallTrigger | null> {
   const { clubId } = context;
-  const userPlan = (user as any).plan ?? 'free';
+  const userPlan = user.plan ?? 'free';
   
   // Personal paid event
   if (!clubId) {
@@ -234,7 +234,7 @@ async function checkTelegramBotProPaywall(
 async function checkClubCreationPaywall(
   user: CurrentUser
 ): Promise<PaywallTrigger | null> {
-  const userPlan = (user as any).plan ?? 'free';
+  const userPlan = user.plan ?? 'free';
   
   if (userPlan === 'pro') return null; // Unlimited clubs
   
@@ -294,7 +294,7 @@ async function checkVisibilityPaywall(
   const { metadata } = context;
   const visibility = metadata?.visibility;
   const clubId = context.clubId;
-  const userPlan = (user as any).plan ?? 'free';
+  const userPlan = user.plan ?? 'free';
   
   // Only "unlisted" and "restricted" require premium
   if (visibility !== 'unlisted' && visibility !== 'restricted') {

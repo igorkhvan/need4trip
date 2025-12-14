@@ -1,12 +1,13 @@
 import { supabase } from "./client";
 import { EventCategory } from "@/lib/types/eventCategory";
+import { log } from "@/lib/utils/logger";
 
 /**
  * Get all active event categories
  */
 export async function getActiveEventCategories(): Promise<EventCategory[]> {
   if (!supabase) {
-    console.error("[getActiveEventCategories] Supabase client not initialized");
+    log.warn("Supabase client not initialized");
     return [];
   }
 
@@ -17,7 +18,7 @@ export async function getActiveEventCategories(): Promise<EventCategory[]> {
     .order("display_order", { ascending: true });
 
   if (error) {
-    console.error("[getActiveEventCategories] Error:", error);
+    log.error("Failed to fetch event categories", { error });
     throw new Error("Failed to fetch event categories");
   }
 
@@ -29,7 +30,7 @@ export async function getActiveEventCategories(): Promise<EventCategory[]> {
  */
 export async function getEventCategoryById(id: string): Promise<EventCategory | null> {
   if (!supabase) {
-    console.error("[getEventCategoryById] Supabase client not initialized");
+    log.warn("Supabase client not initialized");
     return null;
   }
 
@@ -41,7 +42,7 @@ export async function getEventCategoryById(id: string): Promise<EventCategory | 
 
   if (error) {
     if (error.code === "PGRST116") return null; // not found
-    console.error("[getEventCategoryById] Error:", error);
+    log.error("Failed to fetch event category by ID", { categoryId: id, error });
     throw new Error("Failed to fetch event category");
   }
 
@@ -53,7 +54,7 @@ export async function getEventCategoryById(id: string): Promise<EventCategory | 
  */
 export async function getEventCategoryByCode(code: string): Promise<EventCategory | null> {
   if (!supabase) {
-    console.error("[getEventCategoryByCode] Supabase client not initialized");
+    log.warn("Supabase client not initialized");
     return null;
   }
 
@@ -65,7 +66,7 @@ export async function getEventCategoryByCode(code: string): Promise<EventCategor
 
   if (error) {
     if (error.code === "PGRST116") return null; // not found
-    console.error("[getEventCategoryByCode] Error:", error);
+    log.error("Failed to fetch event category by code", { code, error });
     throw new Error("Failed to fetch event category");
   }
 
@@ -77,9 +78,9 @@ export async function getEventCategoryByCode(code: string): Promise<EventCategor
  */
 export async function getEventCategoriesByIds(ids: string[]): Promise<Map<string, EventCategory>> {
   if (ids.length === 0) return new Map();
-
+  
   if (!supabase) {
-    console.error("[getEventCategoriesByIds] Supabase client not initialized");
+    log.warn("Supabase client not initialized");
     return new Map();
   }
 
@@ -89,7 +90,7 @@ export async function getEventCategoriesByIds(ids: string[]): Promise<Map<string
     .in("id", ids);
 
   if (error) {
-    console.error("[getEventCategoriesByIds] Error:", error);
+    log.error("Failed to fetch event categories by IDs", { count: ids.length, error });
     throw new Error("Failed to fetch event categories");
   }
 
