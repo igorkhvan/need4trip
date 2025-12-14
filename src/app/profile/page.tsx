@@ -161,7 +161,8 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: userData.name,
-          // TODO: Add other fields when needed (bio, etc.)
+          bio: userData.bio,
+          phone: userData.phone,
         })
       });
 
@@ -178,6 +179,8 @@ export default function ProfilePage() {
       setUserData({
         ...userData,
         name: user.name || userData.name,
+        bio: user.bio || '',
+        phone: user.phone || '',
         location: cityName || userData.location,
       });
 

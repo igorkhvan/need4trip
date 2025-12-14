@@ -12,6 +12,7 @@ export interface User {
   name: string;
   phone: string | null;
   email: string | null;
+  bio: string | null; // О себе
   telegramHandle: string | null;
   telegramId?: string | null;
   avatarUrl?: string | null;
@@ -92,10 +93,12 @@ export function getMaxActivePersonalEventsForPlan(plan: UserPlan): number | null
  * Profile update input schema
  */
 export const profileUpdateSchema = z.object({
-  name: z.string().trim().min(1, "Имя обязательно").max(100),
-  cityId: z.string().uuid("Выберите город из списка"),
-  carBrandId: z.string().uuid().nullable(),
-  carModelText: z.string().trim().max(100).nullable(),
+  name: z.string().trim().min(1, "Имя обязательно").max(100).optional(),
+  bio: z.string().trim().max(500, "Максимум 500 символов").optional().nullable(),
+  phone: z.string().trim().max(20).optional().nullable(),
+  cityId: z.string().uuid("Выберите город из списка").optional().nullable(),
+  carBrandId: z.string().uuid().optional().nullable(),
+  carModelText: z.string().trim().max(100).optional().nullable(),
 });
 
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;

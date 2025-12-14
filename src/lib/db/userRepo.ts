@@ -14,6 +14,7 @@ function mapRowToUser(data: DbUserRow): User {
     name: data.name,
     phone: data.phone,
     email: data.email,
+    bio: data.bio,
     telegramHandle: data.telegram_handle,
     telegramId: data.telegram_id,
     avatarUrl: data.avatar_url,
@@ -146,7 +147,9 @@ export async function updateUser(
   id: string,
   updates: {
     name?: string;
-    cityId?: string;
+    bio?: string | null;
+    phone?: string | null;
+    cityId?: string | null;
     carBrandId?: string | null;
     carModelText?: string | null;
   }
@@ -155,10 +158,12 @@ export async function updateUser(
   if (!supabase) {
     throw new InternalError("Supabase client is not configured");
   }
-
+  
   const patch: any = {};
   
   if (updates.name !== undefined) patch.name = updates.name;
+  if (updates.bio !== undefined) patch.bio = updates.bio;
+  if (updates.phone !== undefined) patch.phone = updates.phone;
   if (updates.cityId !== undefined) patch.city_id = updates.cityId;
   if (updates.carBrandId !== undefined) patch.car_brand_id = updates.carBrandId;
   if (updates.carModelText !== undefined) patch.car_model_text = updates.carModelText;
