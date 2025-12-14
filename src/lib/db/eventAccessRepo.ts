@@ -34,10 +34,12 @@ export async function upsertEventAccess(eventId: string, userId: string, source:
 export async function listAccessibleEventIds(userId: string): Promise<string[]> {
   const client = ensureClient();
   if (!client) return [];
+  // @ts-ignore - event_user_access table types not yet generated
   const { data, error } = await client.from(table).select("event_id").eq("user_id", userId);
   if (error) {
     console.error("Failed to list accessible events", error);
     throw new InternalError("Failed to list accessible events", error);
   }
+  // @ts-ignore - event_user_access table types not yet generated
   return (data ?? []).map((row) => row.event_id as string);
 }
