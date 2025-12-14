@@ -123,56 +123,15 @@ export function ClubSubscriptionCard({
         </ul>
       </div>
 
-      {/* Действия (только для владельца) */}
-      {canManage && (
+      {/* Действия - DEPRECATED: redirect to /pricing for new billing v2.0 */}
+      {canManage && (subscription.plan === "club_free" || subscription.plan === "free") && (
         <div className="space-y-3 pt-4 border-t border-gray-200">
-          {subscription.plan === "club_free" && (
-            <>
-              <button
-                onClick={() => handleUpgrade("club_basic")}
-                disabled={loading}
-                className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                Перейти на Базовый (990₽/мес)
-              </button>
-              <button
-                onClick={() => handleUpgrade("club_pro")}
-                disabled={loading}
-                className="w-full px-4 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-              >
-                Перейти на Про (2990₽/мес)
-              </button>
-            </>
-          )}
-
-          {subscription.plan === "club_basic" && (
-            <>
-              <button
-                onClick={() => handleUpgrade("club_pro")}
-                disabled={loading}
-                className="w-full px-4 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-              >
-                Перейти на Про (2990₽/мес)
-              </button>
-              <button
-                onClick={onDowngrade}
-                disabled={loading}
-                className="w-full px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                Отменить подписку
-              </button>
-            </>
-          )}
-
-          {subscription.plan === "club_pro" && onDowngrade && (
-            <button
-              onClick={onDowngrade}
-              disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              Отменить подписку
-            </button>
-          )}
+          <a
+            href="/pricing"
+            className="block w-full px-4 py-3 bg-blue-600 text-white text-center font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Посмотреть тарифы
+          </a>
         </div>
       )}
     </div>
