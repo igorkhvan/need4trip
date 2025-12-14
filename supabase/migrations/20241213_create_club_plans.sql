@@ -37,7 +37,7 @@ COMMENT ON COLUMN public.club_plans.max_active_events IS 'Maximum number of acti
 COMMENT ON COLUMN public.club_plans.max_participants_per_event IS 'Maximum participants per single event. NULL means unlimited';
 COMMENT ON COLUMN public.club_plans.max_organizers IS 'Maximum number of organizers (excluding owner)';
 
--- Seed initial plans (based on docs/DESIGN_REFERENCE.md)
+-- Seed initial plans (based on docs/BILLING_AND_LIMITS.md - source of truth)
 INSERT INTO public.club_plans (
   id, 
   name, 
@@ -58,11 +58,11 @@ INSERT INTO public.club_plans (
 (
   'club_free',
   'Free',
-  'Базовый план для начинающих клубов',
+  'Индивидуальное использование / тест / маленькие выезды',
   0,
-  3,   -- до 3 активных событий
-  30,  -- до 30 участников на событие
-  1,   -- 1 организатор
+  NULL,  -- нет лимита на количество событий для Free
+  15,    -- max 15 участников на событие
+  1,     -- 1 организатор (владелец)
   false, false, false, false, false, false, false, false
 ),
 (
@@ -70,9 +70,9 @@ INSERT INTO public.club_plans (
   'Club 50',
   'Для растущих клубов с регулярными событиями',
   990,
-  10,  -- до 10 активных событий
-  50,  -- до 50 участников на событие
-  3,   -- 3 организатора
+  NULL,  -- нет лимита на количество событий
+  50,    -- max 50 участников на событие
+  50,    -- max 50 членов клуба
   true,  -- платные события
   true,  -- email рассылки
   true,  -- статистика
@@ -84,9 +84,9 @@ INSERT INTO public.club_plans (
   'Club 500',
   'Для активных клубов с большим комьюнити',
   2990,
-  30,   -- до 30 активных событий
-  500,  -- до 500 участников на событие
-  10,   -- 10 организаторов
+  NULL,  -- нет лимита на количество событий
+  500,   -- max 500 участников на событие
+  500,   -- max 500 членов клуба
   true, true, true, true,
   true,  -- расширенная аналитика
   true,  -- API доступ
@@ -96,10 +96,10 @@ INSERT INTO public.club_plans (
   'club_unlimited',
   'Unlimited',
   'Без ограничений для профессиональных организаций',
-  0,  -- индивидуально (управляется вне системы)
+  0,     -- индивидуально (управляется вне системы)
   NULL,  -- без ограничений на события
   NULL,  -- без ограничений на участников
-  NULL,  -- без ограничений на организаторов
+  NULL,  -- без ограничений на членов клуба
   true, true, true, true, true, true,
   true,  -- white-label
   true   -- персональный менеджер
