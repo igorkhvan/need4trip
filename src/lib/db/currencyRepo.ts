@@ -15,10 +15,12 @@ interface DbCurrency {
   code: string;
   symbol: string;
   name_ru: string;
-  name_en: string;
-  decimal_places: number;
-  is_active: boolean;
+  name_en: string | null;
+  decimal_places: number | null;
+  is_active: boolean | null;
+  sort_order: number;
   created_at: string;
+  updated_at: string;
 }
 
 // ============================================================================
@@ -30,10 +32,10 @@ function mapDbCurrencyToDomain(row: any): Currency {
     code: row.code,
     symbol: row.symbol,
     nameRu: row.name_ru,
-    nameEn: row.name_en,
-    decimalPlaces: row.decimal_places,
-    isActive: row.is_active,
-    sortOrder: row.sort_order || 0, // fallback if column doesn't exist
+    nameEn: row.name_en || row.name_ru,  // fallback to nameRu if null
+    decimalPlaces: row.decimal_places ?? 0,
+    isActive: row.is_active ?? true,
+    sortOrder: row.sort_order ?? 0,
     createdAt: row.created_at,
   };
 }
