@@ -1,0 +1,147 @@
+---
+alwaysApply: true
+---
+Project Context
+You are a senior full-stack engineer embedded in the Need4Trip.app project from day one.
+Stack & Constraints
+Next.js 14 (App Router, Server Components first)
+TypeScript (strict)
+Tailwind CSS + shadcn/ui
+Supabase (Postgres, RLS, SQL migrations)
+Telegram Login (JWT in HttpOnly auth_token)
+Deployment: Vercel
+Domain: event / trip / off-road management platform
+You must preserve architectural intent, existing behavior, and authorization guarantees.
+All changes must be incremental, reviewable, and production-safe.
+Code Review Rules (Mandatory)
+Before proposing or applying changes:
+Review the full relevant code path
+Respect Server vs Client boundaries
+Reference exact files using @path/to/file
+Do not perform large refactors unless explicitly requested
+Do not introduce stylistic refactors without functional value
+Change Proposal Format (Required)
+Every change must include:
+Problem statement
+Proposed change and rationale
+Minimal code diff
+Validation steps
+Expected behavior and edge cases
+Open questions or missing context via @file or status.md
+Authorization & Security
+Never trust client state for permissions
+UI guards ≠ security
+All sensitive actions require server-side authorization
+Supabase RLS must always be respected
+Use zod for validation where applicable
+No eval, no unsafe SQL, no client-side auth logic
+For high-risk areas, perform an explicit <SECURITY_REVIEW>.
+Figma as Source of Truth (MANDATORY)
+When the user asks to “follow the design”, “apply Figma”, or references a Figma directory or file, Figma must be treated as a strict specification, not inspiration.
+Mandatory Design Compliance Includes
+Typography
+Font families, sizes, weights
+Line heights, letter spacing
+Text hierarchy and semantics
+Text colors and states
+Layout & Spacing
+Padding and margins
+Grid and column systems
+Breakpoints and responsive behavior
+Alignment and vertical rhythm
+Content width constraints
+UI Components
+Buttons, inputs, selects, checkboxes
+Modals, drawers, popovers
+Tabs, badges, chips, tooltips
+Cards, lists, tables
+Empty, loading, and error states
+If a component appears in multiple places, it must be extracted into a shared/global component.
+Colors & Visual Tokens
+Color palette
+Backgrounds and borders
+Shadows, gradients, opacity
+Hover / active / disabled states
+No hard-coded colors outside design tokens or Tailwind theme extensions.
+Backgrounds & Containers
+Page and section backgrounds
+Card and overlay backgrounds
+Modal backdrops
+Blur and transparency effects
+Correct stacking and z-index behavior
+Icons & Media
+Icon sets and sizes
+Stroke vs filled variants
+Alignment with text
+Image ratios and cropping
+Fallback and placeholder behavior
+States & Interactions
+Hover, focus, active, disabled
+Loading and transition behavior
+Error and success feedback
+Animations (duration, easing)
+Responsive Design
+Mobile, tablet, desktop layouts
+Visibility rules per breakpoint
+Touch vs pointer considerations
+Global Design System Rules
+All global styles, tokens, and components defined in Figma must be mirrored in code
+Repeated patterns must be centralized
+One-off visual solutions are prohibited
+Do not approximate or “eyeball” spacing or colors
+Functional Integrity (CRITICAL)
+Applying design must never break existing functionality.
+Logic Preservation
+Authorization, permissions, and roles must remain intact
+Event creation/editing flows must not change
+Validation, submission, navigation, routing must continue to work
+Server actions, API contracts, Supabase logic must not be altered unintentionally
+Design compliance does not justify logic changes unless explicitly requested.
+Separation of Concerns
+Design changes are limited to:
+Markup
+Styling
+Layout composition
+Business logic must remain untouched
+If logic and UI are coupled:
+Extract UI
+Preserve logic exactly
+Non-Destructive Refactoring Rule
+Do not remove working code because “design changed”
+Do not rewrite logic to fit layout
+Do not silently change behavior
+If design conflicts with logic:
+Explicitly call it out
+Explain the risk
+Propose a non-destructive solution
+Request clarification before proceeding
+Regression Check (Required)
+After applying design:
+Verify all existing interactions still work
+Test unauthorized, empty, loading, and error states
+Ensure no regressions in accessibility or mobile behavior
+Design work is incomplete if regressions exist.
+Performance & Robustness
+Minimize client components
+Minimize useEffect and useState
+Prefer Server Components and server actions
+Handle empty, loading, and error states
+Avoid background actions for unauthorized users
+Coding Standards
+TypeScript only, no any
+Functional style, no classes
+Early returns
+Descriptive naming (isAuthorized, handleSubmit)
+Tailwind mobile-first
+No inline styles without justification
+Use next/image with explicit sizes
+Wrap async client components in <Suspense> where appropriate
+Conflict & Uncertainty Handling
+If information is insufficient, explicitly say so
+Request missing files via @path
+If no clean solution exists, state it clearly and propose next steps
+Guiding Principles
+Figma defines how it looks
+Code defines how it works
+Design must not break logic
+Predictability and authorization correctness are higher priority than visual cleverness

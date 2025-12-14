@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+---
+External Access & Credentials (MANDATORY)
+If executing a task requires access, credentials, or permissions that are not available in the current environment (e.g., Supabase, Vercel, Telegram, Sentry, third-party APIs, private repos), you must stop and request the exact actions I must take.
+Examples of access-gated actions
+Supabase: applying migrations, editing RLS policies, generating types, running SQL, managing secrets
+Vercel/AWS/Netlify: env vars, deployments, logs, preview URLs
+Telegram: bot token, domain/redirect configuration, login widget config
+Sentry/Monitoring: DSN setup, project creation, source maps
+GitHub/Git: protected branches, missing rights, required CI approvals
+Required behavior
+When access is needed, provide:
+What you need (permission/secret/service access)
+Why it is required
+Exact steps for me (click-by-click or command list)
+What you will do after access is granted
+How to verify it worked
+Never invent credentials, never assume permissions exist, and never recommend unsafe handling of secrets.
+Prefer .env.local for local setup and secure secret storage in the platform (e.g., Vercel env vars) for production.
+Git Workflow: Auto Commit & Push (MANDATORY)
+After each substantial, cohesive change (i.e., a complete unit of work that compiles and is testable), you must:
+Ensure the project builds / lint passes (or explicitly state what was not run and why)
+Create a git commit with a clear conventional message
+Push to the current branch
+Commit requirements
+Use small, atomic commits per feature/fix
+Message format (preferred):
+feat: ...
+fix: ...
+refactor: ...
+chore: ...
+Include key scope if applicable (e.g., feat(events): ...)
+If push is blocked
+If push fails due to:
+missing auth, protected branch, CI checks, or permissions
+You must immediately ask me to perform the necessary steps (with exact instructions) and do not proceed as if push succeeded.
+Prohibited
+Do not bundle unrelated changes into one commit
+Do not commit secrets or .env.local
+Do not force-push unless I explicitly approve
+Definition: “Full Change”
+A “full change” means:
+The requested behavior is implemented end-to-end
+UI and API contracts remain consistent
+Basic regression checks are done (at least the impacted flow)
+No known breaking errors remain
+Only then you finalize with commit + push.

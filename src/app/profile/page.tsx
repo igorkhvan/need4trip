@@ -16,7 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { UserCar, CarType } from "@/lib/types/userCar";
 import { CAR_TYPES } from "@/lib/types/userCar";
 
@@ -473,30 +479,42 @@ export default function ProfilePage() {
                       <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
                         Марка <span className="text-[var(--color-danger)]">*</span>
                       </label>
-                      <SimpleSelect
+                      <Select
                         value={newCar.carBrandId}
-                        onChange={(e) => setNewCar({ ...newCar, carBrandId: e.target.value })}
+                        onValueChange={(value) => setNewCar({ ...newCar, carBrandId: value })}
                       >
-                        <option value="">Выберите марку</option>
-                        {brands.map(brand => (
-                          <option key={brand.id} value={brand.id}>{brand.name}</option>
-                        ))}
-                      </SimpleSelect>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите марку" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {brands.map(brand => (
+                            <SelectItem key={brand.id} value={brand.id}>
+                              {brand.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
                       <label className="block text-[13px] text-[var(--color-text-muted)] mb-1.5">
                         Тип <span className="text-[var(--color-danger)]">*</span>
                       </label>
-                      <SimpleSelect
+                      <Select
                         value={newCar.type}
-                        onChange={(e) => setNewCar({ ...newCar, type: e.target.value as CarType })}
+                        onValueChange={(value) => setNewCar({ ...newCar, type: value as CarType })}
                       >
-                        <option value="">Выберите тип</option>
-                        {CAR_TYPES.map(type => (
-                          <option key={type.value} value={type.value}>{type.label}</option>
-                        ))}
-                      </SimpleSelect>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите тип" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CAR_TYPES.map(type => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
