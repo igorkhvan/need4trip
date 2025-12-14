@@ -279,7 +279,7 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
       clubId: parsed.clubId,
       action: parsed.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
       context: {
-        eventParticipantsCount: parsed.maxParticipants,
+        eventParticipantsCount: parsed.maxParticipants ?? undefined,
         isPaidEvent: parsed.isPaid,
       },
     });
