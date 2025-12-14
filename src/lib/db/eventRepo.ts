@@ -24,7 +24,7 @@ export async function listEvents(): Promise<DbEvent[]> {
   return (data ?? []).map((row: any) => ({
     ...row,
     custom_fields_schema: row.custom_fields_schema ?? [],
-  })) as DbEvent[];
+  })) as unknown as DbEvent[];
 }
 
 export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
@@ -45,7 +45,7 @@ export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
   return (data ?? []).map((row: any) => ({
     ...row,
     custom_fields_schema: row.custom_fields_schema ?? [],
-  })) as DbEventWithOwner[];
+  })) as unknown as DbEventWithOwner[];
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {
@@ -122,11 +122,11 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     throw new InternalError("Failed to create event", error);
   }
 
-  // Cast custom_fields_schema
+  // Cast custom_fields_schema from Json
   return {
     ...data,
     custom_fields_schema: data.custom_fields_schema ?? [],
-  } as DbEvent;
+  } as unknown as DbEvent;
 }
 
 export async function updateEvent(
@@ -189,11 +189,11 @@ export async function updateEvent(
 
   if (!data) return null;
 
-  // Cast custom_fields_schema
+  // Cast custom_fields_schema from Json
   return {
     ...data,
     custom_fields_schema: data.custom_fields_schema ?? [],
-  } as DbEvent;
+  } as unknown as DbEvent;
 }
 
 export async function replaceAllowedBrands(eventId: string, brandIds: string[]): Promise<void> {
