@@ -477,16 +477,10 @@ export default function ProfilePage() {
                         value={newCar.carBrandId}
                         onValueChange={(value) => setNewCar({ ...newCar, carBrandId: value })}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите марку" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {brands.map(brand => (
-                            <SelectItem key={brand.id} value={brand.id}>
-                              {brand.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                        <option value="">Выберите марку</option>
+                        {brands.map(brand => (
+                          <option key={brand.id} value={brand.id}>{brand.name}</option>
+                        ))}
                       </Select>
                     </div>
 
