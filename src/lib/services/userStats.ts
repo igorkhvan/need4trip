@@ -14,6 +14,9 @@ export interface UserEventStats {
  */
 export async function getUserEventStats(userId: string): Promise<UserEventStats> {
   ensureClient();
+  if (!supabase) {
+    return { totalEvents: 0, completedEvents: 0, organizedEvents: 0 };
+  }
 
   try {
     // 1. Всего событий (где пользователь зарегистрирован)
