@@ -49,10 +49,10 @@ import { hydrateCities, hydrateCitiesByIds } from "@/lib/utils/hydration";
 // } from "@/lib/services/permissions";
 
 // Temporary stubs until migration to v2.0 accessControl
-const canCreateClubPermission = async () => ({ allowed: true });
-const canManageClub = async () => ({ allowed: true });
-const canManageClubMembers = async () => ({ allowed: true });
-const canDeleteClubPermission = async () => ({ allowed: true });
+const canCreateClubPermission = async (...args: any[]) => ({ allowed: true });
+const canManageClub = async (...args: any[]) => ({ allowed: true });
+const canManageClubMembers = async (...args: any[]) => ({ allowed: true });
+const canDeleteClubPermission = async (...args: any[]) => ({ allowed: true });
 
 import {
   clubCreateSchema,
