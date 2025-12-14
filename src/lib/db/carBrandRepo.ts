@@ -27,3 +27,25 @@ export async function listCarBrands(): Promise<CarBrand[]> {
 
   return (data ?? []) as CarBrand[];
 }
+
+/**
+ * Получить марки автомобилей по списку ID (batch load)
+ */
+export async function getCarBrandsByIds(ids: string[]): Promise<CarBrand[]> {
+  if (ids.length === 0) return [];
+  
+  const client = ensureClient();
+  if (!client) return [];
+  
+  const { data, error } = await client
+    .from(table)
+    .select("id, name, slug")
+    .in("id", ids);
+
+  if (error) {
+    console.error("[getCarBrandsByIds] Failed to get car brands", error);
+    return [];
+  }
+
+  return (data ?? []) as CarBrand[];
+}
