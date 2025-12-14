@@ -16,7 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import type { UserCar, CarType } from "@/lib/types/userCar";
 import { CAR_TYPES } from "@/lib/types/userCar";
 
@@ -84,6 +90,7 @@ export default function ProfilePage() {
     try {
       // TODO: Real API call
       // const res = await fetch('/api/auth/me');
+      // if (!res.ok) return;
       // const { user } = await res.json();
       
       // Mock data for now
@@ -114,6 +121,10 @@ export default function ProfilePage() {
   const loadCars = async () => {
     try {
       const res = await fetch('/api/profile/cars');
+      if (!res.ok) {
+        console.error('[loadCars] API error:', res.status);
+        return;
+      }
       const data = await res.json();
       if (data.cars) {
         setCars(data.cars);
@@ -126,6 +137,10 @@ export default function ProfilePage() {
   const loadBrands = async () => {
     try {
       const res = await fetch('/api/car-brands');
+      if (!res.ok) {
+        console.error('[loadBrands] API error:', res.status);
+        return;
+      }
       const data = await res.json();
       if (data.brands) {
         setBrands(data.brands);
@@ -477,10 +492,16 @@ export default function ProfilePage() {
                         value={newCar.carBrandId}
                         onValueChange={(value) => setNewCar({ ...newCar, carBrandId: value })}
                       >
-                        <option value="">Выберите марку</option>
-                        {brands.map(brand => (
-                          <option key={brand.id} value={brand.id}>{brand.name}</option>
-                        ))}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите марку" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {brands.map(brand => (
+                            <SelectItem key={brand.id} value={brand.id}>
+                              {brand.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
 
