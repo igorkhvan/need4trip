@@ -4,13 +4,15 @@ import { DbEvent, DbEventWithOwner } from "@/lib/mappers";
 import { EventCreateInput, EventUpdateInput } from "@/lib/types/event";
 import { log } from "@/lib/utils/logger";
 
+// TODO: Regenerate Supabase types to include events table
+// Using 'as any' temporarily until types are regenerated
 const table = "events";
 
 export async function listEvents(): Promise<DbEvent[]> {
   ensureClient();
   if (!supabase) return [];
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .order("date_time", { ascending: true });
@@ -27,7 +29,7 @@ export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
   ensureClient();
   if (!supabase) return [];
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)")
     .order("date_time", { ascending: true });
@@ -49,7 +51,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(table)
     .select("*")
     .eq("id", id)
@@ -97,7 +99,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     currency_code: payload.currencyCode ?? null, // ISO 4217 (normalized)
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -157,7 +159,7 @@ export async function updateEvent(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -179,14 +181,14 @@ export async function replaceAllowedBrands(eventId: string, brandIds: string[]):
   }
   
   // delete existing
-  const { error: delError } = await supabase.from("event_allowed_brands").delete().eq("event_id", eventId);
+  const { error: delError } = await (supabase as any).from("event_allowed_brands").delete().eq("event_id", eventId);
   if (delError) {
     log.error("Failed to clear allowed brands", { eventId, error: delError });
     throw new InternalError("Failed to clear allowed brands", delError);
   }
   if (!brandIds.length) return;
   const rows = brandIds.map((brandId) => ({ event_id: eventId, brand_id: brandId }));
-  const { error: insError } = await supabase.from("event_allowed_brands").insert(rows);
+  const { error: insError } = await (supabase as any).from("event_allowed_brands").insert(rows);
   if (insError) {
     log.error("Failed to insert allowed brands", { eventId, error: insError });
     throw new InternalError("Failed to insert allowed brands", insError);
@@ -197,7 +199,7 @@ export async function getAllowedBrands(eventId: string) {
   ensureClient();
   if (!supabase) return [];
   
-  const { data: links, error: linkError } = await supabase
+  const { data: links, error: linkError } = await (supabase as any)
     .from("event_allowed_brands")
     .select("brand_id")
     .eq("event_id", eventId);
@@ -207,7 +209,7 @@ export async function getAllowedBrands(eventId: string) {
   }
   const ids = (links ?? []).map((row) => row.brand_id);
   if (!ids.length) return [];
-  const { data: brands, error: brandError } = await supabase
+  const { data: brands, error: brandError } = await (supabase as any)
     .from("car_brands")
     .select("id, name, slug")
     .in("id", ids);
@@ -233,7 +235,7 @@ export async function getAllowedBrandsByEventIds(
   if (!supabase) return new Map();
 
   // Step 1: Get all event_allowed_brands links for these events
-  const { data: links, error: linkError } = await supabase
+  const { data: links, error: linkError } = await (supabase as any)
     .from("event_allowed_brands")
     .select("event_id, brand_id")
     .in("event_id", eventIds);
@@ -251,7 +253,7 @@ export async function getAllowedBrandsByEventIds(
   const brandIds = Array.from(new Set(links.map(link => link.brand_id)));
 
   // Step 3: Load all brands at once
-  const { data: brands, error: brandError } = await supabase
+  const { data: brands, error: brandError } = await (supabase as any)
     .from("car_brands")
     .select("id, name, slug")
     .in("id", brandIds);
@@ -296,7 +298,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
     throw new InternalError("Supabase client is not configured");
   }
   
-  const { error, count } = await supabase
+  const { error, count } = await (supabase as any)
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
