@@ -288,7 +288,7 @@ export async function createClub(
   currentUser: CurrentUser | null
 ): Promise<Club> {
   // Проверка авторизации
-  const permissionCheck = canCreateClubPermission(currentUser);
+  const permissionCheck = await canCreateClubPermission(currentUser);
   if (!permissionCheck.allowed) {
     throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 401);
   }
@@ -613,7 +613,7 @@ export async function validateClubCreation(
   const errors: string[] = [];
 
   // Проверка авторизации
-  const permissionCheck = canCreateClubPermission(currentUser);
+  const permissionCheck = await canCreateClubPermission(currentUser);
   if (!permissionCheck.allowed) {
     errors.push(permissionCheck.reason ?? "Необходима авторизация");
   }
