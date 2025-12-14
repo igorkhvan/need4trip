@@ -477,10 +477,16 @@ export default function ProfilePage() {
                         value={newCar.carBrandId}
                         onValueChange={(value) => setNewCar({ ...newCar, carBrandId: value })}
                       >
-                        <option value="">Выберите марку</option>
-                        {brands.map(brand => (
-                          <option key={brand.id} value={brand.id}>{brand.name}</option>
-                        ))}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите марку" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {brands.map(brand => (
+                            <SelectItem key={brand.id} value={brand.id}>
+                              {brand.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
 
@@ -492,10 +498,16 @@ export default function ProfilePage() {
                         value={newCar.type}
                         onValueChange={(value) => setNewCar({ ...newCar, type: value as CarType })}
                       >
-                        <option value="">Выберите тип</option>
-                        {CAR_TYPES.map(type => (
-                          <option key={type.value} value={type.value}>{type.label}</option>
-                        ))}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите тип" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CAR_TYPES.map(type => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
 
