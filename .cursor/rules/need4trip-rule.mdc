@@ -45,6 +45,35 @@ Examples of what NOT to do:
 Technical debt should shrink with every commit, never grow
 When you encounter workarounds, ask: "Why does this exist?" and fix the root cause
 
+CRITICAL: Global Error Detection and Prevention
+When fixing an error, ALWAYS search for similar patterns across the entire codebase:
+- DO NOT fix only the immediate error location
+- DO search for ALL places where the same error could occur
+- DO fix all instances proactively in a single commit
+- DO use grep/search tools to find similar patterns
+
+Examples:
+- BAD: "Fixed import error in file A" (file B, C, D have the same import)
+- GOOD: "Found import error → searched codebase → found 4 files → fixed all 4 files"
+- BAD: "Added missing property to stub in route X"
+- GOOD: "Found missing property → searched for all stubs → updated 5 stubs consistently"
+- BAD: "Changed old type import in component Y"
+- GOOD: "Detected old type → grep'd entire codebase → migrated 12 imports + deprecated source"
+
+Process for error fixes:
+1. Identify the error and its root cause
+2. Search codebase for similar patterns: grep, glob, semantic search
+3. List ALL affected files
+4. Fix ALL instances in a single, atomic commit
+5. Document what was found and fixed in commit message
+
+This prevents:
+- Whack-a-mole debugging (fix one, another breaks)
+- Multiple deploy cycles for the same issue
+- Partial migrations that leave codebase in inconsistent state
+
+Every error is an opportunity to improve the entire codebase, not just one file
+
 Code Review Rules (Mandatory)
 Before proposing or applying changes:
 Review the full relevant code path
