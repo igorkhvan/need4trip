@@ -2,7 +2,7 @@
 -- This table defines available club subscription plans and their limits
 
 CREATE TABLE IF NOT EXISTS public.club_plans (
-  id TEXT PRIMARY KEY,  -- 'club_free', 'club_basic', 'club_pro'
+  id TEXT PRIMARY KEY,  -- 'club_free', 'club_50', 'club_500', 'club_unlimited'
   name TEXT NOT NULL,
   description TEXT,
   price_monthly NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -10,18 +10,21 @@ CREATE TABLE IF NOT EXISTS public.club_plans (
   -- Event limits
   max_active_events INT,  -- NULL = unlimited
   
-  -- Member limits
+  -- Participant limits per event
+  max_participants_per_event INT,  -- NULL = unlimited
+  
+  -- Member limits (club organizers/admins)
   max_organizers INT NOT NULL DEFAULT 1,
   
   -- Feature flags
   allow_paid_events BOOLEAN NOT NULL DEFAULT false,
+  allow_email_notifications BOOLEAN NOT NULL DEFAULT false,
+  allow_statistics BOOLEAN NOT NULL DEFAULT false,
   allow_csv_export BOOLEAN NOT NULL DEFAULT false,
-  allow_telegram_bot_pro BOOLEAN NOT NULL DEFAULT false,
-  allow_analytics_basic BOOLEAN NOT NULL DEFAULT false,
   allow_analytics_advanced BOOLEAN NOT NULL DEFAULT false,
-  allow_white_label BOOLEAN NOT NULL DEFAULT false,
-  allow_subdomain BOOLEAN NOT NULL DEFAULT false,
   allow_api_access BOOLEAN NOT NULL DEFAULT false,
+  allow_white_label BOOLEAN NOT NULL DEFAULT false,
+  allow_personal_manager BOOLEAN NOT NULL DEFAULT false,
   
   -- Metadata
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -31,55 +34,75 @@ CREATE TABLE IF NOT EXISTS public.club_plans (
 -- Add comments
 COMMENT ON TABLE public.club_plans IS 'Reference table for club subscription plans and their limits';
 COMMENT ON COLUMN public.club_plans.max_active_events IS 'Maximum number of active (future) events. NULL means unlimited';
+COMMENT ON COLUMN public.club_plans.max_participants_per_event IS 'Maximum participants per single event. NULL means unlimited';
 COMMENT ON COLUMN public.club_plans.max_organizers IS 'Maximum number of organizers (excluding owner)';
 
--- Seed initial plans
+-- Seed initial plans (based on docs/DESIGN_REFERENCE.md)
 INSERT INTO public.club_plans (
   id, 
   name, 
   description,
   price_monthly, 
-  max_active_events, 
+  max_active_events,
+  max_participants_per_event,
   max_organizers,
   allow_paid_events,
+  allow_email_notifications,
+  allow_statistics,
   allow_csv_export,
-  allow_telegram_bot_pro,
-  allow_analytics_basic,
   allow_analytics_advanced,
+  allow_api_access,
   allow_white_label,
-  allow_subdomain,
-  allow_api_access
+  allow_personal_manager
 ) VALUES 
 (
   'club_free',
   'Free',
   'Базовый план для начинающих клубов',
   0,
-  1,  -- 1 событие
-  1,  -- 1 организатор
+  3,   -- до 3 активных событий
+  30,  -- до 30 участников на событие
+  1,   -- 1 организатор
   false, false, false, false, false, false, false, false
 ),
 (
-  'club_basic',
-  'Basic',
+  'club_50',
+  'Club 50',
   'Для растущих клубов с регулярными событиями',
   990,
-  3,  -- 3 события
-  3,  -- 3 организатора
+  10,  -- до 10 активных событий
+  50,  -- до 50 участников на событие
+  3,   -- 3 организатора
   true,  -- платные события
+  true,  -- email рассылки
+  true,  -- статистика
   true,  -- CSV export
-  false, 
-  true,  -- базовая аналитика
   false, false, false, false
 ),
 (
-  'club_pro',
-  'Pro',
-  'Полный функционал для профессиональных клубов',
-  4990,
-  NULL,  -- unlimited events
-  10,    -- 10 организаторов
-  true, true, true, true, true, true, true, true  -- все фичи
+  'club_500',
+  'Club 500',
+  'Для активных клубов с большим комьюнити',
+  2990,
+  30,   -- до 30 активных событий
+  500,  -- до 500 участников на событие
+  10,   -- 10 организаторов
+  true, true, true, true,
+  true,  -- расширенная аналитика
+  true,  -- API доступ
+  false, false
+),
+(
+  'club_unlimited',
+  'Unlimited',
+  'Без ограничений для профессиональных организаций',
+  0,  -- индивидуально (управляется вне системы)
+  NULL,  -- без ограничений на события
+  NULL,  -- без ограничений на участников
+  NULL,  -- без ограничений на организаторов
+  true, true, true, true, true, true,
+  true,  -- white-label
+  true   -- персональный менеджер
 )
 ON CONFLICT (id) DO NOTHING;
 
