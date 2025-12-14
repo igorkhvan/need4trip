@@ -225,9 +225,9 @@ export function isSubscriptionActive(subscription: any): boolean {
  * Get days until subscription expires
  */
 export function getDaysUntilExpiration(subscription: ClubSubscription): number | null {
-  if (!subscription.validUntil) return null; // No expiration
+  if (!subscription.currentPeriodEnd) return null; // No expiration
   const now = new Date();
-  const expiration = new Date(subscription.validUntil);
+  const expiration = new Date(subscription.currentPeriodEnd);
   const diffMs = expiration.getTime() - now.getTime();
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
