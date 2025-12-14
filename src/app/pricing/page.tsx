@@ -8,21 +8,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClubPlan } from "@/lib/types/billing";
+import { PricingPlan } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
+import { PricingCardButton } from "@/components/pricing/pricing-card-button";
 
 interface PricingResponse {
-  plans: ClubPlan[];
-  free: {
-    id: "free";
-    title: string;
-    priceMonthlyKzt: number;
-    currency: string;
-    maxMembers: null;
-    maxEventParticipants: number;
-    allowPaidEvents: boolean;
-    allowCsvExport: boolean;
-  };
+  plans: PricingPlan[];
+  free: PricingPlan;
 }
 
 export default function PricingPage() {

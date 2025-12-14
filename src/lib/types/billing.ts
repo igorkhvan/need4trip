@@ -13,6 +13,9 @@ import { z } from "zod";
 export const PLAN_IDS = ["club_50", "club_500", "club_unlimited"] as const;
 export type PlanId = typeof PLAN_IDS[number];
 
+// For display purposes (includes free)
+export type PlanIdWithFree = PlanId | "free";
+
 export interface ClubPlan {
   id: PlanId;
   title: string;
@@ -25,6 +28,18 @@ export interface ClubPlan {
   isPublic: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// For pricing page display (includes free plan)
+export interface PricingPlan {
+  id: PlanIdWithFree;
+  title: string;
+  priceMonthlyKzt: number;
+  currency: string;
+  maxMembers: number | null;
+  maxEventParticipants: number | null;
+  allowPaidEvents: boolean;
+  allowCsvExport: boolean;
 }
 
 export const ClubPlanSchema = z.object({

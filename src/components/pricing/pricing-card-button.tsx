@@ -2,24 +2,23 @@
 
 import { Button } from "@/components/ui/button";
 import { CreateClubButton } from "@/components/clubs/create-club-button";
-import type { ClubPlan } from "@/lib/types/billing";
+import type { PricingPlan } from "@/lib/types/billing";
 
 interface PricingCardButtonProps {
-  plan: ClubPlan;
+  plan: PricingPlan;
   isAuthenticated: boolean;
 }
 
 export function PricingCardButton({ plan, isAuthenticated }: PricingCardButtonProps) {
-  // New billing v2.0 plan IDs: club_50, club_500, club_unlimited
   const isPro = plan.id === 'club_unlimited';
   const isBasic = plan.id === 'club_50' || plan.id === 'club_500';
-  const isFree = plan.id === 'free'; // Free plan doesn't have DB record
+  const isFree = plan.id === 'free';
 
   if (isFree) {
     return (
       <CreateClubButton
         isAuthenticated={isAuthenticated}
-        variant={isPro ? "default" : isBasic ? "secondary" : "outline"}
+        variant="outline"
         className="w-full"
         size="lg"
       >
@@ -31,7 +30,7 @@ export function PricingCardButton({ plan, isAuthenticated }: PricingCardButtonPr
   return (
     <>
       <Button
-        variant={isPro ? "default" : isBasic ? "secondary" : "outline"}
+        variant={isPro ? "default" : "secondary"}
         className="w-full"
         size="lg"
       >
