@@ -44,6 +44,9 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
   const userRole = currentUserMember?.role;
   const canManage = userRole === "owner" || userRole === "organizer";
   const isOwner = userRole === "owner";
+  
+  // Показывать боковую панель только если есть что показать
+  const showSidebar = isOwner && club.subscription;
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
@@ -57,9 +60,9 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
           <span>Все клубы</span>
         </Link>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+        <div className={showSidebar ? "grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8" : ""}>
           {/* Основная информация */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className={`space-y-6 ${showSidebar ? "lg:col-span-2" : ""}`}>
             {/* Заголовок */}
             <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
               <div className="flex items-start gap-6">
@@ -198,19 +201,19 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
             </div>
           </div>
 
-          {/* Боковая панель */}
-          <div className="space-y-6">
-            {/* Подписка (только для owner) */}
-            {isOwner && club.subscription && (
+          {/* Боковая панель (только если есть что показать) */}
+          {showSidebar && (
+            <div className="space-y-6">
+              {/* Подписка (только для owner) */}
               <ClubSubscriptionCard
                 subscription={club.subscription}
                 canManage={isOwner}
               />
-            )}
 
-            {/* TODO: Последние события клуба */}
-            {/* TODO: Кнопка "Вступить в клуб" для не-членов */}
-          </div>
+              {/* TODO: Последние события клуба */}
+              {/* TODO: Кнопка "Вступить в клуб" для не-членов */}
+            </div>
+          )}
         </div>
       </div>
     </div>
