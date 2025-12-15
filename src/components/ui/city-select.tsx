@@ -129,8 +129,8 @@ export function CitySelect({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-12 w-full justify-between rounded-xl border-2 text-left font-normal",
-            error && "border-red-500",
+            "h-12 w-full justify-between rounded-xl text-left font-normal",
+            error && "border-red-500 focus:border-red-500",
             !selectedCity && "text-gray-500",
             className
           )}
@@ -138,11 +138,11 @@ export function CitySelect({
           <div className="flex items-center gap-2 truncate">
             <MapPin className="h-4 w-4 shrink-0 opacity-50" />
             {selectedCity ? (
-              <span>
+              <span className="text-[15px]">
                 {getCountryFlag(selectedCity.country)} {formatCityName(selectedCity)}
               </span>
             ) : (
-              <span>{placeholder}</span>
+              <span className="text-[15px]">{placeholder}</span>
             )}
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

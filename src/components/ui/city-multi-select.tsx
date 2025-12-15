@@ -170,15 +170,15 @@ export function CityMultiSelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "h-12 w-full justify-between rounded-xl border-2 text-left font-normal shadow-none hover:bg-white",
-              error ? "border-red-500 focus-visible:ring-red-500" : "border-[#E5E7EB]",
+              "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
+              error ? "border-red-500 focus:border-red-500" : "",
               selectedCities.length === 0 && "text-[#9CA3AF]",
               className
             )}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <MapPin className={cn("h-4 w-4 shrink-0", selectedCities.length > 0 ? "text-[#6B7280]" : "text-[#9CA3AF]")} />
-              <span className="truncate">{displayText}</span>
+              <span className="truncate text-[15px]">{displayText}</span>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>

@@ -56,15 +56,15 @@ export function BrandSelect({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "flex h-12 w-full items-center justify-between gap-2 rounded-xl border-2 bg-background px-4 text-left shadow-none hover:bg-white font-normal",
-            error ? "border-red-500 focus-visible:ring-red-500" : "border-[#E5E7EB]",
+            "flex h-12 w-full items-center justify-between gap-2 rounded-xl bg-background px-4 text-left shadow-none hover:bg-white font-normal",
+            error ? "border-red-500 focus:border-red-500" : "",
             disabled ? "cursor-not-allowed opacity-70" : ""
           )}
           disabled={disabled}
         >
           <span className={cn(
-            "text-sm",
-            selectedBrand ? "text-foreground" : "text-[#6B7280]"
+            "text-[15px]",
+            selectedBrand ? "text-[#1F2937]" : "text-[#6B7280]"
           )}>
             {selectedBrand ? selectedBrand.name : placeholder}
           </span>
