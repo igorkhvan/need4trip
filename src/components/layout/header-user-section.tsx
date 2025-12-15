@@ -49,27 +49,20 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
         /* User Profile Icon */
         <Link 
           href="/profile"
-          className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-[#F9FAFB]"
+          className="flex items-center justify-center transition-all hover:opacity-80"
+          title={currentUser.name || "Профиль"}
         >
-          {currentUser.avatarUrl ? (
-            <Avatar className="h-6 w-6">
-              <AvatarImage
-                src={currentUser.avatarUrl}
-                alt={currentUser.name ?? "Пользователь"}
-              />
-              <AvatarFallback className="text-xs bg-[#FF6F2C] text-white">
-                {currentUser.name?.slice(0, 2).toUpperCase() ??
-                  currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
-                  "TG"}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FF6F2C] text-white text-[10px] font-semibold">
+          <Avatar className="h-10 w-10">
+            <AvatarImage
+              src={currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=FF6F2C&color=fff&size=80`}
+              alt={currentUser.name ?? "Пользователь"}
+            />
+            <AvatarFallback className="text-sm bg-[#FF6F2C] text-white font-semibold">
               {currentUser.name?.slice(0, 2).toUpperCase() ??
                 currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
                 "TG"}
-            </div>
-          )}
+            </AvatarFallback>
+          </Avatar>
         </Link>
       ) : (
         /* User Icon (opens login modal) */

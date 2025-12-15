@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs } from "@/components/ui/tabs";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Select,
   SelectContent,
@@ -557,13 +558,16 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 md:gap-4">
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl border-4 border-white/30 bg-[var(--color-bg-subtle)] overflow-hidden shadow-lg backdrop-blur-sm">
-                    <img 
-                      src={userData.avatar} 
+                  <Avatar className="w-20 h-20 md:w-24 md:h-24 rounded-2xl border-4 border-white/30 shadow-lg">
+                    <AvatarImage
+                      src={userData.avatar}
                       alt={userData.name}
-                      className="w-full h-full object-cover"
+                      className="object-cover"
                     />
-                  </div>
+                    <AvatarFallback className="text-2xl md:text-3xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-white font-bold rounded-2xl">
+                      {userData.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
 
                 {/* Name and Location */}
