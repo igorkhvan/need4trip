@@ -121,6 +121,11 @@ export default function ProfilePage() {
 
       const data = await res.json();
       
+      console.log('[loadProfileData] Full API response:', data);
+      console.log('[loadProfileData] user object:', data.user);
+      console.log('[loadProfileData] user.cityId:', data.user?.cityId);
+      console.log('[loadProfileData] user.city:', data.user?.city);
+      
       // Map user data
       const user = data.user;
       const cityName = user.city ? `${user.city.name}, ${user.city.region}` : '';
@@ -130,6 +135,8 @@ export default function ProfilePage() {
         year: 'numeric',
         month: 'long'
       }) : '';
+      
+      console.log('[loadProfileData] Setting cityId to:', user.cityId);
       
       setUserData({
         name: user.name || 'Пользователь',
@@ -642,9 +649,13 @@ export default function ProfilePage() {
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Город
                       </label>
+                      {console.log('[CitySelect] Rendering with value:', userData.cityId)}
                       <CitySelect
                         value={userData.cityId}
-                        onChange={(cityId) => setUserData({ ...userData, cityId })}
+                        onChange={(cityId) => {
+                          console.log('[CitySelect] onChange called with:', cityId);
+                          setUserData({ ...userData, cityId });
+                        }}
                         placeholder="Выберите город..."
                         className="shadow-none"
                       />
