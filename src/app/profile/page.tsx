@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BrandSelect, BrandSelectOption } from "@/components/brand-select";
 import type { UserCar, CarType } from "@/lib/types/userCar";
 import { CAR_TYPES } from "@/lib/types/userCar";
 
@@ -70,7 +71,7 @@ export default function ProfilePage() {
   });
 
   const [cars, setCars] = useState<UserCar[]>([]);
-  const [brands, setBrands] = useState<CarBrand[]>([]);
+  const [brands, setBrands] = useState<BrandSelectOption[]>([]);
   const [showAddCar, setShowAddCar] = useState(false);
   const [newCar, setNewCar] = useState({
     carBrandId: '',
@@ -149,7 +150,10 @@ export default function ProfilePage() {
       const res = await fetch('/api/car-brands');
       const data = await res.json();
       if (data.brands) {
-        setBrands(data.brands);
+        setBrands(data.brands.map((brand: CarBrand) => ({
+          id: brand.id,
+          name: brand.name
+        })));
       }
     } catch (error) {
       console.error('[loadBrands] Error:', error);
@@ -508,9 +512,10 @@ export default function ProfilePage() {
                       <label className="block text-sm font-medium text-[var(--color-text)]">
                         Марка <span className="text-[var(--color-danger)]">*</span>
                       </label>
-                      <Select
+                      <BrandSelect
+                        options={brands}
                         value={newCar.carBrandId}
-                        onValueChange={(value) => {
+                        onChange={(value) => {
                           setNewCar({ ...newCar, carBrandId: value });
                           if (carFieldErrors.carBrandId) {
                             setCarFieldErrors((prev) => {
@@ -520,18 +525,9 @@ export default function ProfilePage() {
                             });
                           }
                         }}
-                      >
-                        <SelectTrigger className={carFieldErrors.carBrandId ? 'border-red-500 focus-visible:ring-red-500' : ''}>
-                          <SelectValue placeholder="Выберите марку" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {brands.map(brand => (
-                            <SelectItem key={brand.id} value={brand.id}>
-                              {brand.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        error={!!carFieldErrors.carBrandId}
+                        placeholder="Выберите марку"
+                      />
                       <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.carBrandId ?? ''}</div>
                     </div>
 
