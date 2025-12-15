@@ -92,6 +92,17 @@ export async function deleteUserCar(userId: string, carId: string): Promise<void
   ensureAdminClient();
   if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
 
+  // Check if this is the primary car
+  const { data: carToDelete } = await supabaseAdmin
+    .from("user_cars")
+    .select("is_primary")
+    .eq("id", carId)
+    .eq("user_id", userId)
+    .single();
+
+  const wasPrimary = carToDelete?.is_primary || false;
+
+  // Delete the car
   const { error } = await supabaseAdmin
     .from("user_cars")
     .delete()
@@ -101,6 +112,14 @@ export async function deleteUserCar(userId: string, carId: string): Promise<void
   if (error) {
     log.error("Failed to delete user car", { userId, carId, error });
     throw new Error("Не удалось удалить автомобиль");
+  }
+
+  // If deleted car was primary, set the first remaining car as primary
+  if (wasPrimary) {
+    const remainingCars = await getUserCars(userId);
+    if (remainingCars.length > 0) {
+      await setPrimaryUserCar(userId, remainingCars[0].id);
+    }
   }
 }
 

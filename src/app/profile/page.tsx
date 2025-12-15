@@ -460,20 +460,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDeleteCar = async (carId: string) => {
-    // Remove from local state
-    const updatedCars = cars.filter(car => car.id !== carId);
-    setCars(updatedCars);
-
-    // If deleted car was primary, set first car as primary
-    if (updatedCars.length > 0 && !updatedCars.some(c => c.isPrimary)) {
-      handleSetPrimary(updatedCars[0].id);
-    }
-
-    // Close confirm dialog
-    setDeleteConfirm({ open: false, carId: null });
-  };
-
   const confirmDeleteCar = async () => {
     if (!deleteConfirm.carId) return;
 
@@ -484,13 +470,18 @@ export default function ProfilePage() {
 
       if (!res.ok) throw new Error('Failed to delete car');
 
-      await handleDeleteCar(deleteConfirm.carId);
+      // Reload cars from server to get correct state
+      await loadCars();
+      
+      // Close confirm dialog
+      setDeleteConfirm({ open: false, carId: null });
     } catch (error) {
       console.error('[confirmDeleteCar] Error:', error);
       setErrorDialog({ 
         open: true, 
         message: 'Не удалось удалить автомобиль' 
       });
+      // Close confirm dialog even on error
       setDeleteConfirm({ open: false, carId: null });
     }
   };
@@ -516,16 +507,7 @@ export default function ProfilePage() {
             
             {/* Top Right Actions */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              {!isEditing && (
-                <Button 
-                  onClick={() => setIsEditing(true)}
-                  variant="outline"
-                  className="bg-white/90 backdrop-blur-sm hover:bg-white"
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Изменить
-                </Button>
-              )}
+              {/* Edit button moved to Personal Info section */}
             </div>
 
             {/* User Info Overlay */}
@@ -604,7 +586,16 @@ export default function ProfilePage() {
               <CardContent className="p-5 md:p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3>Личная информация</h3>
-                  <User className="w-5 h-5 text-[var(--color-text-muted)]" />
+                  {!isEditing && (
+                    <Button 
+                      onClick={() => setIsEditing(true)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Редактировать
+                    </Button>
+                  )}
                 </div>
 
                 {isEditing ? (
@@ -735,6 +726,7 @@ export default function ProfilePage() {
                       setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
                       setCarFieldErrors({});
                     }}
+                    variant={cars.length === 0 ? "default" : "secondary"}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Добавить
