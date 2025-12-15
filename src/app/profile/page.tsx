@@ -595,7 +595,11 @@ export default function ProfilePage() {
                   <h3>Личная информация</h3>
                   {!isEditing && (
                     <Button 
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => {
+                        console.log('[Button onClick] userData before edit:', userData);
+                        console.log('[Button onClick] cityId:', userData.cityId);
+                        setIsEditing(true);
+                      }}
                       variant="secondary"
                     >
                       <Edit2 className="w-4 h-4 mr-2" />
