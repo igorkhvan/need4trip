@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs } from "@/components/ui/tabs";
 import { 
   Select,
   SelectContent,
@@ -381,38 +382,16 @@ export default function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-0 md:gap-1 mb-6 md:mb-8 border-b border-[var(--color-border)]">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 md:px-5 py-3 text-sm md:text-base border-b-2 transition-colors ${
-              activeTab === 'overview'
-                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-            }`}
-          >
-            Обзор
-          </button>
-          <button
-            onClick={() => setActiveTab('events')}
-            className={`px-4 md:px-5 py-3 text-sm md:text-base border-b-2 transition-colors ${
-              activeTab === 'events'
-                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-            }`}
-          >
-            События
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 md:px-5 py-3 text-sm md:text-base border-b-2 transition-colors ${
-              activeTab === 'settings'
-                ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-            }`}
-          >
-            Настройки
-          </button>
-        </div>
+        <Tabs
+          tabs={[
+            { id: "overview", label: "Обзор" },
+            { id: "events", label: "События" },
+            { id: "settings", label: "Настройки" },
+          ]}
+          activeTab={activeTab}
+          onChange={(tabId) => setActiveTab(tabId as 'overview' | 'events' | 'settings')}
+          className="md:mb-8"
+        />
 
         {/* Tab Content */}
         {activeTab === 'overview' && (

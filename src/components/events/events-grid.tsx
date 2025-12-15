@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
+import { Tabs } from "@/components/ui/tabs";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { Event } from "@/lib/types/event";
@@ -258,40 +259,15 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-[#E5E7EB]">
-        <button
-          onClick={() => setActiveTab("all")}
-          className={`border-b-2 px-4 py-3 text-[15px] transition-colors ${
-            activeTab === "all"
-              ? "border-[#FF6F2C] text-[#FF6F2C]"
-              : "border-transparent text-[#6B7280] hover:text-[#111827]"
-          }`}
-        >
-          Все события
-        </button>
-        <button
-          onClick={() => setActiveTab("upcoming")}
-          className={`border-b-2 px-4 py-3 text-[15px] transition-colors ${
-            activeTab === "upcoming"
-              ? "border-[#FF6F2C] text-[#FF6F2C]"
-              : "border-transparent text-[#6B7280] hover:text-[#111827]"
-          }`}
-        >
-          Предстоящие
-        </button>
-        {currentUserId && (
-          <button
-            onClick={() => setActiveTab("my")}
-            className={`border-b-2 px-4 py-3 text-[15px] transition-colors ${
-              activeTab === "my"
-                ? "border-[#FF6F2C] text-[#FF6F2C]"
-                : "border-transparent text-[#6B7280] hover:text-[#111827]"
-            }`}
-          >
-            Мои события
-          </button>
-        )}
-      </div>
+      <Tabs
+        tabs={[
+          { id: "all", label: "Все события" },
+          { id: "upcoming", label: "Предстоящие" },
+          { id: "my", label: "Мои события", hidden: !currentUserId },
+        ]}
+        activeTab={activeTab}
+        onChange={(tabId) => setActiveTab(tabId as TabType)}
+      />
 
       {/* Search */}
       <div className="max-w-md">
