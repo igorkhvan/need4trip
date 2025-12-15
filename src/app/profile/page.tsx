@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { redirect } from "next/navigation";
 import { 
   User, Mail, Phone, MapPin, Calendar, Car, 
-  Settings, Edit2, Camera, Save, X, Plus, Trash2, Check, Pencil
+  Settings, Edit2, X, Plus, Trash2, Check, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +94,7 @@ export default function ProfilePage() {
   });
   const [savingCar, setSavingCar] = useState(false);
   const [carFieldErrors, setCarFieldErrors] = useState<Record<string, string>>({});
+  const [profileFieldErrors, setProfileFieldErrors] = useState<Record<string, string>>({});
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ 
     open: false, 
     message: '' 
@@ -186,6 +187,21 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    // Validate fields
+    const errors: Record<string, string> = {};
+    
+    if (!userData.name.trim()) {
+      errors.name = 'Имя и фамилия обязательны';
+    }
+    
+    // If validation fails, show errors and return
+    if (Object.keys(errors).length > 0) {
+      setProfileFieldErrors(errors);
+      return;
+    }
+
+    setProfileFieldErrors({});
+
     try {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
@@ -229,6 +245,9 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     setIsEditing(false);
+    setProfileFieldErrors({});
+    // Reload profile data to reset changes
+    loadProfileData();
   };
 
   const handleAddCar = async () => {
@@ -497,33 +516,15 @@ export default function ProfilePage() {
             
             {/* Top Right Actions */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              {!isEditing ? (
-                <>
-                  <button className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors">
-                    <Camera className="w-5 h-5 text-white" />
-                  </button>
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors"
-                  >
-                    <Edit2 className="w-5 h-5 text-white" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button 
-                    onClick={handleSave}
-                    className="p-2 bg-white/90 backdrop-blur-sm rounded-lg hover:bg-white transition-colors"
-                  >
-                    <Save className="w-5 h-5 text-[var(--color-primary)]" />
-                  </button>
-                  <button 
-                    onClick={handleCancel}
-                    className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
-                </>
+              {!isEditing && (
+                <Button 
+                  onClick={() => setIsEditing(true)}
+                  variant="outline"
+                  className="bg-white/90 backdrop-blur-sm hover:bg-white"
+                >
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Изменить
+                </Button>
               )}
             </div>
 
@@ -539,11 +540,6 @@ export default function ProfilePage() {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  {!isEditing && (
-                    <button className="absolute bottom-0 right-0 p-1.5 bg-[var(--color-primary)] rounded-lg hover:bg-orange-600 transition-colors shadow-lg">
-                      <Camera className="w-3.5 h-3.5 text-white" />
-                    </button>
-                  )}
                 </div>
 
                 {/* Name and Location */}
@@ -613,14 +609,25 @@ export default function ProfilePage() {
 
                 {isEditing ? (
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
-                        Имя и фамилия
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
+                        Имя и фамилия <span className="text-[var(--color-danger)]">*</span>
                       </label>
                       <Input
                         value={userData.name}
-                        onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                        onChange={(e) => {
+                          setUserData({ ...userData, name: e.target.value });
+                          if (profileFieldErrors.name) {
+                            setProfileFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.name;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={profileFieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                       />
+                      <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.name ?? ''}</div>
                     </div>
                     <div>
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
@@ -629,7 +636,8 @@ export default function ProfilePage() {
                       <Input
                         type="email"
                         value={userData.email}
-                        onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                        disabled
+                        className="bg-gray-50 cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -649,6 +657,7 @@ export default function ProfilePage() {
                         value={userData.cityId}
                         onChange={(cityId) => setUserData({ ...userData, cityId })}
                         placeholder="Выберите город..."
+                        className="shadow-none"
                       />
                     </div>
                     <div>
@@ -663,6 +672,21 @@ export default function ProfilePage() {
                           focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary-bg)]
                           transition-all duration-200 resize-none"
                       />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button 
+                        variant="ghost"
+                        onClick={handleCancel}
+                      >
+                        Отмена
+                      </Button>
+                      <Button 
+                        onClick={handleSave}
+                      >
+                        Сохранить
+                      </Button>
                     </div>
                   </div>
                 ) : (
