@@ -5,10 +5,12 @@ import { log } from "@/lib/utils/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 log.info("Supabase client configuration", {
   url: !!supabaseUrl,
   anonKey: !!supabaseAnonKey,
+  serviceRoleKey: !!supabaseServiceRoleKey,
 });
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -18,11 +20,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
   });
 }
 
+// Client for browser/public use (with RLS)
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: true,
+      },
+    })
+  : null;
+
+// Admin client for server-side operations (bypasses RLS)
+export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+  ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     })
   : null;
@@ -37,8 +50,24 @@ export function ensureClient(): void {
   }
 }
 
+/**
+ * Ensure Supabase admin client is initialized
+ * Throws error if client is not available
+ */
+export function ensureAdminClient(): void {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase admin client is not initialized. Check SUPABASE_SERVICE_ROLE_KEY.");
+  }
+}
+
 if (supabase) {
   log.info("Supabase client created successfully");
 } else {
   log.error("Failed to create Supabase client");
+}
+
+if (supabaseAdmin) {
+  log.info("Supabase admin client created successfully");
+} else {
+  log.warn("Supabase admin client not available (SERVICE_ROLE_KEY missing)");
 }

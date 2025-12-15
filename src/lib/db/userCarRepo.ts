@@ -1,4 +1,4 @@
-import { supabase, ensureClient } from "./client";
+import { supabase, supabaseAdmin, ensureClient, ensureAdminClient } from "./client";
 import type { UserCar, UserCarCreateInput } from "../types/userCar";
 import type { Database } from "../types/supabase";
 import { log } from "@/lib/utils/logger";
@@ -53,8 +53,8 @@ export async function createUserCar(
   userId: string,
   input: UserCarCreateInput
 ): Promise<UserCar> {
-  ensureClient();
-  if (!supabase) throw new Error("Supabase client not initialized");
+  ensureAdminClient();
+  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
 
   // Проверяем, есть ли у пользователя другие автомобили
   const existingCars = await getUserCars(userId);
@@ -69,7 +69,7 @@ export async function createUserCar(
     is_primary: isFirstCar,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("user_cars")
     .insert(insertData)
     .select()
@@ -77,7 +77,9 @@ export async function createUserCar(
 
   if (error) {
     log.error("Failed to create user car", { userId, input, error });
-    throw new Error("Не удалось создать автомобиль");
+    // Include Supabase error details in the message for debugging
+    const errorDetails = error.message || error.code || "Unknown error";
+    throw new Error(`Не удалось создать автомобиль: ${errorDetails}`);
   }
 
   return mapUserCar(data);
@@ -87,10 +89,10 @@ export async function createUserCar(
  * Удалить автомобиль
  */
 export async function deleteUserCar(userId: string, carId: string): Promise<void> {
-  ensureClient();
-  if (!supabase) throw new Error("Supabase client not initialized");
+  ensureAdminClient();
+  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("user_cars")
     .delete()
     .eq("id", carId)
@@ -106,12 +108,12 @@ export async function deleteUserCar(userId: string, carId: string): Promise<void
  * Установить основной автомобиль
  */
 export async function setPrimaryUserCar(userId: string, carId: string): Promise<void> {
-  ensureClient();
-  if (!supabase) throw new Error("Supabase client not initialized");
+  ensureAdminClient();
+  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
 
   // 1. Снять флаг is_primary со всех автомобилей пользователя
   const resetUpdate: DbUserCarUpdate = { is_primary: false };
-  const { error: resetError } = await supabase
+  const { error: resetError } = await supabaseAdmin
     .from("user_cars")
     .update(resetUpdate)
     .eq("user_id", userId);
@@ -123,7 +125,7 @@ export async function setPrimaryUserCar(userId: string, carId: string): Promise<
 
   // 2. Установить is_primary для выбранного автомобиля
   const setUpdate: DbUserCarUpdate = { is_primary: true };
-  const { error: setError } = await supabase
+  const { error: setError } = await supabaseAdmin
     .from("user_cars")
     .update(setUpdate)
     .eq("id", carId)
