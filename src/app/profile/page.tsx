@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { redirect } from "next/navigation";
 import { 
   User, Mail, Phone, MapPin, Calendar, Car, 
-  Settings, Edit2, Camera, Save, X, Plus, Trash2, Check
+  Settings, Edit2, Camera, Save, X, Plus, Trash2, Check, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,7 @@ export default function ProfilePage() {
   const [cars, setCars] = useState<UserCar[]>([]);
   const [brands, setBrands] = useState<BrandSelectOption[]>([]);
   const [showAddCar, setShowAddCar] = useState(false);
+  const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [newCar, setNewCar] = useState({
     carBrandId: '',
     type: '' as CarType | '',
@@ -304,6 +305,108 @@ export default function ProfilePage() {
       }
       
       // Show error dialog instead of alert
+      setErrorDialog({ open: true, message });
+    } finally {
+      setSavingCar(false);
+    }
+  };
+
+  const startEditCar = (car: UserCar) => {
+    setEditingCarId(car.id);
+    setNewCar({
+      carBrandId: car.carBrandId,
+      type: car.type,
+      plate: car.plate || '',
+      color: car.color || ''
+    });
+    setCarFieldErrors({});
+    setShowAddCar(false);  // Hide add form if open
+  };
+
+  const cancelEditCar = () => {
+    setEditingCarId(null);
+    setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+    setCarFieldErrors({});
+  };
+
+  const handleUpdateCar = async () => {
+    if (!editingCarId) return;
+
+    // Validate fields
+    const errors: Record<string, string> = {};
+    
+    if (!newCar.carBrandId) {
+      errors.carBrandId = 'Выберите марку автомобиля';
+    }
+    
+    if (!newCar.type) {
+      errors.type = 'Выберите тип автомобиля';
+    }
+    
+    // If validation fails, show errors and return
+    if (Object.keys(errors).length > 0) {
+      setCarFieldErrors(errors);
+      return;
+    }
+
+    setSavingCar(true);
+    setCarFieldErrors({});
+    
+    try {
+      // Prepare payload: convert empty strings to null for optional fields
+      const payload = {
+        carBrandId: newCar.carBrandId,
+        type: newCar.type,
+        plate: newCar.plate.trim() || null,
+        color: newCar.color.trim() || null,
+      };
+
+      console.log('[handleUpdateCar] Sending payload:', payload);
+
+      const res = await fetch(`/api/profile/cars?id=${editingCarId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('[handleUpdateCar] Response status:', res.status);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('[handleUpdateCar] API Error:', errorData);
+        
+        let errorMessage = 'Не удалось обновить автомобиль';
+        
+        if (errorData.error && typeof errorData.error.message === 'string') {
+          errorMessage = errorData.error.message;
+        } else if (typeof errorData.message === 'string') {
+          errorMessage = errorData.message;
+        } else if (typeof errorData.error === 'string') {
+          errorMessage = errorData.error;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await res.json();
+      console.log('[handleUpdateCar] Success:', data);
+      
+      // Reload cars list from server
+      await loadCars();
+      
+      setEditingCarId(null);
+      setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+    } catch (error) {
+      console.error('[handleUpdateCar] Error:', error);
+      
+      let message = 'Не удалось обновить автомобиль';
+      
+      if (error instanceof Error && typeof error.message === 'string') {
+        message = error.message;
+      } else if (typeof error === 'string') {
+        message = error;
+      }
+      
       setErrorDialog({ open: true, message });
     } finally {
       setSavingCar(false);
@@ -577,7 +680,12 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between mb-5">
                   <h3>Мои автомобили</h3>
                   <Button 
-                    onClick={() => setShowAddCar(!showAddCar)}
+                    onClick={() => {
+                      setShowAddCar(!showAddCar);
+                      setEditingCarId(null);  // Close edit mode if open
+                      setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+                      setCarFieldErrors({});
+                    }}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Добавить
@@ -692,71 +800,179 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {cars.map((car) => (
-                      <div
-                        key={car.id}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          car.isPrimary
-                            ? 'bg-[var(--color-primary-bg)] border-[var(--color-primary)]'
-                            : 'bg-[var(--color-bg-subtle)] border-transparent hover:border-[var(--color-border)]'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                              car.isPrimary
-                                ? 'bg-[var(--color-primary)] text-white'
-                                : 'bg-white text-[var(--color-text-muted)]'
-                            }`}>
-                              <Car className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="text-base font-semibold">
-                                  {car.carBrand?.name || 'Неизвестная марка'}
-                                </h4>
-                                {car.isPrimary && (
-                                  <Badge variant="default">Основной</Badge>
-                                )}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-muted)]">
-                                <span>{CAR_TYPES.find(t => t.value === car.type)?.label || car.type}</span>
-                                {car.plate && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{car.plate}</span>
-                                  </>
-                                )}
-                                {car.color && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{car.color}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                    {cars.map((car) => {
+                      const isEditing = editingCarId === car.id;
+                      
+                      return isEditing ? (
+                        // Edit form (same as add form)
+                        <div key={car.id} className="p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-4 border-2 border-[var(--color-primary)]">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-text)]">
+                              Марка <span className="text-[var(--color-danger)]">*</span>
+                            </label>
+                            <BrandSelect
+                              options={brands}
+                              value={newCar.carBrandId}
+                              onChange={(value) => {
+                                setNewCar({ ...newCar, carBrandId: value });
+                                if (carFieldErrors.carBrandId) {
+                                  setCarFieldErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next.carBrandId;
+                                    return next;
+                                  });
+                                }
+                              }}
+                              error={!!carFieldErrors.carBrandId}
+                              placeholder="Выберите марку"
+                            />
+                            <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.carBrandId ?? ''}</div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {!car.isPrimary && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSetPrimary(car.id)}
-                              >
-                                <Check className="w-4 h-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Сделать основным</span>
-                              </Button>
-                            )}
-                            <button
-                              onClick={() => setDeleteConfirm({ open: true, carId: car.id })}
-                              className="p-2 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] rounded-lg transition-colors"
+
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-text)]">
+                              Тип <span className="text-[var(--color-danger)]">*</span>
+                            </label>
+                            <Select
+                              value={newCar.type}
+                              onValueChange={(value) => {
+                                setNewCar({ ...newCar, type: value as CarType });
+                                if (carFieldErrors.type) {
+                                  setCarFieldErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next.type;
+                                    return next;
+                                  });
+                                }
+                              }}
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                              <SelectTrigger className={carFieldErrors.type ? 'border-red-500 focus-visible:ring-red-500' : ''}>
+                                <SelectValue placeholder="Выберите тип" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CAR_TYPES.map(type => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.type ?? ''}</div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-text)]">
+                              Гос номер <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
+                            </label>
+                            <Input
+                              placeholder="A 123 BC 01"
+                              value={newCar.plate}
+                              onChange={(e) => setNewCar({ ...newCar, plate: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-text)]">
+                              Цвет <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
+                            </label>
+                            <Input
+                              placeholder="Белый"
+                              value={newCar.color}
+                              onChange={(e) => setNewCar({ ...newCar, color: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="flex justify-end gap-2 pt-2">
+                            <Button 
+                              variant="ghost"
+                              onClick={cancelEditCar}
+                              disabled={savingCar}
+                            >
+                              Отмена
+                            </Button>
+                            <Button 
+                              onClick={handleUpdateCar}
+                              disabled={savingCar}
+                            >
+                              {savingCar ? 'Сохранение...' : 'Сохранить'}
+                            </Button>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ) : (
+                        // Display mode
+                        <div
+                          key={car.id}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            car.isPrimary
+                              ? 'bg-[var(--color-primary-bg)] border-[var(--color-primary)]'
+                              : 'bg-[var(--color-bg-subtle)] border-transparent hover:border-[var(--color-border)]'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                car.isPrimary
+                                  ? 'bg-[var(--color-primary)] text-white'
+                                  : 'bg-white text-[var(--color-text-muted)]'
+                              }`}>
+                                <Car className="w-5 h-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-base font-semibold">
+                                    {car.carBrand?.name || 'Неизвестная марка'}
+                                  </h4>
+                                  {car.isPrimary && (
+                                    <Badge variant="default">Основной</Badge>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-muted)]">
+                                  <span>{CAR_TYPES.find(t => t.value === car.type)?.label || car.type}</span>
+                                  {car.plate && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{car.plate}</span>
+                                    </>
+                                  )}
+                                  {car.color && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{car.color}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {!car.isPrimary && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleSetPrimary(car.id)}
+                                >
+                                  <Check className="w-4 h-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Сделать основным</span>
+                                </Button>
+                              )}
+                              <button
+                                onClick={() => startEditCar(car)}
+                                className="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Редактировать"
+                              >
+                                <Pencil className="w-4 h-4 text-gray-600" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm({ open: true, carId: car.id })}
+                                className="h-8 w-8 flex items-center justify-center hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] rounded-lg transition-colors"
+                                title="Удалить"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

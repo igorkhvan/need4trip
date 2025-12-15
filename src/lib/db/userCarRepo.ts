@@ -105,6 +105,45 @@ export async function deleteUserCar(userId: string, carId: string): Promise<void
 }
 
 /**
+ * Обновить автомобиль
+ */
+export async function updateUserCar(
+  userId: string,
+  carId: string,
+  input: UserCarCreateInput
+): Promise<UserCar> {
+  ensureAdminClient();
+  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+
+  const updateData: DbUserCarUpdate = {
+    car_brand_id: input.carBrandId,
+    type: input.type,
+    plate: input.plate || null,
+    color: input.color || null,
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from("user_cars")
+    .update(updateData)
+    .eq("id", carId)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) {
+    log.error("Failed to update user car", { userId, carId, input, error });
+    const errorDetails = error.message || error.code || "Unknown error";
+    throw new Error(`Не удалось обновить автомобиль: ${errorDetails}`);
+  }
+
+  if (!data) {
+    throw new Error("Автомобиль не найден");
+  }
+
+  return mapUserCar(data);
+}
+
+/**
  * Установить основной автомобиль
  */
 export async function setPrimaryUserCar(userId: string, carId: string): Promise<void> {

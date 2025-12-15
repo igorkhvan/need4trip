@@ -5,6 +5,7 @@ import { AuthError } from "@/lib/errors";
 import {
   getUserCars,
   createUserCar,
+  updateUserCar,
   deleteUserCar,
   setPrimaryUserCar,
 } from "@/lib/db/userCarRepo";
@@ -101,6 +102,36 @@ export async function PATCH(req: NextRequest) {
     await setPrimaryUserCar(user.id, carId);
 
     return respondSuccess({ message: "Основной автомобиль изменен" });
+  } catch (error) {
+    return respondError(error);
+  }
+}
+
+/**
+ * PUT /api/profile/cars?id=...
+ * Обновить данные автомобиля
+ */
+export async function PUT(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new AuthError("Необходима авторизация", 401);
+    }
+
+    const { searchParams } = new URL(req.url);
+    const carId = searchParams.get("id");
+
+    if (!carId) {
+      throw new Error("Car ID is required");
+    }
+
+    const body = await req.json();
+    const input = userCarCreateSchema.parse(body);
+
+    const car = await updateUserCar(user.id, carId, input);
+    const [hydratedCar] = await hydrateUserCars([car]);
+
+    return respondSuccess({ car: hydratedCar });
   } catch (error) {
     return respondError(error);
   }
