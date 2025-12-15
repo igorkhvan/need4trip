@@ -79,6 +79,7 @@ export default function ProfilePage() {
     color: ''
   });
   const [savingCar, setSavingCar] = useState(false);
+  const [carFieldErrors, setCarFieldErrors] = useState<Record<string, string>>({});
 
   // Load data
   useEffect(() => {
@@ -197,12 +198,26 @@ export default function ProfilePage() {
   };
 
   const handleAddCar = async () => {
-    if (!newCar.carBrandId || !newCar.type) {
-      alert('Выберите марку и тип автомобиля');
+    // Validate fields
+    const errors: Record<string, string> = {};
+    
+    if (!newCar.carBrandId) {
+      errors.carBrandId = 'Выберите марку автомобиля';
+    }
+    
+    if (!newCar.type) {
+      errors.type = 'Выберите тип автомобиля';
+    }
+    
+    // If validation fails, show errors and return
+    if (Object.keys(errors).length > 0) {
+      setCarFieldErrors(errors);
       return;
     }
 
     setSavingCar(true);
+    setCarFieldErrors({});
+    
     try {
       const res = await fetch('/api/profile/cars', {
         method: 'POST',
@@ -488,16 +503,25 @@ export default function ProfilePage() {
 
                 {/* Add Car Form */}
                 {showAddCar && (
-                  <div className="mb-4 p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-3">
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                  <div className="mb-4 p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
                         Марка <span className="text-[var(--color-danger)]">*</span>
                       </label>
                       <Select
                         value={newCar.carBrandId}
-                        onValueChange={(value) => setNewCar({ ...newCar, carBrandId: value })}
+                        onValueChange={(value) => {
+                          setNewCar({ ...newCar, carBrandId: value });
+                          if (carFieldErrors.carBrandId) {
+                            setCarFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.carBrandId;
+                              return next;
+                            });
+                          }
+                        }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={carFieldErrors.carBrandId ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                           <SelectValue placeholder="Выберите марку" />
                         </SelectTrigger>
                         <SelectContent>
@@ -508,17 +532,27 @@ export default function ProfilePage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.carBrandId ?? ''}</div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
                         Тип <span className="text-[var(--color-danger)]">*</span>
                       </label>
                       <Select
                         value={newCar.type}
-                        onValueChange={(value) => setNewCar({ ...newCar, type: value as CarType })}
+                        onValueChange={(value) => {
+                          setNewCar({ ...newCar, type: value as CarType });
+                          if (carFieldErrors.type) {
+                            setCarFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.type;
+                              return next;
+                            });
+                          }
+                        }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={carFieldErrors.type ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                           <SelectValue placeholder="Выберите тип" />
                         </SelectTrigger>
                         <SelectContent>
@@ -529,10 +563,11 @@ export default function ProfilePage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.type ?? ''}</div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
                         Гос номер <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
                       </label>
                       <Input
@@ -542,8 +577,8 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
                         Цвет <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
                       </label>
                       <Input
@@ -559,13 +594,14 @@ export default function ProfilePage() {
                         onClick={() => {
                           setShowAddCar(false);
                           setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+                          setCarFieldErrors({});
                         }}
                       >
                         Отмена
                       </Button>
                       <Button 
                         onClick={handleAddCar}
-                        disabled={savingCar || !newCar.carBrandId || !newCar.type}
+                        disabled={savingCar}
                       >
                         {savingCar ? 'Сохранение...' : 'Сохранить'}
                       </Button>
