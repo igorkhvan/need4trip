@@ -147,12 +147,12 @@ export function CityAutocomplete({
             className={cn(
               "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
               error ? "border-red-500 focus:border-red-500" : "",
-              !selectedCity && "text-[#9CA3AF]",
+              !selectedCity && "text-[#6B7280]",
               className
             )}
           >
             <div className="flex items-center gap-2">
-              <MapPin className={cn("h-4 w-4", selectedCity ? "text-[#6B7280]" : "text-[#9CA3AF]")} />
+              <MapPin className={cn("h-4 w-4", selectedCity ? "text-[#6B7280]" : "text-[#6B7280]")} />
               <span className="truncate">{displayValue}</span>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

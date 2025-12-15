@@ -120,11 +120,11 @@ export function CurrencySelect({
             className={cn(
               "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
               error ? "border-red-500 focus:border-red-500" : "",
-              !selectedCurrency && "text-[#9CA3AF]"
+              !selectedCurrency && "text-[#6B7280]"
             )}
           >
             <div className="flex items-center gap-2">
-              <DollarSign className={cn("h-4 w-4", selectedCurrency ? "text-[#6B7280]" : "text-[#9CA3AF]")} />
+              <DollarSign className={cn("h-4 w-4", selectedCurrency ? "text-[#6B7280]" : "text-[#6B7280]")} />
               {selectedCurrency ? (
                 <span className="truncate text-[15px] text-[#111827]">
                   {selectedCurrency.symbol} {selectedCurrency.nameRu} ({selectedCurrency.code})
