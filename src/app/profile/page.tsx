@@ -94,6 +94,10 @@ export default function ProfilePage() {
     open: false, 
     message: '' 
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; carId: string | null }>({
+    open: false,
+    carId: null
+  });
 
   // Load data
   useEffect(() => {
@@ -206,7 +210,10 @@ export default function ProfilePage() {
       setIsEditing(false);
     } catch (error) {
       console.error('[handleSave] Error:', error);
-      alert('Не удалось сохранить профиль');
+      setErrorDialog({ 
+        open: true, 
+        message: 'Не удалось сохранить профиль' 
+      });
     }
   };
 
@@ -316,31 +323,45 @@ export default function ProfilePage() {
       })));
     } catch (error) {
       console.error('[handleSetPrimary] Error:', error);
-      alert('Не удалось изменить основной автомобиль');
+      setErrorDialog({ 
+        open: true, 
+        message: 'Не удалось изменить основной автомобиль' 
+      });
     }
   };
 
   const handleDeleteCar = async (carId: string) => {
-    if (!confirm('Удалить этот автомобиль?')) return;
+    // Remove from local state
+    const updatedCars = cars.filter(car => car.id !== carId);
+    setCars(updatedCars);
+
+    // If deleted car was primary, set first car as primary
+    if (updatedCars.length > 0 && !updatedCars.some(c => c.isPrimary)) {
+      handleSetPrimary(updatedCars[0].id);
+    }
+
+    // Close confirm dialog
+    setDeleteConfirm({ open: false, carId: null });
+  };
+
+  const confirmDeleteCar = async () => {
+    if (!deleteConfirm.carId) return;
 
     try {
-      const res = await fetch(`/api/profile/cars?id=${carId}`, {
+      const res = await fetch(`/api/profile/cars?id=${deleteConfirm.carId}`, {
         method: 'DELETE'
       });
 
       if (!res.ok) throw new Error('Failed to delete car');
 
-      // Remove from local state
-      const updatedCars = cars.filter(car => car.id !== carId);
-      setCars(updatedCars);
-
-      // If deleted car was primary, set first car as primary
-      if (updatedCars.length > 0 && !updatedCars.some(c => c.isPrimary)) {
-        handleSetPrimary(updatedCars[0].id);
-      }
+      await handleDeleteCar(deleteConfirm.carId);
     } catch (error) {
-      console.error('[handleDeleteCar] Error:', error);
-      alert('Не удалось удалить автомобиль');
+      console.error('[confirmDeleteCar] Error:', error);
+      setErrorDialog({ 
+        open: true, 
+        message: 'Не удалось удалить автомобиль' 
+      });
+      setDeleteConfirm({ open: false, carId: null });
     }
   };
 
@@ -725,7 +746,7 @@ export default function ProfilePage() {
                               </Button>
                             )}
                             <button
-                              onClick={() => handleDeleteCar(car.id)}
+                              onClick={() => setDeleteConfirm({ open: true, carId: car.id })}
                               className="p-2 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] rounded-lg transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -768,6 +789,32 @@ export default function ProfilePage() {
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: '' })}>
               Закрыть
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirm Dialog */}
+      <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => !open && setDeleteConfirm({ open: false, carId: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить автомобиль?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие нельзя отменить. Автомобиль будет удален из вашего профиля.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={() => setDeleteConfirm({ open: false, carId: null })}
+              className="bg-transparent hover:bg-gray-100 text-gray-900 border border-gray-300"
+            >
+              Отмена
+            </AlertDialogAction>
+            <AlertDialogAction 
+              onClick={confirmDeleteCar}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Удалить
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
