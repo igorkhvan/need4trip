@@ -72,6 +72,32 @@ export function CitySelect({
     loadPopularCities();
   }, []);
 
+  // Load selected city by ID if not in the list
+  React.useEffect(() => {
+    if (!value) return;
+    
+    // Check if selected city is already in the list
+    const cityExists = cities.some((c) => c.id === value);
+    if (cityExists) return;
+
+    // Load the selected city
+    async function loadSelectedCity() {
+      try {
+        const res = await fetch(`/api/cities/${value}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.city) {
+            // Add selected city to the list
+            setCities((prev) => [data.city, ...prev]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load selected city", err);
+      }
+    }
+    loadSelectedCity();
+  }, [value, cities]);
+
   // Search cities on input
   React.useEffect(() => {
     if (!searchQuery.trim()) return;
