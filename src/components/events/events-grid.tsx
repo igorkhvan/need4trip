@@ -281,7 +281,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="h-12 rounded-xl border-2 pl-12 text-[15px] placeholder:text-[#6B7280]"
+            className="h-12 rounded-xl border border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[var(--color-primary)] focus:outline-none transition-colors pl-12 text-[15px] placeholder:text-[#6B7280]"
           />
         </div>
       </div>

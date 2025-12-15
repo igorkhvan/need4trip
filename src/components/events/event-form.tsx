@@ -373,11 +373,7 @@ export function EventForm({
                 }}
                 disabled={disabled}
                 placeholder="Например: зимний выезд в горы"
-                className={
-                  fieldErrors.title
-                    ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                    : "h-12 rounded-xl border-2"
-                }
+                className={fieldErrors.title ? "border-red-500 focus:border-red-500" : ""}
               />
               <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.title ?? ""}</div>
             </div>
@@ -402,11 +398,7 @@ export function EventForm({
                 }}
                 disabled={disabled}
                 placeholder="Расскажите о маршруте, программе и особенностях поездки..."
-                className={
-                  fieldErrors.description
-                    ? "rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                    : "rounded-xl border-2"
-                }
+                className={fieldErrors.description ? "border-red-500 focus:border-red-500" : ""}
               />
               <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.description ?? ""}</div>
             </div>
@@ -447,11 +439,7 @@ export function EventForm({
                   value={dateTime}
                   onChange={(e) => setDateTime(e.target.value)}
                   disabled={disabled}
-                  className={
-                    fieldErrors.dateTime
-                      ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                      : "h-12 rounded-xl border-2"
-                  }
+                  className={fieldErrors.dateTime ? "border-red-500 focus:border-red-500" : ""}
                 />
                 <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.dateTime ?? ""}</div>
               </div>
@@ -471,14 +459,10 @@ export function EventForm({
                         return next;
                       });
                     }
-                  }}
+                  }                  }
                   disabled={disabled}
                   placeholder="Адрес или координаты"
-                  className={
-                    fieldErrors.locationText
-                      ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                      : "h-12 rounded-xl border-2"
-                  }
+                  className={fieldErrors.locationText ? "border-red-500 focus:border-red-500" : ""}
                 />
                 <div className="min-h-[28px] text-xs text-red-600">
                   {fieldErrors.locationText ?? ""}
@@ -512,11 +496,7 @@ export function EventForm({
                   }}
                   disabled={disabled}
                   placeholder="15"
-                  className={
-                    fieldErrors.maxParticipants
-                      ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                      : "h-12 rounded-xl border-2"
-                  }
+                  className={fieldErrors.maxParticipants ? "border-red-500 focus:border-red-500" : ""}
                 />
                 <div className="min-h-[28px] text-xs text-red-600">
                   {fieldErrors.maxParticipants ?? ""}
@@ -533,7 +513,7 @@ export function EventForm({
                   </div>
                 )}
                 {loadingCategories ? (
-                  <div className="h-12 w-full rounded-xl border-2 border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
+                  <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
                     Загрузка категорий...
                   </div>
                 ) : (
@@ -550,7 +530,7 @@ export function EventForm({
                     }}
                     disabled={disabled}
                   >
-                    <SelectTrigger id="category" className="h-12 rounded-xl border-2">
+                    <SelectTrigger id="category">
                       <SelectValue placeholder="Выберите категорию" />
                     </SelectTrigger>
                     <SelectContent>
@@ -576,7 +556,7 @@ export function EventForm({
                   onValueChange={(val) => setVisibility(val as Visibility)}
                   disabled={disabled}
                 >
-                  <SelectTrigger id="visibility" className="h-12 rounded-xl border-2">
+                  <SelectTrigger id="visibility">
                     <SelectValue placeholder="Кто видит событие" />
                   </SelectTrigger>
                   <SelectContent>
@@ -666,11 +646,7 @@ export function EventForm({
                         }}
                         disabled={disabled}
                         placeholder="5000"
-                        className={
-                          fieldErrors.price
-                            ? "h-12 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                            : "h-12 rounded-xl border-2"
-                        }
+                        className={fieldErrors.price ? "border-red-500 focus:border-red-500" : ""}
                       />
                       <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
                     </div>
@@ -722,7 +698,7 @@ export function EventForm({
                 onValueChange={(val) => setVehicleType(val as VehicleTypeRequirement)}
                 disabled={disabled}
               >
-                <SelectTrigger id="vehicleTypeRequirement" className="h-12 rounded-xl border-2">
+                <SelectTrigger id="vehicleTypeRequirement">
                   <SelectValue placeholder="Выберите тип автомобиля" />
                 </SelectTrigger>
                 <SelectContent>
@@ -768,7 +744,6 @@ export function EventForm({
             onChange={(e) => setRules(e.target.value)}
             placeholder="Опишите условия: порядок движения, скорость, рация, запреты..."
             disabled={disabled}
-            className="rounded-xl border-2"
           />
         </Card>
 
@@ -832,11 +807,7 @@ export function EventForm({
                             <Input
                               value={field.label}
                               placeholder="Например: Наличие рации"
-                              className={
-                                errorText
-                                  ? "h-11 rounded-xl border-2 border-red-500 focus-visible:ring-red-500"
-                                  : "h-11 rounded-xl border-2"
-                              }
+                              className={errorText ? "border-red-500 focus:border-red-500" : ""}
                               onChange={(e) => {
                                 updateField(field.id, { label: e.target.value });
                                 if (errorText) {
@@ -860,7 +831,7 @@ export function EventForm({
                               onValueChange={(value) => updateField(field.id, { type: value as EventCustomFieldType })}
                               disabled={disabled || isLocked}
                             >
-                              <SelectTrigger className="h-11 rounded-xl border-2">
+                              <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>

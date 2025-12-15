@@ -113,7 +113,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className={`h-12 rounded-xl border-2 ${fieldErrors.name ? "border-red-500" : ""}`}
+          className={fieldErrors.name ? "border-red-500 focus:border-red-500" : ""}
           placeholder="Например: OFF-ROAD Москва"
           disabled={loading}
         />
@@ -132,7 +132,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           rows={4}
           value={formData.description ?? ""}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="rounded-xl border-2"
+          className=""
           placeholder="Расскажите о вашем клубе..."
           disabled={loading}
         />
@@ -172,7 +172,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           id="logoUrl"
           value={formData.logoUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-          className="h-12 rounded-xl border-2"
+          className=""
           placeholder="https://example.com/logo.png"
           disabled={loading}
         />
@@ -200,7 +200,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           id="telegramUrl"
           value={formData.telegramUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, telegramUrl: e.target.value })}
-          className="h-12 rounded-xl border-2"
+          className=""
           placeholder="https://t.me/your_club"
           disabled={loading}
         />
@@ -216,7 +216,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           id="websiteUrl"
           value={formData.websiteUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
-          className="h-12 rounded-xl border-2"
+          className=""
           placeholder="https://yourclub.com"
           disabled={loading}
         />
