@@ -47,15 +47,15 @@ export function ClubSubscriptionCard({
   };
 
   return (
-    <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
+    <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
       {/* Заголовок */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className={`text-2xl font-bold ${getPlanColor(planId)} flex items-center gap-2`}>
-            {planId === "club_unlimited" && <Crown className="w-6 h-6" />}
+          <h3 className={`flex items-center gap-2 text-[24px] font-bold ${getPlanColor(planId)}`}>
+            {planId === "club_unlimited" && <Crown className="h-6 w-6" />}
             {getClubPlanLabel(planId)}
           </h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[14px] text-[#6B7280]">
             Текущий тариф клуба
           </p>
         </div>
@@ -76,16 +76,16 @@ export function ClubSubscriptionCard({
 
       {/* Срок действия */}
       {subscription?.currentPeriodEnd && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Calendar className="w-4 h-4" />
+        <div className="mb-6 rounded-xl bg-[#F9FAFB] p-4">
+          <div className="mb-1 flex items-center gap-2 text-[14px] text-[#6B7280]">
+            <Calendar className="h-4 w-4" />
             <span>Действует до</span>
           </div>
-          <div className="text-lg font-semibold text-gray-900">
+          <div className="text-[18px] font-semibold text-[#1F2937]">
             {formatDate(subscription.currentPeriodEnd)}
           </div>
           {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && (
-            <div className="mt-2 text-sm text-orange-600">
+            <div className="mt-2 text-[14px] text-[#EA580C]">
               Осталось {daysUntilExpiration} {daysUntilExpiration === 1 ? "день" : "дней"}
             </div>
           )}
@@ -94,18 +94,18 @@ export function ClubSubscriptionCard({
 
       {/* Возможности */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Возможности тарифа:</h4>
+        <h4 className="mb-3 text-[14px] font-medium text-[#111827]">Возможности тарифа:</h4>
         <ul className="space-y-2">
-          <li className="flex items-start gap-2 text-sm text-gray-600">
-            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+          <li className="flex items-start gap-2 text-[14px] text-[#6B7280]">
+            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#10B981]" />
             <span>Управление клубом</span>
           </li>
-          <li className="flex items-start gap-2 text-sm text-gray-600">
-            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+          <li className="flex items-start gap-2 text-[14px] text-[#6B7280]">
+            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#10B981]" />
             <span>Создание событий</span>
           </li>
-          <li className="flex items-start gap-2 text-sm text-gray-600">
-            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+          <li className="flex items-start gap-2 text-[14px] text-[#6B7280]">
+            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#10B981]" />
             <span>Управление участниками</span>
           </li>
         </ul>
@@ -113,10 +113,10 @@ export function ClubSubscriptionCard({
 
       {/* Действия */}
       {canManage && planId === "free" && (
-        <div className="space-y-3 pt-4 border-t border-gray-200">
+        <div className="space-y-3 border-t border-[#E5E7EB] pt-4">
           <a
             href="/pricing"
-            className="block w-full px-4 py-3 bg-blue-600 text-white text-center font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="block w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-center font-medium text-white transition-colors hover:bg-[#E86223]"
           >
             Посмотреть тарифы
           </a>

@@ -80,13 +80,13 @@ export function ClubMembersList({
   const getRoleIcon = (role: ClubRole) => {
     switch (role) {
       case "owner":
-        return <Crown className="w-4 h-4 text-yellow-600" />;
+        return <Crown className="h-4 w-4 text-[#D97706]" />;
       case "organizer":
-        return <Shield className="w-4 h-4 text-blue-600" />;
+        return <Shield className="h-4 w-4 text-[#3B82F6]" />;
       case "member":
-        return <UsersIcon className="w-4 h-4 text-gray-600" />;
+        return <UsersIcon className="h-4 w-4 text-[#6B7280]" />;
       case "pending":
-        return <Clock className="w-4 h-4 text-gray-400" />;
+        return <Clock className="h-4 w-4 text-[#9CA3AF]" />;
     }
   };
 
@@ -152,25 +152,25 @@ export function ClubMembersList({
         {members.map((member) => (
           <div
             key={member.userId}
-            className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+            className="flex items-center gap-4 rounded-xl border border-[#E5E7EB] bg-white p-4 transition-colors hover:border-[#D1D5DB]"
           >
             {/* Аватар */}
             {member.user.avatarUrl ? (
               <img
                 src={member.user.avatarUrl}
                 alt={member.user.name}
-                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FF6F2C] to-[#E86223] font-semibold text-white">
                 {member.user.name.charAt(0).toUpperCase()}
               </div>
             )}
 
             {/* Информация */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-gray-900 truncate">
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="truncate font-medium text-[#1F2937]">
                   {member.user.name}
                 </span>
                 {member.userId === currentUserId && (
@@ -184,7 +184,7 @@ export function ClubMembersList({
                   href={`https://t.me/${member.user.telegramHandle}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-500 hover:text-primary-600"
+                  className="text-[14px] text-[#6B7280] hover:text-[var(--color-primary)]"
                 >
                   @{member.user.telegramHandle}
                 </a>
@@ -204,31 +204,31 @@ export function ClubMembersList({
               <div className="relative">
                 <button
                   onClick={() => setActionUserId(member.userId)}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                  className="rounded-xl p-2 text-[#9CA3AF] transition-colors hover:bg-[#F9FAFB] hover:text-[#6B7280]"
                   disabled={loading}
                 >
-                  <MoreVertical className="w-5 h-5" />
+                  <MoreVertical className="h-5 w-5" />
                 </button>
 
                 {actionUserId === member.userId && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                  <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border border-[#E5E7EB] bg-white py-1 shadow-lg">
                     {/* Смена роли */}
                     {member.role !== "organizer" && (
                       <button
                         onClick={() => handleRoleChange(member.userId, "organizer")}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-[14px] text-[#111827] hover:bg-[#F9FAFB]"
                       >
-                        <UserCog className="w-4 h-4" />
-                        Сделать организатором
+                        <UserCog className="h-4 w-4" />
+                        <span>Сделать организатором</span>
                       </button>
                     )}
                     {member.role === "organizer" && (
                       <button
                         onClick={() => handleRoleChange(member.userId, "member")}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-[14px] text-[#111827] hover:bg-[#F9FAFB]"
                       >
-                        <UsersIcon className="w-4 h-4" />
-                        Сделать участником
+                        <UsersIcon className="h-4 w-4" />
+                        <span>Сделать участником</span>
                       </button>
                     )}
                     {/* Удаление */}
@@ -236,10 +236,10 @@ export function ClubMembersList({
                       onClick={() => {
                         setShowRemoveConfirm(true);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-[14px] text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      Удалить
+                      <Trash2 className="h-4 w-4" />
+                      <span>Удалить</span>
                     </button>
                   </div>
                 )}
@@ -249,8 +249,8 @@ export function ClubMembersList({
         ))}
 
         {members.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <UsersIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <div className="py-12 text-center text-[#6B7280]">
+            <UsersIcon className="mx-auto mb-3 h-12 w-12 text-[#9CA3AF]" />
             <p>Пока нет участников</p>
           </div>
         )}
