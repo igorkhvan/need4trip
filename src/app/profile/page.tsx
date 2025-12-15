@@ -154,8 +154,11 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/profile/cars');
       const data = await res.json();
-      if (data.cars) {
-        setCars(data.cars);
+      console.log('[loadCars] Response:', data);
+      
+      // API returns: { success: true, data: { cars: [...] } }
+      if (data.success && data.data?.cars) {
+        setCars(data.data.cars);
       }
     } catch (error) {
       console.error('[loadCars] Error:', error);
@@ -283,12 +286,11 @@ export default function ProfilePage() {
       const data = await res.json();
       console.log('[handleAddCar] Success:', data);
       
-      // API returns: { success: true, data: { car: {...} } }
-      if (data.success && data.data?.car) {
-        setCars([...cars, data.data.car]);
-        setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
-        setShowAddCar(false);
-      }
+      // Reload cars list from server to get correct isPrimary
+      await loadCars();
+      
+      setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
+      setShowAddCar(false);
     } catch (error) {
       console.error('[handleAddCar] Error:', error);
       
