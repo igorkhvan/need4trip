@@ -223,13 +223,25 @@ export default function ProfilePage() {
     setCarFieldErrors({});
     
     try {
+      // Prepare payload: convert empty strings to null for optional fields
+      const payload = {
+        carBrandId: newCar.carBrandId,
+        type: newCar.type,
+        plate: newCar.plate.trim() || null,
+        color: newCar.color.trim() || null,
+      };
+
       const res = await fetch('/api/profile/cars', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCar)
+        body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error('Failed to add car');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || 'Не удалось добавить автомобиль';
+        throw new Error(errorMessage);
+      }
 
       const data = await res.json();
       if (data.car) {
@@ -239,7 +251,8 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('[handleAddCar] Error:', error);
-      alert('Не удалось добавить автомобиль');
+      const message = error instanceof Error ? error.message : 'Не удалось добавить автомобиль';
+      alert(message);
     } finally {
       setSavingCar(false);
     }
