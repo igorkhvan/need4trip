@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BrandSelect, BrandSelectOption } from "@/components/brand-select";
+import { CitySelect } from "@/components/ui/city-select";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +49,7 @@ interface UserData {
   email: string;
   phone: string;
   location: string;
+  cityId: string | null;
   bio: string;
   joined: string;
   avatar: string;
@@ -68,6 +70,7 @@ export default function ProfilePage() {
     email: '',
     phone: '',
     location: '',
+    cityId: null,
     bio: '',
     joined: '',
     avatar: ''
@@ -132,6 +135,7 @@ export default function ProfilePage() {
         email: user.email || '',
         phone: user.phone || '',
         location: cityName || '',
+        cityId: user.city?.id || null,
         bio: user.bio || '',
         joined: joinedDate,
         avatar: user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
@@ -190,6 +194,7 @@ export default function ProfilePage() {
           name: userData.name,
           bio: userData.bio,
           phone: userData.phone,
+          cityId: userData.cityId,
         })
       });
 
@@ -209,6 +214,7 @@ export default function ProfilePage() {
         bio: user.bio || '',
         phone: user.phone || '',
         location: cityName || userData.location,
+        cityId: user.city?.id || null,
       });
 
       setIsEditing(false);
@@ -637,6 +643,16 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                        Город
+                      </label>
+                      <CitySelect
+                        value={userData.cityId}
+                        onChange={(cityId) => setUserData({ ...userData, cityId })}
+                        placeholder="Выберите город..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         О себе
                       </label>
                       <textarea
@@ -665,6 +681,15 @@ export default function ProfilePage() {
                         <div className="text-base">{userData.phone}</div>
                       </div>
                     </div>
+                    {userData.location && (
+                      <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
+                        <MapPin className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Город</div>
+                          <div className="text-base">{userData.location}</div>
+                        </div>
+                      </div>
+                    )}
                     <div className="p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                       <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
                       <div className="text-base">{userData.bio}</div>
