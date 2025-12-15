@@ -23,6 +23,35 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 23 96% 56%;
   --radius: 0.75rem;
+
+  /* Need4Trip Design System Colors */
+  --color-primary: #FF6F2C;
+  --color-primary-hover: #E55A1A;
+  --color-primary-bg: rgba(255, 111, 44, 0.1);
+  
+  --color-success: #22C55E;
+  --color-success-bg: #F0FDF4;
+  --color-success-text: #166534;
+  
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-text: #92400E;
+  
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEF2F2;
+  --color-danger-text: #991B1B;
+  
+  --color-info: #3B82F6;
+  --color-info-bg: #EFF6FF;
+  --color-info-text: #1E40AF;
+  
+  --color-text: #1F2937;
+  --color-text-muted: #6B7280;
+  
+  --color-bg-main: #FFFFFF;
+  --color-bg-subtle: #F9FAFB;
+  
+  --color-border: #E5E7EB;
 }
 
 .dark {
