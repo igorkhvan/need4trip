@@ -142,7 +142,7 @@ export default function ProfilePage() {
         cityId: user.cityId || null,
         bio: user.bio || '',
         joined: joinedDate,
-        avatar: user.avatarUrl || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=FF6F2C&color=fff&size=200`
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=FF6F2C&color=fff&size=200`
       });
 
       // Set stats from API

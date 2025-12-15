@@ -54,7 +54,7 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
         >
           <Avatar className="h-10 w-10">
             <AvatarImage
-              src={currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=FF6F2C&color=fff&size=80`}
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=FF6F2C&color=fff&size=80`}
               alt={currentUser.name ?? "Пользователь"}
             />
             <AvatarFallback className="text-sm bg-[#FF6F2C] text-white font-semibold">
