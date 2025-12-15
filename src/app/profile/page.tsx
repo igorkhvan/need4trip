@@ -136,7 +136,7 @@ export default function ProfilePage() {
         email: user.email || '',
         phone: user.phone || '',
         location: cityName || '',
-        cityId: user.city?.id || null,
+        cityId: user.cityId || null,
         bio: user.bio || '',
         joined: joinedDate,
         avatar: user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
@@ -230,7 +230,7 @@ export default function ProfilePage() {
         bio: user.bio || '',
         phone: user.phone || '',
         location: cityName || userData.location,
-        cityId: user.city?.id || null,
+        cityId: user.cityId || null,
       });
 
       setIsEditing(false);
@@ -590,7 +590,6 @@ export default function ProfilePage() {
                     <Button 
                       onClick={() => setIsEditing(true)}
                       variant="secondary"
-                      size="sm"
                     >
                       <Edit2 className="w-4 h-4 mr-2" />
                       Редактировать
@@ -627,8 +626,7 @@ export default function ProfilePage() {
                       <Input
                         type="email"
                         value={userData.email}
-                        disabled
-                        className="bg-gray-50 cursor-not-allowed"
+                        onChange={(e) => setUserData({ ...userData, email: e.target.value })}
                       />
                     </div>
                     <div>
