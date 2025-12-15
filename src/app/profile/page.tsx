@@ -25,6 +25,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BrandSelect, BrandSelectOption } from "@/components/brand-select";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { UserCar, CarType } from "@/lib/types/userCar";
 import { CAR_TYPES } from "@/lib/types/userCar";
 
@@ -81,6 +90,10 @@ export default function ProfilePage() {
   });
   const [savingCar, setSavingCar] = useState(false);
   const [carFieldErrors, setCarFieldErrors] = useState<Record<string, string>>({});
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ 
+    open: false, 
+    message: '' 
+  });
 
   // Load data
   useEffect(() => {
@@ -231,11 +244,15 @@ export default function ProfilePage() {
         color: newCar.color.trim() || null,
       };
 
+      console.log('[handleAddCar] Sending payload:', payload);
+
       const res = await fetch('/api/profile/cars', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      console.log('[handleAddCar] Response status:', res.status);
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -257,6 +274,8 @@ export default function ProfilePage() {
       }
 
       const data = await res.json();
+      console.log('[handleAddCar] Success:', data);
+      
       if (data.car) {
         setCars([...cars, data.car]);
         setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
@@ -274,7 +293,8 @@ export default function ProfilePage() {
         message = error;
       }
       
-      alert(message);
+      // Show error dialog instead of alert
+      setErrorDialog({ open: true, message });
     } finally {
       setSavingCar(false);
     }
@@ -736,6 +756,21 @@ export default function ProfilePage() {
           </Card>
         )}
       </div>
+
+      {/* Error Dialog */}
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ошибка</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: '' })}>
+              Закрыть
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
