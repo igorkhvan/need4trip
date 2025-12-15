@@ -96,7 +96,35 @@ ORDER BY ordinal_position;
 
 ---
 
-### 4️⃣ ADD Foreign Key club_subscriptions → club_plans
+### 4️⃣ DROP старый триггер автосоздания подписок
+
+**Файл:** `supabase/migrations/20241215_drop_auto_subscription_trigger.sql`
+
+**⚠️ КРИТИЧНО!** Старый триггер пытается создать `club_free` с колонками `plan`, `valid_until`, `active` — которые больше не существуют!
+
+**Что произойдёт:**
+1. Удалит триггер `trigger_create_club_subscription`
+2. Удалит функцию `create_default_club_subscription()`
+3. Новые клубы НЕ будут автоматически получать подписку (это правильно для v2.0!)
+
+✅ **Проверка:**
+```sql
+-- Триггер должен отсутствовать
+SELECT trigger_name 
+FROM information_schema.triggers 
+WHERE trigger_name = 'trigger_create_club_subscription';
+-- Ожидаем 0 строк
+
+-- Функция должна отсутствовать
+SELECT proname 
+FROM pg_proc 
+WHERE proname = 'create_default_club_subscription';
+-- Ожидаем 0 строк
+```
+
+---
+
+### 5️⃣ ADD Foreign Key club_subscriptions → club_plans
 
 **После предыдущих шагов выполни:**
 
@@ -109,7 +137,7 @@ ALTER TABLE club_subscriptions
 
 ---
 
-### 5️⃣ CREATE billing_policy + SEED
+### 6️⃣ CREATE billing_policy + SEED
 
 **Файлы:**
 - `20241215_create_billing_policy.sql`
@@ -125,7 +153,7 @@ SELECT * FROM billing_policy;
 
 ---
 
-### 6️⃣ CREATE billing_policy_actions + SEED
+### 7️⃣ CREATE billing_policy_actions + SEED
 
 **Файлы:**
 - `20241215_create_billing_policy_actions.sql`
@@ -144,7 +172,7 @@ ORDER BY status, action;
 
 ---
 
-### 7️⃣ CREATE billing_transactions
+### 8️⃣ CREATE billing_transactions
 
 **Файл:** `20241215_create_billing_transactions.sql`
 
@@ -211,13 +239,14 @@ supabase gen types typescript --project-id YOUR_PROJECT_REF > src/lib/types/supa
 - [ ] 1. CREATE club_plans
 - [ ] 2. SEED club_plans (3 тарифа)
 - [ ] 3. ALTER club_subscriptions (безопасная миграция)
-- [ ] 4. ADD FK club_subscriptions → club_plans
-- [ ] 5. CREATE + SEED billing_policy
-- [ ] 6. CREATE + SEED billing_policy_actions
-- [ ] 7. CREATE billing_transactions
-- [ ] 8. Финальная проверка (4 таблицы созданы)
-- [ ] 9. Регенерация типов
-- [ ] 10. Удаление @ts-expect-error
+- [ ] 4. **DROP старый триггер** ⚠️ КРИТИЧНО!
+- [ ] 5. ADD FK club_subscriptions → club_plans
+- [ ] 6. CREATE + SEED billing_policy
+- [ ] 7. CREATE + SEED billing_policy_actions
+- [ ] 8. CREATE billing_transactions
+- [ ] 9. Финальная проверка (4 таблицы созданы)
+- [ ] 10. Регенерация типов
+- [ ] 11. Удаление @ts-expect-error
 
 ---
 
