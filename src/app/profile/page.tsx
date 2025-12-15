@@ -478,18 +478,12 @@ export default function ProfilePage() {
               <CardContent className="p-5 md:p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3>Мои автомобили</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-[var(--color-text-muted)]">
-                      {cars.length} {cars.length === 1 ? 'автомобиль' : 'автомобиля'}
-                    </span>
-                    <Button 
-                      size="sm"
-                      onClick={() => setShowAddCar(!showAddCar)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Добавить
-                    </Button>
-                  </div>
+                  <Button 
+                    onClick={() => setShowAddCar(!showAddCar)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Добавить
+                  </Button>
                 </div>
 
                 {/* Add Car Form */}
@@ -559,13 +553,7 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <div className="flex gap-2 pt-2">
-                      <Button 
-                        onClick={handleAddCar}
-                        disabled={savingCar || !newCar.carBrandId || !newCar.type}
-                      >
-                        {savingCar ? 'Сохранение...' : 'Сохранить'}
-                      </Button>
+                    <div className="flex justify-end gap-2 pt-2">
                       <Button 
                         variant="ghost"
                         onClick={() => {
@@ -574,6 +562,12 @@ export default function ProfilePage() {
                         }}
                       >
                         Отмена
+                      </Button>
+                      <Button 
+                        onClick={handleAddCar}
+                        disabled={savingCar || !newCar.carBrandId || !newCar.type}
+                      >
+                        {savingCar ? 'Сохранение...' : 'Сохранить'}
                       </Button>
                     </div>
                   </div>
