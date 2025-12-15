@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Hero } from "@/components/landing/hero";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { listEventsSafe } from "@/lib/services/events";
+import { listVisibleEventsForUser } from "@/lib/services/events";
 import { getCategoryLabel } from "@/lib/utils/eventCategories";
 import { formatDate } from "@/lib/utils/dates";
 
@@ -210,8 +210,20 @@ export default async function HomePage() {
   const currentUser = await getCurrentUser();
   const isAuthenticated = !!currentUser;
   
-  const eventsData = await listEventsSafe();
-  const events: EventSummary[] = eventsData.slice(0, 3).map((e) => ({
+  // Get visible events for the user (public + their own + accessible)
+  const eventsData = await listVisibleEventsForUser(currentUser?.id ?? null);
+  
+  // Show only upcoming public events on homepage (limit to 3)
+  const now = new Date();
+  const upcomingPublicEvents = eventsData
+    .filter((e) => {
+      const eventDate = new Date(e.dateTime);
+      return e.visibility === "public" && eventDate >= now;
+    })
+    .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+    .slice(0, 3);
+  
+  const events: EventSummary[] = upcomingPublicEvents.map((e) => ({
     id: e.id,
     title: e.title,
     startsAt: e.dateTime,

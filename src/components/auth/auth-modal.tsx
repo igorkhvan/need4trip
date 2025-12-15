@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -84,7 +84,6 @@ export function AuthModal({
   const [isAuthed, setIsAuthed] = useState(false);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [containerReady, setContainerReady] = useState(false);
   
   // Debug: Log when modal state changes
   useEffect(() => {
@@ -102,15 +101,6 @@ export function AuthModal({
   const authUrl = useMemo(() => resolveAuthUrl(), []);
 
   const finalDescription = description || getReasonDescription(reason);
-  
-  // Callback ref to know when container is mounted
-  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
-    containerRef.current = node;
-    setContainerReady(!!node);
-    if (process.env.NODE_ENV === 'development') {
-      console.log("[auth-modal] Container ref set:", { hasNode: !!node });
-    }
-  }, []);
 
   const handleAuth = useCallback(
     async (payload: TelegramAuthPayload) => {
@@ -187,35 +177,41 @@ export function AuthModal({
 
   // Load Telegram widget when modal opens
   useEffect(() => {
-    if (!open || !username || isAuthed || !containerReady) {
+    if (!open || !username || isAuthed) {
       if (open && !username) {
         console.error("[auth-modal] ❌ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set!");
-      }
-      if (open && !containerReady && process.env.NODE_ENV === 'development') {
-        console.log("[auth-modal] ⏳ Waiting for container to be ready...");
       }
       return;
     }
 
-    // Wait for DOM to be ready with a small delay
-    const timeoutId = setTimeout(() => {
+    // Wait for container to be mounted with a retry mechanism
+    let timeoutId: NodeJS.Timeout;
+    let retryCount = 0;
+    const maxRetries = 10;
+    
+    const initWidget = () => {
       const container = containerRef.current;
       
       // Debug logging (only in development)
       if (process.env.NODE_ENV === 'development') {
-        console.log("[auth-modal] Widget init:", {
+        console.log("[auth-modal] Widget init attempt:", {
           open,
           hasContainer: !!container,
           username,
           authUrl,
           isAuthed,
-          containerReady,
-          botUsername: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+          retryCount,
         });
       }
       
       if (!container) {
-        console.error("[auth-modal] ❌ Container ref is null!");
+        // Retry if container is not ready yet
+        if (retryCount < maxRetries) {
+          retryCount++;
+          timeoutId = setTimeout(initWidget, 50);
+        } else {
+          console.error("[auth-modal] ❌ Container ref is null after max retries!");
+        }
         return;
       }
 
@@ -236,7 +232,10 @@ export function AuthModal({
         console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
       }
       container.appendChild(script);
-    }, 100); // Small delay to ensure DOM is ready
+    };
+    
+    // Start initialization with a small delay
+    timeoutId = setTimeout(initWidget, 100);
 
     return () => {
       clearTimeout(timeoutId);
@@ -245,7 +244,7 @@ export function AuthModal({
         container.innerHTML = "";
       }
     };
-  }, [open, authUrl, username, isAuthed, containerReady]);
+  }, [open, authUrl, username, isAuthed]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,7 +267,6 @@ export function AuthModal({
               <div>• username: {username || '❌ NOT SET'}</div>
               <div>• authUrl: {authUrl || 'auto'}</div>
               <div>• isSubmitting: {String(isSubmitting)}</div>
-              <div>• containerReady: {String(containerReady)}</div>
               <div>• hasContainer: {String(!!containerRef.current)}</div>
             </div>
           )}
@@ -288,7 +286,7 @@ export function AuthModal({
                 </div>
               </div>
             ) : (
-              <div ref={setContainerRef} aria-label="Telegram Login" className="min-h-[46px]" />
+              <div ref={containerRef} aria-label="Telegram Login" className="min-h-[46px]" />
             )}
           </div>
           
