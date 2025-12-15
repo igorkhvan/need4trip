@@ -6,11 +6,11 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { redirect } from "next/navigation";
+import { useState, useEffect, useTransition } from "react";
+import { redirect, useRouter } from "next/navigation";
 import { 
   User, Mail, Phone, MapPin, Calendar, Car, 
-  Settings, Edit2, X, Plus, Trash2, Check, Pencil
+  Settings, Edit2, X, Plus, Trash2, Check, Pencil, LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,8 @@ interface Stats {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'settings'>('overview');
   const [loading, setLoading] = useState(true);
@@ -264,6 +266,23 @@ export default function ProfilePage() {
     setProfileFieldErrors({});
     // Reload profile data to reset changes
     loadProfileData();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      
+      // Dispatch auth change event
+      window.dispatchEvent(new Event("auth-changed"));
+      
+      // Redirect to home
+      startTransition(() => {
+        router.push("/");
+        router.refresh();
+      });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
 
   const handleAddCar = async () => {
@@ -523,7 +542,14 @@ export default function ProfilePage() {
             
             {/* Top Right Actions */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              {/* Edit button moved to Personal Info section */}
+              <button
+                onClick={handleLogout}
+                disabled={isPending}
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Выйти из системы"
+              >
+                <LogOut className="w-5 h-5 text-white" />
+              </button>
             </div>
 
             {/* User Info Overlay */}
