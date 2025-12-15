@@ -276,8 +276,9 @@ export default function ProfilePage() {
       const data = await res.json();
       console.log('[handleAddCar] Success:', data);
       
-      if (data.car) {
-        setCars([...cars, data.car]);
+      // API returns: { success: true, data: { car: {...} } }
+      if (data.success && data.data?.car) {
+        setCars([...cars, data.data.car]);
         setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
         setShowAddCar(false);
       }
