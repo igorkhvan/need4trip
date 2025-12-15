@@ -111,14 +111,6 @@ export default function ProfilePage() {
     loadBrands();
   }, []);
 
-  // Debug: Log when isEditing changes
-  useEffect(() => {
-    if (isEditing) {
-      console.log('[useEffect isEditing=true] userData.cityId:', userData.cityId);
-      console.log('[useEffect isEditing=true] Full userData:', userData);
-    }
-  }, [isEditing, userData]);
-
   const loadProfileData = async () => {
     try {
       const res = await fetch('/api/profile');
@@ -128,11 +120,6 @@ export default function ProfilePage() {
       }
 
       const data = await res.json();
-      
-      console.log('[loadProfileData] Full API response:', data);
-      console.log('[loadProfileData] user object:', data.user);
-      console.log('[loadProfileData] user.cityId:', data.user?.cityId);
-      console.log('[loadProfileData] user.city:', data.user?.city);
       
       // Map user data
       const user = data.user;
@@ -144,8 +131,6 @@ export default function ProfilePage() {
         month: 'long'
       }) : '';
       
-      console.log('[loadProfileData] Setting cityId to:', user.cityId);
-      
       setUserData({
         name: user.name || 'Пользователь',
         email: user.email || '',
@@ -154,7 +139,7 @@ export default function ProfilePage() {
         cityId: user.cityId || null,
         bio: user.bio || '',
         joined: joinedDate,
-        avatar: user.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop'
+        avatar: user.avatarUrl || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=FF6F2C&color=fff&size=200`
       });
 
       // Set stats from API
@@ -207,6 +192,22 @@ export default function ProfilePage() {
     
     if (!userData.name.trim()) {
       errors.name = 'Имя и фамилия обязательны';
+    }
+    
+    // Email validation (optional but must be valid format if provided)
+    if (userData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userData.email.trim())) {
+        errors.email = 'Введите корректный email адрес';
+      }
+    }
+    
+    // Phone validation (only + and digits)
+    if (userData.phone.trim()) {
+      const phoneRegex = /^[\d+]+$/;
+      if (!phoneRegex.test(userData.phone.trim())) {
+        errors.phone = 'Телефон может содержать только цифры и символ +';
+      }
     }
     
     // If validation fails, show errors and return
@@ -603,11 +604,7 @@ export default function ProfilePage() {
                   <h3>Личная информация</h3>
                   {!isEditing && (
                     <Button 
-                      onClick={() => {
-                        console.log('[Button onClick] userData before edit:', userData);
-                        console.log('[Button onClick] cityId:', userData.cityId);
-                        setIsEditing(true);
-                      }}
+                      onClick={() => setIsEditing(true)}
                       variant="secondary"
                     >
                       <Edit2 className="w-4 h-4 mr-2" />
@@ -638,24 +635,46 @@ export default function ProfilePage() {
                       />
                       <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.name ?? ''}</div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
                         Email
                       </label>
                       <Input
                         type="email"
                         value={userData.email}
-                        onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                        onChange={(e) => {
+                          setUserData({ ...userData, email: e.target.value });
+                          if (profileFieldErrors.email) {
+                            setProfileFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.email;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={profileFieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                       />
+                      <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.email ?? ''}</div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-text)]">
                         Телефон
                       </label>
                       <Input
                         value={userData.phone}
-                        onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
+                        onChange={(e) => {
+                          setUserData({ ...userData, phone: e.target.value });
+                          if (profileFieldErrors.phone) {
+                            setProfileFieldErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.phone;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={profileFieldErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}
                       />
+                      <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.phone ?? ''}</div>
                     </div>
                     <div>
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
@@ -663,10 +682,7 @@ export default function ProfilePage() {
                       </label>
                       <CitySelect
                         value={userData.cityId}
-                        onChange={(cityId) => {
-                          console.log('[CitySelect] onChange called with:', cityId);
-                          setUserData({ ...userData, cityId });
-                        }}
+                        onChange={(cityId) => setUserData({ ...userData, cityId })}
                         placeholder="Выберите город..."
                         className="shadow-none"
                       />
@@ -725,9 +741,12 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     )}
-                    <div className="p-3 bg-[var(--color-bg-subtle)] rounded-xl">
-                      <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
-                      <div className="text-base">{userData.bio}</div>
+                    <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
+                      <User className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
+                        <div className="text-base">{userData.bio}</div>
+                      </div>
                     </div>
                   </div>
                 )}
