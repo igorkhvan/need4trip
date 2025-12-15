@@ -35,18 +35,18 @@ export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: bo
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="page-container space-y-6 pb-10 pt-12">
         {/* Кнопка назад */}
         <Link
           href="/clubs"
-          className="mb-6 inline-flex items-center gap-2 text-[15px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
+          className="inline-flex items-center gap-2 text-[15px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
         >
           <ArrowLeft className="h-5 w-5" />
           <span>Назад к списку клубов</span>
         </Link>
 
         {/* Заголовок */}
-        <div className="mb-8">
+        <div>
           <h1 className="text-[28px] font-bold text-[#1F2937] md:text-[32px]">Создать клуб</h1>
           <p className="mt-2 text-[15px] text-[#6B7280]">
             Создайте клуб и соберите единомышленников для совместных путешествий

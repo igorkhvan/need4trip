@@ -44,7 +44,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setFieldErrors({});
     setLoading(true);
 
     // Validate
@@ -61,6 +60,9 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       setLoading(false);
       return;
     }
+    
+    // Clear errors if validation passed
+    setFieldErrors({});
 
     try {
       const url = mode === "create" ? "/api/clubs" : `/api/clubs/${club!.id}`;
@@ -110,7 +112,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
         <Input
           type="text"
           id="name"
-          required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className={fieldErrors.name ? "border-red-500 focus:border-red-500" : ""}
@@ -146,9 +147,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           value={formData.cityIds}
           onChange={(cityIds, cities) => {
             setFormData({ ...formData, cityIds, cities });
-            if (fieldErrors.cityIds) {
-              setFieldErrors({ ...fieldErrors, cityIds: "" });
-            }
           }}
           placeholder="Выберите города..."
           disabled={loading}
@@ -229,7 +227,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"
-          disabled={loading || !formData.name.trim() || formData.cityIds.length === 0}
+          disabled={loading}
           className="flex-1"
         >
           {loading ? "Сохранение..." : mode === "create" ? "Создать клуб" : "Сохранить изменения"}
