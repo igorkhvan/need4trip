@@ -45,6 +45,80 @@ Examples of what NOT to do:
 Technical debt should shrink with every commit, never grow
 When you encounter workarounds, ask: "Why does this exist?" and fix the root cause
 
+CRITICAL: Design System Compliance & UI Polish
+**Before any "полировка" (polish) or UI redesign of a page, ALWAYS follow this workflow:**
+
+### 1. Preparation (MANDATORY first step)
+- ✅ Open Figma design (if exists) and keep it visible
+- ✅ Read `docs/DESIGN_REFERENCE.md` for design system rules
+- ✅ Read `docs/DESIGN_AUDIT.md` to see if page is listed
+- ✅ Keep Figma side-by-side with code to compare EVERY element
+
+### 2. Component Analysis (BEFORE writing code)
+- ✅ Search for duplicate patterns: grep, glob, semantic search
+- ✅ Can component be extracted to `src/components/ui/` globally?
+- ✅ Are existing UI components being reused from `src/components/ui/`?
+- ✅ Check if similar pattern exists on other pages → unify
+
+### 3. Typography (compare EVERY text with Figma)
+- ✅ Use ONLY standard Tailwind classes: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl, text-3xl, text-4xl
+- ✅ NO custom `text-[Npx]` — if found, REPLACE with standard classes
+- ✅ Font-weight: font-normal (400), font-semibold (600), font-bold (700)
+- ✅ Line-height: headings 1.2, text 1.6, interface 1.5
+- ✅ Compare EVERY text element size with Figma design
+
+### 4. Colors (CRITICAL — all through CSS variables)
+- ✅ ALL colors via CSS variables: `var(--color-primary)`, `var(--color-text-muted)`, etc.
+- ✅ Check `src/app/globals.css` — are CSS variables defined?
+- ✅ NO hardcoded #hex, rgb(), rgba() outside of globals.css
+- ✅ If new color needed → add to globals.css as CSS variable first
+
+### 5. Spacing & Layout (design system grid)
+- ✅ Use ONLY standard spacing: 4px, 8px, 12px, 16px, 20px, 24px, 32px, 48px
+- ✅ Border radius ONLY: rounded-lg (12px), rounded-xl (16px), rounded-2xl (24px)
+- ✅ Gap: gap-2 (8px), gap-3 (12px), gap-4 (16px), gap-6 (24px)
+- ✅ Padding: p-3 (12px), p-4 (16px), p-5 (20px), p-6 (24px)
+
+### 6. Responsive Design (test on multiple sizes)
+- ✅ Mobile First: base styles for mobile, then md:, lg: breakpoints
+- ✅ Breakpoints: md: 768px, lg: 1024px, xl: 1280px
+- ✅ Touch-friendly: minimum 44px height for interactive elements
+- ✅ Test on mobile, tablet, desktop sizes before committing
+
+### 7. Final Verification (before commit)
+- ✅ Open page and Figma SIDE-BY-SIDE — compare visually
+- ✅ Check EVERY element: fonts, colors, spacing, radius
+- ✅ Verify hover/focus/active states
+- ✅ Check responsive behavior on all breakpoints
+- ✅ Re-read DESIGN_REFERENCE.md — does everything comply?
+
+### ❌ PROHIBITED Actions
+- ❌ NO "partial" polish (fixing only typography or only colors)
+- ❌ NO skipping Figma comparison
+- ❌ NO forgetting to globalize duplicate components
+- ❌ NO ignoring CSS variables (ALWAYS check globals.css first)
+- ❌ NO custom sizes/colors outside design system
+
+### 📋 Mandatory Workflow for UI Polish:
+1. Open Figma → keep side-by-side with browser
+2. Read DESIGN_REFERENCE.md completely
+3. Semantic search for similar patterns in codebase
+4. Grep for duplicate code/components
+5. Check globals.css for CSS variable availability
+6. Go through ALL page elements top-to-bottom
+7. Compare EACH with Figma and design system
+8. Extract duplicate patterns globally
+9. ONLY THEN commit changes
+
+**If unsure — ASK user, show Figma vs current state comparison.**
+
+This prevents:
+- Hardcoded colors/sizes not in design system
+- Duplicate components (tabs, buttons, etc.)
+- Missing CSS variables causing broken styles
+- Inconsistent spacing/typography
+- Half-finished polish that needs re-work
+
 CRITICAL: Global Error Detection and Prevention
 When fixing an error, ALWAYS search for similar patterns across the entire codebase:
 - DO NOT fix only the immediate error location
