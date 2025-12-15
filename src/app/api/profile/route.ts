@@ -89,11 +89,12 @@ export async function PATCH(req: NextRequest) {
       throw new ValidationError("Ошибка валидации", parseResult.error.errors);
     }
     
-    const { name, bio, phone, cityId, carBrandId, carModelText } = parseResult.data;
+    const { name, email, bio, phone, cityId, carBrandId, carModelText } = parseResult.data;
     
     // Update user
     const updatedUser = await updateUser(user.id, {
       name,
+      email,
       bio,
       phone,
       cityId,

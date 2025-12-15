@@ -94,6 +94,7 @@ export function getMaxActivePersonalEventsForPlan(plan: UserPlan): number | null
  */
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(1, "Имя обязательно").max(100).optional(),
+  email: z.string().trim().email("Некорректный email").max(100).optional().nullable(),
   bio: z.string().trim().max(500, "Максимум 500 символов").optional().nullable(),
   phone: z.string().trim().max(20).optional().nullable(),
   cityId: z.string().uuid("Выберите город из списка").optional().nullable(),

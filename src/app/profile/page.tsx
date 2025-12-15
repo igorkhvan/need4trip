@@ -227,6 +227,7 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: userData.name,
+          email: userData.email || null,
           bio: userData.bio,
           phone: userData.phone,
           cityId: userData.cityId,

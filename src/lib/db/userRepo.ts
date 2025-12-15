@@ -147,6 +147,7 @@ export async function updateUser(
   id: string,
   updates: {
     name?: string;
+    email?: string | null;
     bio?: string | null;
     phone?: string | null;
     cityId?: string | null;
@@ -162,6 +163,7 @@ export async function updateUser(
   const patch: any = {};
   
   if (updates.name !== undefined) patch.name = updates.name;
+  if (updates.email !== undefined) patch.email = updates.email;
   if (updates.bio !== undefined) patch.bio = updates.bio;
   if (updates.phone !== undefined) patch.phone = updates.phone;
   if (updates.cityId !== undefined) patch.city_id = updates.cityId;
