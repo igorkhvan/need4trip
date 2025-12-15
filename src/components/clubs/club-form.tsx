@@ -117,9 +117,9 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           placeholder="Например: OFF-ROAD Москва"
           disabled={loading}
         />
-        {fieldErrors.name && (
-          <p className="text-sm text-red-500">{fieldErrors.name}</p>
-        )}
+        <div className="min-h-[28px] text-xs text-red-600">
+          {fieldErrors.name || ""}
+        </div>
       </div>
 
       {/* Описание */}
@@ -132,7 +132,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           rows={4}
           value={formData.description ?? ""}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className=""
           placeholder="Расскажите о вашем клубе..."
           disabled={loading}
         />
@@ -157,7 +156,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           errorMessage={fieldErrors.cityIds}
           maxItems={10}
         />
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-[#6B7280]">
           Выберите города, в которых действует ваш клуб (до 10 городов)
         </p>
       </div>
@@ -172,7 +171,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           id="logoUrl"
           value={formData.logoUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-          className=""
           placeholder="https://example.com/logo.png"
           disabled={loading}
         />
@@ -200,7 +198,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           id="telegramUrl"
           value={formData.telegramUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, telegramUrl: e.target.value })}
-          className=""
           placeholder="https://t.me/your_club"
           disabled={loading}
         />
@@ -216,7 +213,6 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           id="websiteUrl"
           value={formData.websiteUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
-          className=""
           placeholder="https://yourclub.com"
           disabled={loading}
         />

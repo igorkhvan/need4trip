@@ -39,10 +39,10 @@ export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: bo
         {/* Кнопка назад */}
         <Link
           href="/clubs"
-          className="mb-6 inline-flex items-center gap-2 text-[#6B7280] transition-colors hover:text-[#1F2937]"
+          className="mb-6 inline-flex items-center gap-2 text-[15px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
         >
           <ArrowLeft className="h-5 w-5" />
-          Назад к списку клубов
+          <span>Назад к списку клубов</span>
         </Link>
 
         {/* Заголовок */}
