@@ -140,7 +140,7 @@ export default function ClubsPage() {
         <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-12">
           {/* Поиск по названию */}
           <form onSubmit={handleSearchSubmit} className="relative md:col-span-6">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9CA3AF]" />
+            <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-[#9CA3AF]" />
             <input
               type="search"
               value={searchQuery}

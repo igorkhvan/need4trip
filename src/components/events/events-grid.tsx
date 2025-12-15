@@ -272,7 +272,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {/* Search */}
       <div className="max-w-md">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9CA3AF]" />
+          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-[#9CA3AF]" />
           <Input
             type="text"
             placeholder="Поиск по названию, организатору или месту..."
