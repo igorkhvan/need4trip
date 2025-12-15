@@ -146,7 +146,7 @@ export default function ClubsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск клубов..."
-              className="h-12 w-full rounded-xl border-2 border-[#E5E7EB] bg-white pl-12 pr-4 text-[15px] placeholder:text-[#6B7280] hover:border-[#6B7280] focus:border-[var(--color-primary)] focus:outline-none focus:ring-4 focus:ring-[var(--color-primary-bg)]"
+              className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-white pl-12 pr-4 text-[15px] placeholder:text-[#6B7280] transition-colors hover:border-[#D1D5DB] focus:border-[var(--color-primary)] focus:outline-none"
               disabled={!!selectedCityId}
             />
           </form>
