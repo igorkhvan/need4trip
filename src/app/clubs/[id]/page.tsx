@@ -4,10 +4,11 @@
  * Страница деталей клуба
  */
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Users, Settings, MapPin, Globe, Send } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getClubWithDetails } from "@/lib/services/clubs";
 import { ClubMembersList } from "@/components/clubs/club-members-list";
 import { ClubSubscriptionCard } from "@/components/clubs/club-subscription-card";
 import { Badge } from "@/components/ui/badge";
@@ -15,31 +16,22 @@ import { getClubRoleLabel } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
 
-async function getClubDetails(id: string) {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/clubs/${id}`, {
-      cache: "no-store",
-    });
-    
-    if (!res.ok) return null;
-    
-    const data = await res.json();
-    return data.club;
-  } catch (err) {
-    console.error("[getClubDetails] Failed", err);
-    return null;
-  }
-}
-
 interface ClubDetailsPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) {
-  const [club, user] = await Promise.all([
-    getClubDetails(params.id),
-    getCurrentUser(),
-  ]);
+  const { id } = await params;
+  const user = await getCurrentUser();
+  
+  // Прямой вызов сервиса вместо fetch
+  let club;
+  try {
+    club = await getClubWithDetails(id, user);
+  } catch (error) {
+    console.error("[ClubDetailsPage] Failed to load club", error);
+    notFound();
+  }
 
   if (!club) {
     notFound();
@@ -54,46 +46,46 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
   const isOwner = userRole === "owner";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <div className="page-container space-y-6 pb-10 pt-12">
         {/* Кнопка назад */}
         <Link
           href="/clubs"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-[15px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
         >
-          <ArrowLeft className="w-5 h-5" />
-          Все клубы
+          <ArrowLeft className="h-5 w-5" />
+          <span>Все клубы</span>
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
           {/* Основная информация */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             {/* Заголовок */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
               <div className="flex items-start gap-6">
                 {/* Логотип */}
                 {club.logoUrl ? (
                   <img
                     src={club.logoUrl}
                     alt={club.name}
-                    className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                    className="h-24 w-24 flex-shrink-0 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
+                  <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-3xl font-bold text-white">
                     {club.name.charAt(0).toUpperCase()}
                   </div>
                 )}
 
                 <div className="flex-1">
-                  <div className="flex items-start justify-between mb-3">
-                    <h1 className="text-3xl font-bold text-gray-900">{club.name}</h1>
+                  <div className="mb-3 flex items-start justify-between">
+                    <h1 className="text-[28px] font-bold text-[#1F2937] md:text-[32px]">{club.name}</h1>
                     {canManage && (
                       <Link
                         href={`/clubs/${club.id}/manage`}
-                        className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-[15px] text-[#111827] transition-colors hover:bg-[#F9FAFB]"
                       >
-                        <Settings className="w-4 h-4" />
-                        Управление
+                        <Settings className="h-4 w-4" />
+                        <span>Управление</span>
                       </Link>
                     )}
                   </div>
@@ -108,10 +100,10 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                   )}
 
                   {/* Метаинформация */}
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap gap-4 text-[14px] text-[#6B7280]">
                     {club.cities && club.cities.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
                         <span>
                           {club.cities.length === 1
                             ? club.cities[0].region
@@ -121,28 +113,28 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4" />
                       <span>{club.memberCount} участников</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" />
                       <span>{club.eventCount} событий</span>
                     </div>
                   </div>
 
                   {/* Ссылки */}
                   {(club.telegramUrl || club.websiteUrl) && (
-                    <div className="flex gap-3 mt-4">
+                    <div className="mt-4 flex gap-3">
                       {club.telegramUrl && (
                         <a
                           href={club.telegramUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-[14px] text-[#111827] transition-colors hover:bg-[#F9FAFB]"
                         >
-                          <Send className="w-4 h-4" />
-                          Telegram
+                          <Send className="h-4 w-4" />
+                          <span>Telegram</span>
                         </a>
                       )}
                       {club.websiteUrl && (
@@ -150,10 +142,10 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                           href={club.websiteUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-[14px] text-[#111827] transition-colors hover:bg-[#F9FAFB]"
                         >
-                          <Globe className="w-4 h-4" />
-                          Сайт
+                          <Globe className="h-4 w-4" />
+                          <span>Сайт</span>
                         </a>
                       )}
                     </div>
@@ -163,13 +155,13 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
 
               {/* Описание и Города */}
               {(club.description || (club.cities && club.cities.length > 0)) && (
-                <div className="mt-6 pt-6 border-t border-gray-200 space-y-6">
+                <div className="mt-6 space-y-6 border-t border-[#E5E7EB] pt-6">
                   {/* Города клуба */}
                   {club.cities && club.cities.length > 0 && (
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-gray-600" />
-                        Города клуба
+                      <h2 className="mb-3 flex items-center gap-2 text-[18px] font-semibold text-[#1F2937]">
+                        <MapPin className="h-5 w-5 text-[#6B7280]" />
+                        <span>Города клуба</span>
                       </h2>
                       <div className="flex flex-wrap gap-2">
                         {club.cities.map((city: any) => (
@@ -184,8 +176,8 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                   {/* Описание */}
                   {club.description && (
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3">О клубе</h2>
-                      <p className="text-gray-700 whitespace-pre-wrap">{club.description}</p>
+                      <h2 className="mb-3 text-[18px] font-semibold text-[#1F2937]">О клубе</h2>
+                      <p className="whitespace-pre-wrap text-[15px] text-[#111827]">{club.description}</p>
                     </div>
                   )}
                 </div>
@@ -193,8 +185,8 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
             </div>
 
             {/* Участники */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-[18px] font-semibold text-[#1F2937]">
                 Участники ({club.memberCount})
               </h2>
               <ClubMembersList
