@@ -111,6 +111,14 @@ export default function ProfilePage() {
     loadBrands();
   }, []);
 
+  // Debug: Log when isEditing changes
+  useEffect(() => {
+    if (isEditing) {
+      console.log('[useEffect isEditing=true] userData.cityId:', userData.cityId);
+      console.log('[useEffect isEditing=true] Full userData:', userData);
+    }
+  }, [isEditing, userData]);
+
   const loadProfileData = async () => {
     try {
       const res = await fetch('/api/profile');
@@ -653,7 +661,6 @@ export default function ProfilePage() {
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Город
                       </label>
-                      {console.log('[CitySelect] Rendering with value:', userData.cityId)}
                       <CitySelect
                         value={userData.cityId}
                         onChange={(cityId) => {
