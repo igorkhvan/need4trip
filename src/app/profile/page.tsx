@@ -239,7 +239,20 @@ export default function ProfilePage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData.error || errorData.message || 'Не удалось добавить автомобиль';
+        console.error('[handleAddCar] API Error:', errorData);
+        
+        // Extract error message from API response format
+        // API returns: { success: false, error: { code: "...", message: "..." } }
+        let errorMessage = 'Не удалось добавить автомобиль';
+        
+        if (errorData.error && typeof errorData.error.message === 'string') {
+          errorMessage = errorData.error.message;
+        } else if (typeof errorData.message === 'string') {
+          errorMessage = errorData.message;
+        } else if (typeof errorData.error === 'string') {
+          errorMessage = errorData.error;
+        }
+        
         throw new Error(errorMessage);
       }
 
@@ -251,7 +264,16 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('[handleAddCar] Error:', error);
-      const message = error instanceof Error ? error.message : 'Не удалось добавить автомобиль';
+      
+      // Safe error message extraction
+      let message = 'Не удалось добавить автомобиль';
+      
+      if (error instanceof Error && typeof error.message === 'string') {
+        message = error.message;
+      } else if (typeof error === 'string') {
+        message = error;
+      }
+      
       alert(message);
     } finally {
       setSavingCar(false);
