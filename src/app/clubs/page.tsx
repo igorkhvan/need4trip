@@ -101,7 +101,7 @@ export default function ClubsPage() {
           </div>
           <CreateClubButton
             isAuthenticated={isAuthenticated}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
           >
             <Plus className="h-4 w-4" />
             Создать клуб
@@ -146,7 +146,7 @@ export default function ClubsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск клубов..."
-              className="h-12 w-full rounded-xl border-2 border-[#E5E7EB] bg-white pl-12 pr-4 text-[15px] placeholder:text-[#6B7280] hover:border-[#6B7280] focus:border-[#FF6F2C] focus:outline-none focus:ring-4 focus:ring-[rgba(255,111,44,0.1)]"
+              className="h-12 w-full rounded-xl border-2 border-[#E5E7EB] bg-white pl-12 pr-4 text-[15px] placeholder:text-[#6B7280] hover:border-[#6B7280] focus:border-[var(--color-primary)] focus:outline-none focus:ring-4 focus:ring-[var(--color-primary-bg)]"
               disabled={!!selectedCityId}
             />
           </form>
@@ -166,7 +166,7 @@ export default function ClubsPage() {
         {(selectedCity || searchQuery) && (
           <div className="mb-4 flex items-center gap-2 text-[14px] text-[#6B7280]">
             {selectedCity && (
-              <div className="flex items-center gap-2 rounded-full bg-[rgba(255,111,44,0.1)] px-3 py-1 text-[#FF6F2C]">
+              <div className="flex items-center gap-2 rounded-full bg-[var(--color-primary-bg)] px-3 py-1 text-[var(--color-primary)]">
                 <MapPin className="h-4 w-4" />
                 <span>
                   {selectedCity.region
@@ -178,19 +178,21 @@ export default function ClubsPage() {
                     setSelectedCityId(null);
                     setSelectedCity(null);
                   }}
-                  className="ml-1 hover:text-[#E55A1A]"
+                  className="ml-1 hover:text-[var(--color-primary-hover)]"
+                  aria-label="Очистить фильтр по городу"
                 >
                   ×
                 </button>
               </div>
             )}
             {searchQuery && (
-              <div className="flex items-center gap-2 rounded-full bg-[rgba(255,111,44,0.1)] px-3 py-1 text-[#FF6F2C]">
+              <div className="flex items-center gap-2 rounded-full bg-[var(--color-primary-bg)] px-3 py-1 text-[var(--color-primary)]">
                 <Search className="h-4 w-4" />
                 <span>"{searchQuery}"</span>
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="ml-1 hover:text-[#E55A1A]"
+                  className="ml-1 hover:text-[var(--color-primary-hover)]"
+                  aria-label="Очистить поисковый запрос"
                 >
                   ×
                 </button>
@@ -203,7 +205,7 @@ export default function ClubsPage() {
         {/* Список клубов */}
         {loading ? (
           <div className="py-16 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[#FF6F2C]"></div>
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[var(--color-primary)]"></div>
             <p className="mt-4 text-[#6B7280]">Загрузка...</p>
           </div>
         ) : clubs.length > 0 ? (
@@ -229,7 +231,7 @@ export default function ClubsPage() {
               {!searchQuery && !selectedCity && (
                 <CreateClubButton
                   isAuthenticated={isAuthenticated}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
                 >
                   <Plus className="h-4 w-4" />
                   Создать клуб

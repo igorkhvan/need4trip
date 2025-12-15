@@ -25,7 +25,7 @@ export function ClubCard({ club }: ClubCardProps) {
   return (
     <Link
       href={`/clubs/${club.id}`}
-      className="group block rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm transition-all duration-200 hover:border-[#FF6F2C] hover:shadow-md lg:p-6"
+      className="group block rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-md lg:p-6"
     >
       {/* Логотип и название */}
       <div className="mb-4 flex items-start gap-4">
@@ -36,13 +36,13 @@ export function ClubCard({ club }: ClubCardProps) {
             className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
           />
         ) : (
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6F2C] to-[#E55A1A] text-2xl font-bold text-white">
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] text-2xl font-bold text-white">
             {club.name.charAt(0).toUpperCase()}
           </div>
         )}
 
         <div className="min-w-0 flex-1">
-          <h4 className="mb-1 truncate text-[16px] font-semibold text-[#1F2937] transition-colors group-hover:text-[#FF6F2C]">
+          <h4 className="mb-1 truncate text-[16px] font-semibold text-[#1F2937] transition-colors group-hover:text-[var(--color-primary)]">
             {club.name}
           </h4>
           {club.planId && club.planId !== "free" && (
@@ -65,7 +65,7 @@ export function ClubCard({ club }: ClubCardProps) {
         <div>
           <div className="mb-1 text-[12px] text-[#6B7280]">Участников</div>
           <div className="flex items-center gap-1">
-            <Users className="h-4 w-4 text-[#FF6F2C]" />
+            <Users className="h-4 w-4 text-[var(--color-primary)]" />
             <span className="text-[15px] font-semibold text-[#1F2937]">
               {club.memberCount ?? 0}
             </span>
@@ -74,7 +74,7 @@ export function ClubCard({ club }: ClubCardProps) {
         <div>
           <div className="mb-1 text-[12px] text-[#6B7280]">Событий</div>
           <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4 text-[#FF6F2C]" />
+            <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
             <span className="text-[15px] font-semibold text-[#1F2937]">
               {club.eventCount ?? 0}
             </span>
