@@ -173,16 +173,6 @@ export const BillingTransactionSchema = z.object({
 });
 
 // ============================================================================
-// Free Plan (hardcoded, not in DB)
-// ============================================================================
-
-export const FREE_LIMITS = {
-  maxEventParticipants: 15,
-  allowPaidEvents: false,
-  allowCsvExport: false,
-} as const;
-
-// ============================================================================
 // Paywall Types
 // ============================================================================
 

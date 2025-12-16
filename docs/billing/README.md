@@ -21,12 +21,12 @@
 - PaywallModal компонент
 - Обработка 402 ошибок
 
-### 3. Implementation Details (создать позже)
-Детали реализации backend:
-- `accessControl.ts` - enforcement
-- `enforceClubAction()` - проверка лимитов
-- Database repositories
-- API endpoints
+### 3. [Billing Audit Report](../../BILLING_AUDIT_REPORT.md) ✅
+**Audit v2.1** - полная проверка целостности системы:
+- Отсутствие хардкода (verified)
+- Проверка всех enforcement points
+- Консистентность данных
+- Результаты и исправления
 
 ---
 

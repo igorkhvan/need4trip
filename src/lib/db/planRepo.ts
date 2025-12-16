@@ -119,7 +119,7 @@ export async function planExists(planId: PlanId): Promise<boolean> {
 
 /**
  * Get required plan for participants count (dynamic from DB)
- * Replaces hardcoded FREE_LIMITS logic
+ * Queries cached database plans to find minimum plan that supports the count
  */
 export async function getRequiredPlanForParticipants(
   count: number

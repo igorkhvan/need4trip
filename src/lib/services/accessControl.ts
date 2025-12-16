@@ -32,7 +32,7 @@ import { log } from "@/lib/utils/logger";
  * 
  * Algorithm (per docs/BILLING_AND_LIMITS.md):
  * 1. Get club subscription (null = Free)
- * 2. If Free: check FREE_LIMITS hardcoded
+ * 2. If Free: load plan limits from DB (cached)
  * 3. If paid: check status → billing_policy_actions
  * 4. If "active" → always allowed
  * 5. If "grace"/"pending"/"expired" → check DB rules

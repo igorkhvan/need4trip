@@ -483,6 +483,18 @@ export async function addClubMember(
     }
   }
 
+  // ⚡ Billing v2.0: Check club members limit
+  const currentMembersCount = await countMembers(clubId);
+  const { enforceClubAction } = await import("@/lib/services/accessControl");
+  
+  await enforceClubAction({
+    clubId,
+    action: "CLUB_INVITE_MEMBER",
+    context: {
+      clubMembersCount: currentMembersCount,
+    },
+  });
+
   // Ensure user exists
   await ensureUserExists(userId);
 
