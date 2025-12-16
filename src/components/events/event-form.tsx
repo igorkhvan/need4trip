@@ -134,6 +134,7 @@ export function EventForm({
     initialValues?.allowedBrandIds ?? []
   );
   const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [rules, setRules] = useState<string>(initialValues?.rules ?? "");
   const [isClubEvent, setIsClubEvent] = useState<boolean>(initialValues?.isClubEvent ?? false);
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
@@ -149,24 +150,34 @@ export function EventForm({
   );
 
   useEffect(() => {
-    const loadBrands = async () => {
+    const loadData = async () => {
       try {
-        const res = await fetch("/api/car-brands");
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          brands?: { id: string; name: string; slug?: string | null }[];
-        };
-        setBrands(
-          (data.brands ?? []).map((brand) => ({
-            id: brand.id,
-            name: brand.name,
-          }))
-        );
+        const [brandsRes, typesRes] = await Promise.all([
+          fetch("/api/car-brands"),
+          fetch("/api/vehicle-types"),
+        ]);
+        
+        if (brandsRes.ok) {
+          const brandsData = (await brandsRes.json()) as {
+            brands?: { id: string; name: string; slug?: string | null }[];
+          };
+          setBrands(
+            (brandsData.brands ?? []).map((brand) => ({
+              id: brand.id,
+              name: brand.name,
+            }))
+          );
+        }
+        
+        if (typesRes.ok) {
+          const typesData = await typesRes.json();
+          setVehicleTypes(typesData.vehicleTypes || []);
+        }
       } catch (err) {
-        console.error("Failed to load car brands", err);
+        console.error("Failed to load car data", err);
       }
     };
-    loadBrands();
+    loadData();
   }, []);
 
   // Load categories from API
@@ -728,7 +739,7 @@ export function EventForm({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="vehicleTypeRequirement" className="text-sm font-medium text-[#111827]">
-                Тип автомобиля
+                Требование к типу авто
               </Label>
               <Select
                 value={vehicleType}
@@ -736,13 +747,15 @@ export function EventForm({
                 disabled={disabled}
               >
                 <SelectTrigger id="vehicleTypeRequirement">
-                  <SelectValue placeholder="Выберите тип автомобиля" />
+                  <SelectValue placeholder="Выберите требование" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Любой</SelectItem>
-                  <SelectItem value="sedan">Легковой</SelectItem>
-                  <SelectItem value="crossover">Кроссовер</SelectItem>
-                  <SelectItem value="suv">Внедорожник</SelectItem>
+                  {vehicleTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
