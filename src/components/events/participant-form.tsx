@@ -63,7 +63,17 @@ export function ParticipantForm({
   const [role, setRole] = useState<ParticipantRole>(initialValues?.role || "participant");
   const [customValues, setCustomValues] = useState<CustomValues>(() => {
     if (mode === "edit" && initialValues?.customFieldValues) {
-      return initialValues.customFieldValues as CustomValues;
+      // Для boolean полей всегда конвертируем в true/false, не оставляем null/undefined
+      return Object.fromEntries(
+        customFieldsSchema.map((field) => {
+          const value = initialValues.customFieldValues?.[field.id];
+          if (field.type === "boolean") {
+            return [field.id, Boolean(value)];
+          } else {
+            return [field.id, value ?? getDefaultCustomFieldValue(field.type)];
+          }
+        })
+      ) as CustomValues;
     }
     return Object.fromEntries(
       (customFieldsSchema || []).map((field) => [field.id, getDefaultCustomFieldValue(field.type)])
@@ -115,7 +125,9 @@ export function ParticipantForm({
           issues[field.id] = "Заполните поле";
         }
       } else if (field.type === "boolean") {
-        if (value === undefined || value === null) {
+        // Для boolean полей: если обязательное, то должно быть явно true
+        // (false считается валидным ответом "Нет")
+        if (typeof value !== "boolean") {
           issues[field.id] = "Укажите значение";
         }
       }
@@ -146,6 +158,8 @@ export function ParticipantForm({
             ? null
             : Number(value);
       } else if (field.type === "boolean") {
+        // Всегда сохраняем boolean: true если checked, false если unchecked
+        // Не сохраняем null для чекбоксов - false означает "Нет"
         preparedValues[field.id] = Boolean(value);
       } else {
         preparedValues[field.id] = value ?? "";
