@@ -36,3 +36,4 @@ export {
 
 export { ClubMembersSkeleton } from "./club-members-skeleton";
 export { ClubSubscriptionSkeleton } from "./club-subscription-skeleton";
+export { EventParticipantsSkeleton } from "./event-participants-skeleton";

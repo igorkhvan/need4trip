@@ -1,18 +1,20 @@
 /**
  * Club Details Page
  * 
- * Страница деталей клуба
+ * Страница деталей клуба с Streaming SSR
  */
 
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Users, Settings, MapPin, Globe, Send } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { getClubWithDetails } from "@/lib/services/clubs";
-import { ClubMembersList } from "@/components/clubs/club-members-list";
-import { ClubSubscriptionCard } from "@/components/clubs/club-subscription-card";
+import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 import { Badge } from "@/components/ui/badge";
 import { getClubRoleLabel } from "@/lib/types/club";
+import { ClubMembersAsync } from "./_components/members-async";
+import { ClubSubscriptionAsync } from "./_components/subscription-async";
+import { ClubMembersSkeleton, ClubSubscriptionSkeleton } from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
 
@@ -22,31 +24,26 @@ interface ClubDetailsPageProps {
 
 export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) {
   const { id } = await params;
-  const user = await getCurrentUser();
   
-  // Прямой вызов сервиса вместо fetch
-  let club;
-  try {
-    club = await getClubWithDetails(id, user);
-  } catch (error) {
-    console.error("[ClubDetailsPage] Failed to load club", error);
-    notFound();
-  }
+  // Загружаем критичные данные сразу
+  const [user, club, userRole] = await Promise.all([
+    getCurrentUser(),
+    getClubBasicInfo(id).catch(() => null),
+    (async () => {
+      const u = await getCurrentUser();
+      return getUserClubRole(id, u?.id);
+    })(),
+  ]);
 
   if (!club) {
     notFound();
   }
 
-  // Найти роль текущего пользователя
-  const currentUserMember = club.members?.find(
-    (m: any) => m.userId === user?.id
-  );
-  const userRole = currentUserMember?.role;
   const canManage = userRole === "owner" || userRole === "organizer";
   const isOwner = userRole === "owner";
   
-  // Показывать боковую панель только если есть что показать
-  const showSidebar = isOwner && club.subscription;
+  // Показывать боковую панель только для owner
+  const showSidebar = isOwner;
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
@@ -187,28 +184,23 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
               )}
             </div>
 
-            {/* Участники */}
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-[18px] font-semibold text-[#1F2937]">
-                Участники ({club.memberCount})
-              </h2>
-              <ClubMembersList
+            {/* Участники - загружаем через Suspense */}
+            <Suspense fallback={<ClubMembersSkeleton />}>
+              <ClubMembersAsync
                 clubId={club.id}
-                members={club.members ?? []}
-                canManage={isOwner}
-                currentUserId={user?.id}
+                canManage={canManage}
+                isOwner={isOwner}
               />
-            </div>
+            </Suspense>
           </div>
 
-          {/* Боковая панель (только если есть что показать) */}
+          {/* Боковая панель (только для owner) */}
           {showSidebar && (
             <div className="space-y-6">
-              {/* Подписка (только для owner) */}
-              <ClubSubscriptionCard
-                subscription={club.subscription}
-                canManage={isOwner}
-              />
+              {/* Подписка - загружаем через Suspense */}
+              <Suspense fallback={<ClubSubscriptionSkeleton />}>
+                <ClubSubscriptionAsync clubId={club.id} />
+              </Suspense>
 
               {/* TODO: Последние события клуба */}
               {/* TODO: Кнопка "Вступить в клуб" для не-членов */}

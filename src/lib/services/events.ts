@@ -284,6 +284,47 @@ export async function getEventWithParticipants(
   };
 }
 
+/**
+ * Получить базовую информацию о событии (без участников)
+ * Для быстрой загрузки с Streaming SSR
+ * Включает только счетчик участников (быстрый запрос)
+ */
+export async function getEventBasicInfo(
+  id: string,
+  options?: EventAccessOptions
+): Promise<(Event & { participantsCount: number }) | null> {
+  const dbEvent = await getEventById(id);
+  if (!dbEvent) return null;
+  
+  let event = mapDbEventToDomain(dbEvent);
+  
+  // Hydrate all related data + count participants (parallel)
+  const [allowedBrands, participantsCount] = await Promise.all([
+    getAllowedBrands(id).catch((err) => {
+      console.error("[getEventBasicInfo] Failed to load allowed brands", err);
+      return [];
+    }),
+    countParticipants(id),
+  ]);
+  
+  event.allowedBrands = allowedBrands;
+  
+  // Hydrate city and currency
+  const [hydratedEvents] = await hydrateCitiesAndCurrencies([event]);
+  event = hydratedEvents;
+  
+  // Hydrate category
+  const [eventWithCategory] = await hydrateEventCategories([event]);
+  event = eventWithCategory;
+  
+  await ensureEventVisibility(event, options);
+  
+  return {
+    ...event,
+    participantsCount,
+  };
+}
+
 export async function getEventWithParticipantsVisibility(
   id: string,
   options?: EventAccessOptions

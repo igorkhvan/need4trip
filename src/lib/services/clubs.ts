@@ -245,6 +245,45 @@ export async function getClub(id: string): Promise<Club> {
 /**
  * Получить клуб с полными деталями (subscription, members, event count)
  */
+/**
+ * Получить роль пользователя в клубе
+ */
+export async function getUserClubRole(
+  clubId: string,
+  userId: string | null | undefined
+): Promise<ClubRole | null> {
+  if (!userId) return null;
+  
+  const member = await getMember(clubId, userId);
+  return member?.role ?? null;
+}
+
+/**
+ * Получить базовую информацию о клубе (для быстрой загрузки)
+ * Без members и subscription - они загружаются через Suspense
+ */
+export async function getClubBasicInfo(id: string) {
+  const dbClub = await getClubById(id);
+  if (!dbClub) {
+    throw new NotFoundError("Club not found");
+  }
+
+  const club = mapDbClubToDomain(dbClub);
+  const hydratedClub = await hydrateClubWithCities(club);
+
+  // Count stats (быстрые запросы)
+  const [eventCount, memberCount] = await Promise.all([
+    countClubEvents(id),
+    countMembers(id),
+  ]);
+
+  return {
+    ...hydratedClub,
+    memberCount,
+    eventCount,
+  };
+}
+
 export async function getClubWithDetails(
   id: string,
   currentUser?: CurrentUser | null
