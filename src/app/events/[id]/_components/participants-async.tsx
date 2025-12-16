@@ -100,31 +100,18 @@ export async function EventParticipantsAsync({
 
                       {/* Экипаж */}
                       <TableCell>
-                        <div className="space-y-1">
-                          {participant.userId ? (
-                            <Link
-                              href={`/profile/${participant.userId}`}
-                              className="font-medium text-[#111827] hover:text-[var(--color-primary)] hover:underline"
-                            >
-                              {participant.driverName}
-                            </Link>
-                          ) : (
-                            <span className="font-medium text-[#111827]">
-                              {participant.driverName}
-                            </span>
-                          )}
-                          {participant.crewSize &&
-                            participant.crewSize > 1 && (
-                              <div className="text-[13px] text-[#6B7280]">
-                                +{participant.crewSize - 1} пассажир
-                                {participant.crewSize === 2 ||
-                                participant.crewSize === 3 ||
-                                participant.crewSize === 4
-                                  ? "а"
-                                  : "ов"}
-                              </div>
-                            )}
-                        </div>
+                        {participant.userId ? (
+                          <Link
+                            href={`/profile/${participant.userId}`}
+                            className="font-medium text-[#111827] hover:text-[var(--color-primary)] hover:underline"
+                          >
+                            {participant.displayName}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-[#111827]">
+                            {participant.displayName}
+                          </span>
+                        )}
                       </TableCell>
 
                       {/* Роль */}
@@ -141,16 +128,16 @@ export async function EventParticipantsAsync({
                             {sortedCustomFields.map((field) => {
                               const value =
                                 participant.customFieldValues?.[
-                                  field.name
+                                  field.id
                                 ];
                               if (!value) return null;
                               return (
-                                <div key={field.name}>
+                                <div key={field.id}>
                                   <span className="text-[#6B7280]">
                                     {field.label}:{" "}
                                   </span>
                                   <span className="font-medium">
-                                    {formatCustomFieldValue(field, value)}
+                                    {formatCustomFieldValue(value, field.type)}
                                   </span>
                                 </div>
                               );
@@ -165,8 +152,17 @@ export async function EventParticipantsAsync({
                           {canEdit && (
                             <ParticipantActions
                               eventId={eventId}
-                              participant={participant}
+                              participantId={participant.id}
+                              canEdit={canEdit}
+                              canRemove={canEdit}
                               isOwner={isOwner}
+                              authMissing={false}
+                              customFieldsSchema={event.customFieldsSchema}
+                              participantData={{
+                                displayName: participant.displayName,
+                                role: participant.role,
+                                customFieldValues: participant.customFieldValues,
+                              }}
                               event={event}
                             />
                           )}
