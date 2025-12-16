@@ -36,7 +36,6 @@ export function ClubMembersList({
 }: ClubMembersListProps) {
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   // TODO: Migrate to usePaywall from billing v2.0
   // const { paywallOpen, paywallTrigger, showPaywall, hidePaywall } = usePaywall();
@@ -104,28 +103,22 @@ export function ClubMembersList({
   const handleRemove = async () => {
     if (!actionUserId || !onRemoveMember) return;
 
-    setLoading(true);
     try {
       await onRemoveMember(actionUserId);
       setShowRemoveConfirm(false);
       setActionUserId(null);
     } catch (err) {
       console.error("Failed to remove member", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleRoleChange = async (userId: string, newRole: ClubRole) => {
     if (!onUpdateRole) return;
 
-    setLoading(true);
     try {
       await onUpdateRole(userId, newRole);
     } catch (err) {
       console.error("Failed to update role", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -205,7 +198,6 @@ export function ClubMembersList({
                 <button
                   onClick={() => setActionUserId(member.userId)}
                   className="rounded-xl p-2 text-[#9CA3AF] transition-colors hover:bg-[#F9FAFB] hover:text-[#6B7280]"
-                  disabled={loading}
                 >
                   <MoreVertical className="h-5 w-5" />
                 </button>
@@ -267,7 +259,6 @@ export function ClubMembersList({
         title="Удалить участника?"
         description="Участник потеряет доступ к клубу и его событиям."
         confirmText="Удалить"
-        loading={loading}
       />
 
       {/* TODO: Migrate to new PaywallModal from billing v2.0 */}
