@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.0] - 2024-12-14
+
+### ✨ AI-Powered Event Rules Generation
+
+**New Feature:** Automatic generation of structured event participation rules using OpenAI.
+
+#### What's New
+- 🤖 **AI Button** in event create/edit forms
+- ⚡ **One-click generation** of comprehensive event rules
+- 📝 **Structured output** with 7 standard sections
+- 🎯 **Context-aware** - adapts to event category, vehicle type, custom fields
+- 🇷🇺 **Russian language** optimized for Kazakhstan off-road events
+
+#### Components Added
+- `src/lib/services/ai/openai.ts` - OpenAI API wrapper
+- `src/lib/services/ai/eventDataResolver.ts` - ID → name resolution
+- `src/lib/types/ai.ts` - Zod schemas & types
+- `src/app/api/ai/events/generate-rules/route.ts` - API endpoint
+- `docs/development/AI_FEATURES.md` - Full documentation
+
+#### Technical Details
+- **Model:** `gpt-4o-mini` (cost-effective, $0.0004/generation)
+- **Architecture:** Server-side only (API key never exposed)
+- **Caching:** Uses existing StaticCache for ID resolution
+- **Security:** Requires authentication, input validation with Zod
+- **Performance:** ~2-5 seconds per generation
+
+#### Generated Sections
+1. Общая информация (event details, max participants)
+2. Поведение и дисциплина в колонне (convoy rules)
+3. Требования к автомобилю (vehicle requirements - adapts to category)
+4. Безопасность (safety rules)
+5. Что взять с собой (tools, spare parts, supplies)
+6. Дополнительные условия (from custom fields)
+7. Ответственность участника (liability disclaimer)
+
+#### Setup Required
+Add to `.env.local`:
+```env
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-4o-mini  # optional
+```
+
+---
+
 ## [2.1.0] - 2024-12-16
 
 ### 🚀 Production-Ready Caching & Architecture Improvements

@@ -143,6 +143,7 @@ export function EventForm({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingRules, setIsGeneratingRules] = useState(false);
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
@@ -294,6 +295,89 @@ export function EventForm({
       trimmedLocation,
       trimmedPrice,
     };
+  };
+
+  const handleGenerateRules = async () => {
+    // Prevent if already generating or missing required fields
+    if (isGeneratingRules || !title.trim() || !categoryId || !cityId) {
+      if (!title.trim()) {
+        setFieldErrors(prev => ({ ...prev, title: "Укажите название события" }));
+      }
+      if (!categoryId) {
+        setFieldErrors(prev => ({ ...prev, categoryId: "Выберите категорию" }));
+      }
+      if (!cityId) {
+        setFieldErrors(prev => ({ ...prev, cityId: "Выберите город" }));
+      }
+      return;
+    }
+
+    setIsGeneratingRules(true);
+    setErrorMessage(null);
+
+    try {
+      // Build payload for AI (same structure as save payload)
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        categoryId,
+        dateTime: dateTime ? new Date(dateTime).toISOString() : new Date().toISOString(),
+        cityId,
+        locationText: locationText.trim(),
+        maxParticipants,
+        customFieldsSchema: sortedFields,
+        visibility,
+        vehicleTypeRequirement: vehicleType,
+        allowedBrandIds,
+        isClubEvent,
+        isPaid,
+        price: isPaid && price ? Number(price) : null,
+        currencyCode: isPaid ? currencyCode : null,
+        rules: rules.trim() || null,
+      };
+
+      const response = await fetch("/api/ai/events/generate-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || errorData.message || "Не удалось сгенерировать правила";
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const result = data.data || data;
+
+      if (result.rulesText) {
+        setRules(result.rulesText);
+        // Show success feedback
+        const event = new CustomEvent("toast", {
+          detail: {
+            title: "Готово!",
+            description: "Правила успешно сгенерированы. Вы можете отредактировать их перед сохранением.",
+          },
+        });
+        window.dispatchEvent(event);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Произошла ошибка при генерации правил";
+      setErrorMessage(message);
+      
+      // Show error toast
+      const event = new CustomEvent("toast", {
+        detail: {
+          title: "Ошибка",
+          description: message,
+          variant: "destructive",
+        },
+      });
+      window.dispatchEvent(event);
+    } finally {
+      setIsGeneratingRules(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -797,22 +881,50 @@ export function EventForm({
         </Card>
 
         <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
-              3
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+                3
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-[#0F172A]">Правила участия</p>
+                <p className="text-xs text-[#6B7280]">Показываются в карточке события</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-semibold text-[#0F172A]">Правила участия</p>
-              <p className="text-xs text-[#6B7280]">Показываются в карточке события</p>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateRules}
+              disabled={disabled || isGeneratingRules || isSubmitting}
+              className="gap-2"
+            >
+              {isGeneratingRules ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Генерация...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Сгенерировать правила (ИИ)
+                </>
+              )}
+            </Button>
           </div>
           <Textarea
             id="rules"
-            rows={4}
+            rows={8}
             value={rules}
             onChange={(e) => setRules(e.target.value)}
-            placeholder="Опишите условия: порядок движения, скорость, рация, запреты..."
+            placeholder="Опишите условия: порядок движения, скорость, рация, запреты... Или используйте кнопку 'Сгенерировать правила (ИИ)'"
             disabled={disabled}
+            className={isGeneratingRules ? "opacity-50" : ""}
           />
         </Card>
 

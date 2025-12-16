@@ -22,7 +22,22 @@
 - Bundle size reduction
 - Web Vitals
 
-### 3. Code Style (создать)
+### 3. [AI Features](./AI_FEATURES.md) ⚡
+AI-powered функции:
+- **AI-генерация правил событий**
+- OpenAI integration
+- ID resolution & caching
+- Prompt engineering
+- Cost analysis
+
+### 4. [Cache Management](./CACHE_MANAGEMENT.md)
+Управление кэшем:
+- StaticCache для справочников
+- TTL конфигурация
+- Ручной сброс кэша
+- Troubleshooting
+
+### 5. Code Style (создать)
 Правила написания кода:
 - TypeScript conventions
 - React patterns
@@ -30,11 +45,12 @@
 - File structure
 - Error handling
 
-### 4. Patterns
+### 6. Patterns
 Применяемые паттерны:
 - Repository pattern
 - Service layer
 - **StaticCache pattern** (caching static reference data)
+- **AI integration pattern** (OpenAI + ID resolution)
 - Custom hooks
 - Server Components patterns
 - Error boundaries
