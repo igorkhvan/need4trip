@@ -10,9 +10,13 @@ import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 
 interface ClubSubscriptionAsyncProps {
   clubId: string;
+  canManage: boolean;
 }
 
-export async function ClubSubscriptionAsync({ clubId }: ClubSubscriptionAsyncProps) {
+export async function ClubSubscriptionAsync({ 
+  clubId,
+  canManage 
+}: ClubSubscriptionAsyncProps) {
   // Загружаем подписку (может быть null для free плана)
   const subscription = await getClubSubscription(clubId);
 
@@ -21,5 +25,10 @@ export async function ClubSubscriptionAsync({ clubId }: ClubSubscriptionAsyncPro
     return null;
   }
 
-  return <ClubSubscriptionCard clubId={clubId} subscription={subscription} />;
+  return (
+    <ClubSubscriptionCard 
+      subscription={subscription} 
+      canManage={canManage}
+    />
+  );
 }

@@ -199,7 +199,10 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
             <div className="space-y-6">
               {/* Подписка - загружаем через Suspense */}
               <Suspense fallback={<ClubSubscriptionSkeleton />}>
-                <ClubSubscriptionAsync clubId={club.id} />
+                <ClubSubscriptionAsync 
+                  clubId={club.id}
+                  canManage={isOwner}
+                />
               </Suspense>
 
               {/* TODO: Последние события клуба */}
