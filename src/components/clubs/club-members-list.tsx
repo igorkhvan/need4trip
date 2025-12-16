@@ -47,9 +47,11 @@ export function ClubMembersList({
       if (!res.ok) {
         if (res.status === 402) {
           // ⚡ Billing v2.0: Handle paywall response
-          const data = await res.json();
-          if (data.error?.details?.code === 'PAYWALL') {
-            showPaywall(data.error.details);
+          const response = await res.json();
+          // For error responses, the format is {success: false, error: {...}}
+          const errorData = response.error || response;
+          if (errorData.details?.code === 'PAYWALL' || errorData.code === 'PAYWALL') {
+            showPaywall(errorData.details || errorData);
             return;
           }
         }

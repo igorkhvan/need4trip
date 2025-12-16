@@ -44,7 +44,8 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
       try {
         const res = await fetch(`/api/clubs/${clubId}`);
         if (!res.ok) throw new Error("Failed to load club");
-        const data = await res.json();
+        const response = await res.json();
+        const data = response.data || response;
         setClub(data.club);
       } catch (error) {
         console.error("Failed to load club:", error);

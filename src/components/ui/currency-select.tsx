@@ -74,9 +74,10 @@ export function CurrencySelect({
     try {
       const res = await fetch("/api/currencies");
       if (res.ok) {
-        const data = await res.json();
+        const response = await res.json();
+        const data = response.data || response;
         console.log("✅ Loaded currencies:", data);
-        setCurrencies(data);
+        setCurrencies(data.currencies || data);
       } else {
         console.error("❌ Failed to load currencies, status:", res.status);
         // Fallback to hardcoded popular currencies (KZT first as default)

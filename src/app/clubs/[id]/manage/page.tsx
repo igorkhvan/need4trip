@@ -20,7 +20,8 @@ async function getClubDetails(id: string) {
     
     if (!res.ok) return null;
     
-    const data = await res.json();
+    const response = await res.json();
+    const data = response.data || response;
     return data.club;
   } catch (err) {
     console.error("[getClubDetails] Failed", err);

@@ -192,7 +192,8 @@ export function EventForm({
       try {
         const res = await fetch("/api/event-categories");
         if (res.ok) {
-          const data = await res.json();
+          const response = await res.json();
+          const data = response.data || response;
           const loadedCategories = data.categories || [];
           setCategories(loadedCategories);
           

@@ -90,7 +90,8 @@ export function CityMultiSelect({
     try {
       const res = await fetch("/api/cities?popular=true");
       if (!res.ok) throw new Error("Failed to load cities");
-      const data = await res.json();
+      const response = await res.json();
+      const data = response.data || response;
       setCities(data.cities || []);
     } catch (error) {
       console.error("Failed to load popular cities:", error);
@@ -104,7 +105,8 @@ export function CityMultiSelect({
     try {
       const res = await fetch(`/api/cities?q=${encodeURIComponent(query)}`);
       if (!res.ok) throw new Error("Failed to search cities");
-      const data = await res.json();
+      const response = await res.json();
+      const data = response.data || response;
       setCities(data.cities || []);
     } catch (error) {
       console.error("Failed to search cities:", error);
@@ -117,7 +119,8 @@ export function CityMultiSelect({
     try {
       const res = await fetch(`/api/cities?ids=${cityIds.join(",")}`);
       if (!res.ok) throw new Error("Failed to load cities");
-      const data = await res.json();
+      const response = await res.json();
+      const data = response.data || response;
       setSelectedCities(data.cities || []);
     } catch (error) {
       console.error("Failed to load cities by IDs:", error);

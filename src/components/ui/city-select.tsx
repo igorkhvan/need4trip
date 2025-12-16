@@ -60,7 +60,8 @@ export function CitySelect({
       try {
         const res = await fetch("/api/cities?popular=true&limit=20");
         if (res.ok) {
-          const data = await res.json();
+          const response = await res.json();
+          const data = response.data || response;
           setCities(data.cities || []);
         }
       } catch (err) {
@@ -85,7 +86,8 @@ export function CitySelect({
       try {
         const res = await fetch(`/api/cities/${value}`);
         if (res.ok) {
-          const data = await res.json();
+          const response = await res.json();
+          const data = response.data || response;
           if (data.city) {
             // Add selected city to the list
             setCities((prev) => [data.city, ...prev]);
@@ -107,7 +109,8 @@ export function CitySelect({
       try {
         const res = await fetch(`/api/cities?q=${encodeURIComponent(searchQuery)}`);
         if (res.ok) {
-          const data = await res.json();
+          const response = await res.json();
+          const data = response.data || response;
           setCities(data.cities || []);
         }
       } catch (err) {

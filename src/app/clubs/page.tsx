@@ -78,7 +78,8 @@ export default function ClubsPage() {
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to load clubs");
       
-      const data = await res.json();
+      const response = await res.json();
+      const data = response.data || response;
       setClubs(data.clubs ?? []);
       setTotalClubs(data.total ?? 0);
     } catch (err) {

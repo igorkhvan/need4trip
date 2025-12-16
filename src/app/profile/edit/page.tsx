@@ -48,7 +48,8 @@ export default function ProfileEditPage() {
       try {
         const res = await fetch("/api/car-brands");
         if (!res.ok) throw new Error("Failed to load brands");
-        const data = await res.json();
+        const response = await res.json();
+        const data = response.data || response;
         setBrands(data.brands || []);
       } catch (err) {
         console.error("Failed to load brands:", err);
@@ -65,7 +66,8 @@ export default function ProfileEditPage() {
         if (!res.ok) {
           throw new Error("Failed to load profile");
         }
-        const data = await res.json();
+        const response = await res.json();
+        const data = response.data || response;
         const user = data.user;
         
         setFormData({

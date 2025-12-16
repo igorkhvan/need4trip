@@ -25,7 +25,8 @@ export default function PricingPage() {
   useEffect(() => {
     fetch("/api/plans")
       .then((res) => res.json())
-      .then((json) => {
+      .then((response) => {
+        const json = response.data || response;
         if (json.plans) {
           setData(json);
         } else {
