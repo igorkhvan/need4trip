@@ -532,7 +532,7 @@ export async function listEventsByCreator(
   const { data, error, count } = await supabase
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
-    .eq("created_by", userId)
+    .eq("created_by_user_id", userId)
     .order("date_time", { ascending: true })
     .range(from, to);
 
