@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { Crown, CheckCircle, XCircle, Calendar } from "lucide-react";
 import type { ClubSubscription } from "@/lib/types/billing";
-import { getClubPlanLabel, getClubPlanFeatures } from "@/lib/types/club";
+import { getClubPlanLabel } from "@/lib/types/club";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/dates";
 

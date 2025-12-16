@@ -9,10 +9,6 @@ import { ClubSubscription } from "./billing";
 export const clubRoleSchema = z.enum(["owner", "organizer", "member", "pending"]);
 export type ClubRole = z.infer<typeof clubRoleSchema>;
 
-// DEPRECATED: Old billing system plan types (STRING UNION) - for legacy only
-// Use PlanId from @/lib/types/billing for new v2.0 types
-export const clubPlanSchema = z.enum(["club_free", "club_basic", "club_pro", "free", "club_50", "club_500", "club_unlimited"]);
-export type ClubPlan = z.infer<typeof clubPlanSchema>;
 
 export interface Club {
   id: string;
@@ -123,15 +119,6 @@ export const clubMemberRoleUpdateSchema = z.object({
 
 export type ClubMemberRoleUpdateInput = z.infer<typeof clubMemberRoleUpdateSchema>;
 
-// Update Club Subscription
-export const clubSubscriptionUpdateSchema = z.object({
-  plan: clubPlanSchema,
-  validUntil: z.string().datetime().optional().nullable(),
-  active: z.boolean().optional(),
-});
-
-export type ClubSubscriptionUpdateInput = z.infer<typeof clubSubscriptionUpdateSchema>;
-
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -150,39 +137,17 @@ export function getClubRoleLabel(role: ClubRole): string {
 }
 
 /**
- * Get localized label for club plan (DEPRECATED)
- * Use new billing v2.0 system
+ * Get localized label for club plan
+ * Simple mapping for display purposes
  */
 export function getClubPlanLabel(plan: string): string {
-  // Legacy support for old plan IDs
   const labels: Record<string, string> = {
-    club_free: "Бесплатный",
-    club_basic: "Базовый",
-    club_pro: "Про",
-    // New v2.0 plan IDs
     free: "Бесплатный",
     club_50: "Club 50",
     club_500: "Club 500",
     club_unlimited: "Unlimited",
   };
   return labels[plan] || plan;
-}
-
-/**
- * Get plan features description (DEPRECATED)
- * Use new billing v2.0 system
- */
-export function getClubPlanFeatures(plan: string): string[] {
-  // Legacy support - return empty for now
-  return [];
-}
-
-/**
- * Get max active events for plan (DEPRECATED)
- * Use new billing v2.0 system with maxEventParticipants
- */
-export function getMaxActiveEventsForPlan(plan: string): number | null {
-  return null; // Deprecated
 }
 
 /**
@@ -206,20 +171,6 @@ export function canManageMembers(role: ClubRole | null): boolean {
   return role === "owner";
 }
 
-/**
- * Check if subscription is active and not expired (DEPRECATED - legacy support)
- */
-export function isSubscriptionActive(subscription: any): boolean {
-  // Legacy support
-  if (subscription.status) {
-    // New v2.0 format
-    return subscription.status === 'active' || subscription.status === 'grace';
-  }
-  // Old format
-  if (!subscription.active) return false;
-  if (!subscription.validUntil) return true;
-  return new Date(subscription.validUntil) > new Date();
-}
 
 /**
  * Get days until subscription expires
