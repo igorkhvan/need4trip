@@ -81,7 +81,7 @@ export default function PricingPage() {
               <li>
                 <strong>Участники событий:</strong>{" "}
                 {plan.maxEventParticipants === null
-                  ? "Неограниченно"
+                  ? "Безлимит"
                   : `До ${plan.maxEventParticipants}`}
               </li>
               
@@ -91,7 +91,7 @@ export default function PricingPage() {
                   {plan.id === "free" 
                     ? "Неприменимо"
                     : plan.maxMembers === null
-                      ? "Неограниченно"
+                      ? "Безлимит"
                       : `До ${plan.maxMembers}`}
                 </li>
               )}
