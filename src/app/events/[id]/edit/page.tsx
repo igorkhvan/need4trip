@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { handleApiError } from "@/lib/utils/errors";
 import { VehicleTypeRequirement, Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
+import { PaywallModal } from "@/components/billing/paywall-modal";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamicImport(
@@ -48,6 +49,11 @@ export default function EditEventPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallData, setPaywallData] = useState<{
+    message: string;
+    requiredPlanId?: string;
+  } | null>(null);
 
   useEffect(() => {
     async function loadEvent() {
@@ -149,12 +155,57 @@ export default function EditEventPage() {
     if (!isOwner || authMissing) {
       throw new Error("Недостаточно прав / войдите через Telegram");
     }
+    
+    console.log('[EditEvent] Submitting payload:', payload);
+    
     const res = await fetch(`/api/events/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    
+    console.log('[EditEvent] Response status:', res.status);
+    
     if (!res.ok) {
+      // Handle paywall error (402) - show modal and throw special error
+      if (res.status === 402) {
+        console.log('[EditEvent] Detected 402 Paywall error');
+        
+        try {
+          const errorData = await res.json();
+          console.log('[EditEvent] Error data:', errorData);
+          const error = errorData.error || errorData;
+          
+          const paywallInfo = {
+            message: error.message || "Эта функция доступна на платных тарифах",
+            requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
+          };
+          
+          console.log('[EditEvent] Setting paywall data:', paywallInfo);
+          setPaywallData(paywallInfo);
+          setPaywallOpen(true);
+          console.log('[EditEvent] Paywall modal should be open now');
+          
+          // Throw special error that EventForm will recognize and ignore
+          const paywallError = new Error("PAYWALL_SHOWN");
+          (paywallError as any).isPaywall = true;
+          throw paywallError;
+        } catch (e: any) {
+          // If it's already our paywall error, re-throw it
+          if (e.isPaywall) throw e;
+          
+          // If parsing fails, show generic paywall
+          setPaywallData({
+            message: "Эта функция доступна на платных тарифах",
+          });
+          setPaywallOpen(true);
+          
+          const paywallError = new Error("PAYWALL_SHOWN");
+          (paywallError as any).isPaywall = true;
+          throw paywallError;
+        }
+      }
+      
       await handleApiError(res);
     }
   };
@@ -213,6 +264,15 @@ export default function EditEventPage() {
         }}
         onSubmit={handleSubmit}
       />
+      
+      {paywallData && (
+        <PaywallModal
+          isOpen={paywallOpen}
+          onClose={() => setPaywallOpen(false)}
+          message={paywallData.message}
+          requiredPlanId={paywallData.requiredPlanId}
+        />
+      )}
     </div>
   );
 }
