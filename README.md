@@ -1,303 +1,260 @@
-Need4Trip — сервис для организации оффроуд-событий на Next.js + Supabase. Один монолит: фронт (App Router), API Route Handlers, UI (Tailwind + shadcn/ui), авторизация через Telegram + собственный JWT (`auth_token`).
+# 🚗 Need4Trip
 
-## Требования
-- Node.js 18.18+ (рекомендуется 20 LTS) и npm 9+
-- Настроенные переменные окружения (см. `.env.example` / раздел «Окружение»)
+**Платформа для организации автомобильных поездок и управления автоклубами**
 
-## Скрипты
-- `npm run dev` — локальная разработка (Turbopack)
-- `npm run build` — сборка (`NEXT_FORCE_WEBPACK=1` для стабильности Next 16)
-- `npm run start` — прод-режим после сборки
-- `npm run lint` — eslint 9
+Modern web application built with Next.js 15, React 19, TypeScript, and Supabase.
 
-## Стек
-- Next.js 16 (App Router, TypeScript)
-- Tailwind CSS 3.4 + shadcn/ui
-- Supabase (Postgres) + supabase-js
-- Auth: Telegram Login Widget → `/api/auth/telegram` → JWT (HttpOnly cookie `auth_token`)
-- eslint 9, Turbopack для dev
+---
 
-## Дизайн-система и глобальные правила
+## 🚀 Quick Start
 
-### Цвета и токены
-- Шрифт: Inter (latin+cyrillic), подключён глобально через `next/font`.
-- Цвета: используем токены Tailwind/shadcn и точные HEX значения из Figma:
-  - Primary: `#FF6F2C` (оранжевый), hover `#E86223`
-  - Text: `#111827` (заголовки), `#374151` (основной), `#6B7280` (второстепенный), `#9CA3AF` (disabled)
-  - Borders: `#E5E7EB` (основная), `#D1D5DB` (акцент)
-  - Backgrounds: `#FFFFFF` (белый), `#F9FAFB` (muted), `#FFF4EF` (hover оранжевый)
-  - Success: `#16A34A`, Warning: `#F59E0B`, Error: `#DC2626`
-- Не добавляем инлайновых цветов, если есть токены или точные значения из Figma.
-
-### Макет и ширина
-- Контент: `.page-container` (max-w-7xl, px-5 md:px-8 lg:px-12)
-- Секции: `section` (`py-24 md:py-32`), внутренности — `section-inner`
-- Карточки: `Card` с `border border-[#E5E7EB]`, `rounded-2xl`, `p-5 md:p-6 lg:p-7`
-
-### Типографика
-- H1: `text-5xl font-bold leading-tight text-[#0F172A]` (страницы форм)
-- H1 adaptive: `text-4xl md:text-5xl font-bold` (просмотр события)
-- H2: `text-3xl font-semibold text-[#111827]`
-- H3: `text-2xl font-semibold text-[#111827]` (модальные окна)
-- H4 (CardTitle): `text-xl font-semibold text-[#111827]` (карточки)
-- Body: `text-base` (16px), description: `text-sm` (14px), caption: `text-xs` (12px)
-- Error text: `text-[13px]` (красный), hint text: `text-[13px] text-[#6B7280]`
-- Семейство шрифта единое (Inter)
-
-### Кнопки (из Figma)
-- **Default (primary)**: 
-  - Height: `h-12` (48px)
-  - Border radius: `rounded-xl` (12px)
-  - Padding: `px-6` (24px horizontal)
-  - Font: `text-base font-medium` (16px)
-  - Colors: `bg-[#FF6F2C] hover:bg-[#E86223]`
-  - Transition: `transition-all duration-200`
-  - Gap: `gap-2` (для иконок)
-  
-- **Secondary**:
-  - Same dimensions
-  - Colors: `border-2 border-[#FF6F2C] bg-white text-[#FF6F2C] hover:bg-[#FFF4EF]`
-  - Disabled: `border-[#FECDB3] text-[#FECDB3] opacity-60`
-  
-- **Ghost**:
-  - Same height (48px)
-  - Colors: `hover:bg-muted hover:text-accent-foreground`
-  
-- **Size variants**: 
-  - `sm` (h-9, 36px) - вторичные действия в таблицах
-  - `lg` (h-14, 56px) - главные CTA на лендинге
-  - `icon` (h-12 w-12) - иконочные кнопки
-
-### Выравнивание текста
-- **КРИТИЧНО**: Все текстовые элементы должны иметь явное `text-left`
-- Применяется к: заголовкам, описаниям, лейблам, ошибкам, подсказкам, уведомлениям
-- Особенно важно в: модальных окнах, формах, grid layouts
-- Контейнеры модальных окон: добавлять `text-left` к корневому `div`
-
-### Spacing и отступы
-- Card padding: `p-5 md:p-6 lg:p-7`
-- Section spacing: `space-y-6` (формы), `space-y-8` (страницы)
-- Grid gaps: `gap-4` (формы), `gap-6` (карточки)
-- Utility classes: `.space-y-4`, `.space-y-6`, `.space-y-8` из globals.css
-
-### Глобальные utility (globals.css)
-- `.page-container`, `.section`, `.section-inner`
-- `.heading-hero`, `.heading-section`, `.text-lead`
-- `.space-y-4`, `.space-y-6`, `.space-y-8`
-- `.container-custom`
-
-### Правило унификации
-- ❌ Не создавать кастомные стили для стандартных компонентов
-- ✅ Использовать дефолтные варианты из `src/components/ui/*`
-- ✅ Переиспользовать существующие компоненты
-- ✅ При необходимости кастомизации - обновить базовый компонент
-- ✅ Новые страницы собираем из utility - никаких уникальных размеров/паддингов
-
-## Быстрый старт
 ```bash
+# Install dependencies
 npm install
-cp .env.example .env.local   # заполните ключи Supabase, Telegram и секрет JWT
+
+# Setup environment
+cp .env.example .env.local
+# Fill in your Supabase and Telegram credentials
+
+# Run development server
 npm run dev
-# http://localhost:3000
 ```
 
-## Окружение
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (для серверных операций логина)
-- `TELEGRAM_BOT_TOKEN` — подпись Telegram
-- `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` — username бота для виджета
-- `NEXT_PUBLIC_TELEGRAM_AUTH_URL` — опционально внешний URL для виджета; по умолчанию origin + `/api/auth/telegram`
-- `AUTH_JWT_SECRET` — секрет подписи JWT (кука `auth_token`)
+Open [http://localhost:3000](http://localhost:3000)
 
-## Структура
+---
 
-### Страницы (`src/app`)
-- `page.tsx` — лендинг (Hero, HowItWorks, Features, UpcomingEvents, CTA)
-- `layout.tsx` — root layout с MainHeader и MainFooter
-- `loading.tsx` — глобальный loader (FullPageLoader)
-- `events/`:
-  - `page.tsx` — список событий (EventsGrid: stats, tabs, search, cards)
-  - `loading.tsx` — skeleton для списка
-  - `create/page.tsx` — создание события (использует EventForm)
-  - `create/loading.tsx` — skeleton для создания
-  - `[id]/page.tsx` — детали/участники/регистрация (SSR)
-  - `[id]/loading.tsx` — skeleton для просмотра
-  - `[id]/edit/page.tsx` — редактирование (использует EventForm, client-side)
-  - `[id]/edit/loading.tsx` — skeleton для редактирования
+## 📚 Documentation
 
-### API Routes
-- `/api/auth/telegram`, `/api/auth/me`, `/api/auth/logout`
-- `/api/events`, `/api/events/[id]` (GET/PUT/DELETE)
-- `/api/events/[id]/participants` (GET/POST)
-- `/api/events/[id]/participants/[participantId]` (PATCH/DELETE)
-- `/api/car-brands` (GET)
+### Getting Started
+- **[Quick Start Guide](./QUICK_START.md)** - Step-by-step setup
+- **[Architecture Overview](./docs/architecture/)** - System design
+- **[Full Documentation](./docs/)** - Complete technical docs
 
-### Компоненты (`src/components`)
+### Key Topics
+- **[Billing System v2.0](./docs/billing/)** - Payment plans & limits
+- **[Development Guide](./docs/development/)** - Code style & patterns
+- **[Design System](./docs/design/)** - UI components & styling
+- **[API Security](./docs/architecture/security.md)** - Auth & permissions
 
-**UI Components** (`ui/`):
-- `button.tsx` - стандартизированные кнопки (default, secondary, ghost, sizes)
-- `card.tsx` - карточки с CardHeader, CardTitle, CardDescription, CardContent
-- `badge.tsx` - бейджи (default, secondary, success, warning, outline, destructive)
-- `alert-dialog.tsx` - диалоги подтверждения (AlertDialog, ConfirmDialog)
-- `spinner.tsx` - лоадеры (Spinner, PageLoader, FullPageLoader)
-- Остальные shadcn/ui компоненты (Input, Select, Checkbox, Label, etc.)
+### Guides
+- **[Telegram Setup](./docs/guides/telegram-setup.md)** - Configure auth
+- **[Database Migrations](./docs/guides/)** - Working with DB
+- **[Deployment](./docs/guides/)** - Deploy to production
 
-**Layout Components** (`layout/`):
-- `main-header.tsx` - шапка сайта (logo, navigation, user info, "Создать событие")
-- `main-footer.tsx` - подвал (multi-column: logo, description, links)
+---
 
-**Event Components** (`events/`):
-- `event-form.tsx` - универсальная форма создания/редактирования (mode: create|edit)
-- `events-grid.tsx` - сетка событий (stats, filters, cards)
-- `participant-modal.tsx` - универсальная модалка регистрации (mode: create|edit)
-- `participant-form.tsx` - форма регистрации участника
-- `participant-actions.tsx` - кнопки действий для участников (edit/delete)
-- `owner-actions.tsx` - кнопки действий для владельца события (edit/delete)
+## 🛠️ Tech Stack
 
-**Auth Components** (`auth/`):
-- `telegram-login.tsx` - Telegram Login Widget
-- `use-current-user.tsx` - React hook для текущего пользователя
+### Frontend
+- **Framework:** Next.js 15 (App Router)
+- **UI Library:** React 19
+- **Language:** TypeScript 5.x
+- **Styling:** Tailwind CSS 3.4 + shadcn/ui
+- **State:** Server State (RSC) + React hooks
+- **Forms:** Zod validation
 
-### Библиотеки (`src/lib`)
-- `db/` — репозитории Supabase (events, participants, users, car_brands, event_allowed_brands, event_user_access)
-- `services/` — бизнес-логика (events, participants)
-- `types/` — доменные типы (event, participant, user, supabase)
-- `auth/` — JWT/куки, `getCurrentUser`, `guestSession`
-- `mappers.ts` — маппинг DB ↔ Domain
-- `errors.ts` — кастомные ошибки (AppError, ValidationError, etc.)
+### Backend
+- **API:** Next.js API Routes
+- **Server Components:** React Server Components
+- **Database:** Supabase (PostgreSQL 15)
+- **Auth:** Telegram Login Widget
+- **ORM:** Supabase Client
 
-### Миграции
-- `supabase/migrations/` — SQL миграции
-  - `20241209_add_guest_session_id.sql` - добавление поддержки гостевых сессий
+### DevOps
+- **Hosting:** Vercel
+- **Database:** Supabase Cloud
+- **CI/CD:** GitHub Actions (future)
 
-## Авторизация
+---
 
-### Telegram Users
-- JWT (`auth_token`, HS256) хранит `userId` + `exp`; HttpOnly, SameSite=Lax, 30 дней.
-- `/api/auth/telegram`: проверка подписи Telegram, upsert в `users` по `telegram_id`, генерация JWT, установка куки. Anti-replay/TTL включены.
-- `/api/auth/me`: 200 `{ user }` или 401 + очистка куки.
-- `/api/auth/logout`: очистка куки.
-- Клиент: `useCurrentUser`, сервер: `getCurrentUser` / `getCurrentUserSafe`.
+## 📁 Project Structure
 
-### Guest Sessions (незарегистрированные пользователи)
-- Cookie `guest_session_id` (UUID v4, HttpOnly, 1 год) для идентификации гостей
-- Утилиты: `getOrCreateGuestSessionId()`, `getGuestSessionId()`, `getGuestSessionIdClient()`
-- БД: поле `guest_session_id` в таблице `event_participants`
-- Гости могут:
-  - Регистрироваться на события (только один раз на событие)
-  - Редактировать свою регистрацию (по sessionId)
-  - Удалять свою регистрацию (по sessionId)
-- Владелец события может редактировать/удалять все регистрации (включая гостей)
-- Предотвращение дублей: unique constraint (event_id, guest_session_id, display_name)
+```
+need4trip/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── api/               # API routes
+│   │   └── [pages]/           # Pages & components
+│   │
+│   ├── components/            # React components
+│   │   ├── ui/               # Base UI components (shadcn)
+│   │   └── [feature]/        # Feature components
+│   │
+│   ├── lib/                   # Core logic
+│   │   ├── db/               # Database repositories
+│   │   ├── services/         # Business logic
+│   │   ├── types/            # TypeScript types
+│   │   └── utils/            # Utilities
+│   │
+│   └── hooks/                 # React hooks
+│
+├── docs/                      # Documentation
+│   ├── architecture/          # System design
+│   ├── billing/               # Payment system
+│   ├── development/           # Dev guidelines
+│   ├── design/                # Design system
+│   └── guides/                # How-to guides
+│
+├── supabase/
+│   └── migrations/            # Database migrations
+│
+├── public/                    # Static assets
+└── figma/                     # Figma design files
+```
 
-## Схема БД (кратко)
-- `users`: базовые поля + telegram_handle/id/avatar.
-- `events`: `visibility` (`public` | `link_registered`), `vehicle_type_requirement` (`any` | `sedan` | `crossover` | `suv`), `rules`, `is_club_event`, `is_paid`, `price`, `currency`, `custom_fields_schema`, гео/тайм/лимиты.
-- `event_participants`: роли leader/tail/participant, кастомные значения.
-- `car_brands`, `event_allowed_brands` (допустимые марки).
-- `event_user_access`: доступы к приватным событиям (owner/participant/link).
+---
 
-## Бизнес-правила
+## 🎨 Design System
 
-### Видимость событий
-- `public` — всегда доступна всем
-- `link_registered` — только авторизованным с доступом/участием/владельцу
-- При переходе по ссылке авторизованным добавляется access в `event_user_access`
+### Colors
+- **Primary:** `#FF6F2C` (orange)
+- **Text:** `#111827` (primary), `#6B7280` (secondary)
+- **Border:** `#E5E7EB`
+- **Background:** `#FFFFFF`, `#F9FAFB` (muted)
 
-### События
-- Кастомные поля регистрации нельзя менять, если есть участники
-- `maxParticipants` нельзя опускать ниже текущего числа участников
-- Лимит участников строго соблюдается при регистрации
-- Владелец может редактировать/удалять событие
+### Typography
+- **Font:** Inter (Latin + Cyrillic)
+- **Sizes:** 48px (hero), 36px (h1), 24px (h2), 16px (body)
+- **Weights:** 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
 
-### Участники и роли
-- Роли: `participant` (участник), `leader` (лидер), `tail` (замыкающий)
-- Лидер и замыкающий уникальны (только один на событие)
-- Валидация роли на фронтенде и бэкенде
+### Components
+All components follow [shadcn/ui](https://ui.shadcn.com/) + custom design system.
 
-### Права доступа
-**Владелец события:**
-- Может редактировать/удалять событие
-- Может редактировать/удалять любую регистрацию (включая гостей)
-- Видит кнопки действий для всех участников
+See **[Design System Docs](./docs/design/)** for complete guidelines.
 
-**Авторизованный участник:**
-- Может зарегистрироваться один раз на событие (проверка по `userId`)
-- Может редактировать свою регистрацию (включая имя и роль)
-- Может удалить свою регистрацию
-- Видит кнопки действий только для своей записи
+---
 
-**Гость (guest):**
-- Может зарегистрироваться один раз на событие (проверка по `guest_session_id`)
-- Может редактировать свою регистрацию (включая имя и роль)
-- Может удалить свою регистрацию
-- Видит кнопки действий только для своей записи
-- Идентификация через cookie `guest_session_id`
+## 💳 Billing System
 
-## Сервисы/фичи
-- `listVisibleEventsForUser`, `getEventWithVisibility/Participants`, `hydrateEvent` (allowedBrands, participantsCount).
-- Allowed brands: `replaceAllowedBrands`, `getAllowedBrands`; бренды подгружаются через `/api/car-brands`.
-- Безопасные методы (`listEventsSafe`, `getCurrentUserSafe`) не валят SSR при сбоях Supabase.
+### Plans
+| Plan | Participants | Members | Price |
+|------|--------------|---------|-------|
+| **Free** | 15 | - | 0 ₸ |
+| **Club 50** | 50 | 50 | 3,490 ₸/mo |
+| **Club 500** | 500 | 500 | 11,990 ₸/mo |
+| **Unlimited** | ∞ | ∞ | Custom |
 
-## Паттерны и best practices
+See **[Billing Docs](./docs/billing/)** for complete specification.
 
-### Загрузка страниц
-- Каждая страница/route должна иметь `loading.tsx` с skeleton UI
-- Используем компоненты: `<PageLoader />`, `<FullPageLoader />`, или custom skeleton
-- Для длительных операций: spinner внутри кнопок (`isSubmitting ? "Сохраняем..." : "Сохранить"`)
-- SSR страницы: показывают skeleton автоматически через loading.tsx
-- Client-side загрузка: используем `useState` + `useEffect` + `<PageLoader />`
+---
 
-### Унификация компонентов
-**Принцип DRY (Don't Repeat Yourself):**
-- Один компонент для create/edit режимов (через проп `mode`)
-- Примеры: `EventForm`, `ParticipantModal`, `ParticipantForm`
-- Переиспользуем UI компоненты из `src/components/ui/*`
+## 🔐 Authentication
 
-**Модальные окна:**
-- Используем единый паттерн: триггер (кнопка) + overlay + контент
-- Заголовок и описание через пропсы
-- Обязательно `text-left` для всего контента
-- ESC для закрытия, backdrop click для закрытия
+**Telegram Login Widget** integration:
+1. User clicks "Login with Telegram"
+2. Telegram validates user
+3. Backend creates session
+4. JWT stored in HttpOnly cookie
 
-**Диалоги подтверждения:**
-- Замена `window.confirm()` на `<ConfirmDialog />`
-- Более информативные сообщения
-- Кастомизация кнопок (confirmText, cancelText, destructive)
-- Используется для: удаление записей, отмена изменений, деструктивные действия
+See **[Security Docs](./docs/architecture/security.md)** for details.
 
-**Формы:**
-- Валидация на фронтенде (перед отправкой)
-- Валидация на бэкенде (в services layer)
-- Отображение ошибок под полями (`min-h-[28px]` для выравнивания)
-- Disabled state для всей формы при отсутствии прав
-- ConfirmDialog для кнопки "Отмена"
+---
 
-### Обработка ошибок
-- Кастомные классы ошибок: `AppError`, `ValidationError`, `ConflictError`, `AuthError`, `NotFoundError`, `InternalError`
-- API возвращает структурированные ошибки: `{ message, code?, details? }`
-- UI показывает пользовательские сообщения (не технические детали)
-- Красный текст для ошибок: `text-red-600`, размер `text-sm` или `text-[13px]`
+## 📊 Key Features
 
-### Типизация
-- Строгая типизация через TypeScript
-- Doменные типы в `src/lib/types/`
-- DB типы в `src/lib/types/supabase.ts`
-- Zod схемы для валидации API input/output
+### For Users
+- ✅ Create & manage events
+- ✅ Register for events
+- ✅ Custom registration fields
+- ✅ Profile management
 
-### Стандартизация терминологии
-- "Событие" (не "ивент")
-- "Участник" (не "партиципант")
-- "Регистрация" (не "партисипейшн")
-- Единообразные тексты кнопок, заголовков, сообщений
+### For Clubs
+- ✅ Club management
+- ✅ Member roles (owner/organizer/member)
+- ✅ Event limits based on plan
+- ✅ CSV export (paid plans)
+- ✅ Paid events (paid plans)
 
-## Что ещё планируется
-- Сохранение anti-replay для Telegram в общем сторе (Redis/БД)
-- Оптимизация загрузки событий (без N+1, фильтр на сервере)
-- Предупреждения о несоответствии авто/бренда при регистрации
-- Email уведомления (опционально)
-- Push уведомления через Telegram Bot
-- Интеграционные/e2e-тесты
-- `supabase gen types` вместо ручных типов
-- `npm run build` в прод окружении
+### Technical
+- ✅ Server-Side Rendering (SSR)
+- ✅ Streaming with Suspense
+- ✅ Optimistic UI updates
+- ✅ Type-safe API
+- ✅ Row Level Security (RLS)
+
+---
+
+## 🧪 Development
+
+### Scripts
+```bash
+npm run dev     # Start dev server (Turbopack)
+npm run build   # Build for production
+npm run start   # Run production build
+npm run lint    # Run ESLint
+```
+
+### Environment Variables
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_key
+
+# Telegram
+NEXT_PUBLIC_TELEGRAM_BOT_NAME=your_bot_name
+
+# Auth
+JWT_SECRET=your_jwt_secret
+```
+
+### Code Style
+- **TypeScript strict mode**
+- **ESLint 9** with custom config
+- **Prettier** for formatting (implicit via editor)
+
+See **[Development Guide](./docs/development/)** for full guidelines.
+
+---
+
+## 📦 Deployment
+
+### Vercel (Recommended)
+1. Connect GitHub repository
+2. Configure environment variables
+3. Deploy automatically on push
+
+### Manual
+```bash
+npm run build
+npm run start
+```
+
+See **[Deployment Guide](./docs/guides/)** for details.
+
+---
+
+## 🤝 Contributing
+
+1. Follow **[Code Style](./docs/development/code-style.md)**
+2. Use **[Patterns](./docs/development/patterns.md)**
+3. Update documentation if needed
+4. Test before committing
+
+---
+
+## 📝 License
+
+Private project - all rights reserved.
+
+---
+
+## 🔗 Links
+
+- **Documentation:** [/docs](/docs)
+- **Design System:** [/docs/design](/docs/design)
+- **Billing Spec:** [/docs/billing](/docs/billing)
+- **Architecture:** [/docs/architecture](/docs/architecture)
+
+---
+
+## 📧 Contact
+
+For questions and support, contact the development team.
+
+---
+
+**Version:** 2.0  
+**Last Updated:** December 16, 2024  
+**Status:** 🟢 Production Ready
