@@ -339,7 +339,13 @@ export function EventForm({
       await onSubmit(payload);
       router.push(backHref);
       router.refresh();
-    } catch (err) {
+    } catch (err: any) {
+      // Check if this is a paywall error that's already been handled
+      if (err?.isPaywall || err?.message === 'PAYWALL_SHOWN') {
+        // Paywall modal is already shown, don't show error message
+        return;
+      }
+      
       // ⚡ Billing v2.0: Handle paywall errors (402)
       if (err && typeof err === 'object' && 'message' in err) {
         const errorMsg = String(err.message || '');

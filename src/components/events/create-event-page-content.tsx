@@ -71,7 +71,7 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
     });
     
     if (!res.ok) {
-      // Handle paywall error (402)
+      // Handle paywall error (402) - show modal and throw special error
       if (res.status === 402) {
         try {
           const errorData = await res.json();
@@ -82,14 +82,24 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
             requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
           });
           setPaywallOpen(true);
-          return;
-        } catch (e) {
+          
+          // Throw special error that EventForm will recognize and ignore
+          const paywallError = new Error("PAYWALL_SHOWN");
+          (paywallError as any).isPaywall = true;
+          throw paywallError;
+        } catch (e: any) {
+          // If it's already our paywall error, re-throw it
+          if (e.isPaywall) throw e;
+          
           // If parsing fails, show generic paywall
           setPaywallData({
             message: "Эта функция доступна на платных тарифах",
           });
           setPaywallOpen(true);
-          return;
+          
+          const paywallError = new Error("PAYWALL_SHOWN");
+          (paywallError as any).isPaywall = true;
+          throw paywallError;
         }
       }
       
@@ -98,7 +108,7 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
       return;
     }
     
-    // Redirect to events list with force refresh to show new event
+    // Success - redirect to events list with force refresh to show new event
     router.push('/events');
     router.refresh();
   };
