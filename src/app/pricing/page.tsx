@@ -79,7 +79,7 @@ export default function PricingPage() {
 
             <ul className="space-y-2 text-sm mb-6">
               <li>
-                <strong>Участники:</strong>{" "}
+                <strong>Участники событий:</strong>{" "}
                 {plan.maxEventParticipants === null
                   ? "Неограниченно"
                   : `До ${plan.maxEventParticipants}`}
@@ -87,10 +87,12 @@ export default function PricingPage() {
               
               {"maxMembers" in plan && plan.maxMembers !== undefined && (
                 <li>
-                  <strong>Организаторы:</strong>{" "}
-                  {plan.maxMembers === null
-                    ? "Неограниченно"
-                    : `До ${plan.maxMembers}`}
+                  <strong>Члены клуба:</strong>{" "}
+                  {plan.id === "free" 
+                    ? "Неприменимо"
+                    : plan.maxMembers === null
+                      ? "Неограниченно"
+                      : `До ${plan.maxMembers}`}
                 </li>
               )}
 
