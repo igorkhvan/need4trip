@@ -27,8 +27,14 @@ export function formatCustomFieldValue(
   value: unknown,
   type: EventCustomFieldType
 ): string {
+  // Для boolean полей: false - это валидное значение "Нет"
+  if (type === "boolean") {
+    if (value === null || value === undefined) return "—";
+    return value ? "Да" : "Нет";
+  }
+  
+  // Для остальных типов полей
   if (value === null || value === undefined || value === "") return "—";
-  if (type === "boolean") return value ? "Да" : "Нет";
   return String(value);
 }
 

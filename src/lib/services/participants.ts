@@ -46,9 +46,6 @@ function validateCustomFieldValues(
 
   const sanitized: EventCustomFieldValues = {};
 
-  console.log("[validateCustomFieldValues] Input values:", values);
-  console.log("[validateCustomFieldValues] Schema fields:", schema.map(f => ({ id: f.id, type: f.type, required: f.required })));
-
   for (const field of schema) {
     const rawValue = values[field.id];
     // Для boolean полей false - это валидное значение (означает "Нет")
@@ -56,8 +53,6 @@ function validateCustomFieldValues(
       ? (rawValue !== undefined && rawValue !== null)
       : (rawValue !== undefined && rawValue !== null);
     const fieldLabel = field.label || field.id;
-
-    console.log(`[validateCustomFieldValues] Field ${field.id} (${field.type}): rawValue=${rawValue}, hasValue=${hasValue}`);
 
     if (field.required && !hasValue) {
       throw new ValidationError(`Поле "${fieldLabel}" обязательно для заполнения`, {
@@ -68,9 +63,7 @@ function validateCustomFieldValues(
 
     if (!hasValue) {
       // Для boolean полей: если значение не передано, устанавливаем false (не null)
-      const defaultValue = field.type === "boolean" ? false : null;
-      sanitized[field.id] = defaultValue;
-      console.log(`[validateCustomFieldValues] No value for ${field.id}, setting default: ${defaultValue}`);
+      sanitized[field.id] = field.type === "boolean" ? false : null;
       continue;
     }
 
@@ -83,11 +76,9 @@ function validateCustomFieldValues(
     switch (field.type) {
       case "boolean":
         if (typeof rawValue !== "boolean") {
-          console.log(`[validateCustomFieldValues] ERROR: Field ${field.id} expected boolean, got ${typeof rawValue}:`, rawValue);
           throw fail("Expected boolean value");
         }
         sanitized[field.id] = rawValue;
-        console.log(`[validateCustomFieldValues] Sanitized boolean field ${field.id}: ${rawValue}`);
         break;
       case "text": {
         if (typeof rawValue !== "string") throw fail("Expected string value");
@@ -128,7 +119,6 @@ function validateCustomFieldValues(
     }
   }
 
-  console.log("[validateCustomFieldValues] Final sanitized values:", sanitized);
   return sanitized;
 }
 
