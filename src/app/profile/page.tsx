@@ -98,7 +98,7 @@ export default function ProfilePage() {
   // Sync optimistic state with actual state
   useEffect(() => {
     setOptimisticCars(cars);
-  }, [cars]);
+  }, [cars, setOptimisticCars]);
   const [brands, setBrands] = useState<BrandSelectOption[]>([]);
   const [showAddCar, setShowAddCar] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
@@ -334,6 +334,7 @@ export default function ProfilePage() {
     const tempId = `temp-${Date.now()}`;
     
     // Optimistic update: add car immediately
+    const now = new Date().toISOString();
     const optimisticCar: UserCar = {
       id: tempId,
       userId: '', // Will be set by server
@@ -343,7 +344,8 @@ export default function ProfilePage() {
       plate: newCar.plate.trim() || null,
       color: newCar.color.trim() || null,
       isPrimary: cars.length === 0, // First car is primary
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
     
     setOptimisticCars([...cars, optimisticCar]);
