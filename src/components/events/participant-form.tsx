@@ -160,11 +160,15 @@ export function ParticipantForm({
       } else if (field.type === "boolean") {
         // Всегда сохраняем boolean: true если checked, false если unchecked
         // Не сохраняем null для чекбоксов - false означает "Нет"
-        preparedValues[field.id] = Boolean(value);
+        const boolValue = Boolean(value);
+        preparedValues[field.id] = boolValue;
+        console.log(`[ParticipantForm] Boolean field ${field.id}: raw=${value}, Boolean(value)=${boolValue}`);
       } else {
         preparedValues[field.id] = value ?? "";
       }
     });
+    
+    console.log("[ParticipantForm] Prepared values:", preparedValues);
 
     try {
       let url: string;
