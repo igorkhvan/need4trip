@@ -12,13 +12,13 @@ import { mapDbClubMemberWithUserToDomain } from "@/lib/services/clubs";
 interface ClubMembersAsyncProps {
   clubId: string;
   canManage: boolean;
-  isOwner: boolean;
+  currentUserId?: string;
 }
 
 export async function ClubMembersAsync({ 
   clubId, 
   canManage,
-  isOwner 
+  currentUserId,
 }: ClubMembersAsyncProps) {
   // Загружаем участников
   const dbMembers = await listMembersWithUser(clubId);
@@ -33,7 +33,7 @@ export async function ClubMembersAsync({
         clubId={clubId}
         members={members}
         canManage={canManage}
-        isOwner={isOwner}
+        currentUserId={currentUserId}
       />
     </div>
   );

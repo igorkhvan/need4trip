@@ -189,7 +189,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
               <ClubMembersAsync
                 clubId={club.id}
                 canManage={canManage}
-                isOwner={isOwner}
+                currentUserId={user?.id}
               />
             </Suspense>
           </div>
