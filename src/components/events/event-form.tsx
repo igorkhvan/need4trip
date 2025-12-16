@@ -897,7 +897,6 @@ export function EventForm({
               size="sm"
               onClick={handleGenerateRules}
               disabled={disabled || isGeneratingRules || isSubmitting}
-              className="gap-2"
             >
               {isGeneratingRules ? (
                 <>
