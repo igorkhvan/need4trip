@@ -11,7 +11,14 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "12", 10);
 
     const result = await listEvents(page, limit);
+    console.log('[API /events] Raw DB result:', {
+      total: result.total,
+      eventsCount: result.events.length,
+      eventIds: result.events.map(e => e.id),
+    });
+    
     const hydrated = await Promise.all(result.events.map((e) => hydrateEvent(e)));
+    console.log('[API /events] Hydrated events:', hydrated.length);
     
     return respondJSON({
       events: hydrated,
@@ -21,6 +28,7 @@ export async function GET(req: NextRequest) {
       limit,
     });
   } catch (err) {
+    console.error('[API /events] Error:', err);
     return respondError(err);
   }
 }

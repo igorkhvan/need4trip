@@ -17,14 +17,27 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
   useEffect(() => {
     async function loadData() {
       try {
+        console.log('[EventsPage] Loading data...');
         const [eventsRes, userRes] = await Promise.all([
           fetch("/api/events"),
           fetch("/api/auth/me"),
         ]);
 
+        console.log('[EventsPage] Events response:', {
+          ok: eventsRes.ok,
+          status: eventsRes.status,
+        });
+
         if (eventsRes.ok) {
           const data = await eventsRes.json();
+          console.log('[EventsPage] Events data:', {
+            eventsCount: data.events?.length || 0,
+            total: data.total,
+            events: data.events,
+          });
           setEvents(data.events || []);
+        } else {
+          console.error('[EventsPage] Events request failed:', eventsRes.status);
         }
 
         if (userRes.ok) {
