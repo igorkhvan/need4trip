@@ -26,6 +26,8 @@ interface ParticipantActionsProps {
     customFieldValues: Record<string, unknown>;
   };
   event?: Event;
+  onDeleteSuccess?: () => void;
+  onEditSuccess?: () => void;
 }
 
 export function ParticipantActions({
@@ -38,6 +40,8 @@ export function ParticipantActions({
   customFieldsSchema = [],
   participantData,
   event,
+  onDeleteSuccess,
+  onEditSuccess,
 }: ParticipantActionsProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -50,7 +54,15 @@ export function ParticipantActions({
     }
     setError(null);
     setIsDeleting(true);
+    
     try {
+      // If onDeleteSuccess is provided, call it (for optimistic UI)
+      if (onDeleteSuccess) {
+        await onDeleteSuccess();
+        return;
+      }
+      
+      // Otherwise, use default behavior with router.refresh()
       const res = await fetch(
         `/api/events/${eventId}/participants/${participantId}`,
         { method: "DELETE" }
@@ -90,6 +102,7 @@ export function ParticipantActions({
           event={event}
           initialValues={participantData}
           iconOnly
+          onSuccess={onEditSuccess}
         />
       ) : null}
       {canRemove && (
