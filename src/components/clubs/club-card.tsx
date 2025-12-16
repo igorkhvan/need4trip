@@ -2,11 +2,13 @@
  * Club Card Component
  * 
  * Карточка клуба для отображения в списках
+ * Оптимизирована с Next.js Image для lazy loading
  */
 
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Users, Calendar, MapPin } from "lucide-react";
 import type { Club } from "@/lib/types/club";
 import type { PlanId } from "@/lib/types/billing";
@@ -30,11 +32,18 @@ export function ClubCard({ club }: ClubCardProps) {
       {/* Логотип и название */}
       <div className="mb-4 flex items-start gap-4">
         {club.logoUrl ? (
-          <img
-            src={club.logoUrl}
-            alt={club.name}
-            className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
-          />
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl">
+            <Image
+              src={club.logoUrl}
+              alt={club.name}
+              fill
+              className="object-cover"
+              sizes="64px"
+              loading="lazy"
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNFNUU3RUIiLz48L3N2Zz4="
+            />
+          </div>
         ) : (
           <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] text-2xl font-bold text-white">
             {club.name.charAt(0).toUpperCase()}

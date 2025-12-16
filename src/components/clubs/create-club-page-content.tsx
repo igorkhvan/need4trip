@@ -2,15 +2,22 @@
  * Create Club Page Content
  * 
  * Клиентский компонент для создания клуба
+ * Оптимизирован с dynamic import для code splitting
  */
 
 "use client";
 
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { ClubForm } from "@/components/clubs/club-form";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
+
+// Динамический импорт формы клуба для code splitting
+const ClubForm = dynamic(
+  () => import("@/components/clubs/club-form").then((mod) => ({ default: mod.ClubForm })),
+  { ssr: false }
+);
 
 export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   const { execute } = useProtectedAction(isAuthenticated);

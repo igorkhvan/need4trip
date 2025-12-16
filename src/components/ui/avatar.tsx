@@ -36,6 +36,7 @@ const AvatarImage = React.forwardRef<
       ref={ref}
       className={cn("h-full w-full object-cover", className)}
       alt={alt ?? ""}
+      loading="lazy"
       onError={(e) => {
         setError(true);
         onError?.();

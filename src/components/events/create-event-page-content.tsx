@@ -1,11 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
-import { EventForm } from "@/components/events/event-form";
 import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
+
+// Динамический импорт формы события для code splitting
+const EventForm = dynamic(
+  () => import("@/components/events/event-form").then((mod) => ({ default: mod.EventForm })),
+  { ssr: false }
+);
 
 export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   const searchParams = useSearchParams();
