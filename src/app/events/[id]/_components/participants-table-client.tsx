@@ -168,18 +168,9 @@ export function ParticipantsTableClient({
 
                 {/* Экипаж */}
                 <TableCell>
-                  {participant.userId ? (
-                    <Link
-                      href={`/profile/${participant.userId}`}
-                      className="font-medium text-[#111827] hover:text-[var(--color-primary)] hover:underline"
-                    >
-                      {participant.displayName}
-                    </Link>
-                  ) : (
-                    <span className="font-medium text-[#111827]">
-                      {participant.displayName}
-                    </span>
-                  )}
+                  <span className="font-medium text-[#111827]">
+                    {participant.displayName}
+                  </span>
                 </TableCell>
 
                 {/* Роль */}

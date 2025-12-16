@@ -293,52 +293,36 @@ export async function getEventBasicInfo(
   id: string,
   options?: EventAccessOptions
 ): Promise<(Event & { participantsCount: number }) | null> {
-  try {
-    console.log('[getEventBasicInfo] Starting for event:', id);
-    
-    const dbEvent = await getEventById(id);
-    if (!dbEvent) {
-      console.log('[getEventBasicInfo] Event not found in DB');
-      return null;
-    }
-    
-    console.log('[getEventBasicInfo] DB event loaded, mapping to domain');
-    let event = mapDbEventToDomain(dbEvent);
-    
-    // Hydrate all related data + count participants (parallel)
-    console.log('[getEventBasicInfo] Loading brands and participants count');
-    const [allowedBrands, participantsCount] = await Promise.all([
-      getAllowedBrands(id).catch((err) => {
-        console.error("[getEventBasicInfo] Failed to load allowed brands", err);
-        return [];
-      }),
-      countParticipants(id),
-    ]);
-    
-    event.allowedBrands = allowedBrands;
-    
-    // Hydrate city and currency
-    console.log('[getEventBasicInfo] Hydrating cities and currencies');
-    const [hydratedEvents] = await hydrateCitiesAndCurrencies([event]);
-    event = hydratedEvents;
-    
-    // Hydrate category
-    console.log('[getEventBasicInfo] Hydrating category');
-    const [eventWithCategory] = await hydrateEventCategories([event]);
-    event = eventWithCategory;
-    
-    console.log('[getEventBasicInfo] Checking visibility');
-    await ensureEventVisibility(event, options);
-    
-    console.log('[getEventBasicInfo] Success!');
-    return {
-      ...event,
-      participantsCount,
-    };
-  } catch (error) {
-    console.error('[getEventBasicInfo] Error:', error);
-    throw error;
-  }
+  const dbEvent = await getEventById(id);
+  if (!dbEvent) return null;
+  
+  let event = mapDbEventToDomain(dbEvent);
+  
+  // Hydrate all related data + count participants (parallel)
+  const [allowedBrands, participantsCount] = await Promise.all([
+    getAllowedBrands(id).catch((err) => {
+      console.error("[getEventBasicInfo] Failed to load allowed brands", err);
+      return [];
+    }),
+    countParticipants(id),
+  ]);
+  
+  event.allowedBrands = allowedBrands;
+  
+  // Hydrate city and currency
+  const [hydratedEvents] = await hydrateCitiesAndCurrencies([event]);
+  event = hydratedEvents;
+  
+  // Hydrate category
+  const [eventWithCategory] = await hydrateEventCategories([event]);
+  event = eventWithCategory;
+  
+  await ensureEventVisibility(event, options);
+  
+  return {
+    ...event,
+    participantsCount,
+  };
 }
 
 export async function getEventWithParticipantsVisibility(

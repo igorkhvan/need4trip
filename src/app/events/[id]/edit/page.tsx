@@ -156,24 +156,17 @@ export default function EditEventPage() {
       throw new Error("Недостаточно прав / войдите через Telegram");
     }
     
-    console.log('[EditEvent] Submitting payload:', payload);
-    
     const res = await fetch(`/api/events/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     
-    console.log('[EditEvent] Response status:', res.status);
-    
     if (!res.ok) {
       // Handle paywall error (402) - show modal and throw special error
       if (res.status === 402) {
-        console.log('[EditEvent] Detected 402 Paywall error');
-        
         try {
           const errorData = await res.json();
-          console.log('[EditEvent] Error data:', errorData);
           const error = errorData.error || errorData;
           
           const paywallInfo = {
@@ -181,10 +174,8 @@ export default function EditEventPage() {
             requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
           };
           
-          console.log('[EditEvent] Setting paywall data:', paywallInfo);
           setPaywallData(paywallInfo);
           setPaywallOpen(true);
-          console.log('[EditEvent] Paywall modal should be open now');
           
           // Throw special error that EventForm will recognize and ignore
           const paywallError = new Error("PAYWALL_SHOWN");
