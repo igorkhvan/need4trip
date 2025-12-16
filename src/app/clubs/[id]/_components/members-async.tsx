@@ -3,11 +3,12 @@
  * 
  * Async компонент для загрузки списка участников клуба.
  * Используется внутри Suspense boundary для параллельной загрузки.
+ * Передает данные в client компонент для optimistic UI.
  */
 
-import { ClubMembersList } from "@/components/clubs/club-members-list";
 import { listMembersWithUser } from "@/lib/db/clubMemberRepo";
 import { mapDbClubMemberWithUserToDomain } from "@/lib/services/clubs";
+import { ClubMembersClient } from "./members-client";
 
 interface ClubMembersAsyncProps {
   clubId: string;
@@ -29,9 +30,9 @@ export async function ClubMembersAsync({
       <h2 className="mb-4 text-[18px] font-semibold text-[#1F2937]">
         Участники ({members.length})
       </h2>
-      <ClubMembersList
+      <ClubMembersClient
         clubId={clubId}
-        members={members}
+        initialMembers={members}
         canManage={canManage}
         currentUserId={currentUserId}
       />
