@@ -262,8 +262,8 @@ export async function getClubWithDetails(
   const members = dbMembers.map(mapDbClubMemberWithUserToDomain);
 
   // Count events
-  const allEvents = await listEvents();
-  const clubEvents = allEvents.filter((e) => e.club_id === id);
+  const allEvents = await listEvents(1, 1000); // Load all events for counting
+  const clubEvents = allEvents.events.filter((e) => e.club_id === id);
   const eventCount = clubEvents.length;
 
   // Count members
@@ -382,8 +382,8 @@ export async function deleteClub(
   }
 
   // Проверить нет ли активных событий
-  const allEvents = await listEvents();
-  const clubEvents = allEvents.filter((e) => e.club_id === id);
+  const allEvents = await listEvents(1, 1000); // Load all events for validation
+  const clubEvents = allEvents.events.filter((e) => e.club_id === id);
   const now = new Date();
   const activeEvents = clubEvents.filter((e) => new Date(e.date_time) >= now);
 
@@ -583,8 +583,8 @@ export async function getUserRoleInClub(
  * Получить события клуба
  */
 export async function getClubEvents(clubId: string) {
-  const allEvents = await listEvents();
-  return allEvents.filter((e) => e.club_id === clubId);
+  const allEvents = await listEvents(1, 1000); // Load all events for club
+  return allEvents.events.filter((e) => e.club_id === clubId);
 }
 
 /**
