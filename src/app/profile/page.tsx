@@ -2,11 +2,12 @@
  * User Profile Page - UserProfile.tsx дизайн из Figma
  * 
  * Полная страница профиля с header-плашкой, табами и управлением автомобилями
+ * Использует useLoadingTransition для плавных переходов между табами
  */
 
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { redirect, useRouter } from "next/navigation";
 import { 
   User, Mail, Phone, MapPin, Calendar, Car, 
@@ -18,6 +19,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useLoadingTransition } from "@/hooks/use-loading-transition";
+import { DelayedSpinner } from "@/components/ui/delayed-spinner";
+import { ProfileContentSkeleton } from "@/components/ui/skeletons";
 import { 
   Select,
   SelectContent,
@@ -64,10 +68,10 @@ interface Stats {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const { isPending, showLoading, startTransition } = useLoadingTransition(300);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'settings'>('overview');
-  const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [userData, setUserData] = useState<UserData>({
     name: '',
     email: '',
@@ -152,10 +156,10 @@ export default function ProfilePage() {
         organizedEvents: data.stats?.organizedEvents || 0
       });
 
-      setLoading(false);
+      setInitialLoad(false);
     } catch (error) {
       console.error('[loadProfileData] Error:', error);
-      setLoading(false);
+      setInitialLoad(false);
     }
   };
 
@@ -523,12 +527,10 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
+  if (initialLoad) {
     return (
       <div className="container-custom py-12">
-        <div className="flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent"></div>
-        </div>
+        <ProfileContentSkeleton />
       </div>
     );
   }
@@ -621,9 +623,16 @@ export default function ProfilePage() {
             { id: "settings", label: "Настройки" },
           ]}
           activeTab={activeTab}
-          onChange={(tabId) => setActiveTab(tabId as 'overview' | 'events' | 'settings')}
+          onChange={(tabId) => {
+            startTransition(() => {
+              setActiveTab(tabId as 'overview' | 'events' | 'settings');
+            });
+          }}
           className="md:mb-8"
         />
+
+        {/* Delayed loading indicator for tab transitions */}
+        <DelayedSpinner show={showLoading} className="mb-6" />
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
