@@ -186,7 +186,9 @@ export function ParticipantsTableClient({
                     <div className="space-y-1 text-[14px] text-[#374151]">
                       {sortedCustomFields.map((field) => {
                         const value = participant.customFieldValues?.[field.id];
-                        if (!value) return null;
+                        // Для boolean полей: false - это валидное значение "Нет"
+                        // Скрываем только null/undefined
+                        if (value === null || value === undefined) return null;
                         return (
                           <div key={field.id}>
                             <span className="text-[#6B7280]">
