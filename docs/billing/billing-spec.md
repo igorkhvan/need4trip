@@ -54,7 +54,10 @@
 - ✅ Лимит участников события: **15**
 - ❌ CSV экспорт: нельзя
 
-**Important:** Free не является клубным тарифом. Это режим **"без клуба"**.
+**Important:** 
+- Free не является клубным тарифом. Это режим **"без клуба"**.
+- **Since v2.1:** FREE план хранится в таблице `club_plans` (id='free') для унификации.
+- Все лимиты FREE плана загружаются из БД через `getPlanById('free')`.
 
 ### 2.2 Клубы — только платные
 
@@ -101,13 +104,13 @@ enum PersonalAction {
 
 ```sql
 CREATE TABLE public.club_plans (
-  id TEXT PRIMARY KEY,                         -- club_50 | club_500 | unlimited
+  id TEXT PRIMARY KEY,                         -- free | club_50 | club_500 | unlimited
   title TEXT NOT NULL,
 
-  price_monthly_kzt NUMERIC(10,2) NOT NULL,    -- фиксируем в тенге
+  price_monthly_kzt NUMERIC(10,2) NOT NULL,    -- 0 для free, остальные в тенге
   currency TEXT NOT NULL DEFAULT 'KZT',
 
-  max_members INT NULL,                        -- NULL = unlimited
+  max_members INT NULL,                        -- NULL = unlimited (или не применимо для free)
   max_event_participants INT NULL,             -- NULL = unlimited
 
   allow_paid_events BOOLEAN NOT NULL,
@@ -120,7 +123,18 @@ CREATE TABLE public.club_plans (
 );
 ```
 
-**Примечание:** Free сюда не кладём. Free = отсутствие клуба.
+**📌 Since v2.1:** FREE план теперь хранится в этой таблице с `id='free'` для унификации архитектуры.
+- `price_monthly_kzt = 0.00`
+- `max_event_participants = 15`
+- `allow_paid_events = false`
+- `allow_csv_export = false`
+- `max_members = NULL` (клубы недоступны на FREE)
+
+**Преимущества:**
+- ✅ Единый источник истины для всех планов
+- ✅ Возможность изменить лимиты FREE через БД
+- ✅ Унифицированный код (нет `if (plan === 'free')` с hardcoded значениями)
+- ✅ Кэширование работает для всех планов одинаково
 
 ### 4.2 Таблица `billing_policy` (grace, allowed actions при неоплате)
 
