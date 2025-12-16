@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Sparkles } from "lucide-react";
+import { getClubPlanLabel } from "@/lib/types/club";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -47,7 +48,7 @@ export function PaywallModal({
           </DialogDescription>
           {requiredPlanId && (
             <p className="text-center text-sm text-[#6B7280] pt-2">
-              Требуется тариф: <span className="font-semibold">{requiredPlanId}</span>
+              Требуется тариф: <span className="font-semibold">{getClubPlanLabel(requiredPlanId)}</span>
             </p>
           )}
         </DialogHeader>

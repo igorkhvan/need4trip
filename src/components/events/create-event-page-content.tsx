@@ -64,23 +64,17 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
   }, [clubId, isAuthenticated]);
 
   const handleSubmit = async (payload: Record<string, unknown>) => {
-    console.log('[CreateEvent] Submitting payload:', payload);
-    
     const res = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     
-    console.log('[CreateEvent] Response status:', res.status);
-    
     if (!res.ok) {
       // Handle paywall error (402) - show modal and throw special error
       if (res.status === 402) {
-        console.log('[CreateEvent] Detected 402 Paywall error');
         try {
           const errorData = await res.json();
-          console.log('[CreateEvent] Error data:', errorData);
           const error = errorData.error || errorData;
           
           const paywallInfo = {
@@ -88,10 +82,8 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
             requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
           };
           
-          console.log('[CreateEvent] Setting paywall data:', paywallInfo);
           setPaywallData(paywallInfo);
           setPaywallOpen(true);
-          console.log('[CreateEvent] Paywall modal should be open now');
           
           // Throw special error that EventForm will recognize and ignore
           const paywallError = new Error("PAYWALL_SHOWN");

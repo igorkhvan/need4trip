@@ -101,18 +101,25 @@ export function EventForm({
   const router = useRouter();
   
   // ⚡ Billing v2.0: Load club plan limits dynamically
-  const { limits: clubLimits, loading: loadingPlan } = useClubPlan(club?.id);
+  const { plan, limits: clubLimits, loading: loadingPlan } = useClubPlan(club?.id);
   const { showPaywall, PaywallModalComponent } = usePaywall();
   
   // Determine max participants based on club plan (default to 15 for Free)
   const maxAllowedParticipants = clubLimits?.maxEventParticipants ?? 15;
+  
+  // Check if club events are allowed (club exists AND has active subscription)
+  const isClubEventAllowed = club && plan?.subscription?.status === 'active';
+  const clubEventDisabledReason = !club 
+    ? 'Клубные события доступны только для клубов' 
+    : plan?.subscription?.status !== 'active' 
+      ? 'Требуется активная подписка клуба' 
+      : null;
   
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(initialValues?.categoryId ?? null);
   const [categories, setCategories] = useState<EventCategoryDto[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  console.log("🔍 Current categoryId state:", categoryId);
   const [dateTime, setDateTime] = useState(() => {
     if (initialValues?.dateTime) return initialValues.dateTime.slice(0, 16);
     return "";
@@ -210,9 +217,6 @@ export function EventForm({
             const defaultCategory = loadedCategories.find((cat: EventCategoryDto) => cat.isDefault === true);
             if (defaultCategory) {
               setCategoryId(defaultCategory.id);
-              console.log("✅ Default category set:", defaultCategory.nameRu, defaultCategory.id);
-            } else {
-              console.warn("⚠️ No default category found in database");
             }
           }
         }
@@ -375,10 +379,7 @@ export function EventForm({
 
   // Debug logging
   useEffect(() => {
-    if (hasLockedFields) {
-      console.log("🔒 Locked Field IDs:", lockedFieldIds);
-      console.log("📋 Current Fields:", sortedFields.map(f => ({ id: f.id, label: f.label })));
-    }
+    // Locked fields are now silently prevented from deletion
   }, [hasLockedFields, lockedFieldIds, sortedFields]);
 
   return (
@@ -590,10 +591,8 @@ export function EventForm({
                     onValueChange={(val) => {
                       // Ignore empty string changes (Radix UI bug)
                       if (val === "" && categoryId) {
-                        console.log("⚠️ Ignoring empty value change");
                         return;
                       }
-                      console.log("📝 Category changed to:", val);
                       setCategoryId(val || null);
                     }}
                     disabled={disabled}
@@ -639,12 +638,12 @@ export function EventForm({
                   <Checkbox
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
-                    disabled={disabled || !club}
+                    disabled={disabled || !isClubEventAllowed}
                   />
                   Клубное событие
-                  {!club && (
+                  {clubEventDisabledReason && (
                     <span className="ml-2 text-xs text-[#6B7280]">
-                      (доступно только для клубов)
+                      ({clubEventDisabledReason})
                     </span>
                   )}
                 </label>
