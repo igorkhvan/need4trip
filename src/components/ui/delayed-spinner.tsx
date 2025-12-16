@@ -63,28 +63,3 @@ export function DelayedSpinner({
 
   return <Spinner size={size} className={className} {...props} />;
 }
-
-/**
- * DelayedPageLoader - отложенный page loader
- */
-export function DelayedPageLoader({ delay = 300 }: { delay?: number }) {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShow(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
-  if (!show) {
-    return <div className="min-h-[400px]" />;
-  }
-
-  return (
-    <div className="flex min-h-[400px] items-center justify-center">
-      <div className="text-center">
-        <Spinner size="lg" />
-        <p className="mt-4 text-base text-[#6B7280]">Загрузка...</p>
-      </div>
-    </div>
-  );
-}
