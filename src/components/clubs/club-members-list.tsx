@@ -13,9 +13,7 @@ import { getClubRoleLabel } from "@/lib/types/club";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-// TODO: Migrate to new billing v2.0 PaywallModal from @/components/billing/PaywallModal
-// import { PaywallModal, usePaywall } from "@/components/ui/paywall-modal";
-// import { isPaywallResponse } from "@/lib/types/paywall";
+import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
 
 interface ClubMembersListProps {
   clubId: string;
@@ -37,8 +35,9 @@ export function ClubMembersList({
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [exporting, setExporting] = useState(false);
-  // TODO: Migrate to usePaywall from billing v2.0
-  // const { paywallOpen, paywallTrigger, showPaywall, hidePaywall } = usePaywall();
+  
+  // ⚡ Billing v2.0: Paywall hook
+  const { showPaywall, PaywallModalComponent } = usePaywall();
 
   const handleExportCSV = async () => {
     setExporting(true);
@@ -47,13 +46,12 @@ export function ClubMembersList({
       
       if (!res.ok) {
         if (res.status === 402) {
-          // TODO: Handle 402 Paywall with new billing v2.0 modal
-          // const data = await res.json();
-          // if (isPaywallResponse(data)) {
-          //   showPaywall(data.paywall);
-          // }
-          alert("CSV export requires upgrade. Please visit /pricing");
-          return;
+          // ⚡ Billing v2.0: Handle paywall response
+          const data = await res.json();
+          if (data.error?.details?.code === 'PAYWALL') {
+            showPaywall(data.error.details);
+            return;
+          }
         }
         throw new Error("Failed to export");
       }
@@ -261,14 +259,8 @@ export function ClubMembersList({
         confirmText="Удалить"
       />
 
-      {/* TODO: Migrate to new PaywallModal from billing v2.0 */}
-      {/* {paywallTrigger && (
-        <PaywallModal
-          open={paywallOpen}
-          onOpenChange={hidePaywall}
-          trigger={paywallTrigger}
-        />
-      )} */}
+      {/* ⚡ Billing v2.0: Paywall Modal */}
+      {PaywallModalComponent}
     </>
   );
 }

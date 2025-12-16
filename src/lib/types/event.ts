@@ -146,7 +146,7 @@ export const eventCreateSchema = z
     locationText: z.string().trim().min(1),
     locationLat: z.number().finite().nullable().optional(),
     locationLng: z.number().finite().nullable().optional(),
-    maxParticipants: z.number().int().min(1).max(500).nullable().optional(),
+    maxParticipants: z.number().int().min(1).nullable().optional(), // Backend enforces plan limits
     customFieldsSchema: eventCustomFieldsSchema.default([]),
     createdByUserId: z.string().uuid().optional().nullable(),
     visibility: visibilitySchema.default("public"),

@@ -32,6 +32,8 @@ import { EventCategoryDto } from "@/lib/types/eventCategory";
 import type { Club } from "@/lib/types/club";
 import { getCategoryIcon } from "@/lib/utils/eventCategories";
 import { getErrorMessage } from "@/lib/utils/errors";
+import { useClubPlan } from "@/hooks/use-club-plan";
+import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
 
 const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
   { value: "text", label: "Текст" },
@@ -96,6 +98,14 @@ export function EventForm({
   club,
 }: EventFormProps) {
   const router = useRouter();
+  
+  // ⚡ Billing v2.0: Load club plan limits dynamically
+  const { limits: clubLimits, loading: loadingPlan } = useClubPlan(club?.id);
+  const { showPaywall, PaywallModalComponent } = usePaywall();
+  
+  // Determine max participants based on club plan (default to 15 for Free)
+  const maxAllowedParticipants = clubLimits?.maxEventParticipants ?? 15;
+  
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(initialValues?.categoryId ?? null);
@@ -225,9 +235,12 @@ export function EventForm({
       issues.dateTime = "Дата должна быть в будущем";
     }
     if (participantsCount === null || Number.isNaN(participantsCount)) {
-      issues.maxParticipants = "Укажите количество участников от 1 до 15.";
-    } else if (participantsCount < 1 || participantsCount > 15) {
-      issues.maxParticipants = "Допустимый диапазон: 1–15.";
+      const limitText = maxAllowedParticipants === null ? "" : ` до ${maxAllowedParticipants}`;
+      issues.maxParticipants = `Укажите количество участников от 1${limitText}.`;
+    } else if (participantsCount < 1) {
+      issues.maxParticipants = "Минимум 1 участник.";
+    } else if (maxAllowedParticipants !== null && participantsCount > maxAllowedParticipants) {
+      issues.maxParticipants = `Максимум для вашего плана: ${maxAllowedParticipants}.`;
     }
     if (isPaid) {
       if (!trimmedPrice) {
@@ -302,6 +315,25 @@ export function EventForm({
       router.push(backHref);
       router.refresh();
     } catch (err) {
+      // ⚡ Billing v2.0: Handle paywall errors (402)
+      if (err && typeof err === 'object' && 'message' in err) {
+        const errorMsg = String(err.message || '');
+        // Check if this is a fetch response error with paywall details
+        try {
+          // Try to parse error as API response
+          const match = errorMsg.match(/\{[\s\S]*\}/);
+          if (match) {
+            const apiError = JSON.parse(match[0]);
+            if (apiError.error?.details?.code === 'PAYWALL') {
+              showPaywall(apiError.error.details);
+              return;
+            }
+          }
+        } catch {
+          // Not a JSON error, continue with default handling
+        }
+      }
+      
       setErrorMessage(getErrorMessage(err, "Не удалось сохранить событие. Попробуйте ещё раз."));
     } finally {
       setIsSubmitting(false);
@@ -474,6 +506,11 @@ export function EventForm({
               <div className="space-y-2">
                 <Label htmlFor="maxParticipants" className="text-sm font-medium text-[#111827]">
                   Максимум участников
+                  {clubLimits && !loadingPlan && (
+                    <span className="ml-2 text-xs font-normal text-[#6B7280]">
+                      (ваш лимит: {maxAllowedParticipants === null ? '∞' : maxAllowedParticipants})
+                    </span>
+                  )}
                 </Label>
                 <Input
                   id="maxParticipants"
@@ -481,7 +518,7 @@ export function EventForm({
                   inputMode="numeric"
                   pattern="[0-9]*"
                   min={1}
-                  max={15}
+                  max={maxAllowedParticipants === null ? undefined : maxAllowedParticipants}
                   value={maxParticipants ?? ""}
                   onChange={(e) => {
                     const digitsOnly = e.target.value.replace(/\D/g, "");
@@ -494,8 +531,8 @@ export function EventForm({
                       });
                     }
                   }}
-                  disabled={disabled}
-                  placeholder="15"
+                  disabled={disabled || loadingPlan}
+                  placeholder={maxAllowedParticipants === null ? '∞' : String(maxAllowedParticipants)}
                   className={fieldErrors.maxParticipants ? "border-red-500 focus:border-red-500" : ""}
                 />
                 <div className="min-h-[28px] text-xs text-red-600">
@@ -914,6 +951,9 @@ export function EventForm({
           </Button>
         </div>
       </form>
+      
+      {/* ⚡ Billing v2.0: Paywall Modal */}
+      {PaywallModalComponent}
     </div>
   );
 }

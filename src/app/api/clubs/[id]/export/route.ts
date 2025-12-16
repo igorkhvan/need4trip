@@ -9,16 +9,10 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClub } from "@/lib/services/clubs";
 import { listMembers } from "@/lib/db/clubMemberRepo";
 import { getUserById } from "@/lib/db/userRepo";
-// TODO: Migrate to new billing v2.0 accessControl system
-// import { checkPaywall } from "@/lib/services/paywall";
-// import { canManageClub } from "@/lib/services/permissions";
-
-// Temporary stubs until migration
-const checkPaywall = async (...args: any[]) => null;
-const canManageClub = async (...args: any[]) => ({ allowed: true, reason: "" });
-
+import { getUserClubRole } from "@/lib/services/clubs";
+import { enforceClubAction } from "@/lib/services/accessControl";
 import { respondError } from "@/lib/api/response";
-import { AuthError, NotFoundError } from "@/lib/errors";
+import { AuthError, NotFoundError, ForbiddenError } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -37,25 +31,25 @@ export async function GET(req: NextRequest, { params }: Params) {
       throw new AuthError("Необходима авторизация");
     }
 
-    // Check if club exists and user can manage it
+    // Check if club exists
     const club = await getClub(clubId);
     if (!club) {
       throw new NotFoundError("Клуб не найден");
     }
 
-    const canManage = await canManageClub(user, clubId);
-    if (!canManage.allowed) {
-      throw new AuthError(canManage.reason || "Нет доступа к экспорту участников", undefined, 403);
+    // Check user permission (owner/organizer)
+    const userRole = await getUserClubRole(user.id, clubId);
+    const canManage = userRole === "owner" || userRole === "organizer";
+    
+    if (!canManage) {
+      throw new ForbiddenError("Нет доступа к экспорту участников");
     }
 
-    // Check paywall
-    const paywallTrigger = await checkPaywall(user, "export_csv", { clubId });
-    if (paywallTrigger) {
-      return NextResponse.json(
-        { paywall: paywallTrigger },
-        { status: 402 } // Payment Required
-      );
-    }
+    // ⚡ Billing v2.0: Check if club plan allows CSV export
+    await enforceClubAction({
+      clubId,
+      action: "CLUB_EXPORT_PARTICIPANTS_CSV",
+    });
 
     // Get all members
     const members = await listMembers(clubId);
