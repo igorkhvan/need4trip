@@ -48,7 +48,10 @@ function validateCustomFieldValues(
 
   for (const field of schema) {
     const rawValue = values[field.id];
-    const hasValue = rawValue !== undefined && rawValue !== null;
+    // Для boolean полей false - это валидное значение (означает "Нет")
+    const hasValue = field.type === "boolean" 
+      ? (rawValue !== undefined && rawValue !== null)
+      : (rawValue !== undefined && rawValue !== null);
     const fieldLabel = field.label || field.id;
 
     if (field.required && !hasValue) {
@@ -59,7 +62,8 @@ function validateCustomFieldValues(
     }
 
     if (!hasValue) {
-      sanitized[field.id] = null;
+      // Для boolean полей: если значение не передано, устанавливаем false (не null)
+      sanitized[field.id] = field.type === "boolean" ? false : null;
       continue;
     }
 

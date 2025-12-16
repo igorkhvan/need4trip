@@ -46,6 +46,15 @@ export default async function EventDetails({
     ? await getUserById(event.createdByUserId) 
     : null;
 
+  // Проверяем, зарегистрирован ли текущий пользователь (для скрытия кнопки)
+  const { listParticipants } = await import("@/lib/db/participantRepo");
+  const dbParticipants = await listParticipants(id);
+  const isUserRegistered = dbParticipants.some(
+    (p) => 
+      (currentUser?.id && p.user_id === currentUser.id) ||
+      (guestSessionId && p.guest_session_id === guestSessionId)
+  );
+
   const categoryLabel = event.category ? getCategoryLabel(event.category) : null;
   const categoryBadgeVariant = event.category ? getCategoryBadgeVariant(event.category) : "solid-gray";
   const formattedDateTime = formatDateTime(event.dateTime);
@@ -126,7 +135,7 @@ export default async function EventDetails({
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row md:flex-col md:w-auto">
-          {!isFull && (
+          {!isFull && !isUserRegistered && (
             <ParticipantModal
               mode="create"
               eventId={event.id}
