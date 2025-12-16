@@ -42,7 +42,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { UserCar, CarType } from "@/lib/types/userCar";
-import { CAR_TYPES } from "@/lib/types/userCar";
 
 interface CarBrand {
   id: string;
@@ -100,6 +99,7 @@ export default function ProfilePage() {
     setOptimisticCars(cars);
   }, [cars, setOptimisticCars]);
   const [brands, setBrands] = useState<BrandSelectOption[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [showAddCar, setShowAddCar] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [newCar, setNewCar] = useState({
@@ -900,11 +900,15 @@ export default function ProfilePage() {
                           <SelectValue placeholder="Выберите тип" />
                         </SelectTrigger>
                         <SelectContent>
-                          {CAR_TYPES.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
+                          {vehicleTypes.length === 0 ? (
+                            <SelectItem value="" disabled>Загрузка...</SelectItem>
+                          ) : (
+                            vehicleTypes.map(type => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.type ?? ''}</div>
@@ -1011,11 +1015,15 @@ export default function ProfilePage() {
                                 <SelectValue placeholder="Выберите тип" />
                               </SelectTrigger>
                               <SelectContent>
-                                {CAR_TYPES.map(type => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    {type.label}
-                                  </SelectItem>
-                                ))}
+                                {vehicleTypes.length === 0 ? (
+                                  <SelectItem value="" disabled>Загрузка...</SelectItem>
+                                ) : (
+                                  vehicleTypes.map(type => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))
+                                )}
                               </SelectContent>
                             </Select>
                             <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.type ?? ''}</div>
@@ -1088,7 +1096,7 @@ export default function ProfilePage() {
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-muted)]">
-                                  <span>{CAR_TYPES.find(t => t.value === car.type)?.label || car.type}</span>
+                                  <span>{vehicleTypes.find(t => t.value === car.type)?.label || car.type}</span>
                                   {car.plate && (
                                     <>
                                       <span>•</span>

@@ -19,7 +19,16 @@ export type EventCategoryLegacy = z.infer<typeof eventCategoryLegacySchema>;
 export const visibilitySchema = z.enum(["public", "unlisted", "restricted"]);
 export type Visibility = z.infer<typeof visibilitySchema>;
 
-export const vehicleTypeRequirementSchema = z.enum(["any", "sedan", "crossover", "suv"]);
+import { vehicleTypeIdSchema } from "./vehicleType";
+
+/**
+ * Vehicle Type Requirement for events
+ * "any" = no restriction, or specific vehicle type from database
+ */
+export const vehicleTypeRequirementSchema = z.union([
+  z.literal("any"),
+  vehicleTypeIdSchema,
+]);
 export type VehicleTypeRequirement = z.infer<typeof vehicleTypeRequirementSchema>;
 
 export interface CarBrand {

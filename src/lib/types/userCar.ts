@@ -1,17 +1,17 @@
 import { z } from "zod";
+import { vehicleTypeIdSchema, type VehicleTypeId } from "./vehicleType";
 
 /**
- * Типы автомобилей
+ * Car Type (uses vehicle_types from database)
+ * @deprecated Use VehicleTypeId from vehicleType.ts
  */
-export type CarType = 
-  | "offroad"    // Внедорожник
-  | "sedan"      // Седан
-  | "suv"        // Кроссовер
-  | "sportcar"   // Спорткар
-  | "classic"    // Классика
-  | "other";     // Другое
+export type CarType = VehicleTypeId;
 
-export const CAR_TYPES: { value: CarType; label: string }[] = [
+/**
+ * @deprecated Use getVehicleTypeOptions() from vehicleTypeRepo instead
+ * This constant is kept for backward compatibility but should not be used in new code
+ */
+export const CAR_TYPES: { value: string; label: string }[] = [
   { value: "offroad", label: "Внедорожник" },
   { value: "sedan", label: "Седан" },
   { value: "suv", label: "Кроссовер" },
@@ -44,22 +44,22 @@ export interface UserCar {
 
 /**
  * Схема для создания автомобиля
+ * Now uses vehicle_types from database
  */
 export const userCarCreateSchema = z.object({
   carBrandId: z.string().uuid("Выберите марку автомобиля"),
-  type: z.enum(["offroad", "sedan", "suv", "sportcar", "classic", "other"], {
-    errorMap: () => ({ message: "Выберите тип автомобиля" }),
-  }),
+  type: vehicleTypeIdSchema, // From database
   plate: z.string().trim().max(20, "Макс 20 символов").optional().nullable(),
   color: z.string().trim().max(50, "Макс 50 символов").optional().nullable(),
 });
 
 /**
  * Схема для обновления автомобиля
+ * Now uses vehicle_types from database
  */
 export const userCarUpdateSchema = z.object({
   carBrandId: z.string().uuid("Выберите марку автомобиля").optional(),
-  type: z.enum(["offroad", "sedan", "suv", "sportcar", "classic", "other"]).optional(),
+  type: vehicleTypeIdSchema.optional(), // From database
   plate: z.string().trim().max(20, "Макс 20 символов").optional().nullable(),
   color: z.string().trim().max(50, "Макс 50 символов").optional().nullable(),
   isPrimary: z.boolean().optional(),
