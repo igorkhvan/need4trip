@@ -61,34 +61,36 @@ export function useClubPlan(clubId: string | null | undefined): UseClubPlanRetur
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // If no clubId, fetch Free plan from API (to get actual DB values)
+    // If no clubId, load Free plan from database (cached)
     if (!clubId) {
       let mounted = true;
       
-      const fetchFreePlan = async () => {
+      const loadFreePlan = async () => {
         setLoading(true);
         setError(null);
         
         try {
-          const res = await fetch('/api/clubs/personal/current-plan');
-          
-          if (!res.ok) {
-            throw new Error('Failed to fetch Free plan');
-          }
-          
-          const data = await res.json();
+          // Import dynamically to avoid circular deps
+          const { getPlanById } = await import("@/lib/db/planRepo");
+          const freePlan = await getPlanById("free");
           
           if (!mounted) return;
           
-          if (data.success) {
-            setPlan(data.data);
-          } else {
-            throw new Error(data.error?.message || 'Failed to fetch Free plan');
-          }
+          setPlan({
+            planId: "free",
+            planTitle: freePlan.title,
+            subscription: null,
+            limits: {
+              maxMembers: freePlan.maxMembers,
+              maxEventParticipants: freePlan.maxEventParticipants,
+              allowPaidEvents: freePlan.allowPaidEvents,
+              allowCsvExport: freePlan.allowCsvExport,
+            },
+          });
         } catch (err) {
           if (!mounted) return;
           
-          log.error("Failed to fetch Free plan", { error: err });
+          log.error("Failed to load Free plan from DB", { error: err });
           
           // Fallback to hardcoded defaults only on error
           setPlan({
@@ -109,7 +111,7 @@ export function useClubPlan(clubId: string | null | undefined): UseClubPlanRetur
         }
       };
       
-      fetchFreePlan();
+      loadFreePlan();
       
       return () => {
         mounted = false;

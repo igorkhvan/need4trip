@@ -263,9 +263,8 @@ export function EventForm({
       issues.maxParticipants = `Укажите количество участников от 1${limitText}.`;
     } else if (participantsCount < 1) {
       issues.maxParticipants = "Минимум 1 участник.";
-    } else if (maxAllowedParticipants !== null && participantsCount > maxAllowedParticipants) {
-      issues.maxParticipants = `Максимум для вашего плана: ${maxAllowedParticipants}.`;
     }
+    // Note: Max participant limit is checked on backend and returns PaywallError (402)
     if (isPaid) {
       if (!trimmedPrice) {
         issues.price = "Укажите цену";

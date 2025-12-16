@@ -364,15 +364,23 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   
   // ⚡ Check if club event requires active subscription
   if (parsed.isClubEvent) {
+    const { PaywallError } = await import("@/lib/errors");
+    
     if (!parsed.clubId) {
-      const { ValidationError } = await import("@/lib/errors");
-      throw new ValidationError("Клубное событие возможно только при наличии клуба");
+      // No club = personal event, cannot be club event
+      throw new PaywallError({
+        message: "Клубные события доступны только при наличии клуба с активной подпиской",
+        reason: "CLUB_CREATION_REQUIRES_PLAN",
+        currentPlanId: "free",
+        requiredPlanId: "club_50",
+        meta: {
+          feature: "Клубные события",
+        },
+      });
     }
     
     // Check if club has active subscription
     const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
-    const { PaywallError } = await import("@/lib/errors");
-    
     const subscription = await getClubSubscription(parsed.clubId);
     
     if (!subscription || subscription.status !== "active") {
@@ -543,15 +551,23 @@ export async function updateEvent(
     : existing.is_club_event;
   
   if (finalIsClubEvent) {
+    const { PaywallError } = await import("@/lib/errors");
+    
     if (!existing.club_id) {
-      const { ValidationError } = await import("@/lib/errors");
-      throw new ValidationError("Клубное событие возможно только при наличии клуба");
+      // Cannot make personal event into club event
+      throw new PaywallError({
+        message: "Клубные события доступны только при наличии клуба с активной подпиской",
+        reason: "CLUB_CREATION_REQUIRES_PLAN",
+        currentPlanId: "free",
+        requiredPlanId: "club_50",
+        meta: {
+          feature: "Клубные события",
+        },
+      });
     }
     
     // Check if club has active subscription
     const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
-    const { PaywallError } = await import("@/lib/errors");
-    
     const subscription = await getClubSubscription(existing.club_id);
     
     if (!subscription || subscription.status !== "active") {
