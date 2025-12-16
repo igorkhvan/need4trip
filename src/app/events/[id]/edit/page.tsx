@@ -71,8 +71,6 @@ export default function EditEventPage() {
         }
         
         const eventResponse = await eventRes.json();
-        console.log("📦 Event API response:", eventResponse);
-        
         // API returns: {success: true, data: {event: {...}}}
         const eventData = eventResponse.data || eventResponse;
         
@@ -80,13 +78,6 @@ export default function EditEventPage() {
         const participantsRes = await fetch(`/api/events/${id}/participants`);
         const participantsResponse = participantsRes.ok ? await participantsRes.json() : { participants: [] };
         const participantsData = participantsResponse.data || participantsResponse;
-        
-        console.log("✅ Event data:", {
-          id: eventData.event?.id,
-          title: eventData.event?.title,
-          participantsCount: participantsData.participants?.length,
-          customFieldsCount: eventData.event?.customFieldsSchema?.length
-        });
         
         setEvent(eventData.event);
         setParticipantCount(participantsData.participants?.length ?? 0);

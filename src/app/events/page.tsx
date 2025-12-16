@@ -17,31 +17,16 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        console.log('[EventsPage] Loading data...');
         const [eventsRes, userRes] = await Promise.all([
           fetch("/api/events"),
           fetch("/api/auth/me"),
         ]);
 
-        console.log('[EventsPage] Events response:', {
-          ok: eventsRes.ok,
-          status: eventsRes.status,
-        });
-
         if (eventsRes.ok) {
           const response = await eventsRes.json();
-          console.log('[EventsPage] Events response:', response);
-          
           // API returns: {success: true, data: {events: [...], total: ...}}
           const data = response.data || response;
-          console.log('[EventsPage] Events data:', {
-            eventsCount: data.events?.length || 0,
-            total: data.total,
-            eventIds: data.events?.map((e: any) => e.id) || [],
-          });
           setEvents(data.events || []);
-        } else {
-          console.error('[EventsPage] Events request failed:', eventsRes.status);
         }
 
         if (userRes.ok) {

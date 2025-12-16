@@ -176,7 +176,6 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/profile/cars');
       const data = await res.json();
-      console.log('[loadCars] Response:', data);
       
       // API returns: { success: true, data: { cars: [...] } }
       if (data.success && data.data?.cars) {
@@ -206,13 +205,9 @@ export default function ProfilePage() {
       
       if (typesRes.ok) {
         const typesData = await typesRes.json();
-        console.log('[Profile] Vehicle types loaded:', typesData);
         // API returns: {success: true, data: {vehicleTypes: [...]}}
         const types = typesData.data?.vehicleTypes || typesData.vehicleTypes || [];
         setVehicleTypes(types);
-        console.log('[Profile] Set vehicle types:', types);
-      } else {
-        console.error('[Profile] Failed to load vehicle types:', typesRes.status);
       }
     } catch (error) {
       console.error('[loadBrands] Error:', error);

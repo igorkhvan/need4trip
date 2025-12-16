@@ -69,10 +69,6 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
     }
     
     // Redirect to events list with force refresh to show new event
-    const data = await res.json();
-    console.log('[CreateEvent] Event created:', data.event?.id);
-    
-    // Use replace to prevent back button issues + force refresh
     router.push('/events');
     router.refresh();
   };
