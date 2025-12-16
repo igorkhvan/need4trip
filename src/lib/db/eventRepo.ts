@@ -6,14 +6,22 @@ import { log } from "@/lib/utils/logger";
 
 const table = "events";
 
-export async function listEvents(): Promise<DbEvent[]> {
+export async function listEvents(page = 1, limit = 12): Promise<{
+  data: DbEvent[];
+  total: number;
+  hasMore: boolean;
+}> {
   ensureClient();
-  if (!supabase) return [];
+  if (!supabase) return { data: [], total: 0, hasMore: false };
   
-  const { data, error } = await supabase
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from(table)
-    .select("*")
-    .order("date_time", { ascending: true });
+    .select("*", { count: "exact" })
+    .order("date_time", { ascending: true })
+    .range(from, to);
 
   if (error) {
     log.error("Failed to list events", { error });
@@ -21,20 +29,34 @@ export async function listEvents(): Promise<DbEvent[]> {
   }
 
   // Supabase types custom_fields_schema as Json, cast to proper type
-  return (data ?? []).map((row: any) => ({
+  const events = (data ?? []).map((row: any) => ({
     ...row,
     custom_fields_schema: row.custom_fields_schema ?? [],
   })) as unknown as DbEvent[];
+
+  return {
+    data: events,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
 }
 
-export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
+export async function listEventsWithOwner(page = 1, limit = 12): Promise<{
+  data: DbEventWithOwner[];
+  total: number;
+  hasMore: boolean;
+}> {
   ensureClient();
-  if (!supabase) return [];
+  if (!supabase) return { data: [], total: 0, hasMore: false };
   
-  const { data, error } = await supabase
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from(table)
-    .select("*, created_by_user:users(id, name, telegram_handle)")
-    .order("date_time", { ascending: true });
+    .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
+    .order("date_time", { ascending: true })
+    .range(from, to);
 
   if (error) {
     log.error("Failed to list events with owner", { error });
@@ -42,10 +64,16 @@ export async function listEventsWithOwner(): Promise<DbEventWithOwner[]> {
   }
 
   // Supabase types custom_fields_schema as Json, cast to proper type
-  return (data ?? []).map((row: any) => ({
+  const events = (data ?? []).map((row: any) => ({
     ...row,
     custom_fields_schema: row.custom_fields_schema ?? [],
   })) as unknown as DbEventWithOwner[];
+
+  return {
+    data: events,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {

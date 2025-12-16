@@ -14,28 +14,36 @@ import { UnauthorizedError } from "@/lib/errors";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/clubs?q=searchQuery&cityId=cityId
- * Список клубов с опциональным поиском и фильтром по городу
+ * GET /api/clubs?q=searchQuery&cityId=cityId&page=1&limit=12
+ * Список клубов с опциональным поиском, фильтром по городу и пагинацией
  */
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const query = searchParams.get("q");
     const cityId = searchParams.get("cityId");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "12", 10);
 
-    let clubs;
+    let result;
     if (cityId) {
       // Filter by city
-      clubs = await listClubsByCity(cityId);
+      result = await listClubsByCity(cityId, page, limit);
     } else if (query) {
       // Search by name
-      clubs = await searchClubs(query);
+      result = await searchClubs(query, page, limit);
     } else {
       // List all
-      clubs = await listClubs();
+      result = await listClubs(page, limit);
     }
 
-    return NextResponse.json({ clubs });
+    return NextResponse.json({
+      clubs: result.clubs,
+      total: result.total,
+      hasMore: result.hasMore,
+      page,
+      limit,
+    });
   } catch (error) {
     return respondError(error);
   }

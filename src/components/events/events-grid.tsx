@@ -48,7 +48,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
   const [filterPrice, setFilterPrice] = useState<PriceFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const itemsPerPage = 12; // Fixed items per page matching design
   const [categories, setCategories] = useState<EventCategoryDto[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -477,12 +477,9 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              itemsPerPage={itemsPerPage}
-              totalItems={filteredAndSorted.length}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={(value) => {
-                setItemsPerPage(value);
-                setCurrentPage(1);
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
             />
           )}

@@ -12,6 +12,7 @@ import { Plus, Search, MapPin } from "lucide-react";
 import { ClubCard } from "@/components/clubs/club-card";
 import { CreateClubButton } from "@/components/clubs/create-club-button";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { Pagination } from "@/components/ui/pagination";
 import type { City } from "@/lib/types/city";
 import type { Club } from "@/lib/types/club";
 
@@ -22,11 +23,20 @@ export default function ClubsPage() {
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalClubs, setTotalClubs] = useState(0);
+  const itemsPerPage = 12;
 
   // Load clubs
   useEffect(() => {
-    loadClubs();
+    setCurrentPage(1); // Reset to first page when filters change
+    loadClubs(1);
   }, [selectedCityId, searchQuery]);
+
+  // Load clubs when page changes
+  useEffect(() => {
+    loadClubs(currentPage);
+  }, [currentPage]);
 
   // Check authentication
   useEffect(() => {
@@ -36,11 +46,14 @@ export default function ClubsPage() {
       .catch(() => setIsAuthenticated(false));
   }, []);
 
-  const loadClubs = async () => {
+  const loadClubs = async (page: number) => {
     setLoading(true);
     try {
       let url = `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/clubs`;
       const params = new URLSearchParams();
+      
+      params.append("page", page.toString());
+      params.append("limit", itemsPerPage.toString());
       
       if (selectedCityId) {
         params.append("cityId", selectedCityId);
@@ -48,18 +61,18 @@ export default function ClubsPage() {
         params.append("q", searchQuery.trim());
       }
 
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
+      url += `?${params.toString()}`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to load clubs");
       
       const data = await res.json();
       setClubs(data.clubs ?? []);
+      setTotalClubs(data.total ?? 0);
     } catch (err) {
       console.error("[loadClubs] Failed", err);
       setClubs([]);
+      setTotalClubs(0);
     } finally {
       setLoading(false);
     }
@@ -71,6 +84,12 @@ export default function ClubsPage() {
     if (cityId) {
       setSearchQuery(""); // Clear search when filtering by city
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -198,7 +217,7 @@ export default function ClubsPage() {
                 </button>
               </div>
             )}
-            <span>• Найдено клубов: {clubs.length}</span>
+            <span>• Найдено клубов: {totalClubs}</span>
           </div>
         )}
 
@@ -209,11 +228,22 @@ export default function ClubsPage() {
             <p className="mt-4 text-[#6B7280]">Загрузка...</p>
           </div>
         ) : clubs.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {clubs.map((club) => (
-              <ClubCard key={club.id} club={club} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {clubs.map((club) => (
+                <ClubCard key={club.id} club={club} />
+              ))}
+            </div>
+            
+            {/* Pagination */}
+            <div className="mt-8">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(totalClubs / itemsPerPage)}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          </>
         ) : (
           <div className="rounded-lg border-2 border-dashed border-[#E5E7EB] bg-white py-16 text-center">
             <div className="mx-auto max-w-md">

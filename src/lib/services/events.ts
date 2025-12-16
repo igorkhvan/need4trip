@@ -77,19 +77,40 @@ async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
   }
 }
 
-export async function listEvents(): Promise<Event[]> {
-  const events = await listEventsWithOwner();
-  const mapped = events.map(mapDbEventWithOwnerToDomain);
-  return mapped;
+export async function listEvents(page = 1, limit = 12): Promise<{
+  events: Event[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const result = await listEventsWithOwner(page, limit);
+  const mapped = result.data.map(mapDbEventWithOwnerToDomain);
+  
+  return {
+    events: mapped,
+    total: result.total,
+    hasMore: result.hasMore,
+  };
 }
 
-export async function listEventsSafe(): Promise<Event[]> {
+export async function listEventsSafe(page = 1, limit = 12): Promise<{
+  events: Event[];
+  total: number;
+  hasMore: boolean;
+}> {
   try {
-    const events = await listEventsWithOwner();
-    return events.map(mapDbEventWithOwnerToDomain);
+    const result = await listEventsWithOwner(page, limit);
+    return {
+      events: result.data.map(mapDbEventWithOwnerToDomain),
+      total: result.total,
+      hasMore: result.hasMore,
+    };
   } catch (err) {
     console.error("[listEventsSafe] Failed to list events", err);
-    return [];
+    return {
+      events: [],
+      total: 0,
+      hasMore: false,
+    };
   }
 }
 

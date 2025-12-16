@@ -1,14 +1,25 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser, getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { UnauthorizedError } from "@/lib/errors";
-import { createEvent, hydrateEvent, listVisibleEventsForUser } from "@/lib/services/events";
+import { createEvent, hydrateEvent, listEvents } from "@/lib/services/events";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const currentUser = await getCurrentUserSafe();
-    const events = await listVisibleEventsForUser(currentUser?.id ?? null);
-    const hydrated = await Promise.all(events.map((e) => hydrateEvent(e)));
-    return respondJSON({ events: hydrated });
+    const searchParams = req.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "12", 10);
+
+    const result = await listEvents(page, limit);
+    const hydrated = await Promise.all(result.events.map((e) => hydrateEvent(e)));
+    
+    return respondJSON({
+      events: hydrated,
+      total: result.total,
+      hasMore: result.hasMore,
+      page,
+      limit,
+    });
   } catch (err) {
     return respondError(err);
   }

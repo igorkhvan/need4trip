@@ -166,33 +166,63 @@ function mapDbClubMemberWithUserToDomain(db: DbClubMemberWithUser): ClubMemberWi
 // ============================================================================
 
 /**
- * Список всех клубов
+ * Список всех клубов с пагинацией
  */
-export async function listClubs(): Promise<Club[]> {
-  const clubs = await listClubsRepo();
-  const domainClubs = clubs.map(mapDbClubToDomain);
-  return hydrateClubsWithCities(domainClubs);
+export async function listClubs(page = 1, limit = 12): Promise<{
+  clubs: Club[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const result = await listClubsRepo(page, limit);
+  const domainClubs = result.data.map(mapDbClubToDomain);
+  const hydratedClubs = await hydrateClubsWithCities(domainClubs);
+  
+  return {
+    clubs: hydratedClubs,
+    total: result.total,
+    hasMore: result.hasMore,
+  };
 }
 
 /**
- * Список клубов по городу
+ * Список клубов по городу с пагинацией
  */
-export async function listClubsByCity(cityId: string): Promise<Club[]> {
-  const clubs = await listClubsByCityRepo(cityId);
-  const domainClubs = clubs.map(mapDbClubToDomain);
-  return hydrateClubsWithCities(domainClubs);
+export async function listClubsByCity(cityId: string, page = 1, limit = 12): Promise<{
+  clubs: Club[];
+  total: number;
+  hasMore: boolean;
+}> {
+  const result = await listClubsByCityRepo(cityId, page, limit);
+  const domainClubs = result.data.map(mapDbClubToDomain);
+  const hydratedClubs = await hydrateClubsWithCities(domainClubs);
+  
+  return {
+    clubs: hydratedClubs,
+    total: result.total,
+    hasMore: result.hasMore,
+  };
 }
 
 /**
- * Поиск клубов
+ * Поиск клубов с пагинацией
  */
-export async function searchClubs(query: string): Promise<Club[]> {
+export async function searchClubs(query: string, page = 1, limit = 12): Promise<{
+  clubs: Club[];
+  total: number;
+  hasMore: boolean;
+}> {
   if (!query.trim()) {
-    return listClubs();
+    return listClubs(page, limit);
   }
-  const clubs = await searchClubsRepo(query);
-  const domainClubs = clubs.map(mapDbClubToDomain);
-  return hydrateClubsWithCities(domainClubs);
+  const result = await searchClubsRepo(query, page, limit);
+  const domainClubs = result.data.map(mapDbClubToDomain);
+  const hydratedClubs = await hydrateClubsWithCities(domainClubs);
+  
+  return {
+    clubs: hydratedClubs,
+    total: result.total,
+    hasMore: result.hasMore,
+  };
 }
 
 /**
