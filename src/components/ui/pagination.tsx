@@ -1,42 +1,30 @@
 "use client";
 
 import React from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { Button } from "./button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  itemsPerPage: number;
-  totalItems: number;
   onPageChange: (page: number) => void;
-  onItemsPerPageChange: (itemsPerPage: number) => void;
-  itemsPerPageOptions?: number[];
   className?: string;
 }
 
 export function Pagination({
   currentPage,
   totalPages,
-  itemsPerPage,
-  totalItems,
   onPageChange,
-  onItemsPerPageChange,
-  itemsPerPageOptions = [6, 12, 24, 50],
   className,
 }: PaginationProps) {
-  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  if (totalPages <= 1) return null;
 
   // Generate page numbers to display
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible + 2) {
-      // Show all pages if total is small
+    
+    if (totalPages <= 7) {
+      // Show all pages if 7 or less
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
@@ -45,24 +33,18 @@ export function Pagination({
       pages.push(1);
 
       if (currentPage <= 3) {
-        // Near start
-        for (let i = 2; i <= 4; i++) {
-          pages.push(i);
-        }
+        // Near start: 1, 2, 3, ..., last
+        pages.push(2, 3);
         pages.push("...");
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
-        // Near end
+        // Near end: 1, ..., last-2, last-1, last
         pages.push("...");
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i);
-        }
+        pages.push(totalPages - 2, totalPages - 1, totalPages);
       } else {
-        // Middle
+        // Middle: 1, ..., current, ..., last
         pages.push("...");
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
-        }
+        pages.push(currentPage);
         pages.push("...");
         pages.push(totalPages);
       }
@@ -74,117 +56,65 @@ export function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className={cn("flex flex-col gap-4 md:flex-row md:items-center md:justify-between", className)}>
-      {/* Items info */}
-      <div className="text-[14px] text-[#6B7280]">
-        Показано <span className="font-medium text-[#111827]">{startItem}</span> -{" "}
-        <span className="font-medium text-[#111827]">{endItem}</span> из{" "}
-        <span className="font-medium text-[#111827]">{totalItems}</span>
-      </div>
+    <div className={cn("flex items-center justify-center gap-2", className)}>
+      {/* Previous button */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors",
+          currentPage === 1
+            ? "cursor-not-allowed opacity-40"
+            : "hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+        )}
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </button>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Items per page selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] text-[#6B7280]">На странице:</span>
-          <Select
-            value={itemsPerPage.toString()}
-            onValueChange={(value) => onItemsPerPageChange(Number(value))}
-          >
-            <SelectTrigger className="h-10 w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {itemsPerPageOptions.map((option) => (
-                <SelectItem key={option} value={option.toString()}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Page navigation */}
-        <div className="flex items-center gap-1">
-          {/* First page */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(1)}
-            disabled={currentPage === 1}
-            className="h-10 w-10"
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-
-          {/* Previous page */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="h-10 w-10"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          {/* Page numbers */}
-          <div className="hidden items-center gap-1 sm:flex">
-            {pageNumbers.map((page, index) => {
-              if (page === "...") {
-                return (
-                  <span key={`ellipsis-${index}`} className="px-2 text-[#6B7280]">
-                    ...
-                  </span>
-                );
-              }
-
-              return (
-                <Button
-                  key={page}
-                  variant={page === currentPage ? "default" : "ghost"}
-                  size="icon"
-                  onClick={() => onPageChange(page as number)}
-                  className={cn(
-                    "h-10 w-10",
-                    page === currentPage && "bg-[#FF6F2C] text-white hover:bg-[#FF6F2C]/90"
-                  )}
-                >
-                  {page}
-                </Button>
-              );
-            })}
-          </div>
-
-          {/* Mobile: show current page */}
-          <div className="flex items-center gap-2 sm:hidden">
-            <span className="text-[14px] text-[#6B7280]">
-              {currentPage} / {totalPages}
+      {/* Page numbers */}
+      {pageNumbers.map((page, index) => {
+        if (page === "...") {
+          return (
+            <span
+              key={`ellipsis-${index}`}
+              className="flex h-10 w-10 items-center justify-center text-[15px] text-[#6B7280]"
+            >
+              ...
             </span>
-          </div>
+          );
+        }
 
-          {/* Next page */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="h-10 w-10"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        const isActive = page === currentPage;
 
-          {/* Last page */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(totalPages)}
-            disabled={currentPage === totalPages}
-            className="h-10 w-10"
+        return (
+          <button
+            key={page}
+            onClick={() => onPageChange(page as number)}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl text-[15px] font-medium transition-colors",
+              isActive
+                ? "bg-[var(--color-primary)] text-white hover:bg-[#E86223]"
+                : "border border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+            )}
           >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+            {page}
+          </button>
+        );
+      })}
+
+      {/* Next button */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors",
+          currentPage === totalPages
+            ? "cursor-not-allowed opacity-40"
+            : "hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+        )}
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
     </div>
   );
 }

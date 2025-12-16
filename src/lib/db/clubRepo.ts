@@ -38,23 +38,35 @@ export interface DbClubWithOwner extends DbClub {
 // ============================================================================
 
 /**
- * List all clubs
+ * List all clubs with pagination
  */
-export async function listClubs(): Promise<DbClub[]> {
+export async function listClubs(page = 1, limit = 12): Promise<{
+  data: DbClub[];
+  total: number;
+  hasMore: boolean;
+}> {
   ensureClient();
-  if (!supabase) return [];
+  if (!supabase) return { data: [], total: 0, hasMore: false };
 
-  const { data, error } = await supabase
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from(table)
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) {
     log.error("Failed to list clubs", { error });
     throw new InternalError("Failed to list clubs", error);
   }
 
-  return (data ?? []) as DbClub[];
+  return {
+    data: (data ?? []) as DbClub[],
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
 }
 
 /**
@@ -261,26 +273,37 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
 }
 
 /**
- * Search clubs by name
+ * Search clubs by name with pagination
  */
-export async function searchClubs(query: string): Promise<DbClub[]> {
+export async function searchClubs(query: string, page = 1, limit = 12): Promise<{
+  data: DbClub[];
+  total: number;
+  hasMore: boolean;
+}> {
   ensureClient();
-  if (!supabase) return [];
+  if (!supabase) return { data: [], total: 0, hasMore: false };
 
   const searchPattern = `%${query}%`;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from(table)
-    .select("*")
+    .select("*", { count: "exact" })
     .ilike("name", searchPattern)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true })
+    .range(from, to);
 
   if (error) {
     log.error("Failed to search clubs", { query, error });
     throw new InternalError("Failed to search clubs", error);
   }
 
-  return (data ?? []) as DbClub[];
+  return {
+    data: (data ?? []) as DbClub[],
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
 }
 
 /**
@@ -400,11 +423,15 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
 }
 
 /**
- * List clubs by city (filter)
+ * List clubs by city (filter) with pagination
  */
-export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
+export async function listClubsByCity(cityId: string, page = 1, limit = 12): Promise<{
+  data: DbClub[];
+  total: number;
+  hasMore: boolean;
+}> {
   ensureClient();
-  if (!supabase) return [];
+  if (!supabase) return { data: [], total: 0, hasMore: false };
 
   // Get club IDs that have this city
   const { data: clubCitiesData, error: clubCitiesError } = await supabase
@@ -418,24 +445,31 @@ export async function listClubsByCity(cityId: string): Promise<DbClub[]> {
   }
 
   if (!clubCitiesData || clubCitiesData.length === 0) {
-    return [];
+    return { data: [], total: 0, hasMore: false };
   }
 
   const clubIds = clubCitiesData.map((row: any) => row.club_id);
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
-  // Get clubs by IDs
-  const { data, error } = await supabase
+  // Get clubs by IDs with pagination
+  const { data, error, count } = await supabase
     .from(table)
-    .select("*")
+    .select("*", { count: "exact" })
     .in("id", clubIds)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) {
     log.error("Failed to list clubs by city", { cityId, error });
     throw new InternalError("Failed to list clubs by city", error);
   }
 
-  return (data ?? []) as DbClub[];
+  return {
+    data: (data ?? []) as DbClub[],
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
 }
 
 
