@@ -70,11 +70,16 @@ export default function EditEventPage() {
           throw new Error(`Event not found: ${eventRes.status}`);
         }
         
-        const eventData = await eventRes.json();
+        const eventResponse = await eventRes.json();
+        console.log("📦 Event API response:", eventResponse);
+        
+        // API returns: {success: true, data: {event: {...}}}
+        const eventData = eventResponse.data || eventResponse;
         
         // Fetch participants
         const participantsRes = await fetch(`/api/events/${id}/participants`);
-        const participantsData = participantsRes.ok ? await participantsRes.json() : { participants: [] };
+        const participantsResponse = participantsRes.ok ? await participantsRes.json() : { participants: [] };
+        const participantsData = participantsResponse.data || participantsResponse;
         
         console.log("✅ Event data:", {
           id: eventData.event?.id,
