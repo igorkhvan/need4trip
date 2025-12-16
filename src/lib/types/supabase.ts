@@ -835,6 +835,36 @@ export type Database = {
           },
         ]
       }
+      vehicle_types: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name_en: string
+          name_ru: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id: string
+          is_active?: boolean
+          name_en: string
+          name_ru: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name_en?: string
+          name_ru?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

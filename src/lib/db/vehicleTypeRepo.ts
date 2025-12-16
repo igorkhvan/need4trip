@@ -47,7 +47,7 @@ const vehicleTypesCache = new StaticCache<VehicleType>(
     }
 
     const { data, error } = await supabase
-      .from(table as any) // Table not in generated types yet
+      .from(table)
       .select("*")
       .eq("is_active", true)
       .order("display_order", { ascending: true });
@@ -57,7 +57,7 @@ const vehicleTypesCache = new StaticCache<VehicleType>(
       throw new InternalError("Failed to load vehicle types", error);
     }
 
-    return ((data || []) as any[]).map(mapDbToVehicleType);
+    return (data || []).map(mapDbToVehicleType);
   },
   (type) => type.id // Key extractor
 );
