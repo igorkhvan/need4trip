@@ -84,7 +84,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
 
         <div className="mt-8 border-t border-[#E5E7EB] pt-8 text-center">
           <p className="text-sm text-[#6B7280]">
-            © {new Date().getFullYear()} Need4Trip · бета-версия
+            © {new Date().getFullYear()} Need4Trip · бета-версия · Made in KZ 🇰🇿
           </p>
         </div>
       </div>
