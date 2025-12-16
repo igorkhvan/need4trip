@@ -189,13 +189,29 @@ export default function ProfilePage() {
 
   const loadBrands = async () => {
     try {
-      const res = await fetch('/api/car-brands');
-      const data = await res.json();
-      if (data.brands) {
-        setBrands(data.brands.map((brand: CarBrand) => ({
-          id: brand.id,
-          name: brand.name
-        })));
+      const [brandsRes, typesRes] = await Promise.all([
+        fetch('/api/car-brands'),
+        fetch('/api/vehicle-types'),
+      ]);
+      
+      if (brandsRes.ok) {
+        const brandsData = await brandsRes.json();
+        if (brandsData.brands) {
+          setBrands(brandsData.brands.map((brand: CarBrand) => ({
+            id: brand.id,
+            name: brand.name
+          })));
+        }
+      }
+      
+      if (typesRes.ok) {
+        const typesData = await typesRes.json();
+        console.log('[Profile] Vehicle types loaded:', typesData);
+        if (typesData.vehicleTypes) {
+          setVehicleTypes(typesData.vehicleTypes);
+        }
+      } else {
+        console.error('[Profile] Failed to load vehicle types:', typesRes.status);
       }
     } catch (error) {
       console.error('[loadBrands] Error:', error);
