@@ -2,6 +2,7 @@
  * Clubs List Page
  * 
  * Список всех клубов с поиском и фильтром по городу
+ * Использует useLoadingTransition для плавных переходов
  */
 
 "use client";
@@ -13,12 +14,14 @@ import { ClubCard } from "@/components/clubs/club-card";
 import { CreateClubButton } from "@/components/clubs/create-club-button";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { Pagination } from "@/components/ui/pagination";
+import { useLoadingTransition } from "@/hooks/use-loading-transition";
+import { ClubCardSkeleton } from "@/components/ui/skeletons";
+import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import type { City } from "@/lib/types/city";
 import type { Club } from "@/lib/types/club";
 
 export default function ClubsPage() {
   const [clubs, setClubs] = useState<(Club & { memberCount?: number; eventCount?: number })[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
@@ -26,16 +29,26 @@ export default function ClubsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalClubs, setTotalClubs] = useState(0);
   const itemsPerPage = 12;
+  
+  // Use loading transition hook for smooth UX
+  const { isPending, showLoading, startTransition } = useLoadingTransition(300);
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  // Load clubs
+  // Load clubs with transition
   useEffect(() => {
     setCurrentPage(1); // Reset to first page when filters change
-    loadClubs(1);
+    startTransition(() => {
+      loadClubs(1);
+    });
   }, [selectedCityId, searchQuery]);
 
   // Load clubs when page changes
   useEffect(() => {
-    loadClubs(currentPage);
+    if (currentPage !== 1) {
+      startTransition(() => {
+        loadClubs(currentPage);
+      });
+    }
   }, [currentPage]);
 
   // Check authentication
@@ -47,7 +60,6 @@ export default function ClubsPage() {
   }, []);
 
   const loadClubs = async (page: number) => {
-    setLoading(true);
     try {
       let url = `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/clubs`;
       const params = new URLSearchParams();
@@ -74,7 +86,7 @@ export default function ClubsPage() {
       setClubs([]);
       setTotalClubs(0);
     } finally {
-      setLoading(false);
+      setInitialLoad(false);
     }
   };
 
@@ -222,13 +234,18 @@ export default function ClubsPage() {
         )}
 
         {/* Список клубов */}
-        {loading ? (
-          <div className="py-16 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[var(--color-primary)]"></div>
-            <p className="mt-4 text-[#6B7280]">Загрузка...</p>
+        {initialLoad ? (
+          // Initial loading skeleton
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ClubCardSkeleton key={i} />
+            ))}
           </div>
         ) : clubs.length > 0 ? (
           <>
+            {/* Show delayed spinner during transitions */}
+            <DelayedSpinner show={showLoading} className="mb-4" />
+            
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {clubs.map((club) => (
                 <ClubCard key={club.id} club={club} />

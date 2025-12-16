@@ -24,6 +24,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { Tabs } from "@/components/ui/tabs";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
 import { CreateEventButton } from "@/components/events/create-event-button";
+import { useLoadingTransition } from "@/hooks/use-loading-transition";
+import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { Event } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
@@ -51,6 +53,9 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
   const itemsPerPage = 12; // Fixed items per page matching design
   const [categories, setCategories] = useState<EventCategoryDto[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  
+  // Use loading transition for smooth filter/pagination changes
+  const { isPending, showLoading, startTransition } = useLoadingTransition(300);
 
   // Load categories from API
   useEffect(() => {
@@ -266,7 +271,12 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           { id: "my", label: "Мои события", hidden: !currentUserId },
         ]}
         activeTab={activeTab}
-        onChange={(tabId) => setActiveTab(tabId as TabType)}
+        onChange={(tabId) => {
+          startTransition(() => {
+            setActiveTab(tabId as TabType);
+            setCurrentPage(1);
+          });
+        }}
       />
 
       {/* Search */}
@@ -299,8 +309,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
             <Select
               value={filterCategory}
               onValueChange={(value) => {
-                setFilterCategory(value);
-                setCurrentPage(1);
+                startTransition(() => {
+                  setFilterCategory(value);
+                  setCurrentPage(1);
+                });
               }}
             >
               <SelectTrigger className="h-10">
@@ -323,8 +335,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
             <Select
               value={filterCity}
               onValueChange={(value) => {
-                setFilterCity(value);
-                setCurrentPage(1);
+                startTransition(() => {
+                  setFilterCity(value);
+                  setCurrentPage(1);
+                });
               }}
             >
               <SelectTrigger className="h-10">
@@ -347,8 +361,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
             <Select
               value={filterPrice}
               onValueChange={(value: PriceFilter) => {
-                setFilterPrice(value);
-                setCurrentPage(1);
+                startTransition(() => {
+                  setFilterPrice(value);
+                  setCurrentPage(1);
+                });
               }}
             >
               <SelectTrigger className="h-10">
@@ -365,7 +381,9 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           {/* Sort by */}
           <div className="space-y-1">
             <label className="text-[13px] text-[#6B7280]">Сортировка</label>
-            <Select value={sortBy} onValueChange={(value: SortBy) => setSortBy(value)}>
+            <Select value={sortBy} onValueChange={(value: SortBy) => {
+              startTransition(() => setSortBy(value));
+            }}>
               <SelectTrigger className="h-10">
                 <SelectValue placeholder="По дате" />
               </SelectTrigger>
@@ -386,6 +404,9 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
         </div>
       )}
 
+      {/* Delayed loading spinner */}
+      <DelayedSpinner show={showLoading} className="mb-4" />
+      
       {/* Events Grid */}
       {paginatedEvents.length > 0 ? (
         <>
@@ -478,8 +499,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={(page) => {
-                setCurrentPage(page);
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                startTransition(() => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                });
               }}
             />
           )}
