@@ -23,6 +23,16 @@ import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { Trash2 } from "lucide-react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   EventCustomFieldSchema,
   EventCustomFieldType,
   VehicleTypeRequirement,
@@ -144,6 +154,7 @@ export function EventForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingRules, setIsGeneratingRules] = useState(false);
+  const [showAiConfirmDialog, setShowAiConfirmDialog] = useState(false);
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
@@ -297,9 +308,9 @@ export function EventForm({
     };
   };
 
-  const handleGenerateRules = async () => {
-    // Prevent if already generating or missing required fields
-    if (isGeneratingRules || !title.trim() || !categoryId || !cityId) {
+  const handleAiButtonClick = () => {
+    // Validate required fields first
+    if (!title.trim() || !categoryId || !cityId) {
       if (!title.trim()) {
         setFieldErrors(prev => ({ ...prev, title: "Укажите название события" }));
       }
@@ -309,6 +320,16 @@ export function EventForm({
       if (!cityId) {
         setFieldErrors(prev => ({ ...prev, cityId: "Выберите город" }));
       }
+      return;
+    }
+    
+    // Show confirmation dialog
+    setShowAiConfirmDialog(true);
+  };
+
+  const handleGenerateRules = async () => {
+    // Prevent if already generating
+    if (isGeneratingRules) {
       return;
     }
 
@@ -895,7 +916,7 @@ export function EventForm({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={handleGenerateRules}
+              onClick={handleAiButtonClick}
               disabled={disabled || isGeneratingRules || isSubmitting}
             >
               {isGeneratingRules ? (
@@ -1097,6 +1118,41 @@ export function EventForm({
       
       {/* ⚡ Billing v2.0: Paywall Modal */}
       {PaywallModalComponent}
+
+      {/* 🤖 AI Generation Confirmation Dialog */}
+      <AlertDialog open={showAiConfirmDialog} onOpenChange={setShowAiConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Генерация правил с помощью ИИ</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-left">
+              <p>
+                Перед генерацией <strong>рекомендуется заполнить всю форму</strong>, так как ИИ учитывает следующие данные:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Название и описание события</li>
+                <li>Категорию и тип автомобиля</li>
+                <li>Допустимые марки авто</li>
+                <li>Дополнительные поля регистрации</li>
+                <li>Платность события</li>
+              </ul>
+              <p className="text-sm text-[#6B7280]">
+                Чем больше информации вы укажете, тем более точными и релевантными будут сгенерированные правила.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowAiConfirmDialog(false);
+                handleGenerateRules();
+              }}
+            >
+              Продолжить генерацию
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
