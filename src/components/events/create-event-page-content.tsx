@@ -64,6 +64,15 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
     });
     if (!res.ok) {
       await handleApiError(res);
+      return;
+    }
+    
+    // Redirect to created event
+    const data = await res.json();
+    if (data.event?.id) {
+      router.push(`/events/${data.event.id}`);
+    } else {
+      router.push('/events');
     }
   };
 

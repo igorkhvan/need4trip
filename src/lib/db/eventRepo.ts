@@ -20,7 +20,7 @@ export async function listEvents(page = 1, limit = 12): Promise<{
   const { data, error, count } = await supabase
     .from(table)
     .select("*", { count: "exact" })
-    .order("date_time", { ascending: true })
+    .order("date_time", { ascending: false })
     .range(from, to);
 
   if (error) {
@@ -55,7 +55,7 @@ export async function listEventsWithOwner(page = 1, limit = 12): Promise<{
   const { data, error, count } = await supabase
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
-    .order("date_time", { ascending: true })
+    .order("date_time", { ascending: false })
     .range(from, to);
 
   if (error) {
