@@ -472,3 +472,83 @@ export async function listClubEvents(
     hasMore: (count ?? 0) > to + 1,
   };
 }
+
+/**
+ * List public events (for unauthenticated users or homepage)
+ */
+export async function listPublicEvents(page = 1, limit = 100): Promise<{
+  data: DbEventWithOwner[];
+  total: number;
+  hasMore: boolean;
+}> {
+  ensureClient();
+  if (!supabase) return { data: [], total: 0, hasMore: false };
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
+    .from(table)
+    .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
+    .eq("visibility", "public")
+    .order("date_time", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    log.error("Failed to list public events", { error });
+    throw new InternalError("Failed to list public events", error);
+  }
+
+  const events = (data ?? []).map((row: any) => ({
+    ...row,
+    custom_fields_schema: row.custom_fields_schema ?? [],
+  })) as unknown as DbEventWithOwner[];
+
+  return {
+    data: events,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
+}
+
+/**
+ * List events created by a specific user
+ */
+export async function listEventsByCreator(
+  userId: string,
+  page = 1,
+  limit = 100
+): Promise<{
+  data: DbEventWithOwner[];
+  total: number;
+  hasMore: boolean;
+}> {
+  ensureClient();
+  if (!supabase) return { data: [], total: 0, hasMore: false };
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
+    .from(table)
+    .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
+    .eq("created_by", userId)
+    .order("date_time", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    log.error("Failed to list events by creator", { userId, error });
+    throw new InternalError("Failed to list events by creator", error);
+  }
+
+  const events = (data ?? []).map((row: any) => ({
+    ...row,
+    custom_fields_schema: row.custom_fields_schema ?? [],
+  })) as unknown as DbEventWithOwner[];
+
+  return {
+    data: events,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
+}

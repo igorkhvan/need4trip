@@ -3,6 +3,8 @@ import {
   deleteEvent as deleteEventRecord,
   getEventById,
   listEventsWithOwner,
+  listPublicEvents,
+  listEventsByCreator,
   updateEvent as updateEventRecord,
   replaceAllowedBrands,
   getAllowedBrands,
@@ -115,32 +117,61 @@ export async function listEventsSafe(page = 1, limit = 12): Promise<{
 }
 
 export async function listVisibleEventsForUser(userId: string | null): Promise<Event[]> {
-  const events = await listEventsSafe();
-  const filtered = await (async () => {
-    if (!userId) {
-      return events.filter((e) => e.visibility === "public");
-    }
-    let participantEventIds: string[] = [];
-    let accessEventIds: string[] = [];
-    try {
-      participantEventIds = await listEventIdsForUser(userId);
-    } catch (err) {
+  // If no user, load only public events
+  if (!userId) {
+    const result = await listPublicEvents(1, 100); // Load first 100 public events
+    const mapped = result.data.map(mapDbEventWithOwnerToDomain);
+    
+    const eventIds = mapped.map((e) => e.id);
+    const [counts, allowedBrandsMap, eventsWithHydration] = await Promise.all([
+      getParticipantsCountByEventIds(eventIds),
+      getAllowedBrandsByEventIds(eventIds),
+      hydrateCitiesAndCurrencies(mapped),
+      hydrateEventCategories(mapped),
+    ]);
+
+    return eventsWithHydration.map((event) => ({
+      ...event,
+      allowedBrands: allowedBrandsMap.get(event.id) ?? [],
+      participantsCount: counts[event.id] ?? 0,
+    }));
+  }
+
+  // For authenticated users, load multiple event types in parallel
+  const [publicResult, ownedResult, participantEventIds, accessEventIds] = await Promise.all([
+    listPublicEvents(1, 100),
+    listEventsByCreator(userId, 1, 100),
+    listEventIdsForUser(userId).catch((err) => {
       console.error("[listVisibleEventsForUser] Failed to load participant events", err);
-    }
-    try {
-      accessEventIds = await listAccessibleEventIds(userId);
-    } catch (err) {
+      return [];
+    }),
+    listAccessibleEventIds(userId).catch((err) => {
       console.error("[listVisibleEventsForUser] Failed to load access events", err);
-    }
-    const allowedIds = new Set([...participantEventIds, ...accessEventIds]);
-    return events.filter(
-      (e) => e.visibility === "public" || e.createdByUserId === userId || allowedIds.has(e.id)
-    );
-  })();
+      return [];
+    }),
+  ]);
+
+  // Combine public and owned events
+  const allEvents = [
+    ...publicResult.data.map(mapDbEventWithOwnerToDomain),
+    ...ownedResult.data.map(mapDbEventWithOwnerToDomain),
+  ];
+
+  // Remove duplicates by ID
+  const uniqueEvents = Array.from(
+    new Map(allEvents.map((e) => [e.id, e])).values()
+  );
+
+  // For non-public events, check if user has access
+  const allowedIds = new Set([...participantEventIds, ...accessEventIds]);
+  const filtered = uniqueEvents.filter(
+    (e) => 
+      e.visibility === "public" || 
+      e.createdByUserId === userId || 
+      allowedIds.has(e.id)
+  );
 
   const eventIds = filtered.map((e) => e.id);
-
-  // Batch load all related data in parallel
   const [counts, allowedBrandsMap, eventsWithHydration] = await Promise.all([
     getParticipantsCountByEventIds(eventIds),
     getAllowedBrandsByEventIds(eventIds),
@@ -148,14 +179,11 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
     hydrateEventCategories(filtered),
   ]);
 
-  // Combine all hydrated data
-  const hydrated = eventsWithHydration.map((event) => ({
+  return eventsWithHydration.map((event) => ({
     ...event,
     allowedBrands: allowedBrandsMap.get(event.id) ?? [],
     participantsCount: counts[event.id] ?? 0,
   }));
-
-  return hydrated;
 }
 
 async function getParticipantsCountByEventIds(eventIds: string[]): Promise<Record<string, number>> {
