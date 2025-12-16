@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 
 import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-react";
@@ -8,9 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Hero } from "@/components/landing/hero";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { getCurrentUser } from "@/lib/auth/currentUser";
-import { listVisibleEventsForUser } from "@/lib/services/events";
-import { getCategoryLabel } from "@/lib/utils/eventCategories";
-import { formatDate } from "@/lib/utils/dates";
+import { UpcomingEventsAsync } from "./_components/upcoming-events-async";
+import { UpcomingEventsSkeleton } from "./_components/upcoming-events-skeleton";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -18,15 +17,7 @@ const inter = Inter({
   display: "swap",
 });
 
-type EventSummary = {
-  id: string;
-  title: string;
-  startsAt: string;
-  typeLabel?: string | null;
-  description?: string | null;
-  participantsCount?: number | null;
-  maxParticipants?: number | null;
-};
+// Event types moved to async component
 
 const features = [
   {
@@ -141,106 +132,28 @@ function Features() {
   );
 }
 
-function UpcomingEventsSection({ events }: { events: EventSummary[] }) {
-  return (
-    <section className="bg-white py-24 md:py-32">
-      <div className="page-container">
-        <div className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <h2 className="heading-section mb-4">Ближайшие события</h2>
-            <p className="text-lead">Присоединяйтесь к активным автомобильным сообществам</p>
-          </div>
-          <Button size="lg" variant="secondary" asChild>
-            <Link href="/events">Все события</Link>
-          </Button>
-        </div>
-
-        {events.length === 0 ? (
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white px-4 py-12 text-center text-sm text-[#6B7280] shadow-sm">
-            Пока нет ближайших событий.
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {events.map((event) => (
-              <Link href={`/events/${event.id}`} key={event.id}>
-                <Card className="h-full cursor-pointer border-[#E5E7EB] bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
-                  <CardContent className="p-8">
-                    <div className="mb-4 flex items-start justify-between">
-                      <h4 className="flex-1 text-xl font-semibold leading-tight text-[#111827]">
-                        {event.title}
-                      </h4>
-                      <span className="ml-2 whitespace-nowrap rounded-full bg-[#F7F7F8] px-3 py-1 text-[13px] font-medium text-[#6B7280]">
-                        {event.typeLabel ?? "Событие"}
-                      </span>
-                    </div>
-                    <div className="space-y-3 text-[15px] text-[#6B7280]">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="h-5 w-5 text-[#9CA3AF]" />
-                        <span>{formatDate(event.startsAt)}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-[#9CA3AF]" />
-                        <span>
-                          {event.participantsCount ?? 0}
-                          {event.maxParticipants ? ` / ${event.maxParticipants}` : ""} участников
-                        </span>
-                      </div>
-                      {event.description && (
-                        <div className="flex items-start gap-3">
-                          <Car className="mt-1 h-5 w-5 flex-shrink-0 text-[#9CA3AF]" />
-                          <span>
-                            {event.description.slice(0, 80)}
-                            {event.description.length > 80 ? "..." : ""}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
+// UpcomingEventsSection moved to async component for streaming SSR
 
 export default async function HomePage() {
+  // Загружаем только критичные данные сразу
   const currentUser = await getCurrentUser();
   const isAuthenticated = !!currentUser;
-  
-  // Get visible events for the user (public + their own + accessible)
-  const eventsData = await listVisibleEventsForUser(currentUser?.id ?? null);
-  
-  // Show only upcoming public events on homepage (limit to 3)
-  const now = new Date();
-  const upcomingPublicEvents = eventsData
-    .filter((e) => {
-      const eventDate = new Date(e.dateTime);
-      return e.visibility === "public" && eventDate >= now;
-    })
-    .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
-    .slice(0, 3);
-  
-  const events: EventSummary[] = upcomingPublicEvents.map((e) => ({
-    id: e.id,
-    title: e.title,
-    startsAt: e.dateTime,
-    typeLabel: e.category ? getCategoryLabel(e.category) : "Событие",
-    description: e.description ?? null,
-    participantsCount: e.participantsCount ?? null,
-    maxParticipants: e.maxParticipants ?? null,
-  }));
 
   return (
     <div
       className={`${inter.className} relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] min-h-screen bg-white text-[#111827]`}
     >
+      {/* Критичный контент - показываем сразу */}
       <Hero isAuthenticated={isAuthenticated} />
       <HowItWorksSection />
       <Features />
-      <UpcomingEventsSection events={events} />
+      
+      {/* Async контент - загружаем параллельно с Suspense */}
+      <Suspense fallback={<UpcomingEventsSkeleton />}>
+        <UpcomingEventsAsync />
+      </Suspense>
+      
+      {/* CTA секция */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#E86223] py-24 text-center text-white md:py-32">
         <div
           className="absolute inset-0 opacity-50"

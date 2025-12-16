@@ -150,7 +150,7 @@ async function hydrateClubWithCities(club: Club): Promise<Club> {
   return hydrated;
 }
 
-function mapDbClubMemberWithUserToDomain(db: DbClubMemberWithUser): ClubMemberWithUser {
+export function mapDbClubMemberWithUserToDomain(db: DbClubMemberWithUser): ClubMemberWithUser {
   return {
     clubId: db.club_id,
     userId: db.user_id,

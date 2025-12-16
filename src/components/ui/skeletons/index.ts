@@ -33,3 +33,6 @@ export {
   TableSkeleton,
   ParticipantsTableSkeleton,
 } from "./table-skeleton";
+
+export { ClubMembersSkeleton } from "./club-members-skeleton";
+export { ClubSubscriptionSkeleton } from "./club-subscription-skeleton";
