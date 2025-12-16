@@ -639,9 +639,14 @@ export function EventForm({
                   <Checkbox
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
-                    disabled={disabled}
+                    disabled={disabled || !club}
                   />
                   Клубное событие
+                  {!club && (
+                    <span className="ml-2 text-xs text-[#6B7280]">
+                      (доступно только для клубов)
+                    </span>
+                  )}
                 </label>
               </div>
             </div>
