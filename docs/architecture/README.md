@@ -30,6 +30,13 @@
 - Input validation
 - Error handling
 
+### 4. [Caching Strategy](./CACHING_STRATEGY_ANALYSIS.md)
+Стратегия кэширования для производительности:
+- StaticCache класс
+- Справочники (brands, currencies, categories)
+- Club Plans с FREE в БД
+- Performance metrics
+
 ---
 
 ## 🎯 Ключевые принципы архитектуры
