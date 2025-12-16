@@ -80,14 +80,12 @@ export function ParticipantsTableClient({
           toast({ 
             title: "Ошибка", 
             description: "Недостаточно прав / войдите через Telegram",
-            variant: "destructive" 
           });
         } else {
           const body = await res.json().catch(() => ({}));
           toast({ 
             title: "Ошибка", 
             description: body?.message || "Не удалось удалить участника",
-            variant: "destructive" 
           });
         }
         return;
@@ -105,7 +103,6 @@ export function ParticipantsTableClient({
       toast({ 
         title: "Ошибка", 
         description: e instanceof Error ? e.message : "Произошла ошибка",
-        variant: "destructive" 
       });
     }
   };

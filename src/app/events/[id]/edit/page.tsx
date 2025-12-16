@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,7 +13,7 @@ import { VehicleTypeRequirement, Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 
 // Динамический импорт формы события для code splitting
-const EventForm = dynamic(
+const EventForm = dynamicImport(
   () => import("@/components/events/event-form").then((mod) => ({ default: mod.EventForm })),
   { ssr: false }
 );

@@ -62,7 +62,6 @@ export function ClubMembersClient({
         toast({
           title: "Ошибка",
           description: errorData?.message || "Не удалось удалить участника",
-          variant: "destructive",
         });
         return;
       }
@@ -82,7 +81,6 @@ export function ClubMembersClient({
       toast({
         title: "Ошибка",
         description: error instanceof Error ? error.message : "Произошла ошибка",
-        variant: "destructive",
       });
     }
   };
@@ -111,7 +109,6 @@ export function ClubMembersClient({
         toast({
           title: "Ошибка",
           description: errorData?.message || "Не удалось изменить роль",
-          variant: "destructive",
         });
         return;
       }
@@ -133,7 +130,6 @@ export function ClubMembersClient({
       toast({
         title: "Ошибка",
         description: error instanceof Error ? error.message : "Произошла ошибка",
-        variant: "destructive",
       });
     }
   };
