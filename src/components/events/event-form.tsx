@@ -915,7 +915,6 @@ export function EventForm({
             <Button
               type="button"
               variant="secondary"
-              size="sm"
               onClick={handleAiButtonClick}
               disabled={disabled || isGeneratingRules || isSubmitting}
             >
