@@ -67,13 +67,13 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
       return;
     }
     
-    // Redirect to created event
+    // Redirect to events list with force refresh to show new event
     const data = await res.json();
-    if (data.event?.id) {
-      router.push(`/events/${data.event.id}`);
-    } else {
-      router.push('/events');
-    }
+    console.log('[CreateEvent] Event created:', data.event?.id);
+    
+    // Use replace to prevent back button issues + force refresh
+    router.push('/events');
+    router.refresh();
   };
 
   // Show loading or empty state while auth check happens

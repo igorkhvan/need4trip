@@ -26,6 +26,15 @@ export async function handleApiError(response: Response): Promise<never> {
   if (response.status === 400) {
     throw new Error(body?.message || "Ошибка валидации");
   }
+
+  // 402 Payment Required - PaywallError
+  if (response.status === 402) {
+    // Extract message, handle both string and object formats
+    const message = typeof body?.message === 'string' 
+      ? body.message 
+      : "Эта функция доступна на платных тарифах";
+    throw new Error(message);
+  }
   
   // Общая ошибка
   throw new Error(
