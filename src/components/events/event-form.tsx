@@ -149,15 +149,18 @@ export function EventForm({
     [customFields]
   );
 
-  // Auto-fill maxParticipants with plan limit for new events
+  // Track if user has interacted with maxParticipants field
+  const [hasUserSetMaxParticipants, setHasUserSetMaxParticipants] = useState(false);
+  
+  // Auto-fill maxParticipants with plan limit for new events (only once, on initial load)
   useEffect(() => {
-    if (mode === 'create' && maxParticipants === null && clubLimits && !loadingPlan) {
+    if (mode === 'create' && maxParticipants === null && clubLimits && !loadingPlan && !hasUserSetMaxParticipants) {
       // Set default maxParticipants to plan limit
       if (clubLimits.maxEventParticipants !== null && clubLimits.maxEventParticipants > 0) {
         setMaxParticipants(clubLimits.maxEventParticipants);
       }
     }
-  }, [mode, maxParticipants, clubLimits, loadingPlan]);
+  }, [mode, maxParticipants, clubLimits, loadingPlan, hasUserSetMaxParticipants]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -545,6 +548,7 @@ export function EventForm({
                   max={maxAllowedParticipants === null ? undefined : maxAllowedParticipants}
                   value={maxParticipants ?? ""}
                   onChange={(e) => {
+                    setHasUserSetMaxParticipants(true); // Mark as user-edited
                     const digitsOnly = e.target.value.replace(/\D/g, "");
                     setMaxParticipants(digitsOnly ? Number(digitsOnly) : null);
                     if (fieldErrors.maxParticipants) {
@@ -630,12 +634,12 @@ export function EventForm({
                   <Checkbox
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
-                    disabled={disabled || !club}
+                    disabled={disabled}
                   />
                   Клубное событие
                   {!club && (
                     <span className="ml-2 text-xs text-[#6B7280]">
-                      (доступно только для клубов)
+                      (требуется активная подписка клуба)
                     </span>
                   )}
                 </label>

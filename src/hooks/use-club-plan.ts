@@ -61,22 +61,59 @@ export function useClubPlan(clubId: string | null | undefined): UseClubPlanRetur
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // If no clubId, return Free plan immediately
+    // If no clubId, fetch Free plan from API (to get actual DB values)
     if (!clubId) {
-      setPlan({
-        planId: "free",
-        planTitle: "Free",
-        subscription: null,
-        limits: {
-          maxMembers: null,
-          maxEventParticipants: 15,
-          allowPaidEvents: false,
-          allowCsvExport: false,
-        },
-      });
-      setLoading(false);
-      setError(null);
-      return;
+      let mounted = true;
+      
+      const fetchFreePlan = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const res = await fetch('/api/clubs/personal/current-plan');
+          
+          if (!res.ok) {
+            throw new Error('Failed to fetch Free plan');
+          }
+          
+          const data = await res.json();
+          
+          if (!mounted) return;
+          
+          if (data.success) {
+            setPlan(data.data);
+          } else {
+            throw new Error(data.error?.message || 'Failed to fetch Free plan');
+          }
+        } catch (err) {
+          if (!mounted) return;
+          
+          log.error("Failed to fetch Free plan", { error: err });
+          
+          // Fallback to hardcoded defaults only on error
+          setPlan({
+            planId: "free",
+            planTitle: "Free",
+            subscription: null,
+            limits: {
+              maxMembers: null,
+              maxEventParticipants: 15, // Last resort fallback
+              allowPaidEvents: false,
+              allowCsvExport: false,
+            },
+          });
+        } finally {
+          if (mounted) {
+            setLoading(false);
+          }
+        }
+      };
+      
+      fetchFreePlan();
+      
+      return () => {
+        mounted = false;
+      };
     }
 
     // Fetch club plan from API
