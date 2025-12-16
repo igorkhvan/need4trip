@@ -117,7 +117,9 @@ export function ParticipantForm({
       if (!field.required) return;
 
       if (field.type === "number") {
-        if (value === "" || value === null || Number.isNaN(Number(value))) {
+        // Для обязательных числовых полей: 0 считается как пустое значение
+        const numValue = Number(value);
+        if (value === "" || value === null || Number.isNaN(numValue) || numValue === 0) {
           issues[field.id] = "Укажите значение";
         }
       } else if (field.type === "enum" || field.type === "text") {
@@ -311,7 +313,7 @@ export function ParticipantForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
       {event?.isPaid && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
@@ -364,8 +366,6 @@ export function ParticipantForm({
               <SelectItem value="tail">Замыкающий</SelectItem>
             </SelectContent>
           </Select>
-          <div className="min-h-[28px] text-left text-[13px] text-[#6B7280]">
-          </div>
         </div>
       </div>
 
