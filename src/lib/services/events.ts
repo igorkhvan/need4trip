@@ -373,6 +373,37 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
         isPaidEvent: parsed.isPaid,
       },
     });
+  } else {
+    // Personal events (no club) - enforce FREE_LIMITS
+    const { FREE_LIMITS } = await import("@/lib/types/billing");
+    const { PaywallError } = await import("@/lib/errors");
+    
+    // Check paid events limit
+    if (parsed.isPaid && !FREE_LIMITS.allowPaidEvents) {
+      throw new PaywallError({
+        message: "Платные события доступны только на платных тарифах",
+        reason: "PAID_EVENTS_NOT_ALLOWED",
+        currentPlanId: "free",
+        requiredPlanId: "club_50",
+        meta: {
+          feature: "Платные события",
+        },
+      });
+    }
+    
+    // Check participants limit
+    if (parsed.maxParticipants && parsed.maxParticipants > FREE_LIMITS.maxEventParticipants) {
+      throw new PaywallError({
+        message: `Превышен лимит участников (${parsed.maxParticipants} > ${FREE_LIMITS.maxEventParticipants})`,
+        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
+        currentPlanId: "free",
+        requiredPlanId: "club_50",
+        meta: {
+          requested: parsed.maxParticipants,
+          limit: FREE_LIMITS.maxEventParticipants,
+        },
+      });
+    }
   }
   
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
@@ -474,6 +505,56 @@ export async function updateEvent(
       throw new ValidationError(
         validation.error || "Нельзя удалять существующие поля - они используются участниками"
       );
+    }
+  }
+
+  // ⚡ Billing v2.0 Enforcement for updates
+  // Check if changes violate plan limits
+  const finalMaxParticipants = parsed.maxParticipants !== undefined 
+    ? parsed.maxParticipants 
+    : existing.max_participants;
+  const finalIsPaid = parsed.isPaid !== undefined 
+    ? parsed.isPaid 
+    : existing.is_paid;
+  
+  if (existing.club_id) {
+    // Club event - use enforceClubAction
+    await enforceClubAction({
+      clubId: existing.club_id,
+      action: finalIsPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
+      context: {
+        eventParticipantsCount: finalMaxParticipants ?? undefined,
+        isPaidEvent: finalIsPaid,
+      },
+    });
+  } else {
+    // Personal event - enforce FREE_LIMITS
+    const { FREE_LIMITS } = await import("@/lib/types/billing");
+    const { PaywallError } = await import("@/lib/errors");
+    
+    if (finalIsPaid && !FREE_LIMITS.allowPaidEvents) {
+      throw new PaywallError({
+        message: "Платные события доступны только на платных тарифах",
+        reason: "PAID_EVENTS_NOT_ALLOWED",
+        currentPlanId: "free",
+        requiredPlanId: "club_50",
+        meta: {
+          feature: "Платные события",
+        },
+      });
+    }
+    
+    if (finalMaxParticipants && finalMaxParticipants > FREE_LIMITS.maxEventParticipants) {
+      throw new PaywallError({
+        message: `Превышен лимит участников (${finalMaxParticipants} > ${FREE_LIMITS.maxEventParticipants})`,
+        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
+        currentPlanId: "free",
+        requiredPlanId: "club_50",
+        meta: {
+          requested: finalMaxParticipants,
+          limit: FREE_LIMITS.maxEventParticipants,
+        },
+      });
     }
   }
 
