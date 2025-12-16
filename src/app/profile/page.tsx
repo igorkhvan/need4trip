@@ -330,7 +330,7 @@ export default function ProfilePage() {
     };
     
     // Find brand name for optimistic UI
-    const selectedBrand = brands.find(b => b.value === newCar.carBrandId);
+    const selectedBrand = brands.find(b => b.id === newCar.carBrandId);
     const tempId = `temp-${Date.now()}`;
     
     // Optimistic update: add car immediately
@@ -338,7 +338,7 @@ export default function ProfilePage() {
       id: tempId,
       userId: '', // Will be set by server
       carBrandId: newCar.carBrandId,
-      carBrand: selectedBrand ? { id: newCar.carBrandId, name: selectedBrand.label, slug: null } : undefined,
+      carBrand: selectedBrand ? { id: newCar.carBrandId, name: selectedBrand.name, slug: null } : undefined,
       type: newCar.type as CarType,
       plate: newCar.plate.trim() || null,
       color: newCar.color.trim() || null,
