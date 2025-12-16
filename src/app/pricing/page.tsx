@@ -12,14 +12,9 @@ import { PricingPlan } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
 import { PricingCardButton } from "@/components/pricing/pricing-card-button";
 
-interface PricingResponse {
-  plans: PricingPlan[];
-  free: PricingPlan;
-}
-
 export default function PricingPage() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<PricingResponse | null>(null);
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +23,7 @@ export default function PricingPage() {
       .then((response) => {
         const json = response.data || response;
         if (json.plans) {
-          setData(json);
+          setPlans(json.plans);
         } else {
           setError("Invalid response");
         }
@@ -48,15 +43,13 @@ export default function PricingPage() {
     );
   }
 
-  if (error || !data) {
+  if (error || plans.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-destructive">Ошибка загрузки тарифов</p>
       </div>
     );
   }
-
-  const allPlans = [data.free, ...data.plans];
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -68,7 +61,7 @@ export default function PricingPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {allPlans.map((plan) => (
+        {plans.map((plan) => (
           <div
             key={plan.id}
             className="border rounded-lg p-6 hover:shadow-lg transition-shadow"

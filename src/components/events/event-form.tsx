@@ -87,6 +87,7 @@ function buildEmptyField(order: number): EventCustomFieldSchema {
 }
 
 export function EventForm({
+  mode,
   initialValues,
   onSubmit,
   backHref,
@@ -148,6 +149,16 @@ export function EventForm({
     () => [...customFields].sort((a, b) => a.order - b.order),
     [customFields]
   );
+
+  // Auto-fill maxParticipants with plan limit for new events
+  useEffect(() => {
+    if (mode === 'create' && maxParticipants === null && clubLimits && !loadingPlan) {
+      // Set default maxParticipants to plan limit
+      if (clubLimits.maxEventParticipants !== null && clubLimits.maxEventParticipants > 0) {
+        setMaxParticipants(clubLimits.maxEventParticipants);
+      }
+    }
+  }, [mode, maxParticipants, clubLimits, loadingPlan]);
 
   useEffect(() => {
     const loadData = async () => {

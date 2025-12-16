@@ -18,24 +18,19 @@ export async function GET() {
     
     log.info("GET /api/plans - Success", { count: plans.length });
     
+    // All plans including FREE are now in DB
     return NextResponse.json({
-      plans,
-      free: {
-        id: "free",
-        title: "Free",
-        priceMonthlyKzt: 0,
-        currency: "KZT",
-        maxMembers: null,
-        maxEventParticipants: 15,
-        allowPaidEvents: false,
-        allowCsvExport: false,
-      },
+      success: true,
+      data: { plans },
     });
   } catch (error) {
     log.error("GET /api/plans - Failed", { error });
     
     return NextResponse.json(
-      { error: "Failed to fetch plans" },
+      { 
+        success: false,
+        error: "Failed to fetch plans" 
+      },
       { status: 500 }
     );
   }

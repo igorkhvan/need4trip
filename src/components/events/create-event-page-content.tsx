@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
+import { PaywallModal } from "@/components/billing/paywall-modal";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamic(
@@ -20,6 +21,11 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
   
   const [club, setClub] = useState<Club | null>(null);
   const [loading, setLoading] = useState(!!clubId);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallData, setPaywallData] = useState<{
+    message: string;
+    requiredPlanId?: string;
+  } | null>(null);
   
   const { execute } = useProtectedAction(isAuthenticated);
 
@@ -63,7 +69,31 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    
     if (!res.ok) {
+      // Handle paywall error (402)
+      if (res.status === 402) {
+        try {
+          const errorData = await res.json();
+          const error = errorData.error || errorData;
+          
+          setPaywallData({
+            message: error.message || "Эта функция доступна на платных тарифах",
+            requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
+          });
+          setPaywallOpen(true);
+          return;
+        } catch (e) {
+          // If parsing fails, show generic paywall
+          setPaywallData({
+            message: "Эта функция доступна на платных тарифах",
+          });
+          setPaywallOpen(true);
+          return;
+        }
+      }
+      
+      // Handle other errors
       await handleApiError(res);
       return;
     }
@@ -93,18 +123,29 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
   const initialCityId = club?.cities?.[0]?.id ?? null;
 
   return (
-    <EventForm
-      mode="create"
-      backHref="/events"
-      submitLabel="Создать событие"
-      headerTitle={club ? `Создание события для ${club.name}` : "Создание события"}
-      headerDescription="Заполните информацию о вашей автомобильной поездке"
-      onSubmit={handleSubmit}
-      initialValues={{
-        isClubEvent: !!clubId,
-        cityId: initialCityId,
-      }}
-      club={club}
-    />
+    <>
+      <EventForm
+        mode="create"
+        backHref="/events"
+        submitLabel="Создать событие"
+        headerTitle={club ? `Создание события для ${club.name}` : "Создание события"}
+        headerDescription="Заполните информацию о вашей автомобильной поездке"
+        onSubmit={handleSubmit}
+        initialValues={{
+          isClubEvent: !!clubId,
+          cityId: initialCityId,
+        }}
+        club={club}
+      />
+      
+      {paywallData && (
+        <PaywallModal
+          isOpen={paywallOpen}
+          onClose={() => setPaywallOpen(false)}
+          message={paywallData.message}
+          requiredPlanId={paywallData.requiredPlanId}
+        />
+      )}
+    </>
   );
 }
