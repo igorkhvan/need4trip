@@ -172,7 +172,10 @@ export function EventForm({
         if (typesRes.ok) {
           const typesData = await typesRes.json();
           console.log('[EventForm] Vehicle types loaded:', typesData);
-          setVehicleTypes(typesData.vehicleTypes || []);
+          // API returns: {success: true, data: {vehicleTypes: [...]}}
+          const types = typesData.data?.vehicleTypes || typesData.vehicleTypes || [];
+          setVehicleTypes(types);
+          console.log('[EventForm] Set vehicle types:', types);
         } else {
           console.error('[EventForm] Failed to load vehicle types:', typesRes.status);
         }

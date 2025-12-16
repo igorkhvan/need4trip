@@ -207,9 +207,10 @@ export default function ProfilePage() {
       if (typesRes.ok) {
         const typesData = await typesRes.json();
         console.log('[Profile] Vehicle types loaded:', typesData);
-        if (typesData.vehicleTypes) {
-          setVehicleTypes(typesData.vehicleTypes);
-        }
+        // API returns: {success: true, data: {vehicleTypes: [...]}}
+        const types = typesData.data?.vehicleTypes || typesData.vehicleTypes || [];
+        setVehicleTypes(types);
+        console.log('[Profile] Set vehicle types:', types);
       } else {
         console.error('[Profile] Failed to load vehicle types:', typesRes.status);
       }
