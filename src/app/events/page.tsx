@@ -29,11 +29,15 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
         });
 
         if (eventsRes.ok) {
-          const data = await eventsRes.json();
+          const response = await eventsRes.json();
+          console.log('[EventsPage] Events response:', response);
+          
+          // API returns: {success: true, data: {events: [...], total: ...}}
+          const data = response.data || response;
           console.log('[EventsPage] Events data:', {
             eventsCount: data.events?.length || 0,
             total: data.total,
-            events: data.events,
+            eventIds: data.events?.map((e: any) => e.id) || [],
           });
           setEvents(data.events || []);
         } else {
