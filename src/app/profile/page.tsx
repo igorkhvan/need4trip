@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
+import { useSimpleOptimistic } from "@/hooks/use-optimistic-state";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { ProfileContentSkeleton } from "@/components/ui/skeletons";
 import { 
@@ -90,6 +91,14 @@ export default function ProfilePage() {
   });
 
   const [cars, setCars] = useState<UserCar[]>([]);
+  // Optimistic state for cars
+  const { optimisticState: optimisticCars, setOptimistic: setOptimisticCars } = 
+    useSimpleOptimistic<UserCar[]>(cars);
+  
+  // Sync optimistic state with actual state
+  useEffect(() => {
+    setOptimisticCars(cars);
+  }, [cars]);
   const [brands, setBrands] = useState<BrandSelectOption[]>([]);
   const [showAddCar, setShowAddCar] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
@@ -312,15 +321,34 @@ export default function ProfilePage() {
     setSavingCar(true);
     setCarFieldErrors({});
     
+    // Prepare payload
+    const payload = {
+      carBrandId: newCar.carBrandId,
+      type: newCar.type,
+      plate: newCar.plate.trim() || null,
+      color: newCar.color.trim() || null,
+    };
+    
+    // Find brand name for optimistic UI
+    const selectedBrand = brands.find(b => b.value === newCar.carBrandId);
+    const tempId = `temp-${Date.now()}`;
+    
+    // Optimistic update: add car immediately
+    const optimisticCar: UserCar = {
+      id: tempId,
+      userId: '', // Will be set by server
+      carBrandId: newCar.carBrandId,
+      carBrand: selectedBrand ? { id: newCar.carBrandId, name: selectedBrand.label, slug: null } : undefined,
+      type: newCar.type as CarType,
+      plate: newCar.plate.trim() || null,
+      color: newCar.color.trim() || null,
+      isPrimary: cars.length === 0, // First car is primary
+      createdAt: new Date().toISOString(),
+    };
+    
+    setOptimisticCars([...cars, optimisticCar]);
+    
     try {
-      // Prepare payload: convert empty strings to null for optional fields
-      const payload = {
-        carBrandId: newCar.carBrandId,
-        type: newCar.type,
-        plate: newCar.plate.trim() || null,
-        color: newCar.color.trim() || null,
-      };
-
       console.log('[handleAddCar] Sending payload:', payload);
 
       const res = await fetch('/api/profile/cars', {
@@ -335,8 +363,10 @@ export default function ProfilePage() {
         const errorData = await res.json().catch(() => ({}));
         console.error('[handleAddCar] API Error:', errorData);
         
-        // Extract error message from API response format
-        // API returns: { success: false, error: { code: "...", message: "..." } }
+        // Rollback optimistic update
+        setOptimisticCars(cars);
+        
+        // Extract error message
         let errorMessage = 'Не удалось добавить автомобиль';
         
         if (errorData.error && typeof errorData.error.message === 'string') {
@@ -353,13 +383,14 @@ export default function ProfilePage() {
       const data = await res.json();
       console.log('[handleAddCar] Success:', data);
       
-      // Reload cars list from server to get correct isPrimary
+      // Reload cars list from server to get correct data
       await loadCars();
       
       setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
       setShowAddCar(false);
     } catch (error) {
       console.error('[handleAddCar] Error:', error);
+      // Optimistic state already rolled back
       
       // Safe error message extraction
       let message = 'Не удалось добавить автомобиль';
@@ -503,9 +534,18 @@ export default function ProfilePage() {
 
   const confirmDeleteCar = async () => {
     if (!deleteConfirm.carId) return;
+    
+    const carIdToDelete = deleteConfirm.carId;
+    
+    // Optimistic update: remove car immediately
+    const previousCars = [...cars];
+    setOptimisticCars(cars.filter(car => car.id !== carIdToDelete));
+    
+    // Close confirm dialog immediately for better UX
+    setDeleteConfirm({ open: false, carId: null });
 
     try {
-      const res = await fetch(`/api/profile/cars?id=${deleteConfirm.carId}`, {
+      const res = await fetch(`/api/profile/cars?id=${carIdToDelete}`, {
         method: 'DELETE'
       });
 
@@ -513,17 +553,16 @@ export default function ProfilePage() {
 
       // Reload cars from server to get correct state
       await loadCars();
-      
-      // Close confirm dialog
-      setDeleteConfirm({ open: false, carId: null });
     } catch (error) {
       console.error('[confirmDeleteCar] Error:', error);
+      
+      // Rollback optimistic update
+      setOptimisticCars(previousCars);
+      
       setErrorDialog({ 
         open: true, 
         message: 'Не удалось удалить автомобиль' 
       });
-      // Close confirm dialog even on error
-      setDeleteConfirm({ open: false, carId: null });
     }
   };
 
@@ -805,7 +844,7 @@ export default function ProfilePage() {
                       setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
                       setCarFieldErrors({});
                     }}
-                    variant={cars.length === 0 ? "default" : "secondary"}
+                    variant={optimisticCars.length === 0 ? "default" : "secondary"}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Добавить
@@ -913,14 +952,14 @@ export default function ProfilePage() {
                 )}
 
                 {/* Cars List */}
-                {cars.length === 0 ? (
+                {optimisticCars.length === 0 ? (
                   <div className="text-center py-8 text-[var(--color-text-muted)]">
                     <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>У вас пока нет добавленных автомобилей</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {cars.map((car) => {
+                    {optimisticCars.map((car) => {
                       const isEditing = editingCarId === car.id;
                       
                       return isEditing ? (
