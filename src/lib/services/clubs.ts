@@ -39,7 +39,12 @@ import {
 // NEW: Use billing v2.0 system
 import { getClubSubscription as getClubSubscriptionV2 } from "@/lib/db/clubSubscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
-import { listEvents } from "@/lib/db/eventRepo";
+import { 
+  countClubEvents, 
+  countActiveClubEvents, 
+  countPastClubEvents,
+  listClubEvents 
+} from "@/lib/db/eventRepo";
 import { hydrateCities, hydrateCitiesByIds } from "@/lib/utils/hydration";
 // TODO: Migrate to new billing v2.0 accessControl system
 // import {
@@ -262,9 +267,7 @@ export async function getClubWithDetails(
   const members = dbMembers.map(mapDbClubMemberWithUserToDomain);
 
   // Count events
-  const allEvents = await listEvents(1, 1000); // Load all events for counting
-  const clubEvents = allEvents.events.filter((e) => e.club_id === id);
-  const eventCount = clubEvents.length;
+  const eventCount = await countClubEvents(id);
 
   // Count members
   const memberCount = await countMembers(id);
@@ -382,15 +385,12 @@ export async function deleteClub(
   }
 
   // Проверить нет ли активных событий
-  const allEvents = await listEvents(1, 1000); // Load all events for validation
-  const clubEvents = allEvents.events.filter((e) => e.club_id === id);
-  const now = new Date();
-  const activeEvents = clubEvents.filter((e) => new Date(e.date_time) >= now);
+  const activeEventsCount = await countActiveClubEvents(id);
 
-  if (activeEvents.length > 0) {
+  if (activeEventsCount > 0) {
     throw new ConflictError(
-      `Нельзя удалить клуб с активными событиями (${activeEvents.length}). Сначала удалите или завершите все события.`,
-      { activeEventsCount: activeEvents.length }
+      `Нельзя удалить клуб с активными событиями (${activeEventsCount}). Сначала удалите или завершите все события.`,
+      { activeEventsCount }
     );
   }
 
@@ -580,20 +580,11 @@ export async function getUserRoleInClub(
 // ============================================================================
 
 /**
- * Получить события клуба
+ * Получить события клуба с пагинацией
  */
-export async function getClubEvents(clubId: string) {
-  const allEvents = await listEvents(1, 1000); // Load all events for club
-  return allEvents.events.filter((e) => e.club_id === clubId);
-}
-
-/**
- * Подсчитать активные события клуба
- */
-export async function countActiveClubEvents(clubId: string): Promise<number> {
-  const events = await getClubEvents(clubId);
-  const now = new Date();
-  return events.filter((e) => new Date(e.date_time) >= now).length;
+export async function getClubEvents(clubId: string, page = 1, limit = 100) {
+  const result = await listClubEvents(clubId, page, limit);
+  return result.data;
 }
 
 // ============================================================================
@@ -604,28 +595,27 @@ export async function countActiveClubEvents(clubId: string): Promise<number> {
  * Получить статистику клуба
  */
 export async function getClubStats(clubId: string) {
-  const [memberCount, events] = await Promise.all([
+  const [memberCount, totalEvents, activeEventsCount, pastEventsCount] = await Promise.all([
     countMembers(clubId),
-    getClubEvents(clubId),
+    countClubEvents(clubId),
+    countActiveClubEvents(clubId),
+    countPastClubEvents(clubId),
   ]);
 
-  const now = new Date();
-  const activeEvents = events.filter((e) => new Date(e.date_time) >= now);
-  const pastEvents = events.filter((e) => new Date(e.date_time) < now);
-
-  // Подсчет участников во всех событиях клуба
-  // TODO: Need4Trip: Load actual participants count from participants table
+  // TODO: Need4Trip: Add countClubParticipants() in participantRepo
+  // For now, load first page of events to get approximate count
+  const eventsPage = await listClubEvents(clubId, 1, 10);
   let totalParticipants = 0;
-  events.forEach((event) => {
+  eventsPage.data.forEach((event) => {
     totalParticipants += (event as any).participantsCount ?? 0;
   });
 
   return {
     memberCount,
-    totalEvents: events.length,
-    activeEvents: activeEvents.length,
-    pastEvents: pastEvents.length,
-    totalParticipants,
+    totalEvents,
+    activeEvents: activeEventsCount,
+    pastEvents: pastEventsCount,
+    totalParticipants, // Approximate based on first 10 events
   };
 }
 

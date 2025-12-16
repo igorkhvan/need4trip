@@ -364,3 +364,111 @@ export async function deleteEvent(id: string): Promise<boolean> {
 
   return true;
 }
+
+/**
+ * Count events for a specific club
+ */
+export async function countClubEvents(clubId: string): Promise<number> {
+  ensureClient();
+  if (!supabase) return 0;
+
+  const { count, error } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("club_id", clubId);
+
+  if (error) {
+    log.error("Failed to count club events", { clubId, error });
+    throw new InternalError("Failed to count club events", error);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Count active (future) events for a specific club
+ */
+export async function countActiveClubEvents(clubId: string): Promise<number> {
+  ensureClient();
+  if (!supabase) return 0;
+
+  const now = new Date().toISOString();
+
+  const { count, error } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("club_id", clubId)
+    .gte("date_time", now);
+
+  if (error) {
+    log.error("Failed to count active club events", { clubId, error });
+    throw new InternalError("Failed to count active club events", error);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Count past events for a specific club
+ */
+export async function countPastClubEvents(clubId: string): Promise<number> {
+  ensureClient();
+  if (!supabase) return 0;
+
+  const now = new Date().toISOString();
+
+  const { count, error } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("club_id", clubId)
+    .lt("date_time", now);
+
+  if (error) {
+    log.error("Failed to count past club events", { clubId, error });
+    throw new InternalError("Failed to count past club events", error);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * List events for a specific club with pagination
+ */
+export async function listClubEvents(
+  clubId: string,
+  page = 1,
+  limit = 12
+): Promise<{
+  data: DbEvent[];
+  total: number;
+  hasMore: boolean;
+}> {
+  ensureClient();
+  if (!supabase) return { data: [], total: 0, hasMore: false };
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
+    .from(table)
+    .select("*", { count: "exact" })
+    .eq("club_id", clubId)
+    .order("date_time", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    log.error("Failed to list club events", { clubId, error });
+    throw new InternalError("Failed to list club events", error);
+  }
+
+  const events = (data ?? []).map((row: any) => ({
+    ...row,
+    custom_fields_schema: row.custom_fields_schema ?? [],
+  })) as unknown as DbEvent[];
+
+  return {
+    data: events,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > to + 1,
+  };
+}
