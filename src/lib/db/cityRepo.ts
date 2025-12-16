@@ -2,14 +2,48 @@
  * City Repository
  * 
  * Репозиторий для работы со справочником городов
+ * Popular cities are cached for better performance
  */
 
 import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { City } from "@/lib/types/city";
 import { log } from "@/lib/utils/logger";
+import { StaticCache } from "@/lib/cache/staticCache";
 
 const table = "cities";
+
+// ============================================================================
+// Cache Configuration
+// ============================================================================
+
+const popularCitiesCache = new StaticCache<City>(
+  {
+    ttl: 60 * 60 * 1000, // 1 hour - popular cities list may change
+    name: 'popular_cities',
+  },
+  async () => {
+    // Loader function
+    ensureClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq("is_popular", true)
+      .order("population", { ascending: false, nullsFirst: false })
+      .order("name", { ascending: true })
+      .limit(30); // Load top 30 popular cities
+
+    if (error) {
+      log.error("Failed to load popular cities for cache", { error });
+      throw new InternalError("Failed to load popular cities", error);
+    }
+
+    return (data || []).map(mapRowToCity);
+  },
+  (city) => city.id // Key extractor
+);
 
 
 function mapRowToCity(data: any): City {
@@ -77,26 +111,20 @@ export async function searchCities(query: string, limit: number = 20): Promise<C
 }
 
 /**
- * Get all popular cities (for UI filters and quick select)
+ * Get all popular cities (cached)
+ * Perfect for dropdowns and filters
  */
 export async function getPopularCities(limit: number = 25): Promise<City[]> {
-  ensureClient();
-  if (!supabase) return [];
+  const all = await popularCitiesCache.getAll();
+  return all.slice(0, limit); // Return requested limit from cache
+}
 
-  const { data, error } = await supabase
-    .from(table)
-    .select("*")
-    .eq("is_popular", true)
-    .order("population", { ascending: false, nullsFirst: false })
-    .order("name", { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    log.error("Failed to fetch popular cities", { limit, error });
-    throw new InternalError("Failed to fetch popular cities", error);
-  }
-
-  return (data || []).map(mapRowToCity);
+/**
+ * Invalidate popular cities cache
+ */
+export async function invalidatePopularCitiesCache(): Promise<void> {
+  popularCitiesCache.clear();
+  log.info("Popular cities cache invalidated");
 }
 
 /**

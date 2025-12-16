@@ -1,11 +1,13 @@
 /**
  * Currency Repository - Database operations for currencies table
+ * Uses StaticCache for optimal performance (currencies rarely change)
  */
 
 import { supabase, ensureClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { Currency } from "@/lib/types/currency";
 import { log } from "@/lib/utils/logger";
+import { StaticCache } from "@/lib/cache/staticCache";
 
 // ============================================================================
 // Database Row Type
@@ -41,50 +43,54 @@ function mapDbCurrencyToDomain(row: any): Currency {
 }
 
 // ============================================================================
+// Cache Configuration
+// ============================================================================
+
+const currenciesCache = new StaticCache<Currency>(
+  {
+    ttl: 24 * 60 * 60 * 1000, // 24 hours - currencies rarely change
+    name: 'currencies',
+  },
+  async () => {
+    // Loader function - loads all active currencies
+    if (!supabase) {
+      log.warn("Supabase client is not configured");
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from("currencies")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("code", { ascending: true });
+
+    if (error) {
+      log.error("Error loading currencies for cache", { error });
+      return [];
+    }
+
+    return (data || []).map((row: any) => mapDbCurrencyToDomain(row));
+  },
+  (currency) => currency.code // Key extractor
+);
+
+// ============================================================================
 // Repository Functions
 // ============================================================================
 
-
 /**
- * Get all active currencies
+ * Get all active currencies (cached)
+ * First call: loads from DB
+ * Subsequent calls: returns from cache (0ms)
  */
 export async function getActiveCurrencies(): Promise<Currency[]> {
-  log.debug("getActiveCurrencies called");
-  
-  if (!supabase) {
-    log.warn("Supabase client is not configured");
-    return [];
-  }
-  
-  log.debug("Fetching currencies from DB");
-  
-  // Order by sort_order, then by code
-  const { data, error } = await supabase
-    .from("currencies")
-    .select("*")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("code", { ascending: true });
-
-  if (error) {
-    log.error("Error fetching currencies", { 
-      error: {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    });
-    return [];
-  }
-
-  log.debug("Fetched currencies from DB", { count: data?.length || 0 });
-
-  return (data || []).map((row: any) => mapDbCurrencyToDomain(row));
+  return currenciesCache.getAll();
 }
 
 /**
  * Get all currencies (including inactive)
+ * Note: This bypasses cache for admin operations
  */
 export async function getAllCurrencies(): Promise<Currency[]> {
   if (!supabase) {
@@ -92,11 +98,11 @@ export async function getAllCurrencies(): Promise<Currency[]> {
     return [];
   }
   
-  // Получаем ВСЕ валюты (активные и неактивные)
+  // Admin function - always fetch fresh data
   const { data, error } = await supabase
     .from("currencies")
     .select("*")
-    .order("is_active", { ascending: false }) // Активные первыми
+    .order("is_active", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("code", { ascending: true });
 
@@ -109,59 +115,30 @@ export async function getAllCurrencies(): Promise<Currency[]> {
 }
 
 /**
- * Get currency by code
+ * Get currency by code (cached, O(1))
  */
 export async function getCurrencyByCode(code: string): Promise<Currency | null> {
-  if (!supabase) {
-    log.warn("Supabase client is not configured");
-    return null;
-  }
-  
-  const { data, error } = await supabase
-    .from("currencies")
-    .select("*")
-    .eq("code", code.toUpperCase())
-    .single();
-
-  if (error) {
-    if (error.code === "PGRST116") {
-      return null; // Not found
-    }
-    log.error("Error fetching currency", { code, error });
-    return null;
-  }
-
-  return data ? mapDbCurrencyToDomain(data as DbCurrency) : null;
+  return currenciesCache.getByKey(code.toUpperCase());
 }
 
 /**
- * Get currencies by codes (for hydration)
+ * Get currencies by codes (cached, O(1) per code)
+ * Perfect for batch hydration - no DB queries!
  */
 export async function getCurrenciesByCodes(codes: string[]): Promise<Map<string, Currency>> {
   if (codes.length === 0) {
     return new Map();
   }
 
-  if (!supabase) {
-    log.warn("Supabase client is not configured");
-    return new Map();
-  }
-  
   const upperCodes = codes.map(c => c.toUpperCase());
-  const { data, error } = await supabase
-    .from("currencies")
-    .select("*")
-    .in("code", upperCodes);
+  return currenciesCache.getByKeys(upperCodes);
+}
 
-  if (error) {
-    log.error("Error fetching currencies by codes", { codes: upperCodes, error });
-    return new Map();
-  }
-
-  const currencyMap = new Map<string, Currency>();
-  (data || []).forEach((row: DbCurrency) => {
-    currencyMap.set(row.code, mapDbCurrencyToDomain(row));
-  });
-
-  return currencyMap;
+/**
+ * Invalidate cache (for admin operations)
+ * Call this after adding/updating currencies
+ */
+export async function invalidateCurrenciesCache(): Promise<void> {
+  currenciesCache.clear();
+  log.info("Currencies cache invalidated");
 }

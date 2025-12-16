@@ -10,7 +10,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FREE_LIMITS, type PlanId } from "@/lib/types/billing";
+import { type PlanId } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
 
 export interface ClubPlanLimits {
@@ -69,9 +69,9 @@ export function useClubPlan(clubId: string | null | undefined): UseClubPlanRetur
         subscription: null,
         limits: {
           maxMembers: null,
-          maxEventParticipants: FREE_LIMITS.maxEventParticipants,
-          allowPaidEvents: FREE_LIMITS.allowPaidEvents,
-          allowCsvExport: FREE_LIMITS.allowCsvExport,
+          maxEventParticipants: 15,
+          allowPaidEvents: false,
+          allowCsvExport: false,
         },
       });
       setLoading(false);
@@ -112,16 +112,16 @@ export function useClubPlan(clubId: string | null | undefined): UseClubPlanRetur
         setError(message);
         log.error("Failed to fetch club plan", { clubId, error: err });
 
-        // Fallback to Free limits
+        // Fallback to safe FREE defaults
         setPlan({
           planId: "free",
           planTitle: "Free",
           subscription: null,
           limits: {
             maxMembers: null,
-            maxEventParticipants: FREE_LIMITS.maxEventParticipants,
-            allowPaidEvents: FREE_LIMITS.allowPaidEvents,
-            allowCsvExport: FREE_LIMITS.allowCsvExport,
+            maxEventParticipants: 15, // Safe default
+            allowPaidEvents: false,
+            allowCsvExport: false,
           },
         });
       } finally {

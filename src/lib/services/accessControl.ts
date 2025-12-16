@@ -9,18 +9,17 @@
 
 import { PaywallError } from "@/lib/errors";
 import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
-import { getPlanById } from "@/lib/db/planRepo";
+import { 
+  getPlanById,
+  getRequiredPlanForParticipants,
+  getRequiredPlanForMembers 
+} from "@/lib/db/planRepo";
 import { isActionAllowed } from "@/lib/db/billingPolicyRepo";
 import type { 
   BillingActionCode, 
   ClubSubscription, 
   ClubPlan,
   PlanId 
-} from "@/lib/types/billing";
-import { 
-  FREE_LIMITS, 
-  getRequiredPlanForParticipants,
-  getRequiredPlanForMembers 
 } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
 
@@ -95,9 +94,12 @@ async function enforceFreeLimit(
     isPaidEvent?: boolean;
   }
 ): Promise<void> {
+  // Load FREE plan from database (cached)
+  const freePlan = await getPlanById("free");
+
   // Check paid events
   if (action === "CLUB_CREATE_PAID_EVENT" || context?.isPaidEvent) {
-    if (!FREE_LIMITS.allowPaidEvents) {
+    if (!freePlan.allowPaidEvents) {
       throw new PaywallError({
         message: "Paid events require Club 50 plan or higher",
         reason: "PAID_EVENTS_NOT_ALLOWED",
@@ -109,7 +111,7 @@ async function enforceFreeLimit(
 
   // Check CSV export
   if (action === "CLUB_EXPORT_PARTICIPANTS_CSV") {
-    if (!FREE_LIMITS.allowCsvExport) {
+    if (!freePlan.allowCsvExport) {
       throw new PaywallError({
         message: "CSV export requires Club 50 plan or higher",
         reason: "CSV_EXPORT_NOT_ALLOWED",
@@ -121,8 +123,9 @@ async function enforceFreeLimit(
 
   // Check event participants limit
   if (action === "CLUB_CREATE_EVENT" && context?.eventParticipantsCount) {
-    if (context.eventParticipantsCount > FREE_LIMITS.maxEventParticipants) {
-      const requiredPlan = getRequiredPlanForParticipants(context.eventParticipantsCount);
+    if (freePlan.maxEventParticipants !== null && 
+        context.eventParticipantsCount > freePlan.maxEventParticipants) {
+      const requiredPlan = await getRequiredPlanForParticipants(context.eventParticipantsCount);
       
       throw new PaywallError({
         message: `Event with ${context.eventParticipantsCount} participants requires ${requiredPlan} plan`,
@@ -131,7 +134,7 @@ async function enforceFreeLimit(
         requiredPlanId: requiredPlan === "free" ? undefined : requiredPlan as PlanId,
         meta: {
           requested: context.eventParticipantsCount,
-          limit: FREE_LIMITS.maxEventParticipants,
+          limit: freePlan.maxEventParticipants,
         },
       });
     }
@@ -178,7 +181,7 @@ async function enforcePlanLimits(
   // Check event participants limit (null = unlimited)
   if (action === "CLUB_CREATE_EVENT" && context?.eventParticipantsCount) {
     if (plan.maxEventParticipants !== null && context.eventParticipantsCount > plan.maxEventParticipants) {
-      const requiredPlan = getRequiredPlanForParticipants(context.eventParticipantsCount);
+      const requiredPlan = await getRequiredPlanForParticipants(context.eventParticipantsCount);
       
       throw new PaywallError({
         message: `Event with ${context.eventParticipantsCount} participants exceeds your plan limit of ${plan.maxEventParticipants}`,
@@ -196,7 +199,7 @@ async function enforcePlanLimits(
   // Check club members limit (null = unlimited)
   if (action === "CLUB_INVITE_MEMBER" && context?.clubMembersCount) {
     if (plan.maxMembers !== null && context.clubMembersCount >= plan.maxMembers) {
-      const requiredPlan = getRequiredPlanForMembers(context.clubMembersCount + 1);
+      const requiredPlan = await getRequiredPlanForMembers(context.clubMembersCount + 1);
       
       throw new PaywallError({
         message: `Club has reached maximum members limit (${plan.maxMembers})`,
@@ -252,16 +255,19 @@ export async function enforceClubCreation(params: {
  * Get club's current plan (Free if no subscription)
  */
 export async function getClubCurrentPlan(clubId: string): Promise<{
-  planId: PlanId | "free";
-  plan: ClubPlan | null;
+  planId: PlanId;
+  plan: ClubPlan;
   subscription: ClubSubscription | null;
 }> {
   const subscription = await getClubSubscription(clubId);
 
   if (!subscription) {
+    // No subscription = FREE plan (now loaded from DB)
+    const freePlan = await getPlanById("free");
+    
     return {
       planId: "free",
-      plan: null,
+      plan: freePlan,
       subscription: null,
     };
   }

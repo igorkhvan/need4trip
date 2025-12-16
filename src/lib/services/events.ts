@@ -374,12 +374,14 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
       },
     });
   } else {
-    // Personal events (no club) - enforce FREE_LIMITS
-    const { FREE_LIMITS } = await import("@/lib/types/billing");
+    // Personal events (no club) - enforce FREE plan limits from DB
+    const { getPlanById } = await import("@/lib/db/planRepo");
     const { PaywallError } = await import("@/lib/errors");
     
+    const freePlan = await getPlanById("free");
+    
     // Check paid events limit
-    if (parsed.isPaid && !FREE_LIMITS.allowPaidEvents) {
+    if (parsed.isPaid && !freePlan.allowPaidEvents) {
       throw new PaywallError({
         message: "Платные события доступны только на платных тарифах",
         reason: "PAID_EVENTS_NOT_ALLOWED",
@@ -392,15 +394,16 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     }
     
     // Check participants limit
-    if (parsed.maxParticipants && parsed.maxParticipants > FREE_LIMITS.maxEventParticipants) {
+    if (parsed.maxParticipants && freePlan.maxEventParticipants !== null && 
+        parsed.maxParticipants > freePlan.maxEventParticipants) {
       throw new PaywallError({
-        message: `Превышен лимит участников (${parsed.maxParticipants} > ${FREE_LIMITS.maxEventParticipants})`,
+        message: `Превышен лимит участников (${parsed.maxParticipants} > ${freePlan.maxEventParticipants})`,
         reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
         currentPlanId: "free",
         requiredPlanId: "club_50",
         meta: {
           requested: parsed.maxParticipants,
-          limit: FREE_LIMITS.maxEventParticipants,
+          limit: freePlan.maxEventParticipants,
         },
       });
     }
@@ -528,11 +531,13 @@ export async function updateEvent(
       },
     });
   } else {
-    // Personal event - enforce FREE_LIMITS
-    const { FREE_LIMITS } = await import("@/lib/types/billing");
+    // Personal event - enforce FREE plan limits from DB
+    const { getPlanById } = await import("@/lib/db/planRepo");
     const { PaywallError } = await import("@/lib/errors");
     
-    if (finalIsPaid && !FREE_LIMITS.allowPaidEvents) {
+    const freePlan = await getPlanById("free");
+    
+    if (finalIsPaid && !freePlan.allowPaidEvents) {
       throw new PaywallError({
         message: "Платные события доступны только на платных тарифах",
         reason: "PAID_EVENTS_NOT_ALLOWED",
@@ -544,15 +549,16 @@ export async function updateEvent(
       });
     }
     
-    if (finalMaxParticipants && finalMaxParticipants > FREE_LIMITS.maxEventParticipants) {
+    if (finalMaxParticipants && freePlan.maxEventParticipants !== null &&
+        finalMaxParticipants > freePlan.maxEventParticipants) {
       throw new PaywallError({
-        message: `Превышен лимит участников (${finalMaxParticipants} > ${FREE_LIMITS.maxEventParticipants})`,
+        message: `Превышен лимит участников (${finalMaxParticipants} > ${freePlan.maxEventParticipants})`,
         reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
         currentPlanId: "free",
         requiredPlanId: "club_50",
         meta: {
           requested: finalMaxParticipants,
-          limit: FREE_LIMITS.maxEventParticipants,
+          limit: freePlan.maxEventParticipants,
         },
       });
     }

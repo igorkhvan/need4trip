@@ -13,7 +13,7 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
 import { getClub } from "@/lib/services/clubs";
 import { AuthError, NotFoundError } from "@/lib/errors";
-import { FREE_LIMITS } from "@/lib/types/billing";
+import { getPlanById } from "@/lib/db/planRepo";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -44,28 +44,13 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     // Get current plan from billing system
+    // Now returns plan object for both FREE and paid plans (from DB)
     const { planId, plan, subscription } = await getClubCurrentPlan(clubId);
 
-    // Format response
-    if (planId === "free") {
-      // Free plan (no subscription)
-      return respondSuccess({
-        planId: "free",
-        planTitle: "Free",
-        subscription: null,
-        limits: {
-          maxMembers: null,
-          maxEventParticipants: FREE_LIMITS.maxEventParticipants,
-          allowPaidEvents: FREE_LIMITS.allowPaidEvents,
-          allowCsvExport: FREE_LIMITS.allowCsvExport,
-        },
-      });
-    }
-
-    // Paid plan (with subscription)
+    // Format response (unified for all plans)
     return respondSuccess({
-      planId: plan!.id,
-      planTitle: plan!.title,
+      planId: plan.id,
+      planTitle: plan.title,
       subscription: subscription ? {
         status: subscription.status,
         currentPeriodStart: subscription.currentPeriodStart,
@@ -73,10 +58,10 @@ export async function GET(req: NextRequest, { params }: Params) {
         graceUntil: subscription.graceUntil,
       } : null,
       limits: {
-        maxMembers: plan!.maxMembers,
-        maxEventParticipants: plan!.maxEventParticipants,
-        allowPaidEvents: plan!.allowPaidEvents,
-        allowCsvExport: plan!.allowCsvExport,
+        maxMembers: plan.maxMembers,
+        maxEventParticipants: plan.maxEventParticipants,
+        allowPaidEvents: plan.allowPaidEvents,
+        allowCsvExport: plan.allowCsvExport,
       },
     });
   } catch (error) {

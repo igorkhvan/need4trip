@@ -10,14 +10,14 @@ import { z } from "zod";
 // Plan Types
 // ============================================================================
 
-export const PLAN_IDS = ["club_50", "club_500", "club_unlimited"] as const;
+export const PLAN_IDS = ["free", "club_50", "club_500", "club_unlimited"] as const;
 export type PlanId = typeof PLAN_IDS[number];
 
-// For display purposes (includes free)
-export type PlanIdWithFree = PlanId | "free";
+// Legacy type alias (kept for compatibility)
+export type PlanIdWithFree = PlanId;
 
 export interface ClubPlan {
-  id: PlanId;
+  id: PlanId | "free";  // All plans including FREE are now in DB
   title: string;
   priceMonthlyKzt: number;
   currency: string;
@@ -43,7 +43,7 @@ export interface PricingPlan {
 }
 
 export const ClubPlanSchema = z.object({
-  id: z.enum(PLAN_IDS),
+  id: z.enum(PLAN_IDS), // Includes 'free' now
   title: z.string(),
   priceMonthlyKzt: z.number(),
   currency: z.string(),
@@ -227,27 +227,13 @@ export const PaywallErrorSchema = z.object({
 // ============================================================================
 
 /**
- * Determine required plan ID based on requested participants count
- */
-export function getRequiredPlanForParticipants(count: number): PlanId | "free" {
-  if (count <= 15) return "free";
-  if (count <= 50) return "club_50";
-  if (count <= 500) return "club_500";
-  return "club_unlimited";
-}
-
-/**
- * Determine required plan ID based on club members count
- */
-export function getRequiredPlanForMembers(count: number): PlanId {
-  if (count <= 50) return "club_50";
-  if (count <= 500) return "club_500";
-  return "club_unlimited";
-}
-
-/**
  * Check if subscription is in active state (active or grace)
  */
 export function isSubscriptionActive(status: SubscriptionStatus): boolean {
   return status === "active" || status === "grace";
 }
+
+/**
+ * @deprecated Use getRequiredPlanForParticipants from planRepo (loads from DB)
+ * These functions are moved to planRepo and now query actual plan limits from database
+ */
