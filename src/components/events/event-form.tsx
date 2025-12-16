@@ -107,14 +107,6 @@ export function EventForm({
   // Determine max participants based on club plan (default to 15 for Free)
   const maxAllowedParticipants = clubLimits?.maxEventParticipants ?? 15;
   
-  // Check if club events are allowed (club exists AND has active subscription)
-  const isClubEventAllowed = club && plan?.subscription?.status === 'active';
-  const clubEventDisabledReason = !club 
-    ? 'Клубные события доступны только для клубов' 
-    : plan?.subscription?.status !== 'active' 
-      ? 'Требуется активная подписка клуба' 
-      : null;
-  
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(initialValues?.categoryId ?? null);
@@ -638,12 +630,12 @@ export function EventForm({
                   <Checkbox
                     checked={isClubEvent}
                     onChange={(e) => setIsClubEvent(e.target.checked)}
-                    disabled={disabled || !isClubEventAllowed}
+                    disabled={disabled || !club}
                   />
                   Клубное событие
-                  {clubEventDisabledReason && (
+                  {!club && (
                     <span className="ml-2 text-xs text-[#6B7280]">
-                      ({clubEventDisabledReason})
+                      (доступно только для клубов)
                     </span>
                   )}
                 </label>

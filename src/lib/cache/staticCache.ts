@@ -30,6 +30,9 @@ export interface CacheConfig {
   name: string;          // Cache name for logging/debugging
 }
 
+// Global cache registry for clearing all caches at once
+const cacheRegistry: StaticCache<any>[] = [];
+
 export class StaticCache<T> {
   private cache: T[] = [];
   private map: Map<string, T> = new Map();
@@ -40,7 +43,10 @@ export class StaticCache<T> {
     private config: CacheConfig,
     private loader: () => Promise<T[]>,
     private keyExtractor: (item: T) => string
-  ) {}
+  ) {
+    // Register this cache instance for global clear operations
+    cacheRegistry.push(this);
+  }
 
   /**
    * Get all cached items
@@ -168,4 +174,25 @@ export class StaticCache<T> {
     
     await this.reload();
   }
+}
+
+/**
+ * Clear all registered static caches
+ * Useful after database updates to force reload of cached data
+ */
+export function clearAllCaches(): void {
+  log.info('Clearing all static caches', { count: cacheRegistry.length });
+  
+  cacheRegistry.forEach(cache => {
+    cache.clear();
+  });
+  
+  log.info('All static caches cleared');
+}
+
+/**
+ * Get statistics for all registered caches
+ */
+export function getAllCacheStats() {
+  return cacheRegistry.map(cache => cache.getStats());
 }

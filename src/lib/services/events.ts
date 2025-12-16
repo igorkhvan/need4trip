@@ -362,6 +362,32 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   }
   const parsed = eventCreateSchema.parse(input);
   
+  // ⚡ Check if club event requires active subscription
+  if (parsed.isClubEvent) {
+    if (!parsed.clubId) {
+      const { ValidationError } = await import("@/lib/errors");
+      throw new ValidationError("Клубное событие возможно только при наличии клуба");
+    }
+    
+    // Check if club has active subscription
+    const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
+    const { PaywallError } = await import("@/lib/errors");
+    
+    const subscription = await getClubSubscription(parsed.clubId);
+    
+    if (!subscription || subscription.status !== "active") {
+      throw new PaywallError({
+        message: "Клубные события доступны только при активной подписке клуба",
+        reason: "SUBSCRIPTION_NOT_ACTIVE",
+        currentPlanId: subscription?.planId ?? "free",
+        requiredPlanId: "club_50",
+        meta: {
+          feature: "Клубные события",
+        },
+      });
+    }
+  }
+  
   // ⚡ Billing v2.0 Enforcement
   // Check if club can create event with given parameters
   if (parsed.clubId) {
@@ -511,6 +537,36 @@ export async function updateEvent(
     }
   }
 
+  // ⚡ Check if club event requires active subscription
+  const finalIsClubEvent = parsed.isClubEvent !== undefined 
+    ? parsed.isClubEvent 
+    : existing.is_club_event;
+  
+  if (finalIsClubEvent) {
+    if (!existing.club_id) {
+      const { ValidationError } = await import("@/lib/errors");
+      throw new ValidationError("Клубное событие возможно только при наличии клуба");
+    }
+    
+    // Check if club has active subscription
+    const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
+    const { PaywallError } = await import("@/lib/errors");
+    
+    const subscription = await getClubSubscription(existing.club_id);
+    
+    if (!subscription || subscription.status !== "active") {
+      throw new PaywallError({
+        message: "Клубные события доступны только при активной подписке клуба",
+        reason: "SUBSCRIPTION_NOT_ACTIVE",
+        currentPlanId: subscription?.planId ?? "free",
+        requiredPlanId: "club_50",
+        meta: {
+          feature: "Клубные события",
+        },
+      });
+    }
+  }
+  
   // ⚡ Billing v2.0 Enforcement for updates
   // Check if changes violate plan limits
   const finalMaxParticipants = parsed.maxParticipants !== undefined 
