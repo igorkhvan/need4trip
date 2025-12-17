@@ -49,6 +49,9 @@ interface EventCustomFieldsSectionProps {
   
   // UI state
   disabled?: boolean;
+  
+  // Section number for display
+  sectionNumber?: number;
 }
 
 export function EventCustomFieldsSection({
@@ -61,12 +64,18 @@ export function EventCustomFieldsSection({
   fieldErrors,
   clearFieldError,
   disabled,
+  sectionNumber,
 }: EventCustomFieldsSectionProps) {
   const fieldError = (path: string) => fieldErrors[path];
   
   return (
     <>
       <div className="flex items-center gap-3">
+        {sectionNumber && (
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+            {sectionNumber}
+          </div>
+        )}
         <div className="flex flex-1 items-center gap-3">
           <div>
             <p className="text-2xl font-semibold text-[#0F172A]">Дополнительные поля регистрации</p>

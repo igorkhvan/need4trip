@@ -24,6 +24,9 @@ interface EventRulesSectionProps {
   // UI state
   disabled?: boolean;
   isSubmitting: boolean;
+  
+  // Section number for display
+  sectionNumber?: number;
 }
 
 export function EventRulesSection({
@@ -33,11 +36,17 @@ export function EventRulesSection({
   isGeneratingRules,
   disabled,
   isSubmitting,
+  sectionNumber,
 }: EventRulesSectionProps) {
   return (
     <>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {sectionNumber && (
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+              {sectionNumber}
+            </div>
+          )}
           <div>
             <p className="text-2xl font-semibold text-[#0F172A]">Правила участия</p>
             <p className="text-xs text-[#6B7280]">Показываются в карточке события</p>

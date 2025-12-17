@@ -601,12 +601,6 @@ export function EventForm({
         </Card>
 
         <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
-              3
-            </div>
-          </div>
-
           <EventRulesSection
             rules={rules}
             onRulesChange={setRules}
@@ -614,16 +608,11 @@ export function EventForm({
             isGeneratingRules={isGeneratingRules}
             disabled={disabled}
             isSubmitting={isSubmitting}
+            sectionNumber={3}
           />
         </Card>
 
         <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
-              4
-            </div>
-          </div>
-
           <EventCustomFieldsSection
             sortedFields={sortedFields}
             onAddField={addField}
@@ -640,6 +629,7 @@ export function EventForm({
               });
             }}
             disabled={disabled}
+            sectionNumber={4}
           />
         </Card>
 
