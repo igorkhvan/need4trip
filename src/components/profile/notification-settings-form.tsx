@@ -46,7 +46,7 @@ export function NotificationSettingsForm() {
       
       const data = await res.json();
       console.log('[NotificationSettingsForm] Settings loaded:', data);
-      setSettings(data.settings);
+      setSettings(data.data);
     } catch (err) {
       console.error('[NotificationSettingsForm] Load error:', err);
       setError('Не удалось загрузить настройки');

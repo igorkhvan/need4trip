@@ -32,9 +32,7 @@ export async function GET(request: NextRequest) {
       throw new Error("Failed to load notification settings");
     }
     
-    return respondJSON({
-      settings,
-    });
+    return respondJSON(settings);
   } catch (error) {
     return respondError(error);
   }
@@ -60,10 +58,7 @@ export async function PATCH(request: NextRequest) {
     // Update settings
     const settings = await updateUserNotificationSettings(currentUser.id, parsed);
     
-    return respondJSON({
-      settings,
-      message: "Настройки уведомлений обновлены",
-    });
+    return respondJSON(settings, "Настройки уведомлений обновлены");
   } catch (error) {
     return respondError(error);
   }
