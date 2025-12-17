@@ -157,11 +157,18 @@ export default function EditEventPage() {
       throw new Error("Недостаточно прав / войдите через Telegram");
     }
     
+    console.log('🚀 [EditEvent] Submitting payload:', {
+      dateTime: payload.dateTime,
+      title: payload.title,
+    });
+    
     const res = await fetch(`/api/events/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    
+    console.log('📡 [EditEvent] Response status:', res.status);
     
     if (!res.ok) {
       // Handle paywall error (402) - show modal and throw special error
@@ -202,7 +209,12 @@ export default function EditEventPage() {
       return; // Stop here if error
     }
     
+    // Log success response
+    const responseData = await res.json();
+    console.log('✅ [EditEvent] Success response:', responseData);
+    
     // Success - redirect to event detail page with force refresh
+    console.log('🔄 [EditEvent] Redirecting to:', `/events/${id}`);
     router.push(`/events/${id}`);
     router.refresh();
   };
