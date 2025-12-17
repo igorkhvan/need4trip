@@ -166,6 +166,7 @@ export function CityMultiSelect({
       maxItems={maxItems}
       debounceMs={300}
       shouldFilter={false}
+      badgesPosition="inside"
       
       popoverContentClassName="w-[400px]"
     />

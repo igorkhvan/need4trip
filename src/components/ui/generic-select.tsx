@@ -79,6 +79,7 @@ export interface GenericSelectProps<T> {
   maxItems?: number;  // For multi mode
   debounceMs?: number;  // For async search
   shouldFilter?: boolean;  // For Command component (client-side filtering)
+  badgesPosition?: "inside" | "outside";  // For multi mode: where to show selected badges (default: "outside")
   
   // Popover props
   popoverContentClassName?: string;
@@ -114,6 +115,7 @@ export function GenericSelect<T>({
   maxItems,
   debounceMs = 300,
   shouldFilter = false,
+  badgesPosition = "outside",
   popoverContentClassName,
   popoverAlign = "start",
   popoverSideOffset = 4,
@@ -320,6 +322,36 @@ export function GenericSelect<T>({
         );
       }
       
+      // Badges inside button
+      if (badgesPosition === "inside") {
+        return (
+          <div className="flex flex-wrap gap-2 items-center min-h-[20px] w-full">
+            {icon && <span className="shrink-0 opacity-50">{icon}</span>}
+            {selected.map((item) => (
+              <Badge
+                key={getItemId(item)}
+                variant="secondary"
+                className="flex items-center gap-1 px-2 py-0.5"
+              >
+                <span className="text-sm">{getItemLabel(item)}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(getItemId(item));
+                  }}
+                  disabled={disabled}
+                  className="ml-0.5 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        );
+      }
+      
+      // Badges outside - show counter
       return (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {icon && <span className="shrink-0 opacity-50">{icon}</span>}
@@ -329,7 +361,7 @@ export function GenericSelect<T>({
         </div>
       );
     }
-  }, [mode, icon, getItemLabel]);
+  }, [mode, icon, getItemLabel, badgesPosition, getItemId, handleRemove, disabled]);
   
   const finalRenderItem = renderItem || defaultRenderItem;
   const finalRenderTrigger = renderTrigger || defaultRenderTrigger;
@@ -348,7 +380,8 @@ export function GenericSelect<T>({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
+              "w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
+              badgesPosition === "inside" && mode === "multi" ? "min-h-12 h-auto py-2" : "h-12",
               error && "border-red-500 focus:border-red-500",
               selectedItems.length === 0 && "text-[#6B7280]",
               className
@@ -403,8 +436,8 @@ export function GenericSelect<T>({
         </PopoverContent>
       </Popover>
       
-      {/* Multi mode: Show selected badges below */}
-      {mode === "multi" && selectedItems.length > 0 && (
+      {/* Multi mode: Show selected badges below (only if outside) */}
+      {mode === "multi" && selectedItems.length > 0 && badgesPosition === "outside" && (
         <div className="flex flex-wrap gap-2 mt-2">
           {selectedItems.map((item) => (
             <Badge

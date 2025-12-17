@@ -75,6 +75,7 @@ export function MultiBrandSelect({
         errorMessage={error}
         
         shouldFilter={true}  // Client-side filtering
+        badgesPosition="inside"
         popoverContentClassName="w-[min(420px,calc(100vw-2rem))]"
         popoverAlign="start"
         popoverSideOffset={6}
