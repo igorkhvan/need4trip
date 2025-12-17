@@ -23,6 +23,7 @@ import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { useSimpleOptimistic } from "@/hooks/use-optimistic-state";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { ProfileContentSkeleton } from "@/components/ui/skeletons";
+import { NotificationSettingsForm } from "@/components/profile/notification-settings-form";
 import { 
   Select,
   SelectContent,
@@ -1170,11 +1171,7 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'settings' && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-[var(--color-text-muted)]">Настройки появятся здесь</p>
-            </CardContent>
-          </Card>
+          <NotificationSettingsForm />
         )}
       </div>
 
