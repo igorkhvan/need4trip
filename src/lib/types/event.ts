@@ -201,15 +201,9 @@ const eventUpdateBaseSchema = z.object({
     currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
 });
 
-export const eventUpdateSchema = eventUpdateBaseSchema.superRefine((val, ctx) => {
-  if (val.dateTime && val.dateTime <= date5MinutesAgo()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "dateTime must be in the future",
-      path: ["dateTime"],
-    });
-  }
-});
+// Note: Валидация dateTime перенесена в updateEvent сервис,
+// т.к. нужен контекст существующей даты события
+export const eventUpdateSchema = eventUpdateBaseSchema;
 
 export type EventCreateInput = z.infer<typeof eventCreateSchema>;
 export type EventUpdateInput = z.infer<typeof eventUpdateSchema>;

@@ -580,6 +580,17 @@ export async function updateEvent(
     throw new AuthError("Недостаточно прав для изменения события", undefined, 403);
   }
 
+  // Валидация даты: разрешаем менять прошедшие события на будущие даты
+  // Новая дата всегда должна быть в будущем (минимум через 5 минут)
+  if (parsed.dateTime) {
+    const date5MinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (parsed.dateTime <= date5MinutesAgo) {
+      throw new ValidationError(
+        "Дата события должна быть в будущем (минимум через 5 минут)"
+      );
+    }
+  }
+
   const participantsCount = await countParticipants(id);
 
   if (parsed.maxParticipants !== undefined && parsed.maxParticipants !== null) {
