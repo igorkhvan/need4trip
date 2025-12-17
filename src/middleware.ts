@@ -1,23 +1,34 @@
 /**
- * Next.js Middleware for Authentication & Authorization
+ * Next.js Middleware for Authentication, Authorization & Rate Limiting
  * 
  * Responsibilities:
- * 1. Verify JWT token for protected API routes
- * 2. Attach user ID to request headers for route handlers
- * 3. Return 401 for unauthorized requests
- * 4. Protect admin/cron endpoints with secrets
+ * 1. Rate limiting (Upstash Redis)
+ * 2. Verify JWT token for protected API routes
+ * 3. Attach user ID to request headers for route handlers
+ * 4. Return 401 for unauthorized requests
+ * 5. Protect admin/cron endpoints with secrets
  * 
  * Architecture:
  * - Runs on Edge Runtime (fast, globally distributed)
+ * - Rate limiting happens first (before auth)
  * - JWT verification happens once per request
  * - Route handlers receive pre-validated user ID
  * 
  * @see docs/architecture/security.md
+ * @see docs/RATE_LIMITING_STRATEGY.md
  */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 import { decodeAuthToken } from '@/lib/auth/jwt';
+import {
+  getRateLimitTier,
+  getRateLimitIdentifier,
+  getClientIp,
+  RATE_LIMIT_TIERS,
+} from '@/lib/config/rateLimits';
 
 // ============================================================================
 // Configuration
@@ -84,6 +95,81 @@ const PUBLIC_ROUTES = [
   '/api/vehicle-types',
   '/api/plans',
 ] as const;
+
+// ============================================================================
+// Rate Limiting Setup
+// ============================================================================
+
+/**
+ * Initialize Upstash Redis client
+ * Uses environment variables for configuration
+ */
+let redis: Redis | null = null;
+let rateLimiters: Record<string, Ratelimit> | null = null;
+
+function initializeRateLimiting() {
+  if (rateLimiters) return rateLimiters;
+  
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  
+  if (!url || !token) {
+    console.warn('[Middleware] Upstash credentials not configured. Rate limiting disabled.');
+    return null;
+  }
+  
+  try {
+    redis = new Redis({
+      url,
+      token,
+    });
+    
+    // Create rate limiters for each tier
+    rateLimiters = {
+      critical: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(
+          RATE_LIMIT_TIERS.critical.requests,
+          RATE_LIMIT_TIERS.critical.window
+        ),
+        analytics: true,
+        prefix: 'ratelimit:critical',
+      }),
+      write: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(
+          RATE_LIMIT_TIERS.write.requests,
+          RATE_LIMIT_TIERS.write.window
+        ),
+        analytics: true,
+        prefix: 'ratelimit:write',
+      }),
+      read: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(
+          RATE_LIMIT_TIERS.read.requests,
+          RATE_LIMIT_TIERS.read.window
+        ),
+        analytics: true,
+        prefix: 'ratelimit:read',
+      }),
+      guest: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(
+          RATE_LIMIT_TIERS.guest.requests,
+          RATE_LIMIT_TIERS.guest.window
+        ),
+        analytics: true,
+        prefix: 'ratelimit:guest',
+      }),
+    };
+    
+    return rateLimiters;
+  } catch (error) {
+    console.error('[Middleware] Failed to initialize rate limiting:', error);
+    return null;
+  }
+}
 
 // ============================================================================
 // Helper Functions
@@ -168,6 +254,27 @@ function forbiddenResponse(message: string = 'Access denied'): NextResponse {
   );
 }
 
+/**
+ * Create rate limit exceeded response
+ */
+function rateLimitResponse(limit: number, window: string): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: `Too many requests. Limit: ${limit} per ${window}. Please try again later.`,
+      },
+    },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': '60', // Suggest retry after 60 seconds
+      },
+    }
+  );
+}
+
 // ============================================================================
 // Middleware Function
 // ============================================================================
@@ -175,6 +282,72 @@ function forbiddenResponse(message: string = 'Access denied'): NextResponse {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
+  
+  // =========================================================================
+  // 0. Rate Limiting (First - before any other checks)
+  // =========================================================================
+  
+  // Skip rate limiting for admin/cron routes (they have secret protection)
+  if (!isAdminRoute(pathname) && !isCronRoute(pathname)) {
+    const limiters = initializeRateLimiting();
+    
+    if (limiters) {
+      try {
+        // Determine rate limit tier
+        const tier = getRateLimitTier(pathname, method);
+        const limiter = limiters[tier];
+        
+        if (!limiter) {
+          console.warn(`[Middleware] No rate limiter found for tier: ${tier}`);
+        } else {
+          // Get identifier (userId if authenticated, otherwise IP)
+          // NOTE: At this point we don't have userId yet (auth happens later)
+          // For pre-auth endpoints, we use IP
+          // For post-auth endpoints, we'll use IP now and potentially userId later
+          const ip = getClientIp(request);
+          const identifier = getRateLimitIdentifier(null, ip);
+          
+          // Check rate limit
+          const { success, limit, remaining, reset } = await limiter.limit(identifier);
+          
+          // Add rate limit headers to response
+          const headers: Record<string, string> = {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': new Date(reset).toISOString(),
+          };
+          
+          if (!success) {
+            // Rate limit exceeded
+            const tierConfig = RATE_LIMIT_TIERS[tier];
+            console.warn('[Middleware] Rate limit exceeded', {
+              pathname,
+              method,
+              tier,
+              identifier,
+              limit: tierConfig.requests,
+              window: tierConfig.window,
+            });
+            
+            const response = rateLimitResponse(tierConfig.requests, tierConfig.window);
+            // Add rate limit headers
+            Object.entries(headers).forEach(([key, value]) => {
+              response.headers.set(key, value);
+            });
+            return response;
+          }
+          
+          // Rate limit OK - attach headers for client visibility
+          // We'll add them to the final response below
+          (request as any).rateLimitHeaders = headers;
+        }
+      } catch (error) {
+        // Rate limiting failed - log error but allow request
+        // Graceful degradation: if Redis is down, don't block requests
+        console.error('[Middleware] Rate limiting error:', error);
+      }
+    }
+  }
   
   // =========================================================================
   // 1. Admin Route Protection
@@ -231,7 +404,15 @@ export async function middleware(request: NextRequest) {
   
   if (!needsAuth) {
     // Public route, no auth needed
-    return NextResponse.next();
+    // But still add rate limit headers if available
+    const response = NextResponse.next();
+    const rateLimitHeaders = (request as any).rateLimitHeaders;
+    if (rateLimitHeaders) {
+      Object.entries(rateLimitHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value as string);
+      });
+    }
+    return response;
   }
   
   // =========================================================================
@@ -259,12 +440,22 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-user-id', payload.userId);
   
-  // Pass modified request to route handler
-  return NextResponse.next({
+  // Pass modified request to route handler with rate limit headers
+  const response = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
+  
+  // Add rate limit headers if available
+  const rateLimitHeaders = (request as any).rateLimitHeaders;
+  if (rateLimitHeaders) {
+    Object.entries(rateLimitHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value as string);
+    });
+  }
+  
+  return response;
 }
 
 // ============================================================================
