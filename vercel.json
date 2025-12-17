@@ -2,7 +2,8 @@
   "crons": [
     {
       "path": "/api/cron/process-notifications",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 9 * * *",
+      "comment": "Hobby plan: once daily at 9:00 AM (actual time may vary ±59 min)"
     }
   ]
 }
