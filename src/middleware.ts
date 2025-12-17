@@ -17,7 +17,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { decodeAuthToken } from '@/lib/auth/currentUser';
+import { decodeAuthToken } from '@/lib/auth/jwt';
 
 // ============================================================================
 // Configuration
@@ -112,7 +112,8 @@ function requiresAuth(pathname: string, method: string): boolean {
     } else {
       // Method-specific protection
       if ((pathname === route.path || pathname.startsWith(route.path)) && 
-          route.methods.includes(method as any)) {
+          // @ts-expect-error - TS inference issue with readonly array in const
+          route.methods.includes(method)) {
         return true;
       }
     }
@@ -171,7 +172,7 @@ function forbiddenResponse(message: string = 'Access denied'): NextResponse {
 // Middleware Function
 // ============================================================================
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
   
@@ -243,8 +244,8 @@ export function middleware(request: NextRequest) {
     return unauthorizedResponse('Authentication required. Please log in.');
   }
   
-  // Decode and verify JWT
-  const payload = decodeAuthToken(token);
+  // Decode and verify JWT (async - Edge Runtime compatible)
+  const payload = await decodeAuthToken(token);
   
   if (!payload) {
     return unauthorizedResponse('Invalid or expired token. Please log in again.');

@@ -287,7 +287,7 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
       );
     }
 
-    const token = createAuthToken(verified.id);
+    const token = await createAuthToken(verified.id);
     const user = {
       id: verified.id,
       name: verified.name,

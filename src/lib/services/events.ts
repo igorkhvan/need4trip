@@ -35,6 +35,7 @@ import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/
 import { CurrentUser } from "@/lib/auth/currentUser";
 import { upsertEventAccess, listAccessibleEventIds } from "@/lib/db/eventAccessRepo";
 import { enforceClubAction } from "@/lib/services/accessControl";
+import { log } from "@/lib/utils/logger";
 
 type EventAccessOptions = {
   currentUser?: CurrentUser | null;
