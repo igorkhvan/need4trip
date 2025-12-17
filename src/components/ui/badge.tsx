@@ -20,6 +20,7 @@ const badgeVariants = cva(
       variant: {
         // Subtle Badges (фон + цветной текст)
         "registration-open": "border-transparent bg-[#F0FDF4] text-[#16A34A]",
+        "registration-closed": "border-transparent bg-[#FEF2F2] text-[#DC2626]",
         "starting-soon": "border-transparent bg-[#FFFBEB] text-[#D97706]",
         "almost-full": "border-transparent bg-[#FFFBEB] text-[#D97706]",
         "completed": "border-transparent bg-[#FEF2F2] text-[#DC2626]",

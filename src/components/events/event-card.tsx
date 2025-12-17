@@ -49,7 +49,7 @@ export function EventCard({ event }: EventCardProps) {
       </CardContent>
       <CardFooter className="flex items-center justify-between">
         {isPastEvent ? (
-          <Badge variant="neutral" size="sm" className="flex items-center gap-1.5">
+          <Badge variant="registration-closed" size="sm" className="flex items-center gap-1.5">
             <Lock className="h-3 w-3" />
             Регистрация закрыта
           </Badge>

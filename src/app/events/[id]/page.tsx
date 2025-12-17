@@ -107,7 +107,7 @@ export default async function EventDetails({
               {event.isPaid ? "Платное" : "Бесплатное"}
             </Badge>
             {isPastEvent && (
-              <Badge variant="neutral" size="md" className="flex items-center gap-1.5">
+              <Badge variant="registration-closed" size="md" className="flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5" />
                 Регистрация закрыта
               </Badge>

@@ -13,6 +13,7 @@ import {
   MapPin,
   Clock,
   Filter,
+  Lock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -175,6 +176,16 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
     const fillPercentage = event.maxParticipants
       ? ((event.participantsCount ?? 0) / event.maxParticipants) * 100
       : 0;
+
+    // Проверяем, прошло ли событие
+    if (daysUntil < 0) {
+      return (
+        <Badge variant="registration-closed" size="md" className="flex items-center gap-1.5">
+          <Lock className="h-3.5 w-3.5" />
+          Регистрация закрыта
+        </Badge>
+      );
+    }
 
     if (daysUntil <= 7 && daysUntil >= 0) {
       return (
