@@ -45,7 +45,7 @@ export function EventPricingSection({
   disabled,
 }: EventPricingSectionProps) {
   return (
-    <div className="space-y-4">
+    <div className="mt-8 space-y-4">
       <Label className="text-sm font-medium text-[#111827]">Тип участия</Label>
       <div className="flex flex-wrap items-center gap-6">
         <label className="flex cursor-pointer items-center gap-2 text-sm text-[#374151]">
