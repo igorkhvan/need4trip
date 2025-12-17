@@ -201,17 +201,20 @@ export function middleware(request: NextRequest) {
   // =========================================================================
   
   if (isCronRoute(pathname)) {
-    const cronSecret = request.headers.get('authorization');
+    // Vercel Cron Jobs automatically add this header
+    const vercelCronHeader = request.headers.get('x-vercel-cron');
+    
+    // Manual triggers can use Authorization header with CRON_SECRET
+    const authHeader = request.headers.get('authorization');
     const envSecret = process.env.CRON_SECRET;
     
-    if (!envSecret) {
-      // Cron routes disabled if CRON_SECRET not configured
-      return forbiddenResponse('Cron access not configured');
-    }
+    // Allow if either:
+    // 1. Called by Vercel Cron (has x-vercel-cron header)
+    // 2. Manual trigger with valid CRON_SECRET
+    const isVercelCron = !!vercelCronHeader;
+    const isManualWithSecret = envSecret && authHeader === `Bearer ${envSecret}`;
     
-    // Expect: "Bearer <secret>"
-    const expectedAuth = `Bearer ${envSecret}`;
-    if (cronSecret !== expectedAuth) {
+    if (!isVercelCron && !isManualWithSecret) {
       return forbiddenResponse('Invalid cron credentials');
     }
     

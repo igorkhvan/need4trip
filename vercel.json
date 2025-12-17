@@ -2,10 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/process-notifications",
-      "schedule": "0 9 * * *",
-      "headers": {
-        "Authorization": "Bearer 3f2b8f9a6d4c7e1b0a5d9e8c2f4a7b6e1d0c9a8f5b4e7d6c2a9f8b1e0"
-      }
+      "schedule": "0 9 * * *"
     }
   ]
 }
