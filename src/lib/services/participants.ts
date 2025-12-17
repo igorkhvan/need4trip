@@ -212,7 +212,58 @@ export async function registerParticipant(
   };
 
   const dbParticipant = await registerParticipantRepo(payload);
-  return mapDbParticipantToDomain(dbParticipant);
+  const participant = mapDbParticipantToDomain(dbParticipant);
+  
+  // Queue notification to event organizer (non-blocking)
+  queueNewParticipantNotificationAsync(event, participant, payload.displayName).catch((err) => {
+    console.error("[registerParticipant] Failed to queue organizer notification", err);
+  });
+  
+  return participant;
+}
+
+/**
+ * Queue notification to event organizer about new participant (non-blocking)
+ */
+async function queueNewParticipantNotificationAsync(
+  event: Event,
+  participant: DomainParticipant,
+  displayName: string
+): Promise<void> {
+  try {
+    if (!event.createdByUserId) {
+      console.warn(`[queueNewParticipantNotification] Event has no createdByUserId: ${event.id}`);
+      return;
+    }
+    
+    const { getUserById } = await import("@/lib/db/userRepo");
+    const { countParticipants } = await import("@/lib/db/participantRepo");
+    const { queueNewParticipantNotification } = await import("@/lib/services/notifications");
+    
+    // Get organizer info
+    const organizer = await getUserById(event.createdByUserId);
+    if (!organizer || !organizer.telegramId) {
+      console.log(`[queueNewParticipantNotification] Organizer has no telegramId: ${event.createdByUserId}`);
+      return;
+    }
+    
+    // Get current participant count
+    const totalParticipants = await countParticipants(event.id);
+    
+    await queueNewParticipantNotification({
+      eventId: event.id,
+      eventTitle: event.title,
+      organizerId: organizer.id,
+      organizerTelegramId: organizer.telegramId,
+      participantName: displayName,
+      registrationId: participant.id,
+      totalParticipants,
+      maxParticipants: event.maxParticipants,
+    });
+  } catch (err) {
+    console.error("[queueNewParticipantNotificationAsync] Unexpected error", err);
+    throw err;
+  }
 }
 
 export async function changeParticipantRole(

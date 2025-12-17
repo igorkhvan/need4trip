@@ -458,7 +458,64 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   } catch (err) {
     console.error("[createEvent] Failed to load allowed brands", err);
   }
+  
+  // Queue notifications for new event (non-blocking)
+  if (event.visibility === "public" && event.cityId) {
+    queueNewEventNotificationsAsync(event).catch((err) => {
+      console.error("[createEvent] Failed to queue new event notifications", err);
+    });
+  }
+  
   return event;
+}
+
+/**
+ * Queue new event notifications asynchronously (non-blocking)
+ */
+async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
+  try {
+    const cityId = event.cityId;
+    const creatorId = event.createdByUserId;
+    
+    if (!cityId) {
+      console.warn(`[queueNewEventNotifications] Event has no cityId: ${event.id}`);
+      return;
+    }
+    
+    if (!creatorId) {
+      console.warn(`[queueNewEventNotifications] Event has no creatorId: ${event.id}`);
+      return;
+    }
+    
+    // Get city and category names for notification payload
+    const { getCityById } = await import("@/lib/db/cityRepo");
+    const { getEventCategoryById } = await import("@/lib/db/eventCategoryRepo");
+    const { queueNewEventNotifications } = await import("@/lib/services/notifications");
+    
+    const [city, category] = await Promise.all([
+      getCityById(cityId).catch(() => null),
+      event.categoryId ? getEventCategoryById(event.categoryId).catch(() => null) : Promise.resolve(null),
+    ]);
+    
+    if (!city) {
+      console.warn(`[queueNewEventNotifications] City not found: ${cityId}`);
+      return;
+    }
+    
+    await queueNewEventNotifications({
+      eventId: event.id,
+      eventTitle: event.title,
+      cityId,
+      cityName: city.name,
+      categoryName: category?.nameRu ?? "Событие",
+      dateTime: event.dateTime,
+      locationText: event.locationText || "",
+      creatorId,
+    });
+  } catch (err) {
+    console.error("[queueNewEventNotificationsAsync] Unexpected error", err);
+    throw err;
+  }
 }
 
 /**
@@ -662,7 +719,79 @@ export async function updateEvent(
   } catch (err) {
     console.error("[updateEvent] Failed to load allowed brands", err);
   }
+  
+  // Queue event update notifications to participants (non-blocking)
+  if (participantsCount > 0) {
+    queueEventUpdatedNotificationsAsync(
+      existing,
+      updated,
+      parsed
+    ).catch((err) => {
+      console.error("[updateEvent] Failed to queue update notifications", err);
+    });
+  }
+  
   return event;
+}
+
+/**
+ * Detect changes and queue update notifications (non-blocking)
+ */
+async function queueEventUpdatedNotificationsAsync(
+  existing: Awaited<ReturnType<typeof getEventById>>,
+  updated: Awaited<ReturnType<typeof updateEventRecord>>,
+  parsed: EventUpdateInput
+): Promise<void> {
+  if (!existing || !updated) return;
+  
+  try {
+    const { listParticipants } = await import("@/lib/db/participantRepo");
+    const { queueEventUpdatedNotifications } = await import("@/lib/services/notifications");
+    
+    // Detect changes
+    const changes = {
+      dateTimeChanged: parsed.dateTime !== undefined && 
+        new Date(existing.date_time).getTime() !== new Date(updated.date_time).getTime(),
+      locationChanged: parsed.locationText !== undefined && 
+        existing.location_text !== updated.location_text,
+      rulesChanged: parsed.rules !== undefined && 
+        existing.rules !== updated.rules,
+      maxParticipantsChanged: parsed.maxParticipants !== undefined && 
+        existing.max_participants !== updated.max_participants,
+      paymentChanged: (parsed.isPaid !== undefined && existing.is_paid !== updated.is_paid) ||
+        (parsed.price !== undefined && existing.price !== updated.price),
+      vehicleRequirementChanged: parsed.vehicleTypeRequirement !== undefined && 
+        existing.vehicle_type_requirement !== updated.vehicle_type_requirement,
+    };
+    
+    // Check if any meaningful changes occurred
+    const hasChanges = Object.values(changes).some(Boolean);
+    if (!hasChanges) {
+      console.log('[queueEventUpdatedNotifications] No meaningful changes detected');
+      return;
+    }
+    
+    // Get all participants
+    const participants = await listParticipants(updated.id);
+    if (participants.length === 0) {
+      console.log('[queueEventUpdatedNotifications] No participants to notify');
+      return;
+    }
+    
+    // Get event version for deduplication
+    const eventVersion = (updated as any).version ?? 1;
+    
+    await queueEventUpdatedNotifications({
+      eventId: updated.id,
+      eventTitle: updated.title,
+      eventVersion,
+      changes,
+      participantIds: participants.map(p => p.id),
+    });
+  } catch (err) {
+    console.error("[queueEventUpdatedNotificationsAsync] Unexpected error", err);
+    throw err;
+  }
 }
 
 export async function deleteEvent(id: string, currentUser: CurrentUser | null): Promise<boolean> {

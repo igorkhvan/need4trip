@@ -208,10 +208,95 @@ export async function queueEventUpdatedNotifications(
 ): Promise<{ queued: number; skipped: number }> {
   const { eventId, eventTitle, eventVersion, changes, participantIds } = params;
 
-  // TODO: Implement with participant settings check
-  console.log(`[Notifications] Queueing event updated notifications for ${participantIds.length} participants`);
+  try {
+    if (participantIds.length === 0) {
+      console.log(`[Notifications] No participants to notify for event ${eventId}`);
+      return { queued: 0, skipped: 0 };
+    }
 
-  return { queued: 0, skipped: 0 };
+    // Get participants with user info and notification settings
+    const { supabaseAdmin } = await import("@/lib/db/client");
+    const { data: participants, error } = await supabaseAdmin!
+      .from('event_participants')
+      .select(`
+        id,
+        user_id,
+        display_name,
+        users!inner(
+          id,
+          telegram_id,
+          user_notification_settings!inner(
+            is_telegram_enabled,
+            notify_event_updated
+          )
+        )
+      `)
+      .eq('event_id', eventId)
+      .not('user_id', 'is', null);
+
+    if (error) {
+      console.error('[Notifications] Failed to fetch participants with settings:', error);
+      return { queued: 0, skipped: 0 };
+    }
+
+    if (!participants || participants.length === 0) {
+      console.log(`[Notifications] No authenticated participants found for event ${eventId}`);
+      return { queued: 0, skipped: 0 };
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://need4trip.kz';
+    const eventUrl = `${baseUrl}/events/${eventId}`;
+    const settingsUrl = `${baseUrl}/profile/notifications`;
+
+    const payload: EventUpdatedPayload = {
+      eventId,
+      eventTitle,
+      eventVersion,
+      changes,
+      eventUrl,
+      settingsUrl,
+    };
+
+    let queued = 0;
+    let skipped = 0;
+
+    for (const participant of participants) {
+      const user = (participant as any).users;
+      const settings = user?.user_notification_settings;
+
+      // Check if user has notifications enabled
+      if (!settings?.is_telegram_enabled || !settings?.notify_event_updated) {
+        skipped++;
+        continue;
+      }
+
+      if (!user?.telegram_id) {
+        skipped++;
+        continue;
+      }
+
+      const added = await addToQueue({
+        eventId,
+        userId: user.id,
+        triggerType: NotificationType.EVENT_UPDATED,
+        telegramChatId: user.telegram_id,
+        payload,
+        dedupeParams: { version: eventVersion },
+      });
+
+      if (added) {
+        queued++;
+      } else {
+        skipped++;
+      }
+    }
+
+    console.log(`[Notifications] Event updated: queued=${queued}, skipped=${skipped}`);
+    return { queued, skipped };
+  } catch (error) {
+    console.error('[Notifications] Failed to queue event updated notifications:', error);
+    return { queued: 0, skipped: 0 };
+  }
 }
 
 // ============================================================================
