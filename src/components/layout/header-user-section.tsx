@@ -24,9 +24,14 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
           const response = await res.json();
           const data = response.data || response;
           setCurrentUser(data.user || null);
+        } else {
+          // Clear state on auth failure (401/403)
+          setCurrentUser(null);
         }
       } catch (err) {
         console.error("[header] Failed to check auth:", err);
+        // Clear state on network/fetch error
+        setCurrentUser(null);
       }
     };
 
