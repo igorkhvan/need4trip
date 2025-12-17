@@ -267,8 +267,13 @@ export function EventForm({
     }
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       issues.dateTime = "Укажите корректную дату и время";
-    } else if (parsedDate <= new Date()) {
-      issues.dateTime = "Дата должна быть в будущем";
+    } else {
+      // Валидация даты: для режима edit разрешаем менять прошедшую дату на будущую
+      // Для режима create требуем чтобы дата была в будущем
+      const date5MinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
+      if (parsedDate < date5MinutesFromNow) {
+        issues.dateTime = "Дата должна быть в будущем (минимум через 5 минут)";
+      }
     }
     if (participantsCount === null || Number.isNaN(participantsCount)) {
       const limitText = maxAllowedParticipants === null ? "" : ` до ${maxAllowedParticipants}`;
