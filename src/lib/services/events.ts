@@ -789,7 +789,7 @@ async function queueEventUpdatedNotificationsAsync(
     }
     
     // Get event version for deduplication
-    const eventVersion = (updated as any).version ?? 1;
+    const eventVersion = updated.version;
     
     await queueEventUpdatedNotifications({
       eventId: updated.id,

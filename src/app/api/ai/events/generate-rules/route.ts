@@ -6,7 +6,7 @@
  * Security:
  * - Requires authentication
  * - OpenAI key never exposed to client
- * - Rate limiting TODO (implement if needed)
+ * - Rate limiting: 3 requests/minute (critical tier)
  */
 
 import { NextRequest, NextResponse } from "next/server";

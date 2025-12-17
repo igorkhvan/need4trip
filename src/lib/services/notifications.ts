@@ -215,6 +215,20 @@ export async function queueEventUpdatedNotifications(
     }
 
     // Get participants with user info and notification settings
+    type ParticipantWithSettings = {
+      id: string;
+      user_id: string | null;
+      display_name: string;
+      users: {
+        id: string;
+        telegram_id: string | null;
+        user_notification_settings: {
+          is_telegram_enabled: boolean;
+          notify_event_updated: boolean;
+        };
+      };
+    };
+
     const { supabaseAdmin } = await import("@/lib/db/client");
     const { data: participants, error } = await supabaseAdmin!
       .from('event_participants')
@@ -232,7 +246,7 @@ export async function queueEventUpdatedNotifications(
         )
       `)
       .eq('event_id', eventId)
-      .not('user_id', 'is', null);
+      .not('user_id', 'is', null) as { data: ParticipantWithSettings[] | null; error: any };
 
     if (error) {
       console.error('[Notifications] Failed to fetch participants with settings:', error);
@@ -261,8 +275,8 @@ export async function queueEventUpdatedNotifications(
     let skipped = 0;
 
     for (const participant of participants) {
-      const user = (participant as any).users;
-      const settings = user?.user_notification_settings;
+      const user = participant.users;
+      const settings = user.user_notification_settings;
 
       // Check if user has notifications enabled
       if (!settings?.is_telegram_enabled || !settings?.notify_event_updated) {

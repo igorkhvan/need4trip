@@ -28,6 +28,7 @@ export interface DbEvent {
   is_paid: boolean;
   price: number | null;
   currency_code: string | null; // ISO 4217 code (normalized)
+  version: number; // Auto-incremented on each update for notification deduplication
 }
 
 export interface DbParticipant {

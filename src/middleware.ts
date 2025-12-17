@@ -29,6 +29,7 @@ import {
   getClientIp,
   RATE_LIMIT_TIERS,
 } from '@/lib/config/rateLimits';
+import type { RateLimitHeaders } from '@/types/middleware';
 
 // ============================================================================
 // Configuration
@@ -311,7 +312,7 @@ export async function middleware(request: NextRequest) {
           const { success, limit, remaining, reset } = await limiter.limit(identifier);
           
           // Add rate limit headers to response
-          const headers: Record<string, string> = {
+          const headers: RateLimitHeaders = {
             'X-RateLimit-Limit': limit.toString(),
             'X-RateLimit-Remaining': remaining.toString(),
             'X-RateLimit-Reset': new Date(reset).toISOString(),
@@ -339,7 +340,7 @@ export async function middleware(request: NextRequest) {
           
           // Rate limit OK - attach headers for client visibility
           // We'll add them to the final response below
-          (request as any).rateLimitHeaders = headers;
+          request.rateLimitHeaders = headers;
         }
       } catch (error) {
         // Rate limiting failed - log error but allow request
@@ -406,10 +407,9 @@ export async function middleware(request: NextRequest) {
     // Public route, no auth needed
     // But still add rate limit headers if available
     const response = NextResponse.next();
-    const rateLimitHeaders = (request as any).rateLimitHeaders;
-    if (rateLimitHeaders) {
-      Object.entries(rateLimitHeaders).forEach(([key, value]) => {
-        response.headers.set(key, value as string);
+    if (request.rateLimitHeaders) {
+      Object.entries(request.rateLimitHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
       });
     }
     return response;
@@ -448,10 +448,9 @@ export async function middleware(request: NextRequest) {
   });
   
   // Add rate limit headers if available
-  const rateLimitHeaders = (request as any).rateLimitHeaders;
-  if (rateLimitHeaders) {
-    Object.entries(rateLimitHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value as string);
+  if (request.rateLimitHeaders) {
+    Object.entries(request.rateLimitHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
     });
   }
   

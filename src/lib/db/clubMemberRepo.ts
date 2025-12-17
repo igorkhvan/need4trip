@@ -5,10 +5,6 @@ import { log } from "@/lib/utils/logger";
 
 const table = "club_members";
 
-
-// TODO: Need4Trip: Regenerate supabase types after DB migration to include club_members table
-// Using 'any' cast temporarily for all queries until types are regenerated
-
 // ============================================================================
 // Database Types (snake_case)
 // ============================================================================
@@ -61,7 +57,6 @@ export async function addMember(
     // joined_at will be set by DB DEFAULT NOW()
   };
 
-  // TODO: Need4Trip: Regenerate supabase types after DB migration
   const { data, error } = await supabase
     .from(table)
     .insert(insertPayload)

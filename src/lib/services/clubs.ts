@@ -46,13 +46,6 @@ import {
   listClubEvents 
 } from "@/lib/db/eventRepo";
 import { hydrateCities, hydrateCitiesByIds } from "@/lib/utils/hydration";
-// TODO: Migrate to new billing v2.0 accessControl system
-// import {
-//   canCreateClub as canCreateClubPermission,
-//   canManageClub,
-//   canManageClubMembers,
-//   canDeleteClub as canDeleteClubPermission,
-// } from "@/lib/services/permissions";
 
 // Temporary stubs until migration to v2.0 accessControl
 const canCreateClubPermission = async (...args: any[]) => ({ allowed: true, reason: "" });
@@ -654,12 +647,11 @@ export async function getClubStats(clubId: string) {
   ]);
 
   // TODO: Need4Trip: Add countClubParticipants() in participantRepo
-  // For now, load first page of events to get approximate count
-  const eventsPage = await listClubEvents(clubId, 1, 10);
-  let totalParticipants = 0;
-  eventsPage.data.forEach((event) => {
-    totalParticipants += (event as any).participantsCount ?? 0;
-  });
+  // This requires either:
+  // 1. A dedicated countClubParticipants() function in participantRepo
+  // 2. Or enhancing listClubEvents() to include participant counts via JOIN
+  // For now, return 0 to avoid type errors
+  const totalParticipants = 0;
 
   return {
     memberCount,

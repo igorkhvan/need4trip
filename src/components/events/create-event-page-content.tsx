@@ -7,6 +7,7 @@ import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { PaywallModal } from "@/components/billing/paywall-modal";
+import { PaywallError } from "@/lib/errors/PaywallError";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamic(
@@ -86,12 +87,10 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
           setPaywallOpen(true);
           
           // Throw special error that EventForm will recognize and ignore
-          const paywallError = new Error("PAYWALL_SHOWN");
-          (paywallError as any).isPaywall = true;
-          throw paywallError;
-        } catch (e: any) {
+          throw new PaywallError("PAYWALL_SHOWN", paywallInfo);
+        } catch (e: unknown) {
           // If it's already our paywall error, re-throw it
-          if (e.isPaywall) throw e;
+          if (PaywallError.isPaywallError(e)) throw e;
           
           // If parsing fails, show generic paywall
           setPaywallData({
@@ -99,9 +98,9 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
           });
           setPaywallOpen(true);
           
-          const paywallError = new Error("PAYWALL_SHOWN");
-          (paywallError as any).isPaywall = true;
-          throw paywallError;
+          throw new PaywallError("PAYWALL_SHOWN", {
+            message: "Эта функция доступна на платных тарифах",
+          });
         }
       }
       

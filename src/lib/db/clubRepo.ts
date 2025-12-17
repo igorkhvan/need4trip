@@ -5,10 +5,6 @@ import { log } from "@/lib/utils/logger";
 
 const table = "clubs";
 
-
-// TODO: Need4Trip: Regenerate supabase types after DB migration to include clubs table
-// Using 'any' cast temporarily for all queries until types are regenerated
-
 // ============================================================================
 // Database Types (snake_case)
 // ============================================================================

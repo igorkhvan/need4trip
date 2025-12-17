@@ -12,6 +12,7 @@ import { handleApiError } from "@/lib/utils/errors";
 import { VehicleTypeRequirement, Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import { PaywallModal } from "@/components/billing/paywall-modal";
+import { PaywallError } from "@/lib/errors/PaywallError";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamicImport(
@@ -179,12 +180,10 @@ export default function EditEventPage() {
           setPaywallOpen(true);
           
           // Throw special error that EventForm will recognize and ignore
-          const paywallError = new Error("PAYWALL_SHOWN");
-          (paywallError as any).isPaywall = true;
-          throw paywallError;
-        } catch (e: any) {
+          throw new PaywallError("PAYWALL_SHOWN", paywallInfo);
+        } catch (e: unknown) {
           // If it's already our paywall error, re-throw it
-          if (e.isPaywall) throw e;
+          if (PaywallError.isPaywallError(e)) throw e;
           
           // If parsing fails, show generic paywall
           setPaywallData({
@@ -192,9 +191,9 @@ export default function EditEventPage() {
           });
           setPaywallOpen(true);
           
-          const paywallError = new Error("PAYWALL_SHOWN");
-          (paywallError as any).isPaywall = true;
-          throw paywallError;
+          throw new PaywallError("PAYWALL_SHOWN", {
+            message: "Эта функция доступна на платных тарифах",
+          });
         }
       }
       
