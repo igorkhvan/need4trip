@@ -19,6 +19,7 @@ interface EventParticipantsAsyncProps {
   isOwner: boolean;
   currentUserId?: string | null;
   guestSessionId?: string | null;
+  isPastEvent?: boolean;
 }
 
 export async function EventParticipantsAsync({
@@ -27,6 +28,7 @@ export async function EventParticipantsAsync({
   isOwner,
   currentUserId,
   guestSessionId,
+  isPastEvent = false,
 }: EventParticipantsAsyncProps) {
   // Загружаем участников
   const dbParticipants = await listParticipants(eventId);
@@ -50,7 +52,8 @@ export async function EventParticipantsAsync({
   // Показываем кнопку "Присоединиться" только если:
   // 1. Пользователь не зарегистрирован
   // 2. Событие не заполнено
-  const showJoinButton = !isUserRegistered && !isFull;
+  // 3. Событие не прошло
+  const showJoinButton = !isUserRegistered && !isFull && !isPastEvent;
 
   return (
     <Card>

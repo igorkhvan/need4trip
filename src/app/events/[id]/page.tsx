@@ -216,6 +216,7 @@ export default async function EventDetails({
                 isOwner={isOwner}
                 currentUserId={currentUser?.id}
                 guestSessionId={guestSessionId ?? undefined}
+                isPastEvent={isPastEvent}
               />
             </Suspense>
           </div>
