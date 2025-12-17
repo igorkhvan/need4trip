@@ -77,6 +77,7 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
             reason: "REQUIRED",
             title: "Войти в Need4Trip",
             description: "Чтобы продолжить, войдите через Telegram.",
+            afterLoginRedirectTo: "/profile",
           })}
           className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-[#F9FAFB]"
         >
