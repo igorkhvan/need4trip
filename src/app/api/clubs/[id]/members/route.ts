@@ -6,9 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getClubMembers, addClubMember } from "@/lib/services/clubs";
 import { respondError } from "@/lib/api/response";
+import { log } from "@/lib/utils/logger";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +25,13 @@ interface RouteContext {
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
+    // GET is public - anyone can see club members
     const members = await getClubMembers(id);
 
     return NextResponse.json({ members });
   } catch (error) {
     const { id } = await params;
-    console.error(`[GET /api/clubs/${id}/members]`, error);
+    log.errorWithStack("Failed to get club members", error, { clubId: id });
     return respondError(error);
   }
 }
@@ -43,7 +45,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const user = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
+    
     const body = await req.json();
     const { userId, role } = body;
 
@@ -59,7 +64,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ member }, { status: 201 });
   } catch (error) {
     const { id } = await params;
-    console.error(`[POST /api/clubs/${id}/members]`, error);
+    log.errorWithStack("Failed to add club member", error, { clubId: id });
     return respondError(error);
   }
 }

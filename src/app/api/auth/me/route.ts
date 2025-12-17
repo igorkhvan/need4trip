@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server";
 
-import { clearAuthCookie } from "@/lib/auth/cookies";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) {
-    // Return null user instead of error for unauthenticated state
-    // This prevents 401 errors in browser console
-    return NextResponse.json({ user: null }, { status: 200 });
+/**
+ * GET /api/auth/me
+ * 
+ * Returns current authenticated user
+ * Protected by middleware - requires valid JWT
+ */
+export async function GET(request: Request) {
+  try {
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(request);
+    
+    if (!user) {
+      // Middleware should have blocked this, but handle gracefully
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+    
+    return NextResponse.json({ user });
+  } catch (error) {
+    return NextResponse.json({ user: null }, { status: 401 });
   }
-  return NextResponse.json({ user });
 }

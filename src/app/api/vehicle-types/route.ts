@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { getActiveVehicleTypes } from "@/lib/db/vehicleTypeRepo";
+import { log } from "@/lib/utils/logger";
 
 /**
  * GET /api/vehicle-types
  * 
  * Get all active vehicle types
  * Cached on backend for 24h
+ * Public endpoint (no auth required)
  */
 export async function GET() {
   try {
     const vehicleTypes = await getActiveVehicleTypes();
     
-    console.log('[API /vehicle-types] Loaded types:', vehicleTypes.length);
+    log.debug("Loaded vehicle types", { count: vehicleTypes.length });
     
     // Return as simple options for forms
     const options = vehicleTypes.map(type => ({
@@ -20,11 +22,9 @@ export async function GET() {
       label: type.nameRu,
     }));
     
-    console.log('[API /vehicle-types] Returning options:', options);
-    
     return respondSuccess({ vehicleTypes: options });
   } catch (error) {
-    console.error('[API /vehicle-types] Error:', error);
+    log.errorWithStack("Failed to get vehicle types", error);
     return respondError(error);
   }
 }

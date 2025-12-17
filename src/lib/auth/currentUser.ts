@@ -140,3 +140,61 @@ export async function getCurrentUserSafe(): Promise<CurrentUser | null> {
     return null;
   }
 }
+
+/**
+ * Get CurrentUser from middleware x-user-id header
+ * 
+ * Use this in API route handlers that are protected by middleware.
+ * Middleware validates JWT and adds x-user-id header.
+ * 
+ * @param request - Request object from route handler
+ * @returns CurrentUser object or null
+ * 
+ * @example
+ * ```typescript
+ * export async function POST(request: Request) {
+ *   const user = await getCurrentUserFromMiddleware(request);
+ *   if (!user) {
+ *     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+ *   }
+ *   // Use user...
+ * }
+ * ```
+ */
+export async function getCurrentUserFromMiddleware(request: Request): Promise<CurrentUser | null> {
+  const userId = request.headers.get('x-user-id');
+  
+  if (!userId) {
+    log.warn("getCurrentUserFromMiddleware called without x-user-id header");
+    return null;
+  }
+  
+  try {
+    const user = await getUserById(userId);
+    if (!user) {
+      log.error("User not found after middleware auth", { userId });
+      return null;
+    }
+    
+    // Convert User to CurrentUser format
+    return {
+      id: user.id,
+      name: user.name,
+      telegramHandle: user.telegramHandle,
+      telegramId: user.telegramId,
+      avatarUrl: user.avatarUrl,
+      cityId: user.cityId,
+      phone: user.phone,
+      email: user.email,
+      carBrandId: user.carBrandId,
+      carModelText: user.carModelText,
+      experienceLevel: user.experienceLevel,
+      plan: user.plan,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  } catch (err) {
+    log.errorWithStack("Failed to load user from middleware ID", err, { userId });
+    return null;
+  }
+}

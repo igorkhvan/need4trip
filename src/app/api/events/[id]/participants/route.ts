@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { listParticipants, registerParticipant } from "@/lib/services/participants";
@@ -22,12 +22,21 @@ export async function GET(_: Request, context: Params) {
 export async function POST(request: Request, context: Params) {
   try {
     const { id } = await context.params;
-    const currentUser = await getCurrentUser();
+    
+    // POST /api/events/[id]/participants is special:
+    // - Middleware requires auth for POST
+    // - BUT we want to allow guest registrations
+    // - Solution: Check middleware user first, fallback to guest session
+    
+    let currentUser = await getCurrentUserFromMiddleware(request);
+    let guestSessionId: string | null = null;
+    
+    if (!currentUser) {
+      // No authenticated user - create guest session
+      guestSessionId = await getOrCreateGuestSessionId();
+    }
+    
     const payload = await request.json();
-    
-    // Get or create guest session ID for non-authenticated users
-    const guestSessionId = currentUser ? null : await getOrCreateGuestSessionId();
-    
     const participant = await registerParticipant(id, payload, currentUser, guestSessionId);
     
     // Revalidate event page to show updated participants list

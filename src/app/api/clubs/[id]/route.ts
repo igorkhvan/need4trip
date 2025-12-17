@@ -7,9 +7,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getClubWithDetails, updateClub, deleteClub } from "@/lib/services/clubs";
 import { respondError } from "@/lib/api/response";
+import { log } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,14 @@ interface RouteContext {
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
+    // GET is public, but may need user context for membership check
     const user = await getCurrentUser();
     const club = await getClubWithDetails(id, user);
 
     return NextResponse.json({ club });
   } catch (error) {
     const { id } = await params;
-    console.error(`[GET /api/clubs/${id}]`, error);
+    log.errorWithStack("Failed to get club details", error, { clubId: id });
     return respondError(error);
   }
 }
@@ -42,7 +44,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const user = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     const body = await req.json();
 
     const club = await updateClub(id, body, user);
@@ -50,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ club });
   } catch (error) {
     const { id } = await params;
-    console.error(`[PATCH /api/clubs/${id}]`, error);
+    log.errorWithStack("Failed to update club", error, { clubId: id });
     return respondError(error);
   }
 }
@@ -62,13 +66,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    const user = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     await deleteClub(id, user);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     const { id } = await params;
-    console.error(`[DELETE /api/clubs/${id}]`, error);
+    log.errorWithStack("Failed to delete club", error, { clubId: id });
     return respondError(error);
   }
 }

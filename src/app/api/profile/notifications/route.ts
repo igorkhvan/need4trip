@@ -5,7 +5,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondJSON, respondError } from "@/lib/api/response";
 import { AuthError, ValidationError } from "@/lib/errors";
 import {
@@ -20,7 +20,8 @@ import { notificationSettingsUpdateSchema } from "@/lib/types/notification";
  */
 export async function GET(request: NextRequest) {
   try {
-    const currentUser = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const currentUser = await getCurrentUserFromMiddleware(request);
     
     if (!currentUser) {
       throw new AuthError("Требуется авторизация", undefined, 401);
@@ -44,7 +45,8 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const currentUser = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const currentUser = await getCurrentUserFromMiddleware(request);
     
     if (!currentUser) {
       throw new AuthError("Требуется авторизация", undefined, 401);

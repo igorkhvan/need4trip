@@ -61,7 +61,7 @@ async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
     const allowedIds = new Set<string>([...participantEventIds, ...accessEventIds]);
     allowed = allowedIds.has(event.id);
   } catch (err) {
-    console.error("[ensureEventVisibility] Failed to check access", err);
+    log.errorWithStack("Failed to check event visibility access", err, { eventId: event.id });
   }
 
   // For 'restricted' visibility, grant access automatically when user visits via link
@@ -70,7 +70,7 @@ async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
       await upsertEventAccess(event.id, currentUser.id, "link");
       allowed = true;
     } catch (err) {
-      console.error("[ensureEventVisibility] Failed to upsert access for restricted event", err);
+      log.errorWithStack("Failed to upsert access for restricted event", err, { eventId: event.id });
     }
   }
 
@@ -107,7 +107,7 @@ export async function listEventsSafe(page = 1, limit = 12): Promise<{
       hasMore: result.hasMore,
     };
   } catch (err) {
-    console.error("[listEventsSafe] Failed to list events", err);
+    log.errorWithStack("Failed to list events safely", err);
     return {
       events: [],
       total: 0,
@@ -142,11 +142,11 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
     listPublicEvents(1, 100),
     listEventsByCreator(userId, 1, 100),
     listEventIdsForUser(userId).catch((err) => {
-      console.error("[listVisibleEventsForUser] Failed to load participant events", err);
+      log.errorWithStack("Failed to load participant events for user", err, { userId });
       return [];
     }),
     listAccessibleEventIds(userId).catch((err) => {
-      console.error("[listVisibleEventsForUser] Failed to load access events", err);
+      log.errorWithStack("Failed to load accessible events for user", err, { userId });
       return [];
     }),
   ]);
@@ -192,7 +192,7 @@ async function getParticipantsCountByEventIds(eventIds: string[]): Promise<Recor
   try {
     participantEventIdsAll = await listParticipantEventIds(eventIds);
   } catch (err) {
-    console.error("[getParticipantsCountByEventIds] Failed to count participants for events", err);
+    log.errorWithStack("Failed to count participants for events", err, { eventCount: eventIds.length });
     return {};
   }
   return participantEventIdsAll.reduce<Record<string, number>>((acc, eventId) => {
@@ -206,13 +206,13 @@ export async function hydrateEvent(event: Event): Promise<Event> {
   try {
     allowedBrands = await getAllowedBrands(event.id);
   } catch (err) {
-    console.error("[hydrateEvent] Failed to load allowed brands", err);
+    log.warn("Failed to load allowed brands for event, using empty array", { eventId: event.id, error: err });
   }
   let participantsCount = event.participantsCount ?? 0;
   try {
     participantsCount = await countParticipants(event.id);
   } catch (err) {
-    console.error("[hydrateEvent] Failed to count participants", err);
+    log.warn("Failed to count participants for event, using 0", { eventId: event.id, error: err });
   }
   
   // Hydrate city and currency
@@ -221,7 +221,7 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     const [hydrated] = await hydrateCitiesAndCurrencies([hydratedEvent]);
     hydratedEvent = hydrated;
   } catch (err) {
-    console.error("[hydrateEvent] Failed to hydrate city/currency", err);
+    log.warn("Failed to hydrate city/currency for event", { eventId: event.id, error: err });
   }
   
   // Hydrate category
@@ -229,7 +229,7 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     const [hydratedWithCategory] = await hydrateEventCategories([hydratedEvent]);
     hydratedEvent = hydratedWithCategory;
   } catch (err) {
-    console.error("[hydrateEvent] Failed to hydrate category", err);
+    log.warn("Failed to hydrate category for event", { eventId: event.id, error: err });
   }
   
   return hydratedEvent;
@@ -239,7 +239,7 @@ export async function grantEventAccessByLink(eventId: string, userId: string): P
   try {
     await upsertEventAccess(eventId, userId, "link");
   } catch (err) {
-    console.error("[grantEventAccessByLink] Failed to upsert access", err);
+    log.errorWithStack("Failed to grant event access by link", err, { eventId, userId });
   }
 }
 
@@ -252,7 +252,7 @@ export async function getEvent(id: string): Promise<Event> {
   try {
     event.allowedBrands = await getAllowedBrands(id);
   } catch (err) {
-    console.error("[getEvent] Failed to load allowed brands", err);
+    log.warn("Failed to load allowed brands for event, using empty array", { eventId: id, error: err });
   }
   return event;
 }
@@ -276,7 +276,7 @@ export async function getEventWithParticipants(
   try {
     event.allowedBrands = await getAllowedBrands(id);
   } catch (err) {
-    console.error("[getEventWithParticipants] Failed to load allowed brands", err);
+    log.warn("Failed to load allowed brands for event with participants, using empty array", { eventId: id, error: err });
   }
   return {
     event,
@@ -301,7 +301,7 @@ export async function getEventBasicInfo(
   // Hydrate all related data + count participants (parallel)
   const [allowedBrands, participantsCount] = await Promise.all([
     getAllowedBrands(id).catch((err) => {
-      console.error("[getEventBasicInfo] Failed to load allowed brands", err);
+      log.warn("Failed to load allowed brands for event basic info, using empty array", { eventId: id, error: err });
       return [];
     }),
     countParticipants(id),
@@ -338,7 +338,7 @@ export async function getEventWithParticipantsVisibility(
   try {
     event.allowedBrands = await getAllowedBrands(id);
   } catch (err) {
-    console.error("[getEventWithParticipants] Failed to load allowed brands", err);
+    log.warn("Failed to load allowed brands for event with visibility, using empty array", { eventId: id, error: err });
   }
   
   // Hydrate city and currency
@@ -456,13 +456,13 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   try {
     event.allowedBrands = await getAllowedBrands(db.id);
   } catch (err) {
-    console.error("[createEvent] Failed to load allowed brands", err);
+    log.warn("Failed to load allowed brands for new event, using empty array", { eventId: db.id, error: err });
   }
   
   // Queue notifications for new event (non-blocking)
   if (event.visibility === "public" && event.cityId) {
     queueNewEventNotificationsAsync(event).catch((err) => {
-      console.error("[createEvent] Failed to queue new event notifications", err);
+      log.errorWithStack("Failed to queue new event notifications", err, { eventId: event.id });
     });
   }
   
@@ -478,12 +478,12 @@ async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
     const creatorId = event.createdByUserId;
     
     if (!cityId) {
-      console.warn(`[queueNewEventNotifications] Event has no cityId: ${event.id}`);
+      log.warn("Cannot queue event notifications: event has no cityId", { eventId: event.id });
       return;
     }
     
     if (!creatorId) {
-      console.warn(`[queueNewEventNotifications] Event has no creatorId: ${event.id}`);
+      log.warn("Cannot queue event notifications: event has no creatorId", { eventId: event.id });
       return;
     }
     
@@ -498,7 +498,7 @@ async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
     ]);
     
     if (!city) {
-      console.warn(`[queueNewEventNotifications] City not found: ${cityId}`);
+      log.warn("Cannot queue event notifications: city not found", { eventId: event.id, cityId });
       return;
     }
     
@@ -513,7 +513,7 @@ async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
       creatorId,
     });
   } catch (err) {
-    console.error("[queueNewEventNotificationsAsync] Unexpected error", err);
+    log.errorWithStack("Unexpected error queueing new event notifications", err, { eventId: event.id });
     throw err;
   }
 }
@@ -726,7 +726,7 @@ export async function updateEvent(
   try {
     event.allowedBrands = await getAllowedBrands(id);
   } catch (err) {
-    console.error("[updateEvent] Failed to load allowed brands", err);
+    log.warn("Failed to load allowed brands for updated event, using empty array", { eventId: id, error: err });
   }
   
   // Queue event update notifications to participants (non-blocking)
@@ -736,7 +736,7 @@ export async function updateEvent(
       updated,
       parsed
     ).catch((err) => {
-      console.error("[updateEvent] Failed to queue update notifications", err);
+      log.errorWithStack("Failed to queue event update notifications", err, { eventId: id });
     });
   }
   
@@ -776,14 +776,14 @@ async function queueEventUpdatedNotificationsAsync(
     // Check if any meaningful changes occurred
     const hasChanges = Object.values(changes).some(Boolean);
     if (!hasChanges) {
-      console.log('[queueEventUpdatedNotifications] No meaningful changes detected');
+      log.debug("No meaningful changes detected for event update notifications", { eventId: updated.id });
       return;
     }
     
     // Get all participants
     const participants = await listParticipants(updated.id);
     if (participants.length === 0) {
-      console.log('[queueEventUpdatedNotifications] No participants to notify');
+      log.debug("No participants to notify for event update", { eventId: updated.id });
       return;
     }
     
@@ -798,7 +798,7 @@ async function queueEventUpdatedNotificationsAsync(
       participantIds: participants.map(p => p.id),
     });
   } catch (err) {
-    console.error("[queueEventUpdatedNotificationsAsync] Unexpected error", err);
+    log.errorWithStack("Unexpected error queueing event update notifications", err, { eventId: updated.id });
     throw err;
   }
 }

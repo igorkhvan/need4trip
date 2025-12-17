@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getClub } from "@/lib/services/clubs";
 import { listMembers } from "@/lib/db/clubMemberRepo";
 import { getUserById } from "@/lib/db/userRepo";
@@ -25,7 +25,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id: clubId } = await params;
-    const user = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
 
     if (!user) {
       throw new AuthError("Необходима авторизация");

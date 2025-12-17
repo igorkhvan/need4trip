@@ -3,6 +3,7 @@ import { respondJSON, respondError } from '@/lib/api/response';
 import { processNotificationQueue, resetStuckNotificationsTask } from '@/lib/services/notifications';
 import { getQueueStats } from '@/lib/db/notificationQueueRepo';
 import { AuthError } from '@/lib/errors';
+import { log } from '@/lib/utils/logger';
 
 /**
  * Cron job endpoint for processing notification queue
@@ -12,14 +13,9 @@ import { AuthError } from '@/lib/errors';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      throw new AuthError('Unauthorized', undefined, 401);
-    }
-
+    // NOTE: Cron secret verified by middleware
+    // This route should only be reachable if middleware passed
+    
     const startTime = Date.now();
 
     // Generate unique worker ID
@@ -36,11 +32,14 @@ export async function POST(request: NextRequest) {
 
     const duration = Date.now() - startTime;
 
-    console.log(
-      `[Cron] Notification processing complete: ` +
-      `sent=${result.sent}, failed=${result.failed}, skipped=${result.skipped}, ` +
-      `reset=${resetResult.reset}, duration=${duration}ms`
-    );
+    log.info("Cron: Notification processing complete", {
+      workerId,
+      sent: result.sent,
+      failed: result.failed,
+      skipped: result.skipped,
+      reset: resetResult.reset,
+      duration,
+    });
 
     return respondJSON({
       success: true,
@@ -57,25 +56,18 @@ export async function POST(request: NextRequest) {
       queueStats: stats,
     });
   } catch (error) {
-    console.error('[Cron] Error processing notifications:', error);
+    log.errorWithStack("Cron: Error processing notifications", error);
     return respondError(error);
   }
 }
 
 /**
  * Manual trigger endpoint (for testing)
- * Requires admin authentication
+ * Requires cron secret (verified by middleware)
  */
 export async function GET(request: NextRequest) {
   try {
-    // For testing, allow with admin auth or cron secret
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      throw new AuthError('Unauthorized - use POST with CRON_SECRET', undefined, 401);
-    }
-
+    // NOTE: Already verified by middleware
     // Get current stats only
     const stats = await getQueueStats();
 

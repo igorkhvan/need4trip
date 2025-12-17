@@ -6,9 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { updateClubMemberRole, removeClubMember } from "@/lib/services/clubs";
 import { respondError } from "@/lib/api/response";
+import { log } from "@/lib/utils/logger";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,10 @@ interface RouteContext {
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
     const { id, userId } = await params;
-    const user = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
+    
     const body = await req.json();
     const { role } = body;
 
@@ -42,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ member });
   } catch (error) {
     const { id, userId } = await params;
-    console.error(`[PATCH /api/clubs/${id}/members/${userId}]`, error);
+    log.errorWithStack("Failed to update club member role", error, { clubId: id, memberId: userId });
     return respondError(error);
   }
 }
@@ -54,13 +58,16 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const { id, userId } = await params;
-    const user = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
+    
     await removeClubMember(id, userId, user);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     const { id, userId } = await params;
-    console.error(`[DELETE /api/clubs/${id}/members/${userId}]`, error);
+    log.errorWithStack("Failed to remove club member", error, { clubId: id, memberId: userId });
     return respondError(error);
   }
 }

@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getUserClubs } from "@/lib/services/clubs";
 import { getCityById } from "@/lib/db/cityRepo";
 import { respondError } from "@/lib/api/response";
@@ -13,6 +13,7 @@ import { updateUser } from "@/lib/db/userRepo";
 import { profileUpdateSchema } from "@/lib/types/user";
 import { AuthError, ValidationError } from "@/lib/errors";
 import { getUserEventStats } from "@/lib/services/userStats";
+import { log } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
       try {
         city = await getCityById(user.cityId);
       } catch (err) {
-        console.error("[GET /api/profile] Failed to load city:", err);
+        log.warn("Failed to load city for user profile", { userId: user.id, cityId: user.cityId, error: err });
       }
     }
 
@@ -75,7 +76,8 @@ export async function GET(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     
     if (!user) {
       throw new AuthError("Необходима авторизация");
@@ -108,7 +110,7 @@ export async function PATCH(req: NextRequest) {
       try {
         city = await getCityById(updatedUser.cityId);
       } catch (err) {
-        console.error("[PATCH /api/profile] Failed to load city:", err);
+        log.warn("Failed to load city for updated user profile", { userId: updatedUser.id, cityId: updatedUser.cityId, error: err });
       }
     }
     

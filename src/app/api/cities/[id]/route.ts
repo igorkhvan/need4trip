@@ -2,10 +2,12 @@
  * City by ID API
  * 
  * GET /api/cities/[id] - Get city by ID
+ * Public endpoint (no auth required)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCityById } from "@/lib/db/cityRepo";
+import { log } from "@/lib/utils/logger";
 
 export async function GET(
   req: NextRequest,
@@ -32,7 +34,7 @@ export async function GET(
 
     return NextResponse.json({ city });
   } catch (error) {
-    console.error(`[GET /api/cities/${id}] Failed to fetch city:`, error);
+    log.errorWithStack("Failed to fetch city by ID", error, { cityId: id });
     return NextResponse.json(
       { error: "Failed to fetch city" },
       { status: 500 }

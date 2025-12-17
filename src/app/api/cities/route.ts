@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCities, getPopularCities, getAllCities, getCitiesByIds } from "@/lib/db/cityRepo";
 
+import { log } from "@/lib/utils/logger";
+
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const query = searchParams.get("q");
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ cities });
   } catch (error) {
-    console.error("[GET /api/cities] Failed to fetch cities:", error);
+    log.errorWithStack("Failed to fetch cities", error, { query, popularOnly, idsParam });
     return NextResponse.json(
       { error: "Failed to fetch cities" },
       { status: 500 }

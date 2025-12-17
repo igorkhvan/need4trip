@@ -6,6 +6,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 import { setAuthCookie } from "@/lib/auth/cookies";
 import { createAuthToken } from "@/lib/auth/currentUser";
+import { log } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +114,7 @@ async function upsertTelegramUser(
   payload: TelegramPayload,
   name: string
 ) {
+  const { log } = await import("@/lib/utils/logger");
   const telegramId = String(payload.id);
   
   // 1. Ищем существующего пользователя по telegram_id
@@ -123,7 +125,7 @@ async function upsertTelegramUser(
     .maybeSingle();
 
   if (findError) {
-    console.error("[auth/telegram] Error finding existing user:", findError);
+    log.error("Error finding existing user in Telegram auth", { telegramId, error: findError });
     return { error: findError };
   }
 
@@ -142,11 +144,11 @@ async function upsertTelegramUser(
       .single();
 
     if (error) {
-      console.error("[auth/telegram] Error updating existing user:", error);
+      log.error("Error updating existing user in Telegram auth", { userId: existing.id, telegramId, error });
       return { error };
     }
 
-    console.log("[auth/telegram] Updated existing user:", { id: data.id, telegram_id: telegramId });
+    log.info("Updated existing user via Telegram auth", { userId: data.id, telegramId });
     return { data };
   }
 
@@ -163,11 +165,11 @@ async function upsertTelegramUser(
     .single();
 
   if (error) {
-    console.error("[auth/telegram] Error creating new user:", error);
+    log.error("Error creating new user in Telegram auth", { telegramId, error });
     return { error };
   }
 
-  console.log("[auth/telegram] Created new user:", { id: data.id, telegram_id: telegramId });
+  log.info("Created new user via Telegram auth", { userId: data.id, telegramId });
   return { data };
 }
 
@@ -179,12 +181,12 @@ async function verifyUserExists(supabase: SupabaseClient, userId: string) {
     .maybeSingle();
 
   if (error) {
-    console.error("[auth/telegram] Supabase error on verify user:", error);
+    log.errorWithStack("Supabase error verifying Telegram user", error, { userId });
     return { error };
   }
 
   if (!data) {
-    console.error("[auth/telegram] User not created or returned after upsert.", { userId });
+    log.error("Telegram user not found after upsert", { userId });
     return { data: null };
   }
 
@@ -301,7 +303,7 @@ async function handleTelegramAuth(payload: TelegramPayload | null) {
     
     return response;
   } catch (err) {
-    console.error("[auth/telegram] Unexpected error during Supabase operations", err);
+    log.errorWithStack("Unexpected error during Telegram auth Supabase operations", err);
     return NextResponse.json(
       {
         error: "db_error",
@@ -318,7 +320,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as TelegramPayload;
     return await handleTelegramAuth(body);
   } catch (err) {
-    console.error("Telegram auth error", err);
+    log.errorWithStack("Telegram auth POST error", err);
     return NextResponse.json(
       { error: "InternalError", message: "Ошибка авторизации" },
       { status: 500 }
@@ -332,7 +334,7 @@ export async function GET(request: Request) {
     const payload = parsePayloadFromSearchParams(url);
     return await handleTelegramAuth(payload);
   } catch (err) {
-    console.error("Telegram auth error", err);
+    log.errorWithStack("Telegram auth GET error", err);
     return NextResponse.json(
       { error: "InternalError", message: "Ошибка авторизации" },
       { status: 500 }

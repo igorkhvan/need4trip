@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { AuthError } from "@/lib/errors";
 import {
@@ -16,9 +16,10 @@ import { userCarCreateSchema } from "@/lib/types/userCar";
  * GET /api/profile/cars
  * Получить список автомобилей текущего пользователя
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(request);
     if (!user) {
       throw new AuthError("Необходима авторизация", 401);
     }
@@ -38,7 +39,8 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
       throw new AuthError("Необходима авторизация", 401);
     }
@@ -61,7 +63,8 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
       throw new AuthError("Необходима авторизация", 401);
     }
@@ -87,7 +90,8 @@ export async function DELETE(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
       throw new AuthError("Необходима авторизация", 401);
     }
@@ -113,7 +117,8 @@ export async function PATCH(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
       throw new AuthError("Необходима авторизация", 401);
     }

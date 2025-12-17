@@ -1,5 +1,5 @@
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser, getCurrentUserSafe } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { createEvent, hydrateEvent, listEvents } from "@/lib/services/events";
 import { NextRequest } from "next/server";
@@ -31,10 +31,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const currentUser = await getCurrentUser();
+    // Get user from middleware (JWT already verified)
+    const currentUser = await getCurrentUserFromMiddleware(request);
+    
     if (!currentUser) {
       throw new UnauthorizedError("Авторизация обязательна для создания события");
     }
+    
     const payload = await request.json();
     const event = await createEvent(payload, currentUser);
     return respondJSON({ event }, undefined, 201);

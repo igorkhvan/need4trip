@@ -1,5 +1,6 @@
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { UnauthorizedError } from "@/lib/errors";
 import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
 
 type Params = { params: Promise<{ id: string }> };
@@ -7,6 +8,8 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_: Request, { params }: Params) {
   try {
     const { id } = await params;
+    // GET is public, but may need user context for visibility
+    // Use getCurrentUser (not middleware) since GET is not protected
     const currentUser = await getCurrentUser();
     const event = await getEventWithVisibility(id, {
       currentUser,
@@ -22,7 +25,14 @@ export async function GET(_: Request, { params }: Params) {
 export async function PUT(request: Request, { params }: Params) {
   try {
     const { id } = await params;
-    const currentUser = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const currentUser = await getCurrentUserFromMiddleware(request);
+    
+    if (!currentUser) {
+      throw new UnauthorizedError("Авторизация обязательна");
+    }
+    
     const payload = await request.json();
     const updated = await updateEvent(id, payload, currentUser);
     return respondJSON({ event: updated });
@@ -31,10 +41,17 @@ export async function PUT(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
     const { id } = await params;
-    const currentUser = await getCurrentUser();
+    
+    // Get user from middleware (JWT already verified)
+    const currentUser = await getCurrentUserFromMiddleware(request);
+    
+    if (!currentUser) {
+      throw new UnauthorizedError("Авторизация обязательна");
+    }
+    
     await deleteEvent(id, currentUser);
     return respondJSON({ ok: true });
   } catch (err) {

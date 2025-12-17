@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveEventCategories } from "@/lib/db/eventCategoryRepo";
+import { log } from "@/lib/utils/logger";
 
 /**
  * GET /api/event-categories
  * Returns list of active event categories
+ * Public endpoint (no auth required)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -16,12 +18,12 @@ export async function GET(req: NextRequest) {
       nameRu: cat.nameRu,
       nameEn: cat.nameEn,
       icon: cat.icon,
-      isDefault: cat.isDefault, // Added
+      isDefault: cat.isDefault,
     }));
 
     return NextResponse.json({ categories: dtoCategories });
   } catch (error) {
-    console.error("[GET /api/event-categories] Error:", error);
+    log.errorWithStack("Failed to fetch event categories", error);
     return NextResponse.json(
       { error: "Failed to fetch event categories" },
       { status: 500 }

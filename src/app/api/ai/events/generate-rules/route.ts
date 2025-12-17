@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondError, respondJSON } from "@/lib/api/response";
 import { AuthError, ValidationError } from "@/lib/errors";
 import { 
@@ -30,8 +30,8 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authentication check
-    const currentUser = await getCurrentUser();
+    // 1. Get user from middleware (JWT already verified)
+    const currentUser = await getCurrentUserFromMiddleware(request);
     if (!currentUser) {
       throw new AuthError("Авторизация обязательна для использования AI");
     }
