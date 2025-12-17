@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamicImport from "next/dynamic";
 
@@ -43,6 +43,7 @@ type Event = {
 
 export default function EditEventPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [event, setEvent] = useState<Event | null>(null);
   const [participantCount, setParticipantCount] = useState(0);
@@ -198,7 +199,12 @@ export default function EditEventPage() {
       }
       
       await handleApiError(res);
+      return; // Stop here if error
     }
+    
+    // Success - redirect to event detail page with force refresh
+    router.push(`/events/${id}`);
+    router.refresh();
   };
 
   return (

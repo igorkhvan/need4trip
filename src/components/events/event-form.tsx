@@ -440,8 +440,8 @@ export function EventForm({
 
     try {
       await onSubmit(payload);
-      router.push(backHref);
-      router.refresh();
+      // Редирект и обновление страницы делает родительский компонент (после onSubmit)
+      // Не делаем здесь, чтобы избежать конфликтов и дать родителю контроль
     } catch (err: any) {
       // Check if this is a paywall error that's already been handled
       if (err?.isPaywall || err?.message === 'PAYWALL_SHOWN') {
