@@ -33,13 +33,19 @@ export function NotificationSettingsForm() {
   const loadSettings = async () => {
     try {
       setLoading(true);
+      console.log('[NotificationSettingsForm] Loading settings...');
       const res = await fetch('/api/profile/notifications');
       
+      console.log('[NotificationSettingsForm] Response status:', res.status);
+      
       if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('[NotificationSettingsForm] Error response:', errorData);
         throw new Error('Failed to load settings');
       }
       
       const data = await res.json();
+      console.log('[NotificationSettingsForm] Settings loaded:', data);
       setSettings(data.settings);
     } catch (err) {
       console.error('[NotificationSettingsForm] Load error:', err);
