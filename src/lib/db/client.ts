@@ -66,8 +66,12 @@ if (supabase) {
   log.error("Failed to create Supabase client");
 }
 
-if (supabaseAdmin) {
-  log.info("Supabase admin client created successfully");
-} else {
-  log.warn("Supabase admin client not available (SERVICE_ROLE_KEY missing)");
+// Admin client is only available on server-side
+// Don't log warning on client as SERVICE_ROLE_KEY should never be exposed to browser
+if (typeof window === 'undefined') {
+  if (supabaseAdmin) {
+    log.info("Supabase admin client created successfully");
+  } else {
+    log.warn("Supabase admin client not available (SERVICE_ROLE_KEY missing)");
+  }
 }
