@@ -3,9 +3,16 @@
  * Manages user preferences for notifications
  */
 
-import { supabase, supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
 import type { NotificationSettings, NotificationSettingsUpdate } from "@/lib/types/notification";
 import { NotificationTypeDefaults } from "@/lib/constants/notificationTypes";
+
+// TODO: Regenerate Supabase types after applying migration
+const getNotificationSettings = () => {
+  ensureAdminClient();
+  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+  return (supabaseAdmin as any);
+};
 
 /**
  * Get user notification settings
@@ -13,7 +20,7 @@ import { NotificationTypeDefaults } from "@/lib/constants/notificationTypes";
  */
 export async function getUserNotificationSettings(userId: string): Promise<NotificationSettings | null> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getNotificationSettings()
       .from('user_notification_settings')
       .select('*')
       .eq('user_id', userId)
@@ -50,7 +57,7 @@ export async function createDefaultSettings(userId: string): Promise<Notificatio
     notify_organizer_message: NotificationTypeDefaults.organizer_message,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getNotificationSettings()
     .from('user_notification_settings')
     .insert(defaults)
     .select()
@@ -95,7 +102,7 @@ export async function updateUserNotificationSettings(
     dbUpdates.notify_organizer_message = updates.notifyOrganizerMessage;
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getNotificationSettings()
     .from('user_notification_settings')
     .update(dbUpdates)
     .eq('user_id', userId)
@@ -119,7 +126,7 @@ export async function getUsersForNewEventNotification(
   creatorId: string
 ): Promise<Array<{ userId: string; telegramChatId: string }>> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getNotificationSettings()
       .from('users')
       .select(`
         id,

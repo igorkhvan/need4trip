@@ -8,13 +8,7 @@ import { AuthError } from '@/lib/errors';
  * Cron job endpoint for processing notification queue
  * Protected by CRON_SECRET
  * 
- * Vercel Cron configuration:
- * {
- *   "crons": [{
- *     "path": "/api/cron/process-notifications",
- *     "schedule": "*/5 * * * *"
- *   }]
- * }
+ * Configured in vercel.json to run every 5 minutes
  */
 export async function POST(request: NextRequest) {
   try {

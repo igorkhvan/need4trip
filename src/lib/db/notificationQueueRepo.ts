@@ -3,9 +3,17 @@
  * Hardened with deduplication, parallel-safe claiming, and DLQ
  */
 
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
 import type { NotificationQueueItem, NotificationTrigger, NotificationPayload } from "@/lib/types/notification";
 import { buildDedupeKey } from "@/lib/types/notification";
+
+// TODO: Regenerate Supabase types after applying migration
+// For now, we cast to any to avoid type errors
+const getNotificationQueue = () => {
+  ensureAdminClient();
+  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+  return (supabaseAdmin as any);
+};
 
 export interface AddToQueueParams {
   eventId: string;
@@ -46,7 +54,8 @@ export async function addToQueue(params: AddToQueueParams): Promise<boolean> {
   const message = JSON.stringify(payload); // Temporary, formatter will replace
 
   try {
-    const { error } = await supabaseAdmin
+    const client = getNotificationQueue();
+    const { error } = await client
       .from('notification_queue')
       .insert({
         event_id: eventId,
@@ -89,7 +98,7 @@ export async function claimPendingNotifications(
 ): Promise<NotificationQueueItem[]> {
   try {
     // Use the claim function from migration
-    const { data, error } = await supabaseAdmin.rpc('claim_pending_notifications', {
+    const { data, error } = await getNotificationQueue().rpc('claim_pending_notifications', {
       p_batch_size: batchSize,
       p_worker_id: workerId,
     });
@@ -110,7 +119,7 @@ export async function claimPendingNotifications(
  * Mark notification as sent
  */
 export async function markAsSent(id: string): Promise<void> {
-  const { error } = await supabaseAdmin
+  const { error } = await getNotificationQueue()
     .from('notification_queue')
     .update({
       status: 'sent',
@@ -134,7 +143,7 @@ export async function markAsFailed(
   maxAttempts: number = 3
 ): Promise<void> {
   // Get current attempts
-  const { data: notification, error: fetchError } = await supabaseAdmin
+  const { data: notification, error: fetchError } = await getNotificationQueue()
     .from('notification_queue')
     .select('attempts')
     .eq('id', id)
@@ -157,7 +166,7 @@ export async function markAsFailed(
   const backoffMinutes = Math.pow(2, newAttempts) * 5; // 5, 10, 20 minutes
   const scheduledFor = new Date(Date.now() + backoffMinutes * 60 * 1000);
 
-  const { error } = await supabaseAdmin
+  const { error } = await getNotificationQueue()
     .from('notification_queue')
     .update({
       status: 'pending',
@@ -182,7 +191,7 @@ export async function markAsFailed(
  */
 export async function moveToDLQ(id: string, errorMessage: string): Promise<void> {
   try {
-    await supabaseAdmin.rpc('move_to_dead_letter_queue', {
+    await getNotificationQueue().rpc('move_to_dead_letter_queue', {
       p_notification_id: id,
       p_error_message: errorMessage,
     });
@@ -200,7 +209,7 @@ export async function moveToDLQ(id: string, errorMessage: string): Promise<void>
  */
 export async function resetStuckNotifications(timeoutMinutes: number = 30): Promise<number> {
   try {
-    const { data: count, error } = await supabaseAdmin.rpc('reset_stuck_notifications', {
+    const { data: count, error } = await getNotificationQueue().rpc('reset_stuck_notifications', {
       p_timeout_minutes: timeoutMinutes,
     });
 
@@ -229,7 +238,7 @@ export async function getQueueStats(): Promise<{
   sent: number;
   failed: number;
 }> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getNotificationQueue()
     .from('notification_queue')
     .select('status')
     .in('status', ['pending', 'processing', 'sent', 'failed']);
