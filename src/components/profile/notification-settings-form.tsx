@@ -82,7 +82,7 @@ export function NotificationSettingsForm() {
       }
       
       const data = await res.json();
-      setSettings(data.settings);
+      setSettings(data.data);
       
       // Show success indicator
       setSaveSuccess(true);

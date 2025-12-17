@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,9 @@ interface EventCardProps {
 }
 
 export function EventCard({ event }: EventCardProps) {
+  // Проверяем, прошло ли событие
+  const isPastEvent = new Date(event.dateTime) < new Date();
+  
   return (
     <Card className="h-full">
       <CardHeader>
@@ -44,9 +48,16 @@ export function EventCard({ event }: EventCardProps) {
         </p>
       </CardContent>
       <CardFooter className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          Обновлено {new Date(event.updatedAt).toLocaleDateString("ru-RU")}
-        </div>
+        {isPastEvent ? (
+          <Badge variant="neutral" size="sm" className="flex items-center gap-1.5">
+            <Lock className="h-3 w-3" />
+            Регистрация закрыта
+          </Badge>
+        ) : (
+          <div className="text-xs text-muted-foreground">
+            Обновлено {new Date(event.updatedAt).toLocaleDateString("ru-RU")}
+          </div>
+        )}
         <Button asChild variant="secondary" size="sm">
           <Link href={`/events/${event.id}`}>Подробнее</Link>
         </Button>

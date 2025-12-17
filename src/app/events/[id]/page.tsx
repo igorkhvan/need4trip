@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine } from "lucide-react";
+import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +66,9 @@ export default async function EventDetails({
   };
   const vehicleTypeLabel = vehicleTypeLabelMap[event.vehicleTypeRequirement] ?? "Любой";
   
+  // Проверяем, прошло ли событие
+  const isPastEvent = new Date(event.dateTime) < new Date();
+  
   // Participants count (fast query, already loaded)
   const participantsCountLabel = `${event.participantsCount} / ${event.maxParticipants ?? "∞"} участников`;
   const fillPercent =
@@ -103,7 +106,13 @@ export default async function EventDetails({
             <Badge variant={event.isPaid ? "paid" : "free"} size="md">
               {event.isPaid ? "Платное" : "Бесплатное"}
             </Badge>
-            {isFull && (
+            {isPastEvent && (
+              <Badge variant="neutral" size="md" className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />
+                Регистрация закрыта
+              </Badge>
+            )}
+            {isFull && !isPastEvent && (
               <Badge variant="warning" size="md">
                 Лимит достигнут
               </Badge>
@@ -135,14 +144,21 @@ export default async function EventDetails({
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row md:flex-col md:w-auto">
-          {!isFull && !isUserRegistered && (
-            <ParticipantModal
-              mode="create"
-              eventId={event.id}
-              customFieldsSchema={event.customFieldsSchema}
-              event={event}
-              triggerLabel="Присоединиться"
-            />
+          {isPastEvent ? (
+            <Button variant="secondary" disabled className="w-full sm:w-auto">
+              <Lock className="mr-2 h-4 w-4" />
+              Регистрация закрыта
+            </Button>
+          ) : (
+            !isFull && !isUserRegistered && (
+              <ParticipantModal
+                mode="create"
+                eventId={event.id}
+                customFieldsSchema={event.customFieldsSchema}
+                event={event}
+                triggerLabel="Присоединиться"
+              />
+            )
           )}
           {isOwner && (
             <Button variant="secondary" asChild className="w-full sm:w-auto">
