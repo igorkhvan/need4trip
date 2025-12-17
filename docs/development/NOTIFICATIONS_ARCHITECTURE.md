@@ -9,7 +9,7 @@
 ## 🎯 Требования
 
 ### Функциональные
-1. **Триггеры уведомлений** - участники получают уведомления при:
+1. **Триггеры уведомлений для участников** - получают уведомления при:
    - Изменении даты/времени события
    - Изменении места сбора (город, locationText)
    - Изменении правил
@@ -17,7 +17,11 @@
    - Отмене события (DELETE)
    - Изменении статуса оплаты (isPaid, price, currency)
    - Изменении требований к транспорту
+   - Публикации нового события в их городе
    - Публикации сообщения организатором (будущая фича)
+
+2. **Триггеры уведомлений для организаторов** - получают уведомления когда:
+   - Новый участник регистрируется на их событие
 
 2. **Настройки пользователя** - каждый триггер можно включить/выключить в профиле
 3. **Фильтрация** - уведомления только для:
@@ -44,7 +48,7 @@
 CREATE TABLE user_notification_settings (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   
-  -- Event update triggers
+  -- Event update triggers (for participants)
   notify_on_datetime_change BOOLEAN DEFAULT true,
   notify_on_location_change BOOLEAN DEFAULT true,
   notify_on_rules_change BOOLEAN DEFAULT false,
@@ -53,9 +57,14 @@ CREATE TABLE user_notification_settings (
   notify_on_vehicle_requirement_change BOOLEAN DEFAULT true,
   notify_on_event_cancelled BOOLEAN DEFAULT true,
   
+  -- New event triggers (for all users in city)
+  notify_on_new_event_published BOOLEAN DEFAULT true,
+  
+  -- Organizer triggers (when you own the event)
+  notify_on_new_participant_joined BOOLEAN DEFAULT true,
+  
   -- Future triggers (reserved for phase 2)
   notify_on_organizer_message BOOLEAN DEFAULT true,
-  notify_on_new_participant BOOLEAN DEFAULT false,
   
   -- Metadata
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -90,6 +99,8 @@ CREATE TYPE notification_trigger AS ENUM (
   'payment_change',
   'vehicle_requirement_change',
   'event_cancelled',
+  'new_event_published',
+  'new_participant_joined',
   'organizer_message'
 );
 
@@ -234,18 +245,60 @@ export async function getParticipantsNotificationSettings(
 }
 
 /**
- * Создать уведомления для участников
+ * Создать уведомления для участников об изменениях
  */
 export async function queueParticipantNotifications(
   eventId: string,
   changes: EventChanges,
-  eventTitle: string
+  eventTitle: string,
+  eventData?: Record<string, any>
 ): Promise<{ queued: number; skipped: number }> {
   // 1. Получить участников с настройками
   // 2. Для каждого изменения проверить настройки
-  // 3. Сформировать message
+  // 3. Сформировать message с ссылками
   // 4. Добавить в notification_queue
   // 5. Вернуть статистику
+}
+
+/**
+ * Создать уведомления о новом событии
+ */
+export async function queueNewEventNotifications(
+  eventId: string,
+  eventTitle: string,
+  cityId: string,
+  eventDetails: {
+    category?: string;
+    dateTime?: string;
+    location?: string;
+  }
+): Promise<{ queued: number; skipped: number }> {
+  // 1. Получить всех пользователей в том же городе с telegram_id
+  // 2. Проверить их настройки (notify_on_new_event_published)
+  // 3. Исключить владельца события (не уведомлять себя)
+  // 4. Сформировать message с ссылками
+  // 5. Добавить в notification_queue
+  // 6. Вернуть статистику
+}
+
+/**
+ * Создать уведомление владельцу о новом участнике
+ */
+export async function queueNewParticipantNotification(
+  eventId: string,
+  ownerId: string,
+  eventTitle: string,
+  participantDetails: {
+    participantName: string;
+    totalParticipants: number;
+    maxParticipants: number | null;
+  }
+): Promise<{ queued: boolean }> {
+  // 1. Получить telegram_id владельца
+  // 2. Проверить его настройки (notify_on_new_participant_joined)
+  // 3. Сформировать message с ссылками
+  // 4. Добавить в notification_queue
+  // 5. Вернуть результат
 }
 
 /**
@@ -318,9 +371,9 @@ export async function sendTelegramMessage(
 }
 
 /**
- * Форматировать сообщение об изменении события
+ * Форматировать сообщение с уведомлением
  */
-export function formatEventChangeMessage(
+export function formatNotificationMessage(
   eventTitle: string,
   eventId: string,
   trigger: NotificationTrigger,
@@ -328,12 +381,14 @@ export function formatEventChangeMessage(
 ): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://need4trip.kz';
   const eventUrl = `${baseUrl}/events/${eventId}`;
+  const settingsUrl = `${baseUrl}/profile/notifications`;
   
-  let message = `🔔 *Изменение в событии*\n\n`;
-  message += `📌 ${eventTitle}\n\n`;
+  let message = '';
   
   switch (trigger) {
     case 'datetime_change':
+      message = `🔔 *Изменение в событии*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
       message += `⏰ Изменилась дата или время события\n`;
       if (details?.newDateTime) {
         message += `Новое время: ${formatDateTime(details.newDateTime)}\n`;
@@ -341,6 +396,8 @@ export function formatEventChangeMessage(
       break;
     
     case 'location_change':
+      message = `🔔 *Изменение в событии*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
       message += `📍 Изменилось место сбора\n`;
       if (details?.newLocation) {
         message += `Новое место: ${details.newLocation}\n`;
@@ -348,10 +405,14 @@ export function formatEventChangeMessage(
       break;
     
     case 'rules_change':
+      message = `🔔 *Изменение в событии*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
       message += `📋 Обновлены правила участия\n`;
       break;
     
     case 'max_participants_change':
+      message = `🔔 *Изменение в событии*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
       message += `👥 Изменился лимит участников\n`;
       if (details?.newLimit) {
         message += `Новый лимит: ${details.newLimit} человек\n`;
@@ -359,19 +420,52 @@ export function formatEventChangeMessage(
       break;
     
     case 'payment_change':
+      message = `🔔 *Изменение в событии*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
       message += `💰 Изменились условия оплаты\n`;
       break;
     
     case 'vehicle_requirement_change':
+      message = `🔔 *Изменение в событии*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
       message += `🚗 Изменились требования к транспорту\n`;
       break;
     
     case 'event_cancelled':
-      message += `❌ *Событие отменено*\n`;
+      message = `🔔 *Отмена события*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
+      message += `❌ Событие отменено организатором\n`;
+      break;
+    
+    case 'new_event_published':
+      message = `🎉 *Новое событие в вашем городе*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
+      if (details?.category) {
+        message += `📂 Категория: ${details.category}\n`;
+      }
+      if (details?.dateTime) {
+        message += `📅 Дата: ${formatDateTime(details.dateTime)}\n`;
+      }
+      if (details?.location) {
+        message += `📍 Место: ${details.location}\n`;
+      }
+      break;
+    
+    case 'new_participant_joined':
+      message = `👥 *Новый участник*\n\n`;
+      message += `📌 ${eventTitle}\n\n`;
+      if (details?.participantName) {
+        message += `✅ ${details.participantName} зарегистрировался на событие\n`;
+      }
+      if (details?.totalParticipants && details?.maxParticipants) {
+        message += `Участников: ${details.totalParticipants}/${details.maxParticipants}\n`;
+      }
       break;
   }
   
-  message += `\n[Подробности →](${eventUrl})`;
+  // Добавляем ссылки (для всех типов уведомлений)
+  message += `\n[👉 Открыть событие](${eventUrl})`;
+  message += ` • [⚙️ Настройки](${settingsUrl})`;
   
   return message;
 }
@@ -437,6 +531,78 @@ export async function deleteEvent(
   
   // Удаление события
   await deleteEventRecord(id);
+}
+```
+
+#### 3.3 Интеграция в `createEvent`
+
+```typescript
+export async function createEvent(
+  input: unknown,
+  currentUser: CurrentUser | null
+) {
+  // ... existing validation ...
+  
+  const parsed = eventCreateSchema.parse(input);
+  
+  // ... existing business logic ...
+  
+  // Создание события в БД
+  const result = await createEventRecord({
+    title: parsed.title,
+    // ... other fields
+  });
+  
+  // ✨ НОВОЕ: Уведомить пользователей в том же городе о новом событии
+  if (parsed.visibility === 'public') {
+    await queueNewEventNotifications(result.id, result.title, result.city_id, {
+      category: result.category_name,
+      dateTime: result.date_time,
+      location: result.location_text,
+    }).catch(err => {
+      console.error('[createEvent] Failed to queue new event notifications:', err);
+    });
+  }
+  
+  // ... existing hydration and return ...
+}
+```
+
+#### 3.4 Интеграция в `createParticipant`
+
+```typescript
+// В src/lib/services/participants.ts
+
+export async function createParticipant(
+  eventId: string,
+  input: unknown,
+  currentUser: CurrentUser | null
+) {
+  // ... existing validation ...
+  
+  // Создание участника в БД
+  const result = await createParticipantRecord(eventId, {
+    // ... participant data
+  });
+  
+  // ✨ НОВОЕ: Уведомить владельца события о новом участнике
+  const event = await getEventById(eventId);
+  const totalParticipants = await countParticipants(eventId);
+  
+  await queueNewParticipantNotification(
+    eventId,
+    event.created_by_user_id,
+    event.title,
+    {
+      participantName: result.display_name,
+      totalParticipants,
+      maxParticipants: event.max_participants,
+    }
+  ).catch(err => {
+    console.error('[createParticipant] Failed to queue organizer notification:', err);
+  });
+  
+  // ... existing return ...
 }
 ```
 

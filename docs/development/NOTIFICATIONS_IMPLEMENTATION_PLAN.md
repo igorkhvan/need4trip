@@ -21,12 +21,16 @@ CREATE TYPE notification_trigger AS ENUM (
   'payment_change',
   'vehicle_requirement_change',
   'event_cancelled',
+  'new_event_published',
+  'new_participant_joined',
   'organizer_message'
 );
 
 -- 2. user_notification_settings table
 CREATE TABLE user_notification_settings (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  
+  -- Event update triggers (for participants)
   notify_on_datetime_change BOOLEAN DEFAULT true,
   notify_on_location_change BOOLEAN DEFAULT true,
   notify_on_rules_change BOOLEAN DEFAULT false,
@@ -34,8 +38,16 @@ CREATE TABLE user_notification_settings (
   notify_on_payment_change BOOLEAN DEFAULT true,
   notify_on_vehicle_requirement_change BOOLEAN DEFAULT true,
   notify_on_event_cancelled BOOLEAN DEFAULT true,
+  
+  -- New event triggers (for all users in city)
+  notify_on_new_event_published BOOLEAN DEFAULT true,
+  
+  -- Organizer triggers (when you own the event)
+  notify_on_new_participant_joined BOOLEAN DEFAULT true,
+  
+  -- Future triggers
   notify_on_organizer_message BOOLEAN DEFAULT true,
-  notify_on_new_participant BOOLEAN DEFAULT false,
+  
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -145,6 +157,7 @@ export type NotificationStatus = z.infer<typeof notificationStatusSchema>;
 
 export interface NotificationSettings {
   userId: string;
+  // Event update triggers (for participants)
   notifyOnDatetimeChange: boolean;
   notifyOnLocationChange: boolean;
   notifyOnRulesChange: boolean;
@@ -152,8 +165,12 @@ export interface NotificationSettings {
   notifyOnPaymentChange: boolean;
   notifyOnVehicleRequirementChange: boolean;
   notifyOnEventCancelled: boolean;
+  // New event triggers (for all users in city)
+  notifyOnNewEventPublished: boolean;
+  // Organizer triggers (when you own the event)
+  notifyOnNewParticipantJoined: boolean;
+  // Future triggers
   notifyOnOrganizerMessage: boolean;
-  notifyOnNewParticipant: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -259,13 +276,16 @@ export async function sendTelegramMessage(
   // Implementation
 }
 
-export function formatEventChangeMessage(
+export function formatNotificationMessage(
   eventTitle: string,
   eventId: string,
   trigger: NotificationTrigger,
   details?: Record<string, any>
 ): string {
-  // Implementation  
+  // Implementation
+  // Always includes:
+  // 1. Event link: [👉 Открыть событие](url)
+  // 2. Settings link: [⚙️ Настройки](url)
 }
 
 function formatDateTime(dateTime: string | Date): string {
@@ -326,6 +346,41 @@ export async function queueEventCancelledNotifications(
   eventTitle: string
 ): Promise<{ queued: number }> {
   // Similar to above but only for cancellation trigger
+}
+
+export async function queueNewEventNotifications(
+  eventId: string,
+  eventTitle: string,
+  cityId: string,
+  eventDetails: {
+    category?: string;
+    dateTime?: string;
+    location?: string;
+  }
+): Promise<{ queued: number; skipped: number }> {
+  // 1. Get all users in the same city with telegram_id
+  // 2. Check their settings (notify_on_new_event_published)
+  // 3. Exclude event owner (don't notify yourself)
+  // 4. Format message with links
+  // 5. Add to notification_queue
+  // 6. Return stats
+}
+
+export async function queueNewParticipantNotification(
+  eventId: string,
+  ownerId: string,
+  eventTitle: string,
+  participantDetails: {
+    participantName: string;
+    totalParticipants: number;
+    maxParticipants: number | null;
+  }
+): Promise<{ queued: boolean }> {
+  // 1. Get owner's telegram_id
+  // 2. Check their settings (notify_on_new_participant_joined)
+  // 3. Format message with links
+  // 4. Add to notification_queue
+  // 5. Return result
 }
 ```
 
@@ -621,6 +676,8 @@ export function NotificationSettingsForm({ initialSettings }: Props) {
           notifyOnPaymentChange: settings.notifyOnPaymentChange,
           notifyOnVehicleRequirementChange: settings.notifyOnVehicleRequirementChange,
           notifyOnEventCancelled: settings.notifyOnEventCancelled,
+          notifyOnNewEventPublished: settings.notifyOnNewEventPublished,
+          notifyOnNewParticipantJoined: settings.notifyOnNewParticipantJoined,
         }),
       });
       
@@ -694,6 +751,28 @@ export function NotificationSettingsForm({ initialSettings }: Props) {
           checked={settings.notifyOnEventCancelled}
           onCheckedChange={(val) => handleToggle('notifyOnEventCancelled', val)}
         />
+        
+        <div className="my-6 border-t pt-6">
+          <h3 className="mb-4 text-lg font-semibold">Новые события</h3>
+          
+          <NotificationToggle
+            label="Новые события в моем городе"
+            description="Уведомления о публикации новых событий в вашем городе"
+            checked={settings.notifyOnNewEventPublished}
+            onCheckedChange={(val) => handleToggle('notifyOnNewEventPublished', val)}
+          />
+        </div>
+        
+        <div className="my-6 border-t pt-6">
+          <h3 className="mb-4 text-lg font-semibold">Для организаторов</h3>
+          
+          <NotificationToggle
+            label="Новые участники моих событий"
+            description="Уведомления когда кто-то регистрируется на ваше событие"
+            checked={settings.notifyOnNewParticipantJoined}
+            onCheckedChange={(val) => handleToggle('notifyOnNewParticipantJoined', val)}
+          />
+        </div>
         
         <div className="flex justify-end pt-4">
           <Button onClick={handleSave} disabled={isSubmitting}>
