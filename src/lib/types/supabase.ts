@@ -620,6 +620,7 @@ export type Database = {
           title: string
           updated_at: string
           vehicle_type_requirement: string
+          version: number
           visibility: string
         }
         Insert: {
@@ -646,6 +647,7 @@ export type Database = {
           title: string
           updated_at?: string
           vehicle_type_requirement?: string
+          version?: number
           visibility?: string
         }
         Update: {
@@ -672,6 +674,7 @@ export type Database = {
           title?: string
           updated_at?: string
           vehicle_type_requirement?: string
+          version?: number
           visibility?: string
         }
         Relationships: [
@@ -709,6 +712,132 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      notification_logs: {
+        Row: {
+          error_message: string | null
+          event_id: string
+          id: string
+          message: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          trigger_type: Database["public"]["Enums"]["notification_trigger"]
+          user_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          event_id: string
+          id?: string
+          message: string
+          sent_at?: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          trigger_type: Database["public"]["Enums"]["notification_trigger"]
+          user_id: string
+        }
+        Update: {
+          error_message?: string | null
+          event_id?: string
+          id?: string
+          message?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          trigger_type?: Database["public"]["Enums"]["notification_trigger"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_queue: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          dedupe_key: string | null
+          event_id: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number | null
+          message: string
+          moved_to_dlq_at: string | null
+          payload: Json | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"] | null
+          telegram_chat_id: string
+          trigger_type: Database["public"]["Enums"]["notification_trigger"]
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          dedupe_key?: string | null
+          event_id: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number | null
+          message: string
+          moved_to_dlq_at?: string | null
+          payload?: Json | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          telegram_chat_id: string
+          trigger_type: Database["public"]["Enums"]["notification_trigger"]
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          dedupe_key?: string | null
+          event_id?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number | null
+          message?: string
+          moved_to_dlq_at?: string | null
+          payload?: Json | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          telegram_chat_id?: string
+          trigger_type?: Database["public"]["Enums"]["notification_trigger"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -758,6 +887,53 @@ export type Database = {
             foreignKeyName: "user_cars_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notification_settings: {
+        Row: {
+          created_at: string | null
+          is_telegram_enabled: boolean | null
+          notify_event_cancelled: boolean | null
+          notify_event_reminder: boolean | null
+          notify_event_updated: boolean | null
+          notify_new_event_published: boolean | null
+          notify_new_participant_joined: boolean | null
+          notify_organizer_message: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          is_telegram_enabled?: boolean | null
+          notify_event_cancelled?: boolean | null
+          notify_event_reminder?: boolean | null
+          notify_event_updated?: boolean | null
+          notify_new_event_published?: boolean | null
+          notify_new_participant_joined?: boolean | null
+          notify_organizer_message?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          is_telegram_enabled?: boolean | null
+          notify_event_cancelled?: boolean | null
+          notify_event_reminder?: boolean | null
+          notify_event_updated?: boolean | null
+          notify_new_event_published?: boolean | null
+          notify_new_participant_joined?: boolean | null
+          notify_organizer_message?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -870,15 +1046,64 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_pending_notifications: {
+        Args: { p_batch_size: number; p_worker_id: string }
+        Returns: {
+          attempts: number | null
+          created_at: string | null
+          dedupe_key: string | null
+          event_id: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number | null
+          message: string
+          moved_to_dlq_at: string | null
+          payload: Json | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"] | null
+          telegram_chat_id: string
+          trigger_type: Database["public"]["Enums"]["notification_trigger"]
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "notification_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       deactivate_expired_club_subscriptions: { Args: never; Returns: undefined }
       get_club_city_ids: { Args: { p_club_id: string }; Returns: string[] }
+      move_to_dead_letter_queue: {
+        Args: { p_error_message: string; p_notification_id: string }
+        Returns: undefined
+      }
+      reset_stuck_notifications: {
+        Args: { p_timeout_minutes?: number }
+        Returns: number
+      }
       update_club_cities: {
         Args: { p_city_ids: string[]; p_club_id: string }
         Returns: undefined
       }
     }
     Enums: {
-      [_ in never]: never
+      notification_status:
+        | "pending"
+        | "processing"
+        | "sent"
+        | "failed"
+        | "cancelled"
+      notification_trigger:
+        | "event_updated"
+        | "new_event_published"
+        | "new_participant_joined"
+        | "event_cancelled"
+        | "event_reminder"
+        | "organizer_message"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1005,6 +1230,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      notification_status: [
+        "pending",
+        "processing",
+        "sent",
+        "failed",
+        "cancelled",
+      ],
+      notification_trigger: [
+        "event_updated",
+        "new_event_published",
+        "new_participant_joined",
+        "event_cancelled",
+        "event_reminder",
+        "organizer_message",
+      ],
+    },
   },
 } as const
