@@ -105,11 +105,13 @@ export function NotificationSettingsForm() {
   };
 
   if (loading) {
+    console.log('[NotificationSettingsForm] Rendering loading state');
     return (
       <Card>
         <CardContent className="p-8">
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <p className="text-sm text-gray-500">Загрузка настроек...</p>
           </div>
         </CardContent>
       </Card>
@@ -117,10 +119,12 @@ export function NotificationSettingsForm() {
   }
 
   if (error && !settings) {
+    console.log('[NotificationSettingsForm] Rendering error state:', error);
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600 mb-2">{error}</p>
+          <p className="text-sm text-gray-500 mb-4">Проверьте консоль браузера для подробностей</p>
           <Button onClick={loadSettings} className="mt-4">
             Повторить
           </Button>
@@ -129,7 +133,12 @@ export function NotificationSettingsForm() {
     );
   }
 
-  if (!settings) return null;
+  if (!settings) {
+    console.log('[NotificationSettingsForm] No settings, returning null');
+    return null;
+  }
+  
+  console.log('[NotificationSettingsForm] Rendering settings form');
 
   const notificationTypes = [
     {
