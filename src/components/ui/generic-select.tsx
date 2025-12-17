@@ -418,7 +418,7 @@ export function GenericSelect<T>({
                     return (
                       <CommandItem
                         key={itemId}
-                        value={itemId}
+                        value={getItemLabel(item)}
                         onSelect={() => !isDisabled && handleSelect(item)}
                         className={cn(
                           "cursor-pointer",
