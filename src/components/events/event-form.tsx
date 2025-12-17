@@ -268,20 +268,10 @@ export function EventForm({
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       issues.dateTime = "Укажите корректную дату и время";
     } else {
-      // Валидация даты: для режима edit разрешаем менять прошедшую дату на будущую
-      // Для режима create требуем чтобы дата была в будущем
+      // Валидация даты: требуем чтобы дата была минимум через 5 минут
       const date5MinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
-      
-      console.log('📅 [EventForm] Date validation:', {
-        parsedDate: parsedDate.toISOString(),
-        date5MinutesFromNow: date5MinutesFromNow.toISOString(),
-        isValid: parsedDate >= date5MinutesFromNow,
-        mode,
-      });
-      
       if (parsedDate < date5MinutesFromNow) {
         issues.dateTime = "Дата должна быть в будущем (минимум через 5 минут)";
-        console.log('❌ [EventForm] Date validation failed');
       }
     }
     if (participantsCount === null || Number.isNaN(participantsCount)) {

@@ -571,29 +571,11 @@ export async function updateEvent(
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для изменения события", undefined, 401);
   }
-  
-  console.log('🔧 [updateEvent] Input payload:', {
-    dateTime: (input as any).dateTime,
-    title: (input as any).title,
-  });
-  
   const parsed = eventUpdateSchema.parse(input);
-  
-  console.log('✅ [updateEvent] Parsed payload:', {
-    dateTime: parsed.dateTime ? new Date(parsed.dateTime).toISOString() : undefined,
-    title: parsed.title,
-  });
-  
   const existing = await getEventById(id);
   if (!existing) {
     throw new NotFoundError("Event not found");
   }
-  
-  console.log('📋 [updateEvent] Existing event:', {
-    id: existing.id,
-    dateTime: existing.date_time,
-  });
-  
   if (existing.created_by_user_id !== currentUser.id) {
     throw new AuthError("Недостаточно прав для изменения события", undefined, 403);
   }
@@ -602,12 +584,6 @@ export async function updateEvent(
   // Новая дата всегда должна быть в будущем (минимум через 5 минут)
   if (parsed.dateTime) {
     const date5MinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    console.log('📅 [updateEvent] Date validation:', {
-      parsedDate: new Date(parsed.dateTime).toISOString(),
-      date5MinutesAgo: date5MinutesAgo.toISOString(),
-      isValid: parsed.dateTime > date5MinutesAgo,
-    });
-    
     if (parsed.dateTime <= date5MinutesAgo) {
       throw new ValidationError(
         "Дата события должна быть в будущем (минимум через 5 минут)"
@@ -739,17 +715,7 @@ export async function updateEvent(
       : undefined,
   };
 
-  console.log('💾 [updateEvent] Patch to apply:', {
-    dateTime: patch.dateTime ? patch.dateTime.toISOString() : undefined,
-    title: patch.title,
-  });
-
   const updated = await updateEventRecord(id, patch);
-  
-  console.log('✅ [updateEvent] Updated record:', {
-    id: updated?.id,
-    dateTime: updated?.date_time,
-  });
   if (!updated) {
     throw new NotFoundError("Event not found");
   }
