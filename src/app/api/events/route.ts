@@ -4,6 +4,10 @@ import { UnauthorizedError } from "@/lib/errors";
 import { createEvent, hydrateEvent, listEvents } from "@/lib/services/events";
 import { NextRequest } from "next/server";
 
+// Force dynamic rendering to prevent caching of events list
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;

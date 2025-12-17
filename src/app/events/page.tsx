@@ -18,8 +18,8 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
     async function loadData() {
       try {
         const [eventsRes, userRes] = await Promise.all([
-          fetch("/api/events"),
-          fetch("/api/auth/me"),
+          fetch("/api/events", { cache: 'no-store' }),
+          fetch("/api/auth/me", { cache: 'no-store' }),
         ]);
 
         if (eventsRes.ok) {
