@@ -13,7 +13,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { ParticipantModal } from "@/components/events/participant-modal";
 import { EventLocationsCard } from "@/components/events/EventLocationsCard";
 import { LocationHeaderItem } from "@/components/events/LocationHeaderItem";
-import { MobileSectionNav } from "@/components/events/MobileSectionNav";
+import { MobileSectionNav } from "@/components/ui/mobile-section-nav";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
