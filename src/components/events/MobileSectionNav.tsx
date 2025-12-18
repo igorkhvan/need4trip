@@ -7,10 +7,13 @@
  * 
  * Features:
  * - Intersection Observer for active section tracking
+ *   - Maintains entry map for all observed sections
+ *   - Re-evaluates ALL sections on any intersection change
+ *   - Selects section with highest intersection ratio
  * - Smooth scroll behavior
  * - Accessibility (ARIA labels, keyboard navigation)
  * - iOS safe area support
- * - Performance optimized (debounced)
+ * - Performance optimized (debounced via thresholds)
  */
 
 "use client";
@@ -31,6 +34,7 @@ interface MobileSectionNavProps {
 export function MobileSectionNav({ sections, className }: MobileSectionNavProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const entriesMapRef = useRef<Map<string, IntersectionObserverEntry>>(new Map());
 
   // Setup Intersection Observer
   useEffect(() => {
@@ -38,32 +42,37 @@ export function MobileSectionNav({ sections, className }: MobileSectionNavProps)
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
+    entriesMapRef.current.clear();
 
     // Create new observer
     const observer = new IntersectionObserver(
       (entries) => {
-        // Find the most visible section
+        // Update entries map with latest observations
+        entries.forEach((entry) => {
+          entriesMapRef.current.set(entry.target.id, entry);
+        });
+
+        // Find the most visible section across ALL observed entries
         let maxRatio = 0;
         let maxIndex = 0;
 
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+        sections.forEach((section, index) => {
+          const entry = entriesMapRef.current.get(section.id);
+          if (entry && entry.isIntersecting && entry.intersectionRatio > maxRatio) {
             maxRatio = entry.intersectionRatio;
-            const index = sections.findIndex((s) => s.id === entry.target.id);
-            if (index !== -1) {
-              maxIndex = index;
-            }
+            maxIndex = index;
           }
         });
 
+        // Update active index if we found any visible section
         if (maxRatio > 0) {
           setActiveIndex(maxIndex);
         }
       },
       {
         root: null, // viewport
-        rootMargin: "-50% 0px -50% 0px", // Trigger when section crosses center
-        threshold: [0, 0.25, 0.5, 0.75, 1.0], // Multiple thresholds for accuracy
+        rootMargin: "-20% 0px -20% 0px", // Trigger when section is 20% into viewport
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], // Fine-grained thresholds
       }
     );
 
@@ -80,6 +89,7 @@ export function MobileSectionNav({ sections, className }: MobileSectionNavProps)
     // Cleanup
     return () => {
       observer.disconnect();
+      entriesMapRef.current.clear();
     };
   }, [sections]);
 
