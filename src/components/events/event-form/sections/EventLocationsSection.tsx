@@ -104,16 +104,18 @@ export function EventLocationsSection({
       </div>
 
       {/* Add Location Button */}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleAddLocation}
-        disabled={disabled}
-        className="w-full gap-2 border-dashed"
-      >
-        <Plus className="h-4 w-4" />
-        Добавить точку маршрута
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleAddLocation}
+          disabled={disabled}
+          className="h-11 gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Добавить точку маршрута
+        </Button>
+      </div>
 
       {/* Hint */}
       <div className="rounded-lg bg-[#F0F9FF] p-4 text-sm text-[#1E40AF]">

@@ -10,6 +10,7 @@
  * - Handle locked fields (used by participants)
  */
 
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -173,9 +174,10 @@ export function EventCustomFieldsSection({
           type="button"
           onClick={onAddField}
           disabled={disabled}
-          className="h-11 px-4"
+          className="h-11 gap-2"
         >
-          + Добавить поле
+          <Plus className="h-4 w-4" />
+          Добавить поле
         </Button>
       </div>
       {hasLockedFields && (
