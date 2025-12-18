@@ -247,6 +247,7 @@ export default function EditEventPage() {
           dateTime: event.dateTime,
           cityId: event.cityId ?? null,
           locationText: event.locationText,
+          locations: event.locations ?? [{ sortOrder: 1, title: "Точка сбора", latitude: null, longitude: null, rawInput: null }],
           maxParticipants: event.maxParticipants,
           customFieldsSchema: event.customFieldsSchema || [],
           visibility: event.visibility,

@@ -31,6 +31,7 @@ import {
   VehicleTypeRequirement,
   Visibility,
 } from "@/lib/types/event";
+import { EventLocationInput } from "@/lib/types/eventLocation";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import type { Club } from "@/lib/types/club";
 import { getCategoryIcon } from "@/lib/utils/eventCategories";
@@ -39,6 +40,7 @@ import { useClubPlan } from "@/hooks/use-club-plan";
 import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
 // Section components
 import { EventBasicInfoSection } from "./event-form/sections/EventBasicInfoSection";
+import { EventLocationsSection } from "./event-form/sections/EventLocationsSection";
 import { EventPricingSection } from "./event-form/sections/EventPricingSection";
 import { EventVehicleSection } from "./event-form/sections/EventVehicleSection";
 import { EventRulesSection } from "./event-form/sections/EventRulesSection";
@@ -60,6 +62,7 @@ export type EventFormValues = {
   dateTime: string;
   cityId: string | null; // FK на cities
   locationText: string;
+  locations: EventLocationInput[]; // NEW: Multiple location points
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchema[];
   visibility: Visibility;
@@ -128,6 +131,9 @@ export function EventForm({
   });
   const [cityId, setCityId] = useState<string | null>(initialValues?.cityId ?? null);
   const [locationText, setLocationText] = useState(initialValues?.locationText ?? "");
+  const [locations, setLocations] = useState<EventLocationInput[]>(
+    initialValues?.locations ?? [{ sortOrder: 1, title: "Точка сбора", latitude: null, longitude: null, rawInput: null }]
+  );
   const [maxParticipants, setMaxParticipants] = useState<number | null>(
     initialValues?.maxParticipants ?? null
   );
@@ -442,6 +448,7 @@ export function EventForm({
       dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
       cityId: cityId || null, // FK на cities
       locationText: trimmedLocation,
+      locations, // NEW: Multiple location points
       maxParticipants,
       customFieldsSchema: sortedFields,
       visibility,
@@ -590,10 +597,29 @@ export function EventForm({
           />
         </Card>
 
+        {/* Section 2: Event Locations */}
+        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
+          <EventLocationsSection
+            locations={locations}
+            onLocationsChange={setLocations}
+            fieldErrors={fieldErrors}
+            clearFieldError={(field) => {
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next[field];
+                return next;
+              });
+            }}
+            disabled={disabled}
+            sectionNumber={2}
+          />
+        </Card>
+
+        {/* Section 3: Vehicle Requirements */}
         <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
-              2
+              3
             </div>
             <div>
               <p className="text-2xl font-semibold text-[#0F172A]">Требования к автомобилю</p>
@@ -620,7 +646,7 @@ export function EventForm({
             isGeneratingRules={isGeneratingRules}
             disabled={disabled}
             isSubmitting={isSubmitting}
-            sectionNumber={3}
+            sectionNumber={4}
           />
         </Card>
 
@@ -641,7 +667,7 @@ export function EventForm({
               });
             }}
             disabled={disabled}
-            sectionNumber={4}
+            sectionNumber={5}
           />
         </Card>
 
