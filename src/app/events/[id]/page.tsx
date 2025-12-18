@@ -132,11 +132,9 @@ export default async function EventDetails({
             {event.locations && event.locations.length > 0 ? (
               <LocationHeaderItem
                 location={event.locations[0]}
-                fallbackText={event.locationText}
               />
             ) : event.locationText ? (
               <LocationHeaderItem
-                location={{} as any}
                 fallbackText={event.locationText}
               />
             ) : null}

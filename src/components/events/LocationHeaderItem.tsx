@@ -20,8 +20,8 @@ import { copyCoordinatesToClipboard } from "@/lib/utils/coordinates";
 import type { EventLocation } from "@/lib/types/eventLocation";
 
 interface LocationHeaderItemProps {
-  location: EventLocation;
-  fallbackText?: string; // For old events without locations
+  location?: EventLocation; // ✅ Optional now
+  fallbackText?: string;
 }
 
 export function LocationHeaderItem({
@@ -29,7 +29,14 @@ export function LocationHeaderItem({
   fallbackText,
 }: LocationHeaderItemProps) {
   const [copied, setCopied] = useState(false);
-  const hasCoordinates = location?.latitude !== null && location?.longitude !== null;
+  
+  // ✅ Proper validation: check if location exists AND has coordinates
+  const hasCoordinates = 
+    location !== undefined && 
+    location.latitude !== null && 
+    location.latitude !== undefined &&
+    location.longitude !== null && 
+    location.longitude !== undefined;
 
   const handleCopyCoordinates = async () => {
     if (!hasCoordinates || !location) return;
