@@ -6,7 +6,8 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Navigation, Copy, ExternalLink } from "lucide-react";
+import { Navigation, Copy, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -88,9 +89,9 @@ export function NavigationChooser({
     <Button
       type="button"
       variant="ghost"
-      size="sm"
+      size="icon"
       disabled={disabled}
-      className={className}
+      className={cn("h-8 w-8", className)}
     >
       <Navigation className="h-4 w-4" />
     </Button>

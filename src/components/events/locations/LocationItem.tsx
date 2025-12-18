@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Navigation, AlertCircle } from "lucide-react";
+import { Eye, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -167,13 +167,13 @@ export function LocationItem({
               <TooltipTrigger asChild>
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="ghost"
+                  size="icon"
                   onClick={handleOpenMap}
                   disabled={disabled || !hasValidCoordinates}
-                  className="shrink-0"
+                  className="h-8 w-8 shrink-0"
                 >
-                  <MapPin className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

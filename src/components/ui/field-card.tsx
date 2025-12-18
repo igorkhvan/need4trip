@@ -117,13 +117,11 @@ export function FieldCard({
                     onClick={canDelete ? onDelete : undefined}
                     disabled={!canDelete}
                     className={cn(
-                      "h-9 w-9 rounded-full",
-                      canDelete
-                        ? "text-[#6B7280] hover:bg-[#FFF4EF] hover:text-[#E86223]"
-                        : "cursor-not-allowed opacity-40"
+                      "h-8 w-8",
+                      !canDelete && "cursor-not-allowed opacity-40"
                     )}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 text-red-600" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
