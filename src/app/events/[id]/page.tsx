@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Users, Calendar as CalendarIcon, MapPin, Car, PencilLine, Lock } from "lucide-react";
+import { Users, Calendar as CalendarIcon, Car, PencilLine, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { ParticipantModal } from "@/components/events/participant-modal";
+import { EventLocationsCard } from "@/components/events/EventLocationsCard";
+import { LocationHeaderItem } from "@/components/events/LocationHeaderItem";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
@@ -125,17 +127,27 @@ export default async function EventDetails({
               <CalendarIcon className="h-5 w-5 flex-shrink-0" />
               <span>{formattedDateTime}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 flex-shrink-0" />
-              <span>{event.locationText}</span>
-            </div>
+            
+            {/* Location - First point with navigation */}
+            {event.locations && event.locations.length > 0 ? (
+              <LocationHeaderItem
+                location={event.locations[0]}
+                fallbackText={event.locationText}
+              />
+            ) : event.locationText ? (
+              <LocationHeaderItem
+                location={{} as any}
+                fallbackText={event.locationText}
+              />
+            ) : null}
+            
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 flex-shrink-0" />
               <span>{participantsCountLabel}</span>
             </div>
             {event.city && (
               <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 flex-shrink-0" />
+                <Car className="h-5 w-5 flex-shrink-0" />
                 <span>{event.city.name}{event.city.region && `, ${event.city.region}`}</span>
               </div>
             )}
@@ -236,6 +248,11 @@ export default async function EventDetails({
                   <p className="text-[13px] text-[#6B7280]">за экипаж</p>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Locations Card - NEW */}
+            {event.locations && event.locations.length > 0 && (
+              <EventLocationsCard locations={event.locations} />
             )}
 
             {/* Vehicle Requirements Card */}
