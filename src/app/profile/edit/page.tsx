@@ -14,7 +14,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { FormField } from "@/components/ui/form-field";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
+import { scrollToFirstError } from "@/lib/utils/form-validation";
 import type { City } from "@/lib/types/city";
 
 interface ProfileEditForm {
@@ -105,6 +107,12 @@ export default function ProfileEditPage() {
     
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      
+      // Scroll to first error field
+      setTimeout(() => {
+        scrollToFirstError({ offset: 100 });
+      }, 100);
+      
       return;
     }
     
@@ -215,10 +223,12 @@ export default function ProfileEditPage() {
               <h3 className="mb-3">Личная информация</h3>
               <div className="space-y-3">
                 {/* Name - точно по Figma */}
-                <div>
-                  <label className="text-[13px] font-medium mb-2 block">
-                    Имя <span className="text-[var(--color-danger)]">*</span>
-                  </label>
+                <FormField
+                  id="name"
+                  label="Имя"
+                  required
+                  error={fieldErrors.name}
+                >
                   <Input
                     type="text"
                     value={formData.name}
@@ -226,19 +236,15 @@ export default function ProfileEditPage() {
                     placeholder="Введите имя"
                     required
                   />
-                  {fieldErrors.name && (
-                    <p className="text-[13px] text-[var(--color-danger)] mt-1">{fieldErrors.name}</p>
-                  )}
-                </div>
+                </FormField>
 
                 {/* City - точно по Figma с "Опционально" */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[13px] font-medium">
-                      Город
-                    </label>
-                    <span className="text-[12px] text-[var(--color-text-muted)]">Опционально</span>
-                  </div>
+                <FormField
+                  id="cityId"
+                  label="Город"
+                  hint="Опционально"
+                  error={fieldErrors.cityId}
+                >
                   <CityAutocomplete
                     value={formData.cityId}
                     onChange={(cityId, city) => {
@@ -247,9 +253,8 @@ export default function ProfileEditPage() {
                         setFieldErrors({ ...fieldErrors, cityId: "" });
                       }
                     }}
-                    errorMessage={fieldErrors.cityId}
                   />
-                </div>
+                </FormField>
               </div>
             </CardContent>
           </Card>
@@ -260,36 +265,32 @@ export default function ProfileEditPage() {
               <h3 className="mb-3">Информация об автомобиле</h3>
               <div className="space-y-3">
                 {/* Brand - точно по Figma */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[13px] font-medium">
-                      Марка
-                    </label>
-                    <span className="text-[12px] text-[var(--color-text-muted)]">Опционально</span>
-                  </div>
+                <FormField
+                  id="carBrandId"
+                  label="Марка"
+                  hint="Опционально"
+                >
                   <Input
                     type="text"
                     value={formData.carBrandId || ""}
                     onChange={(e) => setFormData({ ...formData, carBrandId: e.target.value || null })}
                     placeholder="Например: Toyota"
                   />
-                </div>
+                </FormField>
 
                 {/* Model - точно по Figma */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-[13px] font-medium">
-                      Модель
-                    </label>
-                    <span className="text-[12px] text-[var(--color-text-muted)]">Опционально</span>
-                  </div>
+                <FormField
+                  id="carModelText"
+                  label="Модель"
+                  hint="Опционально"
+                >
                   <Input
                     type="text"
                     value={formData.carModelText || ""}
                     onChange={(e) => setFormData({ ...formData, carModelText: e.target.value })}
                     placeholder="Например: Land Cruiser"
                   />
-                </div>
+                </FormField>
               </div>
             </CardContent>
           </Card>

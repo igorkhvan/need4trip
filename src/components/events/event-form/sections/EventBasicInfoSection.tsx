@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { FormField } from "@/components/ui/form-field";
 import { Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import type { Club } from "@/lib/types/club";
@@ -102,10 +103,12 @@ export function EventBasicInfoSection({
   return (
     <div className="space-y-4">
       {/* Title */}
-      <div className="space-y-2">
-        <Label htmlFor="title" className="text-sm font-medium text-[#111827]">
-          Название события
-        </Label>
+      <FormField
+        id="title"
+        label="Название события"
+        required
+        error={fieldErrors.title}
+      >
         <Input
           id="title"
           value={title}
@@ -119,14 +122,15 @@ export function EventBasicInfoSection({
           placeholder="Например: зимний выезд в горы"
           className={fieldErrors.title ? "border-red-500 focus:border-red-500" : ""}
         />
-        <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.title ?? ""}</div>
-      </div>
+      </FormField>
 
       {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description" className="text-sm font-medium text-[#111827]">
-          Описание
-        </Label>
+      <FormField
+        id="description"
+        label="Описание"
+        required
+        error={fieldErrors.description}
+      >
         <Textarea
           id="description"
           rows={4}
@@ -141,14 +145,15 @@ export function EventBasicInfoSection({
           placeholder="Расскажите о маршруте, программе и особенностях поездки..."
           className={fieldErrors.description ? "border-red-500 focus:border-red-500" : ""}
         />
-        <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.description ?? ""}</div>
-      </div>
+      </FormField>
 
       {/* City */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-[#111827]">
-          Город <span className="text-red-500">*</span>
-        </Label>
+      <FormField
+        id="cityId"
+        label="Город"
+        required
+        error={fieldErrors.cityId}
+      >
         <CityAutocomplete
           value={cityId}
           onChange={(newCityId) => {
@@ -160,16 +165,17 @@ export function EventBasicInfoSection({
           disabled={disabled}
           placeholder="Выберите город..."
           error={!!fieldErrors.cityId}
-          errorMessage={fieldErrors.cityId}
         />
-      </div>
+      </FormField>
 
       {/* DateTime & Location */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="dateTime" className="text-sm font-medium text-[#111827]">
-            Дата и время
-          </Label>
+        <FormField
+          id="dateTime"
+          label="Дата и время"
+          required
+          error={fieldErrors.dateTime}
+        >
           <Input
             id="dateTime"
             type="datetime-local"
@@ -178,12 +184,14 @@ export function EventBasicInfoSection({
             disabled={disabled}
             className={fieldErrors.dateTime ? "border-red-500 focus:border-red-500" : ""}
           />
-          <div className="min-h-[28px] text-xs text-red-600">{fieldErrors.dateTime ?? ""}</div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="locationText" className="text-sm font-medium text-[#111827]">
-            Место сбора
-          </Label>
+        </FormField>
+
+        <FormField
+          id="locationText"
+          label="Место сбора"
+          required
+          error={fieldErrors.locationText}
+        >
           <Input
             id="locationText"
             value={locationText}
@@ -197,23 +205,22 @@ export function EventBasicInfoSection({
             placeholder="Адрес или координаты"
             className={fieldErrors.locationText ? "border-red-500 focus:border-red-500" : ""}
           />
-          <div className="min-h-[28px] text-xs text-red-600">
-            {fieldErrors.locationText ?? ""}
-          </div>
-        </div>
+        </FormField>
       </div>
 
       {/* MaxParticipants & Category */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="maxParticipants" className="text-sm font-medium text-[#111827]">
-            Максимум участников
-            {clubLimits && !loadingPlan && (
-              <span className="ml-2 text-xs font-normal text-[#6B7280]">
-                (ваш лимит: {maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : maxAllowedParticipants})
-              </span>
-            )}
-          </Label>
+        <FormField
+          id="maxParticipants"
+          label="Максимум участников"
+          required
+          error={fieldErrors.maxParticipants}
+          hint={
+            clubLimits && !loadingPlan
+              ? `Ваш лимит: ${maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : maxAllowedParticipants}`
+              : undefined
+          }
+        >
           <Input
             id="maxParticipants"
             type="text"
@@ -233,20 +240,14 @@ export function EventBasicInfoSection({
             placeholder={maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : String(maxAllowedParticipants)}
             className={fieldErrors.maxParticipants ? "border-red-500 focus:border-red-500" : ""}
           />
-          <div className="min-h-[28px] text-xs text-red-600">
-            {fieldErrors.maxParticipants ?? ""}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="category" className="text-sm font-medium text-[#111827]">
-            Категория события
-          </Label>
-          {/* Debug info - remove after testing */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-xs text-gray-500">
-              State: {categoryId || 'null'} | Categories loaded: {categories.length}
-            </div>
-          )}
+        </FormField>
+
+        <FormField
+          id="category"
+          label="Категория события"
+          required
+          error={fieldErrors.categoryId}
+        >
           {loadingCategories ? (
             <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
               Загрузка категорий...
@@ -275,8 +276,7 @@ export function EventBasicInfoSection({
               </SelectContent>
             </Select>
           )}
-          <div className="min-h-[28px]" />
-        </div>
+        </FormField>
       </div>
 
       {/* Visibility & IsClubEvent */}

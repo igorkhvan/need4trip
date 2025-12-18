@@ -6,10 +6,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Navigation, Trash2, AlertCircle } from "lucide-react";
+import { MapPin, Navigation, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { FieldCard } from "@/components/ui/field-card";
 import {
   Tooltip,
   TooltipContent,
@@ -116,22 +117,22 @@ export function LocationItem({
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FF6F2C]/10 text-xs font-semibold text-[#FF6F2C]">
-          {index + 1}
-        </div>
-        <span className="text-sm font-medium text-[#6B7280]">
-          {isFirst ? "Точка сбора (обязательная)" : `Точка ${index + 1}`}
-        </span>
-      </div>
-
+    <FieldCard
+      index={index + 1}
+      isFirst={isFirst}
+      firstFieldMessage="Первая точка не может быть удалена"
+      onDelete={onDelete}
+      deleteDisabled={disabled}
+      variant="subtle"
+    >
       {/* Title Input */}
-      <div className="space-y-2">
-        <Label htmlFor={`location-title-${location.sortOrder}`} className="text-sm font-medium text-[#111827]">
-          Название точки
-        </Label>
+      <FormField
+        id={`location-title-${location.sortOrder}`}
+        label="Название точки"
+        required={isFirst}
+        error={error}
+        hint={isFirst ? "Обязательное поле" : undefined}
+      >
         <Input
           id={`location-title-${location.sortOrder}`}
           value={location.title}
@@ -140,22 +141,15 @@ export function LocationItem({
           placeholder={isFirst ? "Точка сбора" : "Например: привал, смотровая площадка"}
           className={error ? "border-red-500 focus:border-red-500" : ""}
         />
-        {error && (
-          <div className="flex items-center gap-1 text-xs text-red-600">
-            <AlertCircle className="h-3 w-3" />
-            {error}
-          </div>
-        )}
-      </div>
+      </FormField>
 
       {/* Coordinates Input */}
-      <div className="space-y-2">
-        <Label htmlFor={`location-coords-${location.sortOrder}`} className="text-sm font-medium text-[#111827]">
-          Координаты
-          <span className="ml-2 text-xs font-normal text-[#6B7280]">
-            (Decimal Degrees, Google Maps URL, или DMS)
-          </span>
-        </Label>
+      <FormField
+        id={`location-coords-${location.sortOrder}`}
+        label="Координаты"
+        error={coordinatesError}
+        hint="Decimal Degrees, Google Maps URL, или DMS"
+      >
         <div className="flex gap-2">
           <Input
             id={`location-coords-${location.sortOrder}`}
@@ -205,58 +199,8 @@ export function LocationItem({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
-          {/* Delete Button */}
-          {!isFirst && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onDelete}
-                    disabled={disabled}
-                    className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Удалить точку</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          {/* First location cannot be deleted */}
-          {isFirst && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={true}
-                    className="shrink-0 cursor-not-allowed opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Первая точка не может быть удалена
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
         </div>
-        
-        {coordinatesError && (
-          <div className="flex items-center gap-1 text-xs text-red-600">
-            <AlertCircle className="h-3 w-3" />
-            {coordinatesError}
-          </div>
-        )}
-      </div>
+      </FormField>
 
       {/* Map Preview Modal */}
       {hasValidCoordinates && (
@@ -270,6 +214,6 @@ export function LocationItem({
           }}
         />
       )}
-    </div>
+    </FieldCard>
   );
 }

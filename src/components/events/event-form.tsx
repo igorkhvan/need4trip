@@ -38,6 +38,7 @@ import { getCategoryIcon } from "@/lib/utils/eventCategories";
 import { getErrorMessage } from "@/lib/utils/errors";
 import { useClubPlan } from "@/hooks/use-club-plan";
 import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
+import { scrollToFirstError } from "@/lib/utils/form-validation";
 // Section components
 import { EventBasicInfoSection } from "./event-form/sections/EventBasicInfoSection";
 import { EventLocationsSection } from "./event-form/sections/EventLocationsSection";
@@ -435,6 +436,12 @@ export function EventForm({
     } = validate();
     if (Object.keys(issues).length) {
       setFieldErrors(issues);
+      
+      // Scroll to first error field with offset for header
+      setTimeout(() => {
+        scrollToFirstError({ offset: 100 });
+      }, 100);
+      
       return;
     }
     setIsSubmitting(true);

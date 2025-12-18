@@ -13,6 +13,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CurrencySelect } from "@/components/ui/currency-select";
+import { FormField } from "@/components/ui/form-field";
 
 interface EventPricingSectionProps {
   // Form values
@@ -88,10 +89,12 @@ export function EventPricingSection({
       {isPaid && (
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="price" className="text-sm font-medium text-[#111827]">
-                Цена
-              </Label>
+            <FormField
+              id="price"
+              label="Цена"
+              required
+              error={fieldErrors.price}
+            >
               <Input
                 id="price"
                 type="text"
@@ -111,12 +114,14 @@ export function EventPricingSection({
                 placeholder="5000"
                 className={fieldErrors.price ? "border-red-500 focus:border-red-500" : ""}
               />
-              <div className="min-h-[24px] text-xs text-red-600">{fieldErrors.price ?? ""}</div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#111827]">
-                Валюта
-              </Label>
+            </FormField>
+
+            <FormField
+              id="currency"
+              label="Валюта"
+              required
+              error={fieldErrors.currencyCode}
+            >
               <CurrencySelect
                 value={currencyCode}
                 onChange={(newCode) => {
@@ -127,9 +132,8 @@ export function EventPricingSection({
                 }}
                 disabled={disabled}
                 placeholder="Выберите валюту..."
-                error={fieldErrors.currencyCode}
               />
-            </div>
+            </FormField>
           </div>
         </div>
       )}

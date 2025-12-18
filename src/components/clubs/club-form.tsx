@@ -10,10 +10,11 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CityMultiSelect } from "@/components/ui/city-multi-select";
+import { FormField } from "@/components/ui/form-field";
 import { getErrorMessage } from "@/lib/utils/errors";
+import { scrollToFirstError } from "@/lib/utils/form-validation";
 import type { Club, ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
 import type { City } from "@/lib/types/city";
 
@@ -58,6 +59,12 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setLoading(false);
+      
+      // Scroll to first error field
+      setTimeout(() => {
+        scrollToFirstError({ offset: 100 });
+      }, 100);
+      
       return;
     }
     
@@ -105,10 +112,12 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Название */}
-      <div className="space-y-2">
-        <Label htmlFor="name" className="text-sm font-medium text-[#111827]">
-          Название клуба <span className="text-red-500">*</span>
-        </Label>
+      <FormField
+        id="name"
+        label="Название клуба"
+        required
+        error={fieldErrors.name}
+      >
         <Input
           type="text"
           id="name"
@@ -118,16 +127,14 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           placeholder="Например: OFF-ROAD Москва"
           disabled={loading}
         />
-        <div className="min-h-[28px] text-xs text-red-600">
-          {fieldErrors.name || ""}
-        </div>
-      </div>
+      </FormField>
 
       {/* Описание */}
-      <div className="space-y-2">
-        <Label htmlFor="description" className="text-sm font-medium text-[#111827]">
-          Описание
-        </Label>
+      <FormField
+        id="description"
+        label="Описание"
+        hint="Расскажите о вашем клубе"
+      >
         <Textarea
           id="description"
           rows={4}
@@ -136,13 +143,16 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           placeholder="Расскажите о вашем клубе..."
           disabled={loading}
         />
-      </div>
+      </FormField>
 
       {/* Города */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-[#111827]">
-          Города клуба <span className="text-red-500">*</span>
-        </Label>
+      <FormField
+        id="cityIds"
+        label="Города клуба"
+        required
+        error={fieldErrors.cityIds}
+        hint="Выберите города, в которых действует ваш клуб (до 10 городов)"
+      >
         <CityMultiSelect
           value={formData.cityIds}
           onChange={(cityIds, cities) => {
@@ -151,19 +161,16 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           placeholder="Выберите города..."
           disabled={loading}
           error={!!fieldErrors.cityIds}
-          errorMessage={fieldErrors.cityIds}
           maxItems={10}
         />
-        <p className="text-sm text-[#6B7280]">
-          Выберите города, в которых действует ваш клуб (до 10 городов)
-        </p>
-      </div>
+      </FormField>
 
       {/* URL логотипа */}
-      <div className="space-y-2">
-        <Label htmlFor="logoUrl" className="text-sm font-medium text-[#111827]">
-          URL логотипа
-        </Label>
+      <FormField
+        id="logoUrl"
+        label="URL логотипа"
+        hint="Ссылка на изображение логотипа клуба"
+      >
         <Input
           type="url"
           id="logoUrl"
@@ -184,13 +191,14 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
             />
           </div>
         )}
-      </div>
+      </FormField>
 
       {/* Telegram */}
-      <div className="space-y-2">
-        <Label htmlFor="telegramUrl" className="text-sm font-medium text-[#111827]">
-          Ссылка на Telegram
-        </Label>
+      <FormField
+        id="telegramUrl"
+        label="Ссылка на Telegram"
+        hint="Ссылка на Telegram-канал или группу клуба"
+      >
         <Input
           type="url"
           id="telegramUrl"
@@ -199,13 +207,14 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           placeholder="https://t.me/your_club"
           disabled={loading}
         />
-      </div>
+      </FormField>
 
       {/* Сайт */}
-      <div className="space-y-2">
-        <Label htmlFor="websiteUrl" className="text-sm font-medium text-[#111827]">
-          Сайт клуба
-        </Label>
+      <FormField
+        id="websiteUrl"
+        label="Сайт клуба"
+        hint="Официальный сайт клуба"
+      >
         <Input
           type="url"
           id="websiteUrl"
@@ -214,7 +223,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           placeholder="https://yourclub.com"
           disabled={loading}
         />
-      </div>
+      </FormField>
 
       {/* Ошибка */}
       {error && (

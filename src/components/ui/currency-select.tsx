@@ -24,7 +24,6 @@ export interface CurrencySelectProps {
   onChange: (currencyCode: string | null) => void;
   placeholder?: string;
   disabled?: boolean;
-  error?: string;
 }
 
 /**
@@ -38,7 +37,6 @@ export function CurrencySelect({
   onChange,
   placeholder = "Выберите валюту...",
   disabled = false,
-  error,
 }: CurrencySelectProps) {
   const [open, setOpen] = React.useState(false);
   const [currencies, setCurrencies] = React.useState<Currency[]>([]);
@@ -184,11 +182,6 @@ export function CurrencySelect({
           </Command>
         </PopoverContent>
       </Popover>
-
-      {/* Error message with fixed height */}
-      <div className="min-h-[28px] text-xs text-red-600">
-        {error || ""}
-      </div>
     </div>
   );
 }

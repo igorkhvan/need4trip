@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -14,12 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FormField } from "@/components/ui/form-field";
 import { toast } from "@/components/ui/use-toast";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 import { useCurrentUser } from "@/components/auth/use-current-user";
 import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
 import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
+import { scrollToFirstError } from "@/lib/utils/form-validation";
 
 interface ParticipantFormProps {
   mode: "create" | "edit";
@@ -146,6 +147,12 @@ export function ParticipantForm({
     const issues = validate();
     if (Object.keys(issues).length) {
       setFieldErrors(issues);
+      
+      // Scroll to first error field
+      setTimeout(() => {
+        scrollToFirstError({ offset: 100 });
+      }, 100);
+      
       return;
     }
 
@@ -238,45 +245,51 @@ export function ParticipantForm({
 
   const renderField = (field: EventCustomFieldSchema) => {
     const errorText = fieldErrors[field.id];
-    const labelContent = (
-      <>
-        {field.label}
-        {field.required && <span className="ml-0.5 text-red-600">*</span>}
-      </>
-    );
     const value = customValues[field.id];
 
     switch (field.type) {
       case "number":
         return (
-          <div className="space-y-2" key={field.id}>
-            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
+          <FormField
+            key={field.id}
+            id={`field-${field.id}`}
+            label={field.label}
+            required={field.required}
+            error={errorText}
+          >
             <Input
               type="number"
               value={value as number}
               className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => handleChange(field.id, e.target.value)}
             />
-            <div className="min-h-[28px] text-left text-[13px] text-red-600">{errorText ?? ""}</div>
-          </div>
+          </FormField>
         );
       case "boolean":
         return (
           <div
-            className="flex items-center gap-3 rounded-md border bg-background px-3 py-2"
             key={field.id}
+            className="flex items-center gap-3 rounded-md border bg-background px-3 py-2"
           >
             <Checkbox
               checked={Boolean(value)}
               onChange={(e) => handleChange(field.id, e.target.checked)}
             />
-            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
+            <label className="flex items-center gap-1 text-sm cursor-pointer select-none">
+              {field.label}
+              {field.required && <span className="ml-0.5 text-red-600">*</span>}
+            </label>
           </div>
         );
       case "enum":
         return (
-          <div className="space-y-2" key={field.id}>
-            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
+          <FormField
+            key={field.id}
+            id={`field-${field.id}`}
+            label={field.label}
+            required={field.required}
+            error={errorText}
+          >
             <Select
               value={(value as string) ?? ""}
               onValueChange={(val) => handleChange(field.id, val)}
@@ -292,22 +305,25 @@ export function ParticipantForm({
                 ))}
               </SelectContent>
             </Select>
-            <div className="min-h-[28px] text-left text-[13px] text-red-600">{errorText ?? ""}</div>
-          </div>
+          </FormField>
         );
       case "text":
       default:
         return (
-          <div className="space-y-2" key={field.id}>
-            <Label className="flex items-center gap-1 text-sm">{labelContent}</Label>
+          <FormField
+            key={field.id}
+            id={`field-${field.id}`}
+            label={field.label}
+            required={field.required}
+            error={errorText}
+          >
             <Input
               value={(value as string) ?? ""}
               className={errorText ? "border-red-500 focus-visible:ring-red-500" : ""}
               onChange={(e) => handleChange(field.id, e.target.value)}
               placeholder=""
             />
-            <div className="min-h-[28px] text-left text-[13px] text-red-600">{errorText ?? ""}</div>
-          </div>
+          </FormField>
         );
     }
   };
@@ -327,10 +343,12 @@ export function ParticipantForm({
       )}
 
       <div className="grid gap-4 md:grid-cols-2 md:items-start">
-        <div className="space-y-2">
-          <Label htmlFor="displayName" className="text-sm font-medium">
-            Имя водителя / экипажа
-          </Label>
+        <FormField
+          id="displayName"
+          label="Имя водителя / экипажа"
+          required
+          error={fieldErrors.displayName}
+        >
           <Input
             id="displayName"
             placeholder="Ник или имя"
@@ -347,12 +365,13 @@ export function ParticipantForm({
             }}
             className="h-12"
           />
-          <div className="min-h-[28px] text-left text-[13px] text-red-600">
-            {fieldErrors.displayName ?? ""}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Роль</Label>
+        </FormField>
+
+        <FormField
+          id="role"
+          label="Роль"
+          required
+        >
           <Select
             value={role}
             onValueChange={(value) => setRole(value as ParticipantRole)}
@@ -366,14 +385,16 @@ export function ParticipantForm({
               <SelectItem value="tail">Замыкающий</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
       </div>
 
       {sortedFields.length > 0 && (
         <div className="space-y-4">{sortedFields.map((field) => renderField(field))}</div>
       )}
 
-      <div className="min-h-[20px] text-left text-sm text-red-600">{error ?? ""}</div>
+      {error && (
+        <div className="text-left text-sm text-red-600">{error}</div>
+      )}
       
       {mode === "create" && (
         <p className="text-left text-sm text-[#6B7280]">

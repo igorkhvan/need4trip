@@ -19,8 +19,7 @@ interface CityAutocompleteProps {
   onChange: (cityId: string | null, city: City | null) => void;
   placeholder?: string;
   disabled?: boolean;
-  error?: boolean;
-  errorMessage?: string;
+  error?: boolean; // For styling only (red border)
   className?: string;
 }
 
@@ -30,7 +29,6 @@ export function CityAutocomplete({
   placeholder = "Выберите город",
   disabled = false,
   error = false,
-  errorMessage,
   className,
 }: CityAutocompleteProps) {
   const [open, setOpen] = useState(false);
@@ -212,10 +210,6 @@ export function CityAutocomplete({
           )}
         </PopoverContent>
       </Popover>
-      {/* Always reserve space for error message to prevent layout shift */}
-      <div className="min-h-[28px] text-xs text-red-600">
-        {errorMessage || ""}
-      </div>
     </>
   );
 }
