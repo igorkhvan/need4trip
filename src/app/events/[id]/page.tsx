@@ -13,6 +13,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { ParticipantModal } from "@/components/events/participant-modal";
 import { EventLocationsCard } from "@/components/events/EventLocationsCard";
 import { LocationHeaderItem } from "@/components/events/LocationHeaderItem";
+import { MobileSectionNav } from "@/components/events/MobileSectionNav";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
@@ -81,6 +82,21 @@ export default async function EventDetails({
     event.maxParticipants !== null &&
     event.maxParticipants !== undefined &&
     event.participantsCount >= event.maxParticipants;
+
+  // Build sections for mobile navigation
+  const mobileSections = [
+    { id: "event-description", label: "Описание" },
+    ...(event.rules && event.rules.trim().length > 0
+      ? [{ id: "event-rules", label: "Правила участия" }]
+      : []),
+    { id: "event-participants", label: "Участники" },
+    ...(event.isPaid ? [{ id: "event-price", label: "Стоимость" }] : []),
+    ...(event.locations && event.locations.length > 0
+      ? [{ id: "event-locations", label: "Точки маршрута" }]
+      : []),
+    { id: "event-vehicle", label: "Требования к авто" },
+    ...(ownerUser ? [{ id: "event-organizer", label: "Организатор" }] : []),
+  ];
 
   return (
     <>
@@ -193,7 +209,7 @@ export default async function EventDetails({
           {/* Left Column - Description, Rules, Participants */}
           <div className="space-y-6">
             {/* Description Card */}
-            <Card>
+            <Card id="event-description">
               <CardHeader>
                 <CardTitle>Описание</CardTitle>
               </CardHeader>
@@ -206,7 +222,7 @@ export default async function EventDetails({
 
             {/* Rules Card */}
             {event.rules && event.rules.trim().length > 0 && (
-              <Card>
+              <Card id="event-rules">
                 <CardHeader>
                   <CardTitle>Правила участия</CardTitle>
                 </CardHeader>
@@ -219,23 +235,25 @@ export default async function EventDetails({
             )}
 
             {/* Participants Card - загружаем через Suspense */}
-            <Suspense fallback={<EventParticipantsSkeleton />}>
-              <EventParticipantsAsync
-                eventId={event.id}
-                event={event}
-                isOwner={isOwner}
-                currentUserId={currentUser?.id}
-                guestSessionId={guestSessionId ?? undefined}
-                isPastEvent={isPastEvent}
-              />
-            </Suspense>
+            <div id="event-participants">
+              <Suspense fallback={<EventParticipantsSkeleton />}>
+                <EventParticipantsAsync
+                  eventId={event.id}
+                  event={event}
+                  isOwner={isOwner}
+                  currentUserId={currentUser?.id}
+                  guestSessionId={guestSessionId ?? undefined}
+                  isPastEvent={isPastEvent}
+                />
+              </Suspense>
+            </div>
           </div>
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* Price Card */}
             {event.isPaid && (
-              <Card>
+              <Card id="event-price">
                 <CardHeader>
                   <CardTitle>Стоимость участия</CardTitle>
                 </CardHeader>
@@ -250,11 +268,13 @@ export default async function EventDetails({
 
             {/* Locations Card - NEW */}
             {event.locations && event.locations.length > 0 && (
-              <EventLocationsCard locations={event.locations} />
+              <div id="event-locations">
+                <EventLocationsCard locations={event.locations} />
+              </div>
             )}
 
             {/* Vehicle Requirements Card */}
-            <Card>
+            <Card id="event-vehicle">
               <CardHeader>
                 <CardTitle>Требования к авто</CardTitle>
               </CardHeader>
@@ -287,7 +307,7 @@ export default async function EventDetails({
 
             {/* Organizer Card */}
             {ownerUser && (
-              <Card>
+              <Card id="event-organizer">
                 <CardHeader>
                   <CardTitle>Организатор</CardTitle>
                 </CardHeader>
@@ -303,6 +323,9 @@ export default async function EventDetails({
             )}
           </div>
         </div>
+
+      {/* Mobile Section Navigation */}
+      <MobileSectionNav sections={mobileSections} />
     </>
   );
 }
