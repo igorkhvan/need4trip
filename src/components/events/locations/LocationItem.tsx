@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { NavigationChooser } from "./NavigationChooser";
 import { MapPreviewModal } from "./MapPreviewModal";
-import { parseCoordinates, normalizeCoordinates } from "@/lib/utils/coordinates";
+import { parseCoordinates, normalizeCoordinates, isShortGoogleMapsLink } from "@/lib/utils/coordinates";
 import type { EventLocationInput } from "@/lib/types/eventLocation";
 
 interface LocationItemProps {
@@ -78,6 +78,19 @@ export function LocationItem({
       return;
     }
 
+    // Check for short Google Maps links
+    if (isShortGoogleMapsLink(coordinatesInput)) {
+      setCoordinatesError(
+        "Короткие ссылки Google Maps не поддерживаются. Откройте ссылку в браузере, скопируйте координаты или полный URL из адресной строки."
+      );
+      onUpdate({
+        latitude: null,
+        longitude: null,
+        rawInput: coordinatesInput,
+      });
+      return;
+    }
+
     // Try to parse coordinates
     const parsed = parseCoordinates(coordinatesInput);
 
@@ -94,7 +107,7 @@ export function LocationItem({
     } else {
       // Invalid format
       setCoordinatesError(
-        "Неверный формат координат. Используйте формат: 43.238949, 76.889709"
+        "Неверный формат координат. Используйте формат: 43.238949, 76.889709 или полную ссылку Google Maps."
       );
       onUpdate({
         latitude: null,

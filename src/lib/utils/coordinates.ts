@@ -17,6 +17,19 @@ export interface ParsedCoordinates {
 }
 
 /**
+ * Check if input is a short Google Maps link (goo.gl)
+ * These links require redirect resolution which we don't support
+ */
+export function isShortGoogleMapsLink(input: string): boolean {
+  try {
+    const url = new URL(input);
+    return url.hostname.includes('goo.gl');
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Parse coordinates from various input formats
  * Returns null if parsing fails
  */
@@ -85,21 +98,44 @@ function parseDecimalDegrees(input: string): ParsedCoordinates | null {
  *   - https://maps.google.com/?q=43.238949,76.889709
  *   - https://www.google.com/maps?q=43.238949,76.889709
  *   - https://maps.google.com/@43.238949,76.889709,15z
- *   - https://goo.gl/maps/... (redirects, not supported)
+ *   - https://www.google.com/maps/place/43.238949,76.889709
+ *   - https://goo.gl/maps/... (short links not supported - requires redirect)
+ *   - https://maps.app.goo.gl/... (short links not supported - requires redirect)
  */
 function parseGoogleMapsUrl(input: string): ParsedCoordinates | null {
   // Check if input looks like a URL
-  if (!input.includes('google.com') && !input.includes('maps')) {
+  if (!input.includes('://')) {
     return null;
   }
 
   try {
     const url = new URL(input);
     
+    // Check for short links (goo.gl, maps.app.goo.gl)
+    // These require redirect resolution which we don't support client-side
+    if (url.hostname.includes('goo.gl')) {
+      // Return null - will be caught by validation and show helpful error
+      return null;
+    }
+
+    // Only proceed if it's a Google Maps URL
+    if (!url.hostname.includes('google.com') && !url.hostname.includes('maps.google')) {
+      return null;
+    }
+
     // Try to parse from "q" parameter
     const qParam = url.searchParams.get('q');
     if (qParam) {
       const coords = parseDecimalDegrees(qParam);
+      if (coords) {
+        return { ...coords, format: 'GOOGLE_MAPS' };
+      }
+    }
+
+    // Try to parse from "query" parameter (API format)
+    const queryParam = url.searchParams.get('query');
+    if (queryParam) {
+      const coords = parseDecimalDegrees(queryParam);
       if (coords) {
         return { ...coords, format: 'GOOGLE_MAPS' };
       }
@@ -110,6 +146,22 @@ function parseGoogleMapsUrl(input: string): ParsedCoordinates | null {
     if (pathMatch) {
       const lat = parseFloat(pathMatch[1]);
       const lng = parseFloat(pathMatch[2]);
+      
+      if (validateCoordinates(lat, lng)) {
+        return {
+          lat,
+          lng,
+          format: 'GOOGLE_MAPS',
+          normalized: normalizeCoordinates(lat, lng),
+        };
+      }
+    }
+
+    // Try to parse from /place/ pathname (e.g., /place/43.238949,76.889709)
+    const placeMatch = url.pathname.match(/\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (placeMatch) {
+      const lat = parseFloat(placeMatch[1]);
+      const lng = parseFloat(placeMatch[2]);
       
       if (validateCoordinates(lat, lng)) {
         return {
