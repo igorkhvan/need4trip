@@ -310,30 +310,35 @@ export async function getEventBasicInfo(
 ): Promise<(Event & { participantsCount: number }) | null> {
   const dbEvent = await getEventById(id);
   if (!dbEvent) return null;
-  
+
   let event = mapDbEventToDomain(dbEvent);
-  
+
   // Hydrate all related data + count participants (parallel)
-  const [allowedBrands, participantsCount] = await Promise.all([
+  const [allowedBrands, participantsCount, locations] = await Promise.all([
     getAllowedBrands(id).catch((err) => {
       log.warn("Failed to load allowed brands for event basic info, using empty array", { eventId: id, error: err });
       return [];
     }),
     countParticipants(id),
+    getLocationsByEventId(id).catch((err) => {
+      log.warn("Failed to load locations for event basic info, using empty array", { eventId: id, error: err });
+      return [];
+    }),
   ]);
-  
+
   event.allowedBrands = allowedBrands;
-  
+  event.locations = locations;
+
   // Hydrate city and currency
   const [hydratedEvents] = await hydrateCitiesAndCurrencies([event]);
   event = hydratedEvents;
-  
+
   // Hydrate category
   const [eventWithCategory] = await hydrateEventCategories([event]);
   event = eventWithCategory;
-  
+
   await ensureEventVisibility(event, options);
-  
+
   return {
     ...event,
     participantsCount,
