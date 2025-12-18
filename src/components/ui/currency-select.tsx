@@ -118,7 +118,6 @@ export function CurrencySelect({
             disabled={disabled}
             className={cn(
               "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
-              error ? "border-red-500 focus:border-red-500" : "",
               !selectedCurrency && "text-[#6B7280]"
             )}
           >
