@@ -1,0 +1,129 @@
+/**
+ * EventLocationsSection Component
+ * Section for managing multiple location points in event form
+ * Part of EventForm refactoring
+ */
+
+"use client";
+
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LocationItem } from "@/components/events/locations/LocationItem";
+import type { EventLocationInput } from "@/lib/types/eventLocation";
+
+interface EventLocationsSectionProps {
+  locations: EventLocationInput[];
+  onLocationsChange: (locations: EventLocationInput[]) => void;
+  fieldErrors: Record<string, string>;
+  clearFieldError: (field: string) => void;
+  disabled?: boolean;
+  sectionNumber: number;
+}
+
+export function EventLocationsSection({
+  locations,
+  onLocationsChange,
+  fieldErrors,
+  clearFieldError,
+  disabled,
+  sectionNumber,
+}: EventLocationsSectionProps) {
+  // Sort locations by sortOrder
+  const sortedLocations = [...locations].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const handleAddLocation = () => {
+    // Find next available sort_order
+    const maxOrder = Math.max(...locations.map((loc) => loc.sortOrder), 0);
+    const newLocation: EventLocationInput = {
+      sortOrder: maxOrder + 1,
+      title: `Точка ${maxOrder + 1}`,
+      latitude: null,
+      longitude: null,
+      rawInput: null,
+    };
+    onLocationsChange([...locations, newLocation]);
+  };
+
+  const handleUpdateLocation = (sortOrder: number, patch: Partial<EventLocationInput>) => {
+    const updated = locations.map((loc) =>
+      loc.sortOrder === sortOrder ? { ...loc, ...patch } : loc
+    );
+    onLocationsChange(updated);
+    
+    // Clear field error for this location
+    clearFieldError(`locations.${sortOrder}.title`);
+    clearFieldError(`locations.${sortOrder}.coordinates`);
+  };
+
+  const handleDeleteLocation = (sortOrder: number) => {
+    // Prevent deletion of first location
+    if (sortOrder === 1) {
+      return;
+    }
+    
+    const filtered = locations.filter((loc) => loc.sortOrder !== sortOrder);
+    onLocationsChange(filtered);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Section Header */}
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+          {sectionNumber}
+        </div>
+        <div>
+          <p className="text-2xl font-semibold text-[#0F172A]">Точки маршрута</p>
+          <p className="text-xs text-[#6B7280]">
+            Укажите места сбора и остановок. Первая точка обязательна.
+          </p>
+        </div>
+      </div>
+
+      {/* Locations List */}
+      <div className="space-y-4">
+        {sortedLocations.map((location, index) => (
+          <LocationItem
+            key={location.id || location.sortOrder}
+            location={location}
+            index={index}
+            isFirst={location.sortOrder === 1}
+            onUpdate={(patch) => handleUpdateLocation(location.sortOrder, patch)}
+            onDelete={() => handleDeleteLocation(location.sortOrder)}
+            disabled={disabled}
+            error={
+              fieldErrors[`locations.${location.sortOrder}.title`] ||
+              fieldErrors[`locations.${location.sortOrder}.coordinates`]
+            }
+            onErrorClear={() => {
+              clearFieldError(`locations.${location.sortOrder}.title`);
+              clearFieldError(`locations.${location.sortOrder}.coordinates`);
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Add Location Button */}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleAddLocation}
+        disabled={disabled}
+        className="w-full gap-2 border-dashed"
+      >
+        <Plus className="h-4 w-4" />
+        Добавить точку маршрута
+      </Button>
+
+      {/* Hint */}
+      <div className="rounded-lg bg-[#F0F9FF] p-4 text-sm text-[#1E40AF]">
+        <p className="font-medium">💡 Как вводить координаты:</p>
+        <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
+          <li>Decimal Degrees: <code className="rounded bg-white px-1">43.238949, 76.889709</code></li>
+          <li>Google Maps URL: вставьте ссылку с карты</li>
+          <li>Можно оставить пустым и заполнить позже</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
