@@ -155,6 +155,8 @@ export function EventForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingRules, setIsGeneratingRules] = useState(false);
   const [showAiConfirmDialog, setShowAiConfirmDialog] = useState(false);
+  const [showRequiredFieldsDialog, setShowRequiredFieldsDialog] = useState(false);
+  const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]);
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
@@ -313,21 +315,31 @@ export function EventForm({
   };
 
   const handleAiButtonClick = () => {
-    // Validate required fields first
-    if (!title.trim() || !categoryId || !cityId) {
-      if (!title.trim()) {
-        setFieldErrors(prev => ({ ...prev, title: "Укажите название события" }));
-      }
-      if (!categoryId) {
-        setFieldErrors(prev => ({ ...prev, categoryId: "Выберите категорию" }));
-      }
-      if (!cityId) {
-        setFieldErrors(prev => ({ ...prev, cityId: "Выберите город" }));
-      }
+    // Build list of missing required fields
+    const missing: string[] = [];
+    
+    // Check basic required fields ONLY
+    if (!title.trim()) {
+      missing.push("Название события");
+      setFieldErrors(prev => ({ ...prev, title: "Укажите название события" }));
+    }
+    if (!categoryId) {
+      missing.push("Категория события");
+      setFieldErrors(prev => ({ ...prev, categoryId: "Выберите категорию" }));
+    }
+    if (!cityId) {
+      missing.push("Город");
+      setFieldErrors(prev => ({ ...prev, cityId: "Выберите город" }));
+    }
+    
+    // If any required fields are missing, show error dialog
+    if (missing.length > 0) {
+      setMissingFieldsList(missing);
+      setShowRequiredFieldsDialog(true);
       return;
     }
     
-    // Show confirmation dialog
+    // All required fields are filled - show confirmation dialog
     setShowAiConfirmDialog(true);
   };
 
@@ -655,6 +667,30 @@ export function EventForm({
       
       {/* ⚡ Billing v2.0: Paywall Modal */}
       {PaywallModalComponent}
+
+      {/* 🚫 Required Fields Error Dialog */}
+      <AlertDialog open={showRequiredFieldsDialog} onOpenChange={setShowRequiredFieldsDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Заполните обязательные поля</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-left">
+              <p>
+                Для генерации правил необходимо заполнить следующие обязательные поля:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                {missingFieldsList.map((field, idx) => (
+                  <li key={idx}>{field}</li>
+                ))}
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowRequiredFieldsDialog(false)}>
+              Понятно
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 🤖 AI Generation Confirmation Dialog */}
       <AlertDialog open={showAiConfirmDialog} onOpenChange={setShowAiConfirmDialog}>
