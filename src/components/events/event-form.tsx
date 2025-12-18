@@ -131,7 +131,6 @@ export function EventForm({
     return "";
   });
   const [cityId, setCityId] = useState<string | null>(initialValues?.cityId ?? null);
-  const [locationText, setLocationText] = useState(initialValues?.locationText ?? "");
   const [locations, setLocations] = useState<EventLocationInput[]>(
     initialValues?.locations ?? [{ sortOrder: 1, title: "Точка сбора", latitude: null, longitude: null, rawInput: null }]
   );
@@ -263,7 +262,6 @@ export function EventForm({
     const issues: Record<string, string> = {};
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
-    const trimmedLocation = locationText.trim();
     const parsedDate = dateTime ? new Date(dateTime) : null;
     const participantsCount = maxParticipants ?? null;
     const trimmedPrice = price.trim();
@@ -300,9 +298,6 @@ export function EventForm({
         issues.currencyCode = "Выберите валюту";
       }
     }
-    if (!trimmedLocation) {
-      issues.locationText = "Укажите локацию";
-    }
     if (!cityId) {
       issues.cityId = "Выберите город";
     }
@@ -316,7 +311,6 @@ export function EventForm({
       parsedDate,
       trimmedTitle,
       trimmedDescription,
-      trimmedLocation,
       trimmedPrice,
     };
   };
@@ -367,7 +361,6 @@ export function EventForm({
         categoryId,
         dateTime: dateTime ? new Date(dateTime).toISOString() : new Date().toISOString(),
         cityId,
-        locationText: locationText.trim(),
         maxParticipants,
         customFieldsSchema: sortedFields,
         visibility,
@@ -431,7 +424,6 @@ export function EventForm({
       parsedDate,
       trimmedTitle,
       trimmedDescription,
-      trimmedLocation,
       trimmedPrice,
     } = validate();
     if (Object.keys(issues).length) {
@@ -454,8 +446,7 @@ export function EventForm({
       categoryId,
       dateTime: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
       cityId: cityId || null, // FK на cities
-      locationText: trimmedLocation,
-      locations, // NEW: Multiple location points
+      locations, // Multiple location points
       maxParticipants,
       customFieldsSchema: sortedFields,
       visibility,
@@ -552,21 +543,21 @@ export function EventForm({
             categoryId={categoryId}
             dateTime={dateTime}
             cityId={cityId}
-            locationText={locationText}
             maxParticipants={maxParticipants}
             visibility={visibility}
+            isPaid={isPaid}
             isClubEvent={isClubEvent}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
             onCategoryChange={setCategoryId}
             onDateTimeChange={setDateTime}
             onCityChange={setCityId}
-            onLocationChange={setLocationText}
             onMaxParticipantsChange={(value, userEdited) => {
               if (userEdited) setHasUserSetMaxParticipants(true);
               setMaxParticipants(value);
             }}
             onVisibilityChange={setVisibility}
+            onIsPaidChange={setIsPaid}
             onIsClubEventChange={setIsClubEvent}
             categories={categories}
             loadingCategories={loadingCategories}
@@ -589,7 +580,6 @@ export function EventForm({
             isPaid={isPaid}
             price={price}
             currencyCode={currencyCode}
-            onIsPaidChange={setIsPaid}
             onPriceChange={setPrice}
             onCurrencyChange={setCurrencyCode}
             fieldErrors={fieldErrors}
