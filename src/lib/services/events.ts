@@ -546,7 +546,7 @@ async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
       cityName: city.name,
       categoryName: category?.nameRu ?? "Событие",
       dateTime: event.dateTime,
-      locationText: event.locationText || "",
+      locationText: event.locations?.[0]?.title ?? event.locationText ?? "Не указано", // Fallback: locations → locationText → default
       creatorId,
     });
   } catch (err) {

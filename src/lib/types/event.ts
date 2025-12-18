@@ -154,7 +154,7 @@ export const eventCreateSchema = z
     categoryId: z.string().uuid().nullable().optional(), // Changed from category enum
     dateTime: eventDateSchema,
     cityId: z.string().uuid(), // FK на cities table (обязательное поле)
-    locationText: z.string().trim().min(1),
+    locationText: z.string().trim().min(1).optional(), // DEPRECATED: Use locations array instead
     locationLat: z.number().finite().nullable().optional(),
     locationLng: z.number().finite().nullable().optional(),
     locations: eventLocationsArraySchema.optional(), // NEW: Multiple location points

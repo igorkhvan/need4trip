@@ -26,7 +26,7 @@ export const generateRulesRequestSchema = z.object({
   // Date & Location
   dateTime: z.string(), // ISO 8601
   cityId: z.string().uuid().nullable(),
-  locationText: z.string().min(1).max(500),
+  locationText: z.string().min(1).max(500).optional(), // DEPRECATED: Fallback to locations[0].title
   
   // Participants
   maxParticipants: z.number().int().positive().nullable(),

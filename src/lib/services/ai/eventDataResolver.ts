@@ -78,7 +78,7 @@ export async function resolveEventData(
       description: request.description || null,
       dateTime: request.dateTime,
       cityName,
-      locationText: request.locationText,
+      locationText: request.locationText ?? "Не указано", // DEPRECATED: Optional field with fallback
       maxParticipants: request.maxParticipants,
       categoryName,
       vehicleTypeLabel,

@@ -122,7 +122,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
         ? payload.dateTime.toISOString()
         : payload.dateTime,
     city_id: payload.cityId ?? null, // FK на cities (normalized)
-    location_text: payload.locationText,
+    location_text: payload.locationText ?? "", // DEPRECATED: Fallback to empty string for DB
     location_lat: payload.locationLat ?? null,
     location_lng: payload.locationLng ?? null,
     max_participants: payload.maxParticipants ?? null,
