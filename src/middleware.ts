@@ -53,6 +53,9 @@ const PROTECTED_ROUTES = [
   '/api/auth/me',
   '/api/auth/logout',
   
+  // AI endpoints (all require auth)
+  '/api/ai',
+  
   // Clubs (write operations)
   { path: '/api/clubs', methods: ['POST'] },
   { path: '/api/clubs/', methods: ['PATCH', 'DELETE'] }, // /api/clubs/[id]
