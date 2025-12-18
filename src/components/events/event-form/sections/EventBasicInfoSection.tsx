@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { FormField } from "@/components/ui/form-field";
 import { Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
@@ -40,6 +41,8 @@ interface EventBasicInfoSectionProps {
   maxParticipants: number | null;
   visibility: Visibility;
   isPaid: boolean;
+  price: string;
+  currencyCode: string | null;
   isClubEvent: boolean;
   
   // Change handlers
@@ -51,6 +54,8 @@ interface EventBasicInfoSectionProps {
   onMaxParticipantsChange: (value: number | null, userEdited: boolean) => void;
   onVisibilityChange: (value: Visibility) => void;
   onIsPaidChange: (value: boolean) => void;
+  onPriceChange: (value: string) => void;
+  onCurrencyChange: (value: string | null) => void;
   onIsClubEventChange: (value: boolean) => void;
   
   // External data
@@ -80,6 +85,8 @@ export function EventBasicInfoSection({
   maxParticipants,
   visibility,
   isPaid,
+  price,
+  currencyCode,
   isClubEvent,
   onTitleChange,
   onDescriptionChange,
@@ -89,6 +96,8 @@ export function EventBasicInfoSection({
   onMaxParticipantsChange,
   onVisibilityChange,
   onIsPaidChange,
+  onPriceChange,
+  onCurrencyChange,
   onIsClubEventChange,
   categories,
   loadingCategories,
@@ -102,7 +111,7 @@ export function EventBasicInfoSection({
 }: EventBasicInfoSectionProps) {
   return (
     <div className="space-y-4">
-      {/* Title & City - NEW: grid layout */}
+      {/* Title & City - grid layout */}
       <div className="grid gap-4 md:grid-cols-2">
         <FormField
           id="title"
@@ -169,135 +178,192 @@ export function EventBasicInfoSection({
         />
       </FormField>
 
-      {/* DateTime */}
-      <FormField
-        id="dateTime"
-        label="Дата и время"
-        required
-        error={fieldErrors.dateTime}
-      >
-        <Input
+      {/* DateTime & Category - grid layout */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
           id="dateTime"
-          type="datetime-local"
-          value={dateTime}
-          onChange={(e) => onDateTimeChange(e.target.value)}
-          disabled={disabled}
-          className={fieldErrors.dateTime ? "border-red-500 focus:border-red-500" : ""}
-        />
-      </FormField>
+          label="Дата и время"
+          required
+          error={fieldErrors.dateTime}
+        >
+          <Input
+            id="dateTime"
+            type="datetime-local"
+            value={dateTime}
+            onChange={(e) => onDateTimeChange(e.target.value)}
+            disabled={disabled}
+            className={fieldErrors.dateTime ? "border-red-500 focus:border-red-500" : ""}
+          />
+        </FormField>
 
-      {/* Category - Moved up */}
-      <FormField
-        id="category"
-        label="Категория события"
-        required
-        error={fieldErrors.categoryId}
-      >
-        {loadingCategories ? (
-          <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
-            Загрузка категорий...
-          </div>
-        ) : (
+        <FormField
+          id="category"
+          label="Категория события"
+          required
+          error={fieldErrors.categoryId}
+        >
+          {loadingCategories ? (
+            <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
+              Загрузка категорий...
+            </div>
+          ) : (
+            <Select
+              value={categoryId || ""}
+              onValueChange={(val) => {
+                // Ignore empty string changes (Radix UI bug)
+                if (val === "" && categoryId) {
+                  return;
+                }
+                onCategoryChange(val || null);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Выберите категорию" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.nameRu}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </FormField>
+      </div>
+
+      {/* Visibility & MaxParticipants - grid layout */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          id="visibility"
+          label="Видимость события"
+          required
+        >
           <Select
-            value={categoryId || ""}
-            onValueChange={(val) => {
-              // Ignore empty string changes (Radix UI bug)
-              if (val === "" && categoryId) {
-                return;
-              }
-              onCategoryChange(val || null);
-            }}
+            value={visibility}
+            onValueChange={(val) => onVisibilityChange(val as Visibility)}
             disabled={disabled}
           >
-            <SelectTrigger id="category">
-              <SelectValue placeholder="Выберите категорию" />
+            <SelectTrigger id="visibility">
+              <SelectValue placeholder="Кто видит событие" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.nameRu}
-                </SelectItem>
-              ))}
+              <SelectItem value="public">Публичный (видно всем)</SelectItem>
+              <SelectItem value="unlisted">По прямой ссылке</SelectItem>
+              <SelectItem value="restricted">Только участникам/клубу</SelectItem>
             </SelectContent>
           </Select>
-        )}
-      </FormField>
+        </FormField>
 
-      {/* Visibility - Moved up */}
-      <FormField
-        id="visibility"
-        label="Видимость события"
-        required
-      >
-        <Select
-          value={visibility}
-          onValueChange={(val) => onVisibilityChange(val as Visibility)}
-          disabled={disabled}
-        >
-          <SelectTrigger id="visibility">
-            <SelectValue placeholder="Кто видит событие" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="public">Публичный (видно всем)</SelectItem>
-            <SelectItem value="unlisted">По прямой ссылке</SelectItem>
-            <SelectItem value="restricted">Только участникам/клубу</SelectItem>
-          </SelectContent>
-        </Select>
-      </FormField>
-
-      {/* Тип участия - NEW: Moved from EventPricingSection */}
-      <FormField
-        id="participationType"
-        label="Тип участия"
-        required
-      >
-        <Select
-          value={isPaid ? "paid" : "free"}
-          onValueChange={(val) => onIsPaidChange(val === "paid")}
-          disabled={disabled}
-        >
-          <SelectTrigger id="participationType">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="free">Бесплатное</SelectItem>
-            <SelectItem value="paid">Платное</SelectItem>
-          </SelectContent>
-        </Select>
-      </FormField>
-
-      {/* MaxParticipants - Renamed label */}
-      <FormField
-        id="maxParticipants"
-        label="Максимум экипажей"
-        required
-        error={fieldErrors.maxParticipants}
-        hint={
-          clubLimits && !loadingPlan
-            ? `Ваш лимит: ${maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : maxAllowedParticipants}`
-            : undefined
-        }
-      >
-        <Input
+        <FormField
           id="maxParticipants"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          min={1}
-          max={maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? undefined : maxAllowedParticipants}
-          value={maxParticipants ?? ""}
-          onChange={(e) => {
-            const digitsOnly = e.target.value.replace(/\D/g, "");
-            onMaxParticipantsChange(digitsOnly ? Number(digitsOnly) : null, true);
-            if (fieldErrors.maxParticipants) {
-              clearFieldError("maxParticipants");
-            }
-          }}
-          disabled={disabled || loadingPlan}
-          placeholder={maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : String(maxAllowedParticipants)}
-          className={fieldErrors.maxParticipants ? "border-red-500 focus:border-red-500" : ""}
-        />
-      </FormField>
+          label="Максимум экипажей"
+          required
+          error={fieldErrors.maxParticipants}
+          hint={
+            clubLimits && !loadingPlan
+              ? `Ваш лимит: ${maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : maxAllowedParticipants}`
+              : undefined
+          }
+        >
+          <Input
+            id="maxParticipants"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            min={1}
+            max={maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? undefined : maxAllowedParticipants}
+            value={maxParticipants ?? ""}
+            onChange={(e) => {
+              const digitsOnly = e.target.value.replace(/\D/g, "");
+              onMaxParticipantsChange(digitsOnly ? Number(digitsOnly) : null, true);
+              if (fieldErrors.maxParticipants) {
+                clearFieldError("maxParticipants");
+              }
+            }}
+            disabled={disabled || loadingPlan}
+            placeholder={maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : String(maxAllowedParticipants)}
+            className={fieldErrors.maxParticipants ? "border-red-500 focus:border-red-500" : ""}
+          />
+        </FormField>
+      </div>
+
+      {/* Тип участия & Price/Currency - grid layout */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
+          id="participationType"
+          label="Тип участия"
+          required
+        >
+          <Select
+            value={isPaid ? "paid" : "free"}
+            onValueChange={(val) => onIsPaidChange(val === "paid")}
+            disabled={disabled}
+          >
+            <SelectTrigger id="participationType">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="free">Бесплатное</SelectItem>
+              <SelectItem value="paid">Платное</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormField>
+
+        {/* Price & Currency - nested grid (only if paid) */}
+        {isPaid ? (
+          <div className="grid gap-4 grid-cols-2">
+            <FormField
+              id="price"
+              label="Цена"
+              required
+              error={fieldErrors.price}
+            >
+              <Input
+                id="price"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min={0}
+                step={1}
+                value={price}
+                onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/\D/g, "");
+                  onPriceChange(digitsOnly);
+                  if (fieldErrors.price) {
+                    clearFieldError("price");
+                  }
+                }}
+                disabled={disabled}
+                placeholder="5000"
+                className={fieldErrors.price ? "border-red-500 focus:border-red-500" : ""}
+              />
+            </FormField>
+
+            <FormField
+              id="currency"
+              label="Валюта"
+              required
+              error={fieldErrors.currencyCode}
+            >
+              <CurrencySelect
+                value={currencyCode}
+                onChange={(newCode) => {
+                  onCurrencyChange(newCode);
+                  if (fieldErrors.currencyCode) {
+                    clearFieldError("currencyCode");
+                  }
+                }}
+                disabled={disabled}
+                placeholder="Выберите валюту..."
+              />
+            </FormField>
+          </div>
+        ) : (
+          <div></div>
+        )}
+      </div>
     </div>
   );
 }

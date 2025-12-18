@@ -42,7 +42,6 @@ import { scrollToFirstError } from "@/lib/utils/form-validation";
 // Section components
 import { EventBasicInfoSection } from "./event-form/sections/EventBasicInfoSection";
 import { EventLocationsSection } from "./event-form/sections/EventLocationsSection";
-import { EventPricingSection } from "./event-form/sections/EventPricingSection";
 import { EventVehicleSection } from "./event-form/sections/EventVehicleSection";
 import { EventRulesSection } from "./event-form/sections/EventRulesSection";
 import { EventCustomFieldsSection } from "./event-form/sections/EventCustomFieldsSection";
@@ -546,6 +545,8 @@ export function EventForm({
             maxParticipants={maxParticipants}
             visibility={visibility}
             isPaid={isPaid}
+            price={price}
+            currencyCode={currencyCode}
             isClubEvent={isClubEvent}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
@@ -558,6 +559,8 @@ export function EventForm({
             }}
             onVisibilityChange={setVisibility}
             onIsPaidChange={setIsPaid}
+            onPriceChange={setPrice}
+            onCurrencyChange={setCurrencyCode}
             onIsClubEventChange={setIsClubEvent}
             categories={categories}
             loadingCategories={loadingCategories}
@@ -576,22 +579,7 @@ export function EventForm({
             club={club}
           />
 
-          <EventPricingSection
-            isPaid={isPaid}
-            price={price}
-            currencyCode={currencyCode}
-            onPriceChange={setPrice}
-            onCurrencyChange={setCurrencyCode}
-            fieldErrors={fieldErrors}
-            clearFieldError={(field) => {
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next[field];
-                return next;
-              });
-            }}
-            disabled={disabled}
-          />
+          {/* EventPricingSection no longer needed - integrated into EventBasicInfoSection */}
         </Card>
 
         {/* Section 2: Event Locations */}
