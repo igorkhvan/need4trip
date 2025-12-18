@@ -508,6 +508,50 @@ export type Database = {
         }
         Relationships: []
       }
+      event_locations: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          raw_input: string | null
+          sort_order: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          raw_input?: string | null
+          sort_order: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          raw_input?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_locations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_participants: {
         Row: {
           created_at: string
@@ -1077,6 +1121,10 @@ export type Database = {
       }
       deactivate_expired_club_subscriptions: { Args: never; Returns: undefined }
       get_club_city_ids: { Args: { p_club_id: string }; Returns: string[] }
+      get_event_locations_count: {
+        Args: { p_event_id: string }
+        Returns: number
+      }
       move_to_dead_letter_queue: {
         Args: { p_error_message: string; p_notification_id: string }
         Returns: undefined
