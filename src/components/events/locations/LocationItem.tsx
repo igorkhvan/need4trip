@@ -189,31 +189,22 @@ export function LocationItem({
           </TooltipProvider>
 
           {/* Navigation Chooser */}
-          <NavigationChooser
-            lat={location.latitude || 0}
-            lng={location.longitude || 0}
-            disabled={disabled || !hasValidCoordinates}
-            trigger={
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={disabled || !hasValidCoordinates}
-                      className="shrink-0"
-                    >
-                      <Navigation className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {hasValidCoordinates ? "Открыть в навигации" : "Введите координаты"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            }
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="shrink-0">
+                  <NavigationChooser
+                    lat={location.latitude ?? 0}
+                    lng={location.longitude ?? 0}
+                    disabled={disabled || !hasValidCoordinates}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {hasValidCoordinates ? "Открыть в навигации" : "Введите координаты"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Delete Button */}
           {!isFirst && (
