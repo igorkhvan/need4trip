@@ -29,6 +29,14 @@ type Event = {
   dateTime: string;
   cityId?: string | null; // FK на cities table (normalized)
   locationText: string;
+  locations?: Array<{ // NEW: Multiple location points
+    id?: string;
+    sortOrder: number;
+    title: string;
+    latitude: number | null;
+    longitude: number | null;
+    rawInput: string | null;
+  }>;
   maxParticipants: number | null;
   customFieldsSchema: any[];
   visibility: Visibility;

@@ -4,9 +4,9 @@
  */
 
 import { ensureClient } from "./client";
-import { log } from "@/lib/logger";
-import { InternalError } from "@/lib/errors/InternalError";
-import type {
+import { log } from "@/lib/utils/logger";
+import { InternalError } from "@/lib/errors";
+import {
   EventLocation,
   DbEventLocation,
   EventLocationInput,
