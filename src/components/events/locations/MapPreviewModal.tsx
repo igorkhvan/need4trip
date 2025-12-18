@@ -1,19 +1,18 @@
 /**
  * MapPreviewModal Component
  * Displays a map with a marker at the specified coordinates
- * Uses Leaflet + OpenStreetMap (free, no API key required)
+ * Uses Google Maps (primary) with Leaflet + OSM as fallback
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapPin, Navigation, Copy, X } from "lucide-react";
+import { MapPin, Navigation, Copy } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NavigationChooser } from "./NavigationChooser";
@@ -33,10 +32,34 @@ interface MapPreviewModalProps {
 }
 
 /**
- * Leaflet Map Component (lazy loaded for better performance)
- * Renders only on client-side
+ * Google Maps Component (iframe-based, no API key required for basic embedding)
+ * Simple and reliable solution for map preview
  */
-function LeafletMap({ lat, lng, title }: { lat: number; lng: number; title: string }) {
+function GoogleMapEmbed({ lat, lng, title }: { lat: number; lng: number; title: string }) {
+  // Google Maps Embed URL with marker
+  const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&hl=ru&z=15&output=embed`;
+
+  return (
+    <div className="relative h-[400px] w-full overflow-hidden rounded-xl border border-[#E5E7EB]">
+      <iframe
+        title={`Карта: ${title}`}
+        src={mapUrl}
+        width="100%"
+        height="100%"
+        style={{ border: 0 }}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        className="rounded-xl"
+      />
+    </div>
+  );
+}
+
+/**
+ * Leaflet Map Component (fallback, lazy loaded)
+ * Used if Google Maps embedding fails or is blocked
+ */
+function LeafletMapFallback({ lat, lng, title }: { lat: number; lng: number; title: string }) {
   const [Map, setMap] = useState<any>(null);
 
   useEffect(() => {
@@ -102,50 +125,20 @@ export function MapPreviewModal({
     }
   };
 
-  // Load Leaflet CSS dynamically
-  useEffect(() => {
-    if (isOpen && typeof window !== "undefined") {
-      // Check if CSS is already loaded
-      const existingLink = document.getElementById("leaflet-css");
-      if (!existingLink) {
-        const link = document.createElement("link");
-        link.id = "leaflet-css";
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-      }
-    }
-  }, [isOpen]);
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl p-0">
-        {/* Header */}
+        {/* Header - DialogContent already has close button */}
         <DialogHeader className="border-b border-[#E5E7EB] px-6 py-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <DialogTitle className="text-xl font-semibold text-[#111827]">
-                {location.title}
-              </DialogTitle>
-              <p className="mt-1 text-sm text-[#6B7280]">{coordsText}</p>
-            </div>
-            <DialogClose asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Закрыть</span>
-              </Button>
-            </DialogClose>
-          </div>
+          <DialogTitle className="text-xl font-semibold text-[#111827]">
+            {location.title}
+          </DialogTitle>
+          <p className="mt-1 text-sm text-[#6B7280]">{coordsText}</p>
         </DialogHeader>
 
-        {/* Map */}
+        {/* Map - Google Maps by default */}
         <div className="px-6 pt-4">
-          <LeafletMap
+          <GoogleMapEmbed
             lat={location.lat}
             lng={location.lng}
             title={location.title}
