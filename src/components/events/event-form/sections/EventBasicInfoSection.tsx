@@ -112,7 +112,7 @@ export function EventBasicInfoSection({
   return (
     <div className="space-y-4">
       {/* Title & City - grid layout */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           id="title"
           label="Название события"
@@ -179,7 +179,7 @@ export function EventBasicInfoSection({
       </FormField>
 
       {/* DateTime & Category - grid layout */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           id="dateTime"
           label="Дата и время"
@@ -234,7 +234,7 @@ export function EventBasicInfoSection({
       </div>
 
       {/* Visibility & MaxParticipants - grid layout */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           id="visibility"
           label="Видимость события"
@@ -290,7 +290,7 @@ export function EventBasicInfoSection({
       </div>
 
       {/* Тип участия & Price/Currency - grid layout */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           id="participationType"
           label="Тип участия"
@@ -313,7 +313,7 @@ export function EventBasicInfoSection({
 
         {/* Price & Currency - nested grid (only if paid) */}
         {isPaid ? (
-          <div className="grid gap-4 grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               id="price"
               label="Цена"

@@ -15,7 +15,13 @@ const EventForm = dynamic(
   { ssr: false }
 );
 
-export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {
+export function CreateEventPageContent({ 
+  isAuthenticated,
+  userCityId = null,
+}: { 
+  isAuthenticated: boolean;
+  userCityId?: string | null;
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const clubId = searchParams?.get("clubId");
@@ -130,8 +136,8 @@ export function CreateEventPageContent({ isAuthenticated }: { isAuthenticated: b
     );
   }
 
-  // Pre-fill cityId if club has cities
-  const initialCityId = club?.cities?.[0]?.id ?? null;
+  // Pre-fill cityId: prioritize user's city, fallback to club's first city
+  const initialCityId = userCityId ?? club?.cities?.[0]?.id ?? null;
 
   return (
     <>

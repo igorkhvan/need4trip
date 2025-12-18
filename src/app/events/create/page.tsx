@@ -6,5 +6,10 @@ export const dynamic = "force-dynamic";
 export default async function CreateEventPage() {
   const currentUser = await getCurrentUser();
 
-  return <CreateEventPageContent isAuthenticated={!!currentUser} />;
+  return (
+    <CreateEventPageContent 
+      isAuthenticated={!!currentUser}
+      userCityId={currentUser?.cityId ?? null}
+    />
+  );
 }
