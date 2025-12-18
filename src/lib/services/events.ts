@@ -17,6 +17,12 @@ import {
   listParticipantEventIds,
 } from "@/lib/db/participantRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
+import {
+  getLocationsByEventId,
+  saveLocations,
+  createDefaultLocation,
+} from "@/lib/db/eventLocationsRepo";
+import type { EventLocationInput } from "@/lib/types/eventLocation";
 import { hydrateCitiesAndCurrencies } from "@/lib/utils/hydration";
 import { hydrateEventCategories } from "@/lib/utils/eventCategoryHydration";
 import {
@@ -215,9 +221,17 @@ export async function hydrateEvent(event: Event): Promise<Event> {
   } catch (err) {
     log.warn("Failed to count participants for event, using 0", { eventId: event.id, error: err });
   }
-  
+
+  // Hydrate locations
+  let locations = event.locations ?? [];
+  try {
+    locations = await getLocationsByEventId(event.id);
+  } catch (err) {
+    log.warn("Failed to load locations for event, using empty array", { eventId: event.id, error: err });
+  }
+
   // Hydrate city and currency
-  let hydratedEvent = { ...event, allowedBrands, participantsCount };
+  let hydratedEvent = { ...event, allowedBrands, participantsCount, locations };
   try {
     const [hydrated] = await hydrateCitiesAndCurrencies([hydratedEvent]);
     hydratedEvent = hydrated;
@@ -452,12 +466,29 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   if (parsed.allowedBrandIds?.length) {
     await replaceAllowedBrands(db.id, parsed.allowedBrandIds);
   }
+  
+  // Create locations (default first location or from input)
+  if (parsed.locations && parsed.locations.length > 0) {
+    await saveLocations(db.id, parsed.locations);
+  } else {
+    // Create default first location if not provided
+    await createDefaultLocation(db.id, "Точка сбора");
+  }
+  
   await upsertEventAccess(db.id, currentUser.id, "owner");
   const event = mapDbEventToDomain(db);
   try {
     event.allowedBrands = await getAllowedBrands(db.id);
   } catch (err) {
     log.warn("Failed to load allowed brands for new event, using empty array", { eventId: db.id, error: err });
+  }
+  
+  // Load locations
+  try {
+    event.locations = await getLocationsByEventId(db.id);
+  } catch (err) {
+    log.warn("Failed to load locations for new event, using empty array", { eventId: db.id, error: err });
+    event.locations = [];
   }
   
   // Queue notifications for new event (non-blocking)
@@ -723,11 +754,25 @@ export async function updateEvent(
   if (parsed.allowedBrandIds) {
     await replaceAllowedBrands(id, parsed.allowedBrandIds);
   }
+  
+  // Update locations if provided
+  if (parsed.locations) {
+    await saveLocations(id, parsed.locations);
+  }
+  
   const event = mapDbEventToDomain(updated);
   try {
     event.allowedBrands = await getAllowedBrands(id);
   } catch (err) {
     log.warn("Failed to load allowed brands for updated event, using empty array", { eventId: id, error: err });
+  }
+  
+  // Load locations
+  try {
+    event.locations = await getLocationsByEventId(id);
+  } catch (err) {
+    log.warn("Failed to load locations for updated event, using empty array", { eventId: id, error: err });
+    event.locations = [];
   }
   
   // Queue event update notifications to participants (non-blocking)
@@ -757,13 +802,24 @@ async function queueEventUpdatedNotificationsAsync(
   try {
     const { listParticipants } = await import("@/lib/db/participantRepo");
     const { queueEventUpdatedNotifications } = await import("@/lib/services/notifications");
+    const { detectLocationChanges } = await import("@/lib/utils/eventChanges");
+    
+    // Check if locations changed (need to load before/after)
+    let locationsChanged = false;
+    if (parsed.locations) {
+      const [oldLocations, newLocations] = await Promise.all([
+        getLocationsByEventId(existing.id).catch(() => []),
+        getLocationsByEventId(updated.id).catch(() => []),
+      ]);
+      locationsChanged = detectLocationChanges(oldLocations, newLocations);
+    }
     
     // Detect changes
     const changes = {
       dateTimeChanged: parsed.dateTime !== undefined && 
         new Date(existing.date_time).getTime() !== new Date(updated.date_time).getTime(),
-      locationChanged: parsed.locationText !== undefined && 
-        existing.location_text !== updated.location_text,
+      locationChanged: (parsed.locationText !== undefined && 
+        existing.location_text !== updated.location_text) || locationsChanged,
       rulesChanged: parsed.rules !== undefined && 
         existing.rules !== updated.rules,
       maxParticipantsChanged: parsed.maxParticipants !== undefined && 
