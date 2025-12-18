@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CityHydrated } from "./city";
 import { CurrencyHydrated } from "./currency";
 import { EventCategoryDto } from "./eventCategory";
+import { EventLocation, eventLocationsArraySchema } from "./eventLocation";
 
 // Legacy enum - kept for backward compatibility during migration
 // Will be removed after full migration to event_categories table
@@ -107,6 +108,7 @@ export interface Event {
   locationText: string;
   locationLat: number | null;
   locationLng: number | null;
+  locations?: EventLocation[]; // NEW: Multiple location points
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchemaItem[];
   createdByUserId: string | null;
@@ -155,6 +157,7 @@ export const eventCreateSchema = z
     locationText: z.string().trim().min(1),
     locationLat: z.number().finite().nullable().optional(),
     locationLng: z.number().finite().nullable().optional(),
+    locations: eventLocationsArraySchema.optional(), // NEW: Multiple location points
     maxParticipants: z.number().int().min(1).nullable().optional(), // Backend enforces plan limits
     customFieldsSchema: eventCustomFieldsSchema.default([]),
     createdByUserId: z.string().uuid().optional().nullable(),
@@ -187,6 +190,7 @@ const eventUpdateBaseSchema = z.object({
   locationText: z.string().trim().min(1).optional(),
   locationLat: z.number().finite().nullable().optional(),
   locationLng: z.number().finite().nullable().optional(),
+  locations: eventLocationsArraySchema.optional(), // NEW: Multiple location points
   maxParticipants: z.number().int().min(1).max(500).nullable().optional(),
   customFieldsSchema: eventCustomFieldsSchema.optional(),
   createdByUserId: z.string().uuid().optional().nullable(),
