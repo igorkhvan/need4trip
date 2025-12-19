@@ -287,7 +287,6 @@ export default function ClubsPage() {
             </div>
           </div>
         )}
-      </div>
     </>
   );
 }
