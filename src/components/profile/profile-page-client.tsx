@@ -701,10 +701,12 @@ export function ProfilePageClient() {
                   {!isEditing && (
                     <Button 
                       onClick={() => setIsEditing(true)}
-                      variant="secondary"
+                      variant="ghost-icon"
+                      size="icon-sm"
+                      className="md:w-auto md:px-4"
                     >
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Редактировать
+                      <Edit2 className="icon-sm" />
+                      <span className="sr-only md:not-sr-only md:ml-2">Редактировать</span>
                     </Button>
                   )}
                 </div>
@@ -861,10 +863,12 @@ export function ProfilePageClient() {
                       setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
                       setCarFieldErrors({});
                     }}
-                    variant={optimisticCars.length === 0 ? "default" : "secondary"}
+                    variant={optimisticCars.length === 0 ? "default" : "ghost-icon"}
+                    size={optimisticCars.length === 0 ? "default" : "icon-sm"}
+                    className={optimisticCars.length === 0 ? "" : "md:w-auto md:px-4"}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Добавить
+                    <Plus className="icon-sm" />
+                    <span className={optimisticCars.length === 0 ? "ml-2" : "sr-only md:not-sr-only md:ml-2"}>Добавить</span>
                   </Button>
                 </div>
 
@@ -1134,24 +1138,27 @@ export function ProfilePageClient() {
                                   size="sm"
                                   onClick={() => handleSetPrimary(car.id)}
                                 >
-                                  <Check className="w-4 h-4 sm:mr-2" />
+                                  <Check className="icon-sm sm:mr-2" />
                                   <span className="hidden sm:inline">Сделать основным</span>
                                 </Button>
                               )}
-                              <button
+                              <Button
+                                variant="ghost-icon"
+                                size="icon-sm"
                                 onClick={() => startEditCar(car)}
-                                className="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                                 title="Редактировать"
                               >
-                                <Pencil className="w-4 h-4 text-gray-600" />
-                              </button>
-                              <button
+                                <Pencil className="icon-sm" />
+                              </Button>
+                              <Button
+                                variant="ghost-icon"
+                                size="icon-sm"
                                 onClick={() => setDeleteConfirm({ open: true, carId: car.id })}
-                                className="h-8 w-8 flex items-center justify-center hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] rounded-lg transition-colors"
+                                className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                                 title="Удалить"
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                <Trash2 className="icon-sm" />
+                              </Button>
                             </div>
                           </div>
                         </div>

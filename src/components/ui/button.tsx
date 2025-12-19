@@ -10,22 +10,26 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#FF6F2C] text-white hover:bg-[#E86223] disabled:bg-[#FECDB3] disabled:text-white disabled:opacity-100",
+          "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] disabled:bg-[#FECDB3] disabled:text-white disabled:opacity-100",
         secondary:
-          "border-2 border-[#FF6F2C] bg-white text-[#FF6F2C] hover:bg-[#FFF4EF] disabled:border-[#FECDB3] disabled:text-[#FECDB3] disabled:bg-transparent disabled:opacity-100",
+          "border-2 border-[var(--color-primary)] bg-white text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] disabled:border-[#FECDB3] disabled:text-[#FECDB3] disabled:bg-transparent disabled:opacity-100",
         outline:
-          "border border-[#E5E7EB] bg-white text-[#111827] hover:bg-[#F7F7F8] hover:border-[#D1D5DB] focus-visible:border-[var(--color-primary)]",
+          "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] hover:border-[#D1D5DB] focus-visible:border-[var(--color-primary)]",
         ghost:
-          "bg-transparent text-[#6B7280] hover:bg-[#F7F7F8] hover:text-[#111827] shadow-none",
+          "bg-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)] shadow-none",
+        "ghost-icon":
+          "bg-transparent text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] hover:text-[var(--color-primary-hover)] shadow-none",
         destructive:
-          "bg-[#EF4444] text-white hover:bg-[#DC2626]",
-        link: "text-[#FF6F2C] underline-offset-4 hover:underline shadow-none",
+          "bg-[var(--color-danger)] text-white hover:bg-[#DC2626]",
+        link: "text-[var(--color-primary)] underline-offset-4 hover:underline shadow-none",
       },
       size: {
         default: "h-12 px-6",
-        sm: "h-9 px-4 text-sm",
+        sm: "h-11 px-4 text-sm",
         lg: "h-14 px-8 text-lg",
+        "icon-sm": "h-11 w-11",
         icon: "h-12 w-12",
+        "icon-lg": "h-14 w-14",
       },
     },
     defaultVariants: {

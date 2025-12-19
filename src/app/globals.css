@@ -151,4 +151,25 @@
   .space-4xl {
     @apply gap-24;
   }
+
+  /* Icon sizes - standardized */
+  .icon-xs {
+    @apply h-3 w-3;
+  }
+  
+  .icon-sm {
+    @apply h-4 w-4;
+  }
+  
+  .icon-base {
+    @apply h-5 w-5;
+  }
+  
+  .icon-lg {
+    @apply h-6 w-6;
+  }
+  
+  .icon-xl {
+    @apply h-8 w-8;
+  }
 }
