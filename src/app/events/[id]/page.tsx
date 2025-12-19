@@ -205,7 +205,7 @@ export default async function EventDetails({
       )}
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+      <div className="grid gap-6 pb-20 lg:grid-cols-[2fr,1fr] lg:pb-0">
           {/* Left Column - Description, Rules, Participants */}
           <div className="space-y-6">
             {/* Description Card */}
@@ -325,9 +325,7 @@ export default async function EventDetails({
         </div>
 
       {/* Mobile Section Navigation */}
-      <div className="pb-20 lg:pb-0">
-        <MobileSectionNav sections={mobileSections} />
-      </div>
+      <MobileSectionNav sections={mobileSections} />
     </>
   );
 }

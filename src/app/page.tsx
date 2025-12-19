@@ -140,9 +140,7 @@ export default async function HomePage() {
   const isAuthenticated = !!currentUser;
 
   return (
-    <div
-      className={`${inter.className} relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] min-h-screen bg-white text-[#111827]`}
-    >
+    <>
       {/* Критичный контент - показываем сразу */}
       <Hero isAuthenticated={isAuthenticated} />
       <HowItWorksSection />
@@ -177,6 +175,6 @@ export default async function HomePage() {
           </CreateEventButton>
         </div>
       </section>
-    </div>
+    </>
   );
 }
