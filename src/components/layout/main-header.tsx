@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Car } from "lucide-react";
+import { Car, Menu } from "lucide-react";
 
 import { HeaderUserSection } from "@/components/layout/header-user-section";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const navItems = [
@@ -25,7 +26,7 @@ export async function MainHeader() {
             <span className="text-[22px] font-semibold text-[#111827]">Need4Trip</span>
           </Link>
 
-          {/* Navigation */}
+          {/* Desktop Navigation */}
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <NavLink key={item.href} href={item.href}>
@@ -35,7 +36,13 @@ export async function MainHeader() {
           </nav>
 
           {/* Actions */}
-          <HeaderUserSection currentUser={currentUser} />
+          <div className="flex items-center gap-3">
+            {/* Mobile Navigation */}
+            <MobileNav navItems={navItems} />
+            
+            {/* User Section */}
+            <HeaderUserSection currentUser={currentUser} />
+          </div>
         </div>
       </div>
     </header>

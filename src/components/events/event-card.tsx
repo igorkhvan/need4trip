@@ -26,10 +26,10 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between gap-2">
-          <span>{event.title}</span>
+        <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <span className="line-clamp-2 flex-1">{event.title}</span>
           {event.category && (
-            <Badge variant={getCategoryBadgeVariant(event.category)} size="sm">
+            <Badge variant={getCategoryBadgeVariant(event.category)} size="sm" className="self-start sm:self-auto sm:shrink-0">
               {getCategoryLabel(event.category)}
             </Badge>
           )}

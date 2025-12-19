@@ -141,7 +141,7 @@ export default function ClubsPage() {
         </div>
 
         {/* Статистика */}
-        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
             <div className="mb-1 text-[13px] text-[#6B7280]">Всего клубов</div>
             <div className="text-[24px] font-bold text-[#1F2937] md:text-[28px]">

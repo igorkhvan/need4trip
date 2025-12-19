@@ -69,26 +69,26 @@ const steps = [
 
 function HowItWorksSection() {
   return (
-    <section className="bg-white py-24 md:py-32">
+    <section className="bg-white py-20 md:py-24 lg:py-32">
       <div className="page-container">
-        <div className="mb-16 text-center">
-          <h2 className="heading-section mb-6">Как это работает</h2>
+        <div className="mb-12 text-center md:mb-16">
+          <h2 className="heading-section mb-4 md:mb-6">Как это работает</h2>
           <p className="text-lead mx-auto max-w-2xl">
             Три простых шага для организации вашей автомобильной поездки
           </p>
         </div>
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-6 md:gap-8 md:grid-cols-3">
           {steps.map((item, index) => (
             <Card
               key={item.title}
               className="border-[#E5E7EB] shadow-sm"
             >
-              <CardContent className="p-8">
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-2xl font-bold text-white shadow-lg">
+              <CardContent className="p-6 md:p-8">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-2xl font-bold text-white shadow-lg md:mb-6 md:h-16 md:w-16">
                   {index + 1}
                 </div>
-                <h3 className="mb-4 text-xl font-semibold leading-tight text-[#111827]">{item.title}</h3>
-                <p className="text-base text-[#6B7280]">{item.description}</p>
+                <h3 className="mb-3 text-lg font-semibold leading-tight text-[#111827] md:mb-4 md:text-xl">{item.title}</h3>
+                <p className="text-sm text-[#6B7280] md:text-base">{item.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -100,15 +100,15 @@ function HowItWorksSection() {
 
 function Features() {
   return (
-    <section className="bg-[#F7F7F8] py-24 md:py-32">
+    <section className="bg-[#F7F7F8] py-20 md:py-24 lg:py-32">
       <div className="page-container">
-        <div className="mb-16 text-center">
-          <h2 className="heading-section mb-6">Что умеет Need4Trip</h2>
+        <div className="mb-12 text-center md:mb-16">
+          <h2 className="heading-section mb-4 md:mb-6">Что умеет Need4Trip</h2>
           <p className="text-lead mx-auto max-w-2xl">
             Все необходимые инструменты для организации автомобильных мероприятий
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
           {features.map((item) => {
             const Icon = item.icon;
             return (
@@ -116,12 +116,12 @@ function Features() {
                 key={item.title}
                 className="border-[#E5E7EB] bg-white shadow-sm"
               >
-                <CardContent className="p-8">
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF4EF]">
+                <CardContent className="p-6 md:p-8">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF4EF] md:mb-5">
                     <Icon className="h-6 w-6 text-[#FF6F2C]" strokeWidth={2} />
                   </div>
-                  <h4 className="mb-3 text-xl font-semibold leading-tight text-[#111827]">{item.title}</h4>
-                  <p className="text-base text-[#6B7280]">{item.description}</p>
+                  <h4 className="mb-2 text-lg font-semibold leading-tight text-[#111827] md:mb-3 md:text-xl">{item.title}</h4>
+                  <p className="text-sm text-[#6B7280] md:text-base">{item.description}</p>
                 </CardContent>
               </Card>
             );
@@ -154,7 +154,7 @@ export default async function HomePage() {
       </Suspense>
       
       {/* CTA секция */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#E86223] py-24 text-center text-white md:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#E86223] py-20 text-center text-white md:py-24 lg:py-32">
         <div
           className="absolute inset-0 opacity-50"
           aria-hidden
@@ -164,8 +164,8 @@ export default async function HomePage() {
           }}
         />
         <div className="relative page-container">
-          <h2 className="heading-section mb-6 text-white">Готовы начать?</h2>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-white/90">
+          <h2 className="heading-section mb-4 text-white md:mb-6">Готовы начать?</h2>
+          <p className="mx-auto mb-8 max-w-2xl text-base text-white/90 md:mb-10 md:text-lg">
             Создайте своё первое событие за несколько минут и начните собирать экипажи
           </p>
           <CreateEventButton 
