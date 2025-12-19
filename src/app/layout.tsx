@@ -29,9 +29,7 @@ export default function RootLayout({
         <AuthModalProvider>
           <div className="flex min-h-screen flex-col">
             <MainHeader />
-            <main className="flex-1">
-              <div className="page-container py-6 md:py-10">{children}</div>
-            </main>
+            <main className="flex-1">{children}</main>
             <MainFooter />
             <Toaster />
             <AuthModalHost />
