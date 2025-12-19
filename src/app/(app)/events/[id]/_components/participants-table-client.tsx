@@ -126,7 +126,7 @@ export function ParticipantsTableClient({
       <Table>
         <TableHeader className="bg-[var(--color-bg-subtle)]">
           <TableRow className="border-b border-[var(--color-border)]">
-            <TableHead className="w-16 text-center text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+            <TableHead className="hidden w-16 text-center text-xs font-semibold uppercase text-[var(--color-text-muted)] md:table-cell">
               №
             </TableHead>
             <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
@@ -160,15 +160,16 @@ export function ParticipantsTableClient({
                 className="border-b border-[#E5E7EB] last:border-0 hover:bg-[#F9FAFB]/50 transition-colors"
               >
                 {/* Номер */}
-                <TableCell className="text-center">
-                  <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-full bg-[#FF6F2C]/10 text-[#FF6F2C] text-sm font-semibold">
+                <TableCell className="hidden text-center md:table-cell">
+                  <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-sm font-semibold">
                     {index + 1}
                   </div>
                 </TableCell>
 
                 {/* Экипаж */}
                 <TableCell>
-                  <span className="font-medium text-[#111827]">
+                  <span className="font-medium text-[var(--color-text)]">
+                    <span className="md:hidden">{index + 1}. </span>
                     {participant.displayName}
                   </span>
                 </TableCell>
