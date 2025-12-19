@@ -207,7 +207,7 @@ export default async function EventDetails({
       {/* Main Content Grid */}
       <div className="grid gap-6 pb-24 lg:grid-cols-[2fr,1fr] lg:pb-0">
           {/* Left Column - Description, Rules, Participants */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {/* Description Card */}
             <Card id="event-description">
               <CardHeader>
@@ -250,7 +250,7 @@ export default async function EventDetails({
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {/* Price Card */}
             {event.isPaid && (
               <Card id="event-price">
