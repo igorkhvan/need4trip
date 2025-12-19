@@ -11,9 +11,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base styles
-          "flex h-12 w-full rounded-xl bg-white px-4 text-[15px] text-[#1F2937]",
+          "flex h-12 w-full rounded-xl bg-white px-4 text-base text-[var(--color-text)]",
           // Border - thin and subtle
-          "border border-[#E5E7EB]",
+          "border border-[var(--color-border)]",
           // Hover state - subtle lightening
           "hover:border-[#D1D5DB]",
           // Focus state - orange border only, no ring
@@ -21,9 +21,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           // Transition for smooth color change
           "transition-colors",
           // Placeholder
-          "placeholder:text-[#6B7280]",
+          "placeholder:text-[var(--color-text-muted)]",
           // Disabled state
-          "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#F9FAFB]",
+          "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
           // File input
           "file:border-0 file:bg-transparent file:text-sm file:font-medium",
           className

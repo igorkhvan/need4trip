@@ -26,9 +26,9 @@ export interface ProgressBarProps {
  * Получить цвет прогресс-бара в зависимости от заполненности
  */
 function getProgressColor(value: number): string {
-  if (value >= 85) return "bg-[#EF4444]"; // Красный - почти заполнено
-  if (value >= 60) return "bg-[#FF6F2C]"; // Оранжевый - заполняется
-  return "bg-[#22C55E]"; // Зелёный - много мест
+  if (value >= 85) return "bg-[var(--color-danger)]"; // Красный - почти заполнено
+  if (value >= 60) return "bg-[var(--color-primary)]"; // Оранжевый - заполняется
+  return "bg-[var(--color-success)]"; // Зелёный - много мест
 }
 
 /**
@@ -49,12 +49,12 @@ export function ProgressBar({
   return (
     <div className={cn("w-full", className)}>
       {showLabel && (
-        <div className="mb-2 flex items-center justify-between text-[13px]">
-          <span className="text-[#6B7280]">{label}</span>
-          <span className="font-medium text-[#111827]">{Math.round(normalizedValue)}%</span>
+        <div className="mb-2 flex items-center justify-between text-sm">
+          <span className="text-[var(--color-text-muted)]">{label}</span>
+          <span className="font-medium text-[var(--color-text)]">{Math.round(normalizedValue)}%</span>
         </div>
       )}
-      <div className={cn("overflow-hidden rounded-full bg-[#F3F4F6]", barHeight)}>
+      <div className={cn("overflow-hidden rounded-full bg-[var(--color-bg-subtle)]", barHeight)}>
         <div
           className={cn(
             "h-full rounded-full transition-all duration-300",

@@ -59,9 +59,9 @@ const badgeVariants = cva(
         outline: "border border-[#D1D5DB] bg-transparent text-[#374151]",
       },
       size: {
-        sm: "px-2.5 py-0.5 text-[12px] font-medium",
-        md: "px-3 py-1 text-[13px] font-medium",
-        lg: "px-3.5 py-1 text-[14px] font-semibold",
+        sm: "px-2.5 py-0.5 text-xs font-medium",
+        md: "px-3 py-1 text-sm font-medium",
+        lg: "px-3.5 py-1 text-sm font-semibold",
       },
     },
     defaultVariants: {

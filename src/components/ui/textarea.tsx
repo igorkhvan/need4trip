@@ -10,9 +10,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         className={cn(
           // Base styles
-          "flex min-h-[96px] w-full rounded-xl bg-white px-4 py-3 text-[15px] text-[#1F2937]",
+          "flex min-h-[96px] w-full rounded-xl bg-white px-4 py-3 text-base text-[var(--color-text)]",
           // Border - thin and subtle
-          "border border-[#E5E7EB]",
+          "border border-[var(--color-border)]",
           // Hover state
           "hover:border-[#D1D5DB]",
           // Focus state - orange border only, no ring
@@ -20,9 +20,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           // Transition
           "transition-colors",
           // Placeholder
-          "placeholder:text-[#6B7280]",
+          "placeholder:text-[var(--color-text-muted)]",
           // Disabled
-          "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#F9FAFB]",
+          "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
           // Resize
           "resize-none",
           className

@@ -15,15 +15,15 @@ export async function MainHeader() {
   const currentUser = await getCurrentUser();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#E5E7EB] bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-white/80 backdrop-blur-md">
       <div className="page-container">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-16 items-center justify-between md:h-20">
           {/* Logo */}
           <Link href="/" className="group flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] shadow-sm transition-shadow group-hover:shadow-md">
-              <Car className="h-6 w-6 text-white" strokeWidth={2.5} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] shadow-sm transition-shadow group-hover:shadow-md md:h-12 md:w-12">
+              <Car className="h-5 w-5 text-white md:h-6 md:w-6" strokeWidth={2.5} />
             </div>
-            <span className="text-[22px] font-semibold text-[#111827]">Need4Trip</span>
+            <span className="text-lg font-semibold text-[var(--color-text)] md:text-xl">Need4Trip</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -53,7 +53,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="rounded-lg px-4 py-2 font-medium text-[#111827] transition-all hover:bg-[#F9FAFB]"
+      className="rounded-lg px-4 py-2 font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-bg-subtle)]"
     >
       {children}
     </Link>

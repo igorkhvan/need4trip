@@ -109,7 +109,7 @@ export default async function EventDetails({
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="flex-1">
           {/* Title */}
-          <h1 className="mb-4 text-[32px] font-bold leading-[1.2] text-[#1F2937] md:text-[36px]">
+          <h1 className="mb-4 text-3xl font-bold leading-tight text-[var(--color-text)] md:text-4xl">
             {event.title}
           </h1>
 
@@ -138,7 +138,7 @@ export default async function EventDetails({
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-1 gap-4 text-[15px] text-[#6B7280] md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 text-base text-[var(--color-text-muted)] md:grid-cols-2">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 flex-shrink-0" />
               <span>{formattedDateTime}</span>
@@ -205,7 +205,7 @@ export default async function EventDetails({
       )}
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 pb-20 lg:grid-cols-[2fr,1fr] lg:pb-0">
+      <div className="grid gap-6 pb-24 lg:grid-cols-[2fr,1fr] lg:pb-0">
           {/* Left Column - Description, Rules, Participants */}
           <div className="space-y-6">
             {/* Description Card */}
@@ -214,7 +214,7 @@ export default async function EventDetails({
                 <CardTitle>Описание</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-line text-[15px] leading-[1.6] text-[#374151]">
+                <p className="whitespace-pre-line text-base leading-relaxed text-[var(--color-text)]">
                   {event.description}
                 </p>
               </CardContent>
@@ -227,7 +227,7 @@ export default async function EventDetails({
                   <CardTitle>Правила участия</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line text-[15px] leading-[1.6] text-[#374151]">
+                  <p className="whitespace-pre-line text-base leading-relaxed text-[var(--color-text)]">
                     {event.rules}
                   </p>
                 </CardContent>
@@ -258,10 +258,10 @@ export default async function EventDetails({
                   <CardTitle>Стоимость участия</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-[32px] font-bold leading-none text-[#1F2937]">
+                  <p className="text-3xl font-bold leading-none text-[var(--color-text)]">
                     {event.price ?? 0} {event.currency?.symbol ?? event.currencyCode ?? ""}
                   </p>
-                  <p className="text-[13px] text-[#6B7280]">за экипаж</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">за экипаж</p>
                 </CardContent>
               </Card>
             )}
@@ -280,14 +280,14 @@ export default async function EventDetails({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <p className="text-[13px] font-medium text-[#6B7280]">Тип автомобиля</p>
-                  <p className="text-[15px] font-semibold text-[#1F2937]">
+                  <p className="text-sm font-medium text-[var(--color-text-muted)]">Тип автомобиля</p>
+                  <p className="text-base font-semibold text-[var(--color-text)]">
                     {vehicleTypeLabel}
                   </p>
                 </div>
                 {event.allowedBrands.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[13px] font-medium text-[#6B7280]">Рекомендуемые марки</p>
+                    <p className="text-sm font-medium text-[var(--color-text-muted)]">Рекомендуемые марки</p>
                     <div className="flex flex-wrap gap-2">
                       {event.allowedBrands.map((brand) => (
                         <Badge 
@@ -312,11 +312,11 @@ export default async function EventDetails({
                   <CardTitle>Организатор</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                  <p className="text-[15px] font-semibold text-[#1F2937]">
+                  <p className="text-base font-semibold text-[var(--color-text)]">
                     {ownerUser.name || ownerUser.telegramHandle || "Организатор"}
                   </p>
                   {ownerUser.telegramHandle && (
-                    <p className="text-[13px] text-[#6B7280]">@{ownerUser.telegramHandle}</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">@{ownerUser.telegramHandle}</p>
                   )}
                 </CardContent>
               </Card>

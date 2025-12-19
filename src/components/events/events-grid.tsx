@@ -217,10 +217,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold leading-tight text-[#111827] sm:text-5xl">
+          <h1 className="text-4xl font-bold leading-tight text-[var(--color-text)] sm:text-5xl">
             Все события
           </h1>
-          <p className="text-base text-[#6B7280]">
+          <p className="text-base text-[var(--color-text-muted)]">
             Найдите подходящую автомобильную поездку или создайте свою
           </p>
         </div>
@@ -232,44 +232,44 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="border-[#E5E7EB] shadow-sm">
+        <Card className="border-[var(--color-border)] shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <div className="mb-2 text-[14px] text-[#6B7280]">Всего событий</div>
-              <div className="text-[36px] font-bold leading-none text-[#111827]">
+              <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего событий</div>
+              <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
                 {stats.totalEvents}
               </div>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF4EF]">
-              <Calendar className="h-6 w-6 text-[#FF6F2C]" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
+              <Calendar className="h-6 w-6 text-[var(--color-primary)]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E5E7EB] shadow-sm">
+        <Card className="border-[var(--color-border)] shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <div className="mb-2 text-[14px] text-[#6B7280]">Активных регистраций</div>
-              <div className="text-[36px] font-bold leading-none text-[#111827]">
+              <div className="mb-2 text-sm text-[var(--color-text-muted)]">Активных регистраций</div>
+              <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
                 {stats.activeRegistrations}
               </div>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0FDF4]">
-              <TrendingUp className="h-6 w-6 text-[#22C55E]" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-success-bg)]">
+              <TrendingUp className="h-6 w-6 text-[var(--color-success)]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E5E7EB] shadow-sm">
+        <Card className="border-[var(--color-border)] shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <div className="mb-2 text-[14px] text-[#6B7280]">Всего участников</div>
-              <div className="text-[36px] font-bold leading-none text-[#111827]">
+              <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего участников</div>
+              <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
                 {stats.totalParticipants}
               </div>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFF4EF]">
-              <Users className="h-6 w-6 text-[#FF6F2C]" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
+              <Users className="h-6 w-6 text-[var(--color-primary)]" />
             </div>
           </CardContent>
         </Card>
@@ -294,7 +294,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {/* Search */}
       <div className="max-w-md">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-[#9CA3AF]" />
+          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-[var(--color-text-muted)]" />
           <Input
             type="text"
             placeholder="Поиск по названию, организатору или месту..."
@@ -303,21 +303,21 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="h-12 rounded-xl border border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[var(--color-primary)] focus:outline-none transition-colors pl-12 text-[15px] placeholder:text-[#6B7280]"
+            className="pl-12"
           />
         </div>
       </div>
 
       {/* Filters */}
-      <div className="rounded-xl bg-[#F9FAFB] p-4">
+      <div className="rounded-xl bg-[var(--color-bg-subtle)] p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Filter className="h-4 w-4 text-[#6B7280]" />
-          <span className="text-[13px] font-medium text-[#6B7280]">Фильтры и сортировка</span>
+          <Filter className="h-4 w-4 text-[var(--color-text-muted)]" />
+          <span className="text-sm font-medium text-[var(--color-text-muted)]">Фильтры и сортировка</span>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {/* Category filter */}
           <div className="space-y-1">
-            <label className="text-[13px] text-[#6B7280]">Тип события</label>
+            <label className="text-sm text-[var(--color-text-muted)]">Тип события</label>
             <Select
               value={filterCategory}
               onValueChange={(value) => {
@@ -343,7 +343,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
           {/* City filter */}
           <div className="space-y-1">
-            <label className="text-[13px] text-[#6B7280]">Город</label>
+            <label className="text-sm text-[var(--color-text-muted)]">Город</label>
             <Select
               value={filterCity}
               onValueChange={(value) => {
@@ -369,7 +369,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
           {/* Price filter */}
           <div className="space-y-1">
-            <label className="text-[13px] text-[#6B7280]">Стоимость</label>
+            <label className="text-sm text-[var(--color-text-muted)]">Стоимость</label>
             <Select
               value={filterPrice}
               onValueChange={(value: PriceFilter) => {
@@ -392,7 +392,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
           {/* Sort by */}
           <div className="space-y-1">
-            <label className="text-[13px] text-[#6B7280]">Сортировка</label>
+            <label className="text-sm text-[var(--color-text-muted)]">Сортировка</label>
             <Select value={sortBy} onValueChange={(value: SortBy) => {
               startTransition(() => setSortBy(value));
             }}>
@@ -411,8 +411,8 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
       {/* Results count */}
       {filteredAndSorted.length > 0 && (
-        <div className="text-[14px] text-[#6B7280]">
-          Найдено событий: <span className="font-medium text-[#111827]">{filteredAndSorted.length}</span>
+        <div className="text-sm text-[var(--color-text-muted)]">
+          Найдено событий: <span className="font-medium text-[var(--color-text)]">{filteredAndSorted.length}</span>
         </div>
       )}
 
@@ -440,17 +440,17 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
             return (
               <Card
                 key={event.id}
-                className="cursor-pointer border-[#E5E7EB] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+                className="cursor-pointer border-[var(--color-border)] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
                 onClick={() => router.push(`/events/${event.id}`)}
               >
                 <CardContent className="p-6">
                   {/* Header */}
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="mb-2 text-2xl font-semibold leading-tight text-[#111827]">
+                      <h3 className="mb-2 text-2xl font-semibold leading-tight text-[var(--color-text)]">
                         {event.title}
                       </h3>
-                      <div className="flex items-center gap-2 text-[14px] text-[#6B7280]">
+                      <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
                         <div className="flex items-center gap-1">
                           <CategoryIcon className="h-4 w-4" />
                           <span>{categoryLabel}</span>
@@ -467,31 +467,31 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
                   </div>
 
                   {/* Info Grid */}
-                  <div className="mb-4 grid grid-cols-2 gap-4 rounded-xl bg-[#F7F7F8] p-4">
+                  <div className="mb-4 grid grid-cols-2 gap-4 rounded-xl bg-[var(--color-bg-subtle)] p-4">
                     <div>
-                      <div className="mb-1 text-[13px] text-[#6B7280]">Дата и время</div>
-                      <div className="flex items-center gap-1 text-[15px] text-[#111827]">
-                        <Clock className="h-4 w-4 text-[#6B7280]" />
+                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Дата и время</div>
+                      <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
+                        <Clock className="h-4 w-4 text-[var(--color-text-muted)]" />
                         <span>{formatDateTimeShort(event.dateTime)}</span>
                       </div>
                     </div>
                     <div>
-                      <div className="mb-1 text-[13px] text-[#6B7280]">Место сбора</div>
-                      <div className="flex items-center gap-1 text-[15px] text-[#111827]">
-                        <MapPin className="h-4 w-4 text-[#6B7280]" />
+                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Место сбора</div>
+                      <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
+                        <MapPin className="h-4 w-4 text-[var(--color-text-muted)]" />
                         <span className="truncate">{event.locationText}</span>
                       </div>
                     </div>
                     <div>
-                      <div className="mb-1 text-[13px] text-[#6B7280]">Участники</div>
-                      <div className="text-[15px] text-[#111827]">
+                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Участники</div>
+                      <div className="text-base text-[var(--color-text)]">
                         {event.participantsCount ?? 0}
                         {event.maxParticipants ? ` / ${event.maxParticipants}` : ""}
                       </div>
                     </div>
                     <div>
-                      <div className="mb-1 text-[13px] text-[#6B7280]">Стоимость</div>
-                      <div className="text-[15px] text-[#111827]">{priceLabel}</div>
+                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Стоимость</div>
+                      <div className="text-base text-[var(--color-text)]">{priceLabel}</div>
                     </div>
                   </div>
 
@@ -522,11 +522,11 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       ) : (
         // Empty State
         <div className="py-16 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F7F7F8]">
-            <Search className="h-8 w-8 text-[#6B7280]" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-bg-subtle)]">
+            <Search className="h-8 w-8 text-[var(--color-text-muted)]" />
           </div>
-          <h3 className="mb-2 text-2xl font-semibold text-[#111827]">Ничего не найдено</h3>
-          <p className="mb-6 text-base text-[#6B7280]">
+          <h3 className="mb-2 text-2xl font-semibold text-[var(--color-text)]">Ничего не найдено</h3>
+          <p className="mb-6 text-base text-[var(--color-text-muted)]">
             Попробуйте изменить поисковый запрос или фильтр
           </p>
           <Button variant="ghost" onClick={() => setSearchQuery("")}>

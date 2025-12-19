@@ -66,26 +66,24 @@
 ### Шрифт
 **Inter** — основной шрифт (Google Fonts)
 
-### Размеры
+### Размеры (Tailwind CSS)
 ```css
 /* Заголовки */
-h1: 32px / 36px (desktop/mobile), font-weight: 700
-h2: 28px / 24px (desktop/mobile), font-weight: 700
-h3: 20px / 18px (desktop/mobile), font-weight: 600
-h4: 18px / 16px (desktop/mobile), font-weight: 600
+h1: text-3xl / md:text-4xl (30px / 36px), font-weight: 700
+h2: text-2xl / md:text-3xl (24px / 30px), font-weight: 700
+h3: text-xl (20px), font-weight: 600
+h4: text-lg (18px), font-weight: 600
 
 /* Текст */
-body, p: 15px, font-weight: 400
-small: 14px, font-weight: 400
-.text-sm: 13px
+body, p: text-base (16px), font-weight: 400
+small: text-sm (14px), font-weight: 400
 .text-xs: 12px
-.text-lg: 16px
 ```
 
-### Line-height
-- Заголовки: `1.2`
-- Текст: `1.6`
-- Интерфейс: `1.5`
+### Line-height (Tailwind CSS)
+- Заголовки: `leading-tight` (1.25) или `leading-none` (1)
+- Текст: `leading-relaxed` (1.625)
+- Интерфейс: `leading-normal` (1.5)
 
 ---
 

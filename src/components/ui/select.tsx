@@ -18,9 +18,9 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Base styles
-      "flex h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-[15px] text-[#1F2937]",
+      "flex h-12 w-full items-center justify-between rounded-xl bg-white px-4 text-base text-[var(--color-text)]",
       // Border - thin and subtle
-      "border border-[#E5E7EB]",
+      "border border-[var(--color-border)]",
       // Hover state
       "hover:border-[#D1D5DB]",
       // Focus state - orange border only, no ring
@@ -28,9 +28,9 @@ const SelectTrigger = React.forwardRef<
       // Transition
       "transition-colors",
       // Placeholder
-      "placeholder:text-[#6B7280]",
+      "placeholder:text-[var(--color-text-muted)]",
       // Disabled
-      "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#F9FAFB]",
+      "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
       className
     )}
     {...props}

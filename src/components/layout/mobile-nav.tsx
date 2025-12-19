@@ -66,10 +66,10 @@ export function MobileNav({ navItems }: MobileNavProps) {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex items-center rounded-lg px-4 py-3 text-[15px] font-medium transition-colors",
+                  "flex items-center rounded-lg px-4 py-3 text-base font-medium transition-colors",
                   isActive
-                    ? "bg-[#FFF4EF] text-[#FF6F2C]"
-                    : "text-[#111827] hover:bg-[#F9FAFB]"
+                    ? "bg-[var(--color-primary-bg)] text-[var(--color-primary)]"
+                    : "text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)]"
                 )}
               >
                 {item.label}
