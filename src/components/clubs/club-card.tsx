@@ -27,7 +27,7 @@ export function ClubCard({ club }: ClubCardProps) {
   return (
     <Link
       href={`/clubs/${club.id}`}
-      className="group block rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-md lg:p-6"
+      className="group block rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-md lg:p-6"
     >
       {/* Логотип и название */}
       <div className="mb-4 flex items-start gap-4">
@@ -51,11 +51,11 @@ export function ClubCard({ club }: ClubCardProps) {
         )}
 
         <div className="min-w-0 flex-1">
-          <h4 className="mb-1 truncate text-[16px] font-semibold text-[#1F2937] transition-colors group-hover:text-[var(--color-primary)]">
+          <h4 className="mb-1 truncate text-lg font-semibold text-[var(--color-text)] transition-colors group-hover:text-[var(--color-primary)]">
             {club.name}
           </h4>
           {club.planId && club.planId !== "free" && (
-            <Badge variant="default" size="sm" className="text-[12px]">
+            <Badge variant="default" size="sm" className="text-xs">
               {getClubPlanLabel(club.planId)}
             </Badge>
           )}
@@ -64,27 +64,27 @@ export function ClubCard({ club }: ClubCardProps) {
 
       {/* Описание */}
       {club.description && (
-        <p className="mb-4 line-clamp-2 min-h-[40px] text-[14px] text-[#6B7280]">
+        <p className="mb-4 line-clamp-2 min-h-[40px] text-sm text-[var(--color-text-muted)]">
           {club.description}
         </p>
       )}
 
       {/* Статистика */}
-      <div className="mb-3 grid grid-cols-2 gap-3 rounded-xl bg-[#F9FAFB] p-3">
+      <div className="mb-3 grid grid-cols-2 gap-3 rounded-xl bg-[var(--color-bg-subtle)] p-3">
         <div>
-          <div className="mb-1 text-[12px] text-[#6B7280]">Участников</div>
+          <div className="mb-1 text-xs text-[var(--color-text-muted)]">Участников</div>
           <div className="flex items-center gap-1">
             <Users className="h-4 w-4 text-[var(--color-primary)]" />
-            <span className="text-[15px] font-semibold text-[#1F2937]">
+            <span className="text-base font-semibold text-[var(--color-text)]">
               {club.memberCount ?? 0}
             </span>
           </div>
         </div>
         <div>
-          <div className="mb-1 text-[12px] text-[#6B7280]">Событий</div>
+          <div className="mb-1 text-xs text-[var(--color-text-muted)]">Событий</div>
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
-            <span className="text-[15px] font-semibold text-[#1F2937]">
+            <span className="text-base font-semibold text-[var(--color-text)]">
               {club.eventCount ?? 0}
             </span>
           </div>
@@ -93,7 +93,7 @@ export function ClubCard({ club }: ClubCardProps) {
 
       {/* Города */}
       {club.cities && club.cities.length > 0 && (
-        <div className="text-[13px] text-[#6B7280]">
+        <div className="text-sm text-[var(--color-text-muted)]">
           📍{" "}
           {club.cities.length === 1
             ? club.cities[0].region

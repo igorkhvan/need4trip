@@ -56,8 +56,8 @@ export function LocationHeaderItem({
   if (!location && fallbackText) {
     return (
       <div className="flex items-center gap-2">
-        <MapPin className="h-5 w-5 flex-shrink-0 text-[#6B7280]" />
-        <span className="text-[15px] text-[#6B7280]">{fallbackText}</span>
+        <MapPin className="h-5 w-5 flex-shrink-0 text-[var(--color-text-muted)]" />
+        <span className="text-base text-[var(--color-text-muted)]">{fallbackText}</span>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function LocationHeaderItem({
 
   return (
     <div className="flex items-center gap-2">
-      <MapPin className="h-5 w-5 flex-shrink-0 text-[#6B7280]" />
+      <MapPin className="h-5 w-5 flex-shrink-0 text-[var(--color-text-muted)]" />
       
       {/* Title as clickable link (opens NavigationChooser) */}
       {hasCoordinates ? (
@@ -79,7 +79,7 @@ export function LocationHeaderItem({
             trigger={
               <button
                 type="button"
-                className="text-[15px] font-medium text-[#1F2937] hover:text-[#FF6F2C] transition-colors hover:underline"
+                className="text-base font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors hover:underline"
               >
                 {location.title}
               </button>
@@ -100,7 +100,7 @@ export function LocationHeaderItem({
                   {copied ? (
                     <Check className="h-3.5 w-3.5 text-green-600" />
                   ) : (
-                    <Copy className="h-3.5 w-3.5 text-[#6B7280]" />
+                    <Copy className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -111,7 +111,7 @@ export function LocationHeaderItem({
           </TooltipProvider>
         </>
       ) : (
-        <span className="text-[15px] text-[#6B7280]">{location.title}</span>
+        <span className="text-base text-[var(--color-text-muted)]">{location.title}</span>
       )}
     </div>
   );

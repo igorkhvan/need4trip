@@ -62,10 +62,10 @@ export function Pagination({
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors",
+          "flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] transition-colors",
           currentPage === 1
             ? "cursor-not-allowed opacity-40"
-            : "hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+            : "hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"
         )}
       >
         <ChevronLeft className="h-5 w-5" />
@@ -77,7 +77,7 @@ export function Pagination({
           return (
             <span
               key={`ellipsis-${index}`}
-              className="flex h-10 w-10 items-center justify-center text-[15px] text-[#6B7280]"
+              className="flex h-10 w-10 items-center justify-center text-base text-[var(--color-text-muted)]"
             >
               ...
             </span>
@@ -91,10 +91,10 @@ export function Pagination({
             key={page}
             onClick={() => onPageChange(page as number)}
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-xl text-[15px] font-medium transition-colors",
+              "flex h-10 w-10 items-center justify-center rounded-xl text-base font-medium transition-colors",
               isActive
-                ? "bg-[var(--color-primary)] text-white hover:bg-[#E86223]"
-                : "border border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+                ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
+                : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"
             )}
           >
             {page}
@@ -107,10 +107,10 @@ export function Pagination({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#6B7280] transition-colors",
+          "flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] transition-colors",
           currentPage === totalPages
             ? "cursor-not-allowed opacity-40"
-            : "hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+            : "hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"
         )}
       >
         <ChevronRight className="h-5 w-5" />
