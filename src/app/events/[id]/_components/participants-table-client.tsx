@@ -113,8 +113,8 @@ export function ParticipantsTableClient({
 
   if (optimisticParticipants.length === 0) {
     return (
-      <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-12 text-center">
-        <p className="text-[15px] text-[#6B7280]">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-12 text-center">
+        <p className="text-base text-[var(--color-text-muted)]">
           Пока нет зарегистрированных участников
         </p>
       </div>
@@ -122,26 +122,26 @@ export function ParticipantsTableClient({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#E5E7EB]">
+    <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
       <Table>
-        <TableHeader className="bg-[#F9FAFB]">
-          <TableRow className="border-b border-[#E5E7EB]">
-            <TableHead className="w-16 text-center text-[13px] font-semibold uppercase text-[#6B7280]">
+        <TableHeader className="bg-[var(--color-bg-subtle)]">
+          <TableRow className="border-b border-[var(--color-border)]">
+            <TableHead className="w-16 text-center text-xs font-semibold uppercase text-[var(--color-text-muted)]">
               №
             </TableHead>
-            <TableHead className="text-[13px] font-semibold uppercase text-[#6B7280]">
+            <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
               Экипаж
             </TableHead>
-            <TableHead className="text-[13px] font-semibold uppercase text-[#6B7280]">
+            <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
               Роль
             </TableHead>
             {sortedCustomFields.length > 0 && (
-              <TableHead className="text-[13px] font-semibold uppercase text-[#6B7280]">
+              <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
                 Доп. поля
               </TableHead>
             )}
             {(isOwner || currentUserId || guestSessionId) && (
-              <TableHead className="w-24 text-right text-[13px] font-semibold uppercase text-[#6B7280]">
+              <TableHead className="w-24 text-right text-xs font-semibold uppercase text-[var(--color-text-muted)]">
                 Действия
               </TableHead>
             )}

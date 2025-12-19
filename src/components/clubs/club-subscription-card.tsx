@@ -47,15 +47,15 @@ export function ClubSubscriptionCard({
   };
 
   return (
-    <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
       {/* Заголовок */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className={`flex items-center gap-2 text-[24px] font-bold ${getPlanColor(planId)}`}>
+          <h3 className={`flex items-center gap-2 text-2xl font-bold ${getPlanColor(planId)}`}>
             {planId === "club_unlimited" && <Crown className="h-6 w-6" />}
             {getClubPlanLabel(planId)}
           </h3>
-          <p className="mt-1 text-[14px] text-[#6B7280]">
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             Текущий тариф клуба
           </p>
         </div>
@@ -76,16 +76,16 @@ export function ClubSubscriptionCard({
 
       {/* Срок действия */}
       {subscription?.currentPeriodEnd && (
-        <div className="mb-6 rounded-xl bg-[#F9FAFB] p-4">
-          <div className="mb-1 flex items-center gap-2 text-[14px] text-[#6B7280]">
+        <div className="mb-6 rounded-xl bg-[var(--color-bg-subtle)] p-4">
+          <div className="mb-1 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <Calendar className="h-4 w-4" />
             <span>Действует до</span>
           </div>
-          <div className="text-[18px] font-semibold text-[#1F2937]">
+          <div className="text-lg font-semibold text-[var(--color-text)]">
             {formatDate(subscription.currentPeriodEnd)}
           </div>
           {daysUntilExpiration !== null && daysUntilExpiration <= 7 && daysUntilExpiration > 0 && (
-            <div className="mt-2 text-[14px] text-[#EA580C]">
+            <div className="mt-2 text-sm text-[var(--color-warning)]">
               Осталось {daysUntilExpiration} {daysUntilExpiration === 1 ? "день" : "дней"}
             </div>
           )}
@@ -94,18 +94,18 @@ export function ClubSubscriptionCard({
 
       {/* Возможности */}
       <div className="mb-6">
-        <h4 className="mb-3 text-[14px] font-medium text-[#111827]">Возможности тарифа:</h4>
+        <h4 className="mb-3 text-sm font-medium text-[var(--color-text)]">Возможности тарифа:</h4>
         <ul className="space-y-2">
-          <li className="flex items-start gap-2 text-[14px] text-[#6B7280]">
-            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#10B981]" />
+          <li className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
+            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-success)]" />
             <span>Управление клубом</span>
           </li>
-          <li className="flex items-start gap-2 text-[14px] text-[#6B7280]">
-            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#10B981]" />
+          <li className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
+            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-success)]" />
             <span>Создание событий</span>
           </li>
-          <li className="flex items-start gap-2 text-[14px] text-[#6B7280]">
-            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#10B981]" />
+          <li className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
+            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-success)]" />
             <span>Управление участниками</span>
           </li>
         </ul>
@@ -113,10 +113,10 @@ export function ClubSubscriptionCard({
 
       {/* Действия */}
       {canManage && planId === "free" && (
-        <div className="space-y-3 border-t border-[#E5E7EB] pt-4">
+        <div className="space-y-3 border-t border-[var(--color-border)] pt-4">
           <a
             href="/pricing"
-            className="block w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-center font-medium text-white transition-colors hover:bg-[#E86223]"
+            className="block w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-center font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
           >
             Посмотреть тарифы
           </a>

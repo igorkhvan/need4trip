@@ -90,11 +90,11 @@ export function CitySelect({
       <div className="flex items-center gap-2 truncate">
         <MapPin className="h-4 w-4 shrink-0 opacity-50" />
         {selectedCities.length > 0 ? (
-          <span className="text-[15px]">
+          <span>
             {getCountryFlag(selectedCities[0].country)} {formatCityName(selectedCities[0])}
           </span>
         ) : (
-          <span className="text-[15px]">{ph}</span>
+          <span>{ph}</span>
         )}
       </div>
     );

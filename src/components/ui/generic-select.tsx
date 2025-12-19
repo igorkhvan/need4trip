@@ -305,9 +305,9 @@ export function GenericSelect<T>({
         <div className="flex items-center gap-2 truncate">
           {icon && <span className="shrink-0 opacity-50">{icon}</span>}
           {selected.length > 0 ? (
-            <span className="text-[15px] truncate">{getItemLabel(selected[0])}</span>
+            <span className="truncate">{getItemLabel(selected[0])}</span>
           ) : (
-            <span className="text-[15px] text-[#6B7280]">{ph}</span>
+            <span className="text-[var(--color-text-muted)]">{ph}</span>
           )}
         </div>
       );
@@ -317,7 +317,7 @@ export function GenericSelect<T>({
         return (
           <div className="flex items-center gap-2">
             {icon && <span className="shrink-0 opacity-50">{icon}</span>}
-            <span className="text-[15px] text-[#6B7280]">{ph}</span>
+            <span className="text-[var(--color-text-muted)]">{ph}</span>
           </div>
         );
       }
@@ -355,7 +355,7 @@ export function GenericSelect<T>({
       return (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {icon && <span className="shrink-0 opacity-50">{icon}</span>}
-          <span className="text-[15px] text-[#6B7280]">
+          <span className="text-[var(--color-text-muted)]">
             Выбрано: {selected.length}
           </span>
         </div>
@@ -383,7 +383,7 @@ export function GenericSelect<T>({
               "w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
               badgesPosition === "inside" && mode === "multi" ? "min-h-12 h-auto py-2" : "h-12",
               error && "border-red-500 focus:border-red-500",
-              selectedItems.length === 0 && "text-[#6B7280]",
+              selectedItems.length === 0 && "text-[var(--color-text-muted)]",
               className
             )}
           >

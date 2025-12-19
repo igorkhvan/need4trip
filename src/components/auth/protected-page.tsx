@@ -27,9 +27,9 @@ export function ProtectedPage({
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF4EF]">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-primary-bg)]">
             <svg
-              className="h-8 w-8 text-[#FF6F2C]"
+              className="h-8 w-8 text-[var(--color-primary)]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -42,15 +42,15 @@ export function ProtectedPage({
               />
             </svg>
           </div>
-          <h2 className="mb-2 text-[20px] font-semibold text-[#1F2937]">
+          <h2 className="mb-2 text-xl font-semibold text-[var(--color-text)]">
             {title || "Требуется авторизация"}
           </h2>
-          <p className="mb-6 text-[15px] text-[#6B7280]">
+          <p className="mb-6 text-base text-[var(--color-text-muted)]">
             {description || "Для доступа к этой странице необходимо войти через Telegram."}
           </p>
           <button
             onClick={() => openModal({ reason, title, description })}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-[#FF6F2C] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#E55A1A]"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-base font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
           >
             Войти через Telegram
           </button>

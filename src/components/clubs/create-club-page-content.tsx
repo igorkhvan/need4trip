@@ -41,12 +41,12 @@ export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: bo
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen bg-[var(--color-bg-subtle)]">
       <div className="page-container space-y-6 pb-10 pt-12">
         {/* Кнопка назад */}
         <Link
           href="/clubs"
-          className="inline-flex items-center gap-2 text-[15px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
+          className="inline-flex items-center gap-2 text-base text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
         >
           <ArrowLeft className="h-5 w-5" />
           <span>Назад к списку клубов</span>
@@ -54,14 +54,14 @@ export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: bo
 
         {/* Заголовок */}
         <div>
-          <h1 className="text-[28px] font-bold text-[#1F2937] md:text-[32px]">Создать клуб</h1>
-          <p className="mt-2 text-[15px] text-[#6B7280]">
+          <h1 className="text-3xl font-bold text-[var(--color-text)] md:text-4xl">Создать клуб</h1>
+          <p className="mt-2 text-base text-[var(--color-text-muted)]">
             Создайте клуб и соберите единомышленников для совместных путешествий
           </p>
         </div>
 
         {/* Форма */}
-        <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
           <ClubForm mode="create" />
         </div>
       </div>

@@ -250,10 +250,10 @@ export function AuthModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[20px] font-semibold text-[#1F2937]">
+          <DialogTitle className="text-xl font-semibold text-[var(--color-text)]">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-[15px] text-[#6B7280]">
+          <DialogDescription className="text-base text-[var(--color-text-muted)]">
             {finalDescription}
           </DialogDescription>
         </DialogHeader>
@@ -274,8 +274,8 @@ export function AuthModal({
           {/* Telegram Widget Container */}
           <div className="flex justify-center">
             {isSubmitting ? (
-              <div className="flex items-center gap-2 text-[15px] text-[#6B7280]">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#FF6F2C] border-t-transparent"></div>
+              <div className="flex items-center gap-2 text-base text-[var(--color-text-muted)]">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent"></div>
                 <span>Авторизация...</span>
               </div>
             ) : !username ? (
@@ -293,7 +293,7 @@ export function AuthModal({
           {/* Error Message */}
           {error && (
             <div 
-              className="rounded-xl border border-[#FEE2E2] bg-[#FEF2F2] p-3 text-[14px] text-[#991B1B]" 
+              className="rounded-xl border border-[var(--color-danger-bg)] bg-[var(--color-danger-bg)] p-3 text-sm text-[var(--color-danger-text)]" 
               role="alert"
             >
               {error}
@@ -302,7 +302,7 @@ export function AuthModal({
           
           {/* Info */}
           {!error && !isSubmitting && username && (
-            <div className="text-center text-[13px] text-[#6B7280]">
+            <div className="text-center text-sm text-[var(--color-text-muted)]">
               Войдите через Telegram, чтобы получить доступ ко всем возможностям Need4Trip
             </div>
           )}

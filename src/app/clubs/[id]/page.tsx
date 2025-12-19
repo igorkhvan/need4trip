@@ -46,12 +46,12 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
   const showSidebar = isOwner;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen bg-[var(--color-bg-subtle)]">
       <div className="page-container space-y-6 pb-10 pt-12">
         {/* Кнопка назад */}
         <Link
           href="/clubs"
-          className="inline-flex items-center gap-2 text-[15px] text-[#6B7280] transition-colors hover:text-[#1F2937]"
+          className="inline-flex items-center gap-2 text-base text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
         >
           <ArrowLeft className="h-5 w-5" />
           <span>Все клубы</span>
@@ -61,7 +61,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
           {/* Основная информация */}
           <div className={`space-y-6 ${showSidebar ? "lg:col-span-2" : ""}`}>
             {/* Заголовок */}
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
               <div className="flex items-start gap-6">
                 {/* Логотип */}
                 {club.logoUrl ? (
@@ -71,18 +71,18 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                     className="h-24 w-24 flex-shrink-0 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6F2C] to-[#E86223] text-3xl font-bold text-white">
+                  <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] text-3xl font-bold text-white">
                     {club.name.charAt(0).toUpperCase()}
                   </div>
                 )}
 
                 <div className="flex-1">
                   <div className="mb-3 flex items-start justify-between">
-                    <h1 className="text-[28px] font-bold text-[#1F2937] md:text-[32px]">{club.name}</h1>
+                    <h1 className="text-3xl font-bold text-[var(--color-text)] md:text-4xl">{club.name}</h1>
                     {canManage && (
                       <Link
                         href={`/clubs/${club.id}/manage`}
-                        className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-[15px] text-[#111827] transition-colors hover:bg-[#F9FAFB]"
+                        className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-2 text-base text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-subtle)]"
                       >
                         <Settings className="h-4 w-4" />
                         <span>Управление</span>

@@ -791,9 +791,9 @@ export function ProfilePageClient() {
                         value={userData.bio}
                         onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
                         rows={3}
-                        className="w-full px-4 py-3 rounded-xl border border-[#E5E7EB] bg-white text-[15px] text-[#1F2937]
-                          hover:border-[#D1D5DB] focus:outline-none focus:border-[var(--color-primary)]
-                          transition-colors resize-none placeholder:text-[#6B7280]"
+                        className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-base text-[var(--color-text)]
+                          hover:border-[var(--color-border-hover)] focus:outline-none focus:border-[var(--color-primary)]
+                          transition-colors resize-none placeholder:text-[var(--color-text-muted)]"
                       />
                     </div>
 
