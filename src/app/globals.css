@@ -82,7 +82,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased min-h-screen font-sans;
+    @apply bg-background text-foreground antialiased min-h-screen font-sans overflow-x-hidden;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   }
 }

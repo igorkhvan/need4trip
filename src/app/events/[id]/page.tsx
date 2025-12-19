@@ -325,7 +325,9 @@ export default async function EventDetails({
         </div>
 
       {/* Mobile Section Navigation */}
-      <MobileSectionNav sections={mobileSections} />
+      <div className="pb-20 lg:pb-0">
+        <MobileSectionNav sections={mobileSections} />
+      </div>
     </>
   );
 }

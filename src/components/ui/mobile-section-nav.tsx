@@ -160,7 +160,7 @@ export function MobileSectionNav({
     <div
       className={cn(
         // Fixed positioning at bottom
-        "fixed bottom-6 left-0 right-0 z-50",
+        "fixed bottom-10 left-0 right-0 z-50 md:bottom-6",
         // Center content
         "flex justify-center",
         // Pointer events

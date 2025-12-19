@@ -47,7 +47,7 @@ export async function getLocationsByEventId(eventId: string): Promise<EventLocat
 
 /**
  * Save locations for an event
- * Uses UPSERT strategy to avoid conflicts with first location protection trigger
+ * Replaces all existing locations with new ones (upsert strategy)
  */
 export async function saveLocations(
   eventId: string,
@@ -66,62 +66,34 @@ export async function saveLocations(
     throw new Error("First location (sort_order=1) is required");
   }
 
-  // Step 1: Get existing locations to determine what to update/insert/delete
-  const { data: existingData, error: fetchError } = await supabaseAdmin
+  // Step 1: Delete all existing locations for this event
+  const { error: deleteError } = await supabaseAdmin
     .from(table)
-    .select("*")
+    .delete()
     .eq("event_id", eventId);
 
-  if (fetchError) {
-    log.error("Failed to fetch existing locations", { eventId, error: fetchError });
-    throw new InternalError("Failed to fetch existing locations", fetchError);
+  if (deleteError) {
+    log.error("Failed to delete old locations", { eventId, error: deleteError });
+    throw new InternalError("Failed to delete old locations", deleteError);
   }
 
-  const existingLocations = (existingData || []).map((row: any) => 
-    mapDbEventLocationToDomain(row as DbEventLocation)
-  );
-
-  const existingSortOrders = new Set(existingLocations.map((loc) => loc.sortOrder));
-  const newSortOrders = new Set(locations.map((loc) => loc.sortOrder));
-
-  // Step 2: Delete locations that are no longer in the new list (except sort_order=1)
-  const sortOrdersToDelete = [...existingSortOrders].filter(
-    (sortOrder) => !newSortOrders.has(sortOrder) && sortOrder !== 1
-  );
-
-  if (sortOrdersToDelete.length > 0) {
-    const { error: deleteError } = await supabaseAdmin
-      .from(table)
-      .delete()
-      .eq("event_id", eventId)
-      .in("sort_order", sortOrdersToDelete);
-
-    if (deleteError) {
-      log.error("Failed to delete removed locations", { eventId, sortOrdersToDelete, error: deleteError });
-      throw new InternalError("Failed to delete removed locations", deleteError);
-    }
-  }
-
-  // Step 3: Upsert all locations (insert new ones, update existing ones)
+  // Step 2: Insert new locations
   const dbLocations = locations.map((loc) =>
     mapDomainEventLocationToDb({ ...loc, eventId })
   );
 
-  const { data, error: upsertError } = await supabaseAdmin
+  const { data, error: insertError } = await supabaseAdmin
     .from(table)
-    .upsert(dbLocations, {
-      onConflict: "event_id,sort_order", // Use unique constraint
-      ignoreDuplicates: false, // Update on conflict
-    })
+    .insert(dbLocations)
     .select();
 
-  if (upsertError) {
-    log.error("Failed to upsert locations", { eventId, error: upsertError });
-    throw new InternalError("Failed to upsert locations", upsertError);
+  if (insertError) {
+    log.error("Failed to insert new locations", { eventId, error: insertError });
+    throw new InternalError("Failed to insert new locations", insertError);
   }
 
   if (!data) {
-    throw new InternalError("No data returned after upsert");
+    throw new InternalError("No data returned after insert");
   }
 
   log.info("Saved event locations", { eventId, count: data.length });
