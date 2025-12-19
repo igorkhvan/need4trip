@@ -46,8 +46,8 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
   const showSidebar = isOwner;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-subtle)]">
-      <div className="page-container space-y-6 pb-10 pt-12">
+    <>
+      <div className="space-y-6 pb-10 pt-12">
         {/* Кнопка назад */}
         <Link
           href="/clubs"
@@ -211,7 +211,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

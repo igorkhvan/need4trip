@@ -585,15 +585,15 @@ export function ProfilePageClient() {
 
   if (initialLoad) {
     return (
-      <div className="container-custom py-12">
+      <div className="page-container">
         <ProfileContentSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="py-6 md:py-12">
-      <div className="container-custom">
+    <div>
+      <div className="page-container">
         {/* Header with Cover Photo */}
         <div className="relative mb-6 md:mb-8">
           {/* Cover Image */}

@@ -46,26 +46,22 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
 
   if (loading) {
     return (
-      <div className="page-container py-12">
-        <div className="animate-pulse space-y-8">
-          <div className="h-20 bg-gray-200 rounded-xl" />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="h-24 bg-gray-200 rounded-xl" />
-            <div className="h-24 bg-gray-200 rounded-xl" />
-            <div className="h-24 bg-gray-200 rounded-xl" />
-          </div>
+      <div className="animate-pulse space-y-8">
+        <div className="h-20 bg-gray-200 rounded-xl" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="h-24 bg-gray-200 rounded-xl" />
+          <div className="h-24 bg-gray-200 rounded-xl" />
+          <div className="h-24 bg-gray-200 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-container py-12">
-      <EventsGrid 
-        events={events} 
-        currentUserId={currentUserId} 
-        isAuthenticated={isAuthenticated}
-      />
-    </div>
+    <EventsGrid 
+      events={events} 
+      currentUserId={currentUserId} 
+      isAuthenticated={isAuthenticated}
+    />
   );
 }

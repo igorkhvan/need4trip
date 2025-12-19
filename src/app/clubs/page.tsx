@@ -119,10 +119,9 @@ export default function ClubsPage() {
   const totalCities = new Set(clubs.flatMap(club => club.cities?.map(c => c.id) || [])).size;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
-      <div className="page-container">
-        {/* Заголовок и кнопка создания */}
-        <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-center md:justify-between">
+    <>
+      {/* Заголовок и кнопка создания */}
+      <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="mb-1 text-3xl font-bold leading-tight text-[var(--color-text)] md:text-4xl">
               Автомобильные клубы
@@ -289,7 +288,7 @@ export default function ClubsPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
