@@ -341,3 +341,11 @@ export async function countMembers(clubId: string): Promise<number> {
   return count ?? 0;
 }
 
+/**
+ * Check if user is a club member (excluding pending)
+ */
+export async function isClubMember(clubId: string, userId: string): Promise<boolean> {
+  const member = await getMember(clubId, userId);
+  return member !== null && member.role !== "pending";
+}
+
