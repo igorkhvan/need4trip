@@ -342,10 +342,18 @@ export default async function EventDetails({
           </div>
         </div>
 
-      {/* Danger Zone (Owner Only) */}
+      {/* Owner Controls */}
       {isOwner && (
-        <div className="mt-8" id="event-danger-zone">
-          <EventDangerZone event={event} isOwner={isOwner} />
+        <div className="mt-8 space-y-6">
+          {/* Registration Control */}
+          <div id="event-registration-control">
+            <EventRegistrationControl event={event} isOwner={isOwner} />
+          </div>
+          
+          {/* Danger Zone */}
+          <div id="event-danger-zone">
+            <EventDangerZone event={event} isOwner={isOwner} />
+          </div>
         </div>
       )}
 
