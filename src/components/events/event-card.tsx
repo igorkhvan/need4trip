@@ -21,8 +21,14 @@ interface EventCardProps {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  // Проверяем, прошло ли событие
+  // Проверяем, закрыта ли регистрация
+  // Упрощённая проверка без participantsCount (чтобы избежать JOIN для каждой карточки):
+  // - Событие в прошлом
+  // - Владелец вручную закрыл регистрацию
+  // Проверка лимита участников выполняется только на странице деталей события
   const isPastEvent = new Date(event.dateTime) < new Date();
+  const isClosedManually = event.registrationManuallyClosed;
+  const isRegistrationClosed = isPastEvent || isClosedManually;
   
   return (
     <Card className="h-full">
@@ -52,7 +58,7 @@ export function EventCard({ event }: EventCardProps) {
         </p>
       </CardContent>
       <CardFooter className="flex items-center justify-between">
-        {isPastEvent ? (
+        {isRegistrationClosed ? (
           <Badge variant="registration-closed" size="sm" className="flex items-center gap-1.5">
             <Lock className="h-3 w-3" />
             Регистрация закрыта
