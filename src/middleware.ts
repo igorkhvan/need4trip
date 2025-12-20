@@ -203,7 +203,11 @@ function requiresAuth(pathname: string, method: string): boolean {
       }
     } else {
       // Method-specific protection
-      if ((pathname === route.path || pathname.startsWith(route.path)) && 
+      const pathMatches = route.path.endsWith('/') 
+        ? pathname.startsWith(route.path) // Prefix match for paths with trailing slash
+        : pathname === route.path; // Exact match for paths without trailing slash
+      
+      if (pathMatches && 
           // @ts-expect-error - TS inference issue with readonly array in const
           route.methods.includes(method)) {
         return true;
