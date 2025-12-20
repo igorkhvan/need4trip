@@ -2,35 +2,20 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  Search,
-  Calendar,
-  Users,
-  TrendingUp,
-  Car,
-  Mountain,
-  MapPin,
-  Clock,
-  Filter,
-  Lock,
-} from "lucide-react";
+import { Search, Calendar, Users, TrendingUp, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 import { Tabs } from "@/components/ui/tabs";
-import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
+import { EventCardDetailed } from "@/components/events/event-card-detailed";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { Event } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
-import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
-import { formatDateTimeShort, formatDateShort, getDaysUntil } from "@/lib/utils/dates";
 
 interface EventsGridProps {
   events: Event[];
@@ -171,46 +156,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
     }
   }, [currentPage, totalPages]);
 
-  const getStatusBadge = (event: Event) => {
-    const daysUntil = getDaysUntil(event.dateTime);
-    const fillPercentage = event.maxParticipants
-      ? ((event.participantsCount ?? 0) / event.maxParticipants) * 100
-      : 0;
-
-    // Проверяем, прошло ли событие
-    if (daysUntil < 0) {
-      return (
-        <Badge variant="registration-closed" size="md" className="flex items-center gap-1.5">
-          <Lock className="h-3.5 w-3.5" />
-          Регистрация закрыта
-        </Badge>
-      );
-    }
-
-    if (daysUntil <= 7 && daysUntil >= 0) {
-      return (
-        <Badge variant="starting-soon" size="md">
-          Скоро начало
-        </Badge>
-      );
-    }
-
-    if (fillPercentage >= 90) {
-      return (
-        <Badge variant="almost-full" size="md">
-          Почти заполнено
-        </Badge>
-      );
-    }
-
-    return (
-      <Badge variant="registration-open" size="md">
-        Открыта регистрация
-      </Badge>
-    );
-  };
-
-  // Удалено: используем компонент ProgressBar вместо кастомной логики
+  // Функция getStatusBadge удалена - логика перенесена в EventStatusBadge component
 
   return (
     <div className="space-y-8">
@@ -423,86 +369,13 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {paginatedEvents.length > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {paginatedEvents.map((event) => {
-            const fillPercentage = calculateEventFillPercentage(
-              event.participantsCount ?? 0,
-              event.maxParticipants
-            );
-            const CategoryIcon = event.category ? getCategoryIcon(event.category) : Car;
-            const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
-            const priceLabel =
-              event.isPaid && event.price
-                ? `${event.price} ${event.currency?.symbol ?? event.currencyCode ?? ""}`.trim()
-                : event.isPaid
-                  ? "Платное"
-                  : "Бесплатно";
-
-            return (
-              <Card
+            {paginatedEvents.map((event) => (
+              <EventCardDetailed
                 key={event.id}
-                className="cursor-pointer border-[var(--color-border)] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+                event={event}
                 onClick={() => router.push(`/events/${event.id}`)}
-              >
-                <CardContent className="p-6">
-                  {/* Header */}
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="mb-2 text-2xl font-semibold leading-tight text-[var(--color-text)]">
-                        {event.title}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                        <div className="flex items-center gap-1">
-                          <CategoryIcon className="h-4 w-4" />
-                          <span>{categoryLabel}</span>
-                        </div>
-                        <span>•</span>
-                        <span>
-                          {event.ownerHandle
-                            ? `@${event.ownerHandle}`
-                            : event.ownerName ?? "Организатор"}
-                        </span>
-                      </div>
-                    </div>
-                    {getStatusBadge(event)}
-                  </div>
-
-                  {/* Info Grid */}
-                  <div className="mb-4 grid grid-cols-2 gap-4 rounded-xl bg-[var(--color-bg-subtle)] p-4">
-                    <div>
-                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Дата и время</div>
-                      <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
-                        <Clock className="h-4 w-4 text-[var(--color-text-muted)]" />
-                        <span>{formatDateTimeShort(event.dateTime)}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Место сбора</div>
-                      <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
-                        <MapPin className="h-4 w-4 text-[var(--color-text-muted)]" />
-                        <span className="truncate">{event.locations[0]?.title || "Не указано"}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Участники</div>
-                      <div className="text-base text-[var(--color-text)]">
-                        {event.participantsCount ?? 0}
-                        {event.maxParticipants ? ` / ${event.maxParticipants}` : ""}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-sm text-[var(--color-text-muted)]">Стоимость</div>
-                      <div className="text-base text-[var(--color-text)]">{priceLabel}</div>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  {event.maxParticipants && (
-                    <ProgressBar value={fillPercentage} />
-                  )}
-                </CardContent>
-              </Card>
-            );
-            })}
+              />
+            ))}
           </div>
 
           {/* Pagination */}

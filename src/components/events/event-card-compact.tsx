@@ -1,3 +1,19 @@
+/**
+ * EventCardCompact Component
+ * 
+ * Компактная вертикальная карточка события.
+ * Используется на homepage и в компактных списках.
+ * 
+ * Показывает:
+ * - Заголовок события
+ * - EventAccessBadge (тип доступа)
+ * - Категория
+ * - Дата, место, участники
+ * - Описание (3 строки)
+ * - Статус регистрации в футере
+ * - Кнопка "Подробнее"
+ */
+
 import Link from "next/link";
 import { Lock } from "lucide-react";
 
@@ -16,11 +32,11 @@ import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort } from "@/lib/utils/dates";
 
-interface EventCardProps {
+export interface EventCardCompactProps {
   event: Event;
 }
 
-export function EventCard({ event }: EventCardProps) {
+export function EventCardCompact({ event }: EventCardCompactProps) {
   // Проверяем, закрыта ли регистрация
   // Упрощённая проверка без participantsCount (чтобы избежать JOIN для каждой карточки):
   // - Событие в прошлом
