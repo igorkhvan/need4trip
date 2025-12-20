@@ -14,12 +14,14 @@ import { ParticipantModal } from "@/components/events/participant-modal";
 import { EventLocationsCard } from "@/components/events/EventLocationsCard";
 import { LocationHeaderItem } from "@/components/events/LocationHeaderItem";
 import { MobileSectionNav } from "@/components/ui/mobile-section-nav";
+import { EventDangerZone } from "@/components/events/event-danger-zone";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTime } from "@/lib/utils/dates";
+import { isRegistrationClosed } from "@/lib/utils/eventPermissions";
 import { EventParticipantsAsync } from "./_components/participants-async";
 import { EventParticipantsSkeleton } from "@/components/ui/skeletons";
 
@@ -96,7 +98,11 @@ export default async function EventDetails({
       : []),
     { id: "event-vehicle", label: "Требования к авто" },
     ...(ownerUser ? [{ id: "event-organizer", label: "Организатор" }] : []),
+    ...(isOwner ? [{ id: "event-danger-zone", label: "Опасная зона" }] : []),
   ];
+
+  // ✅ USE CENTRALIZED LOGIC for registration status
+  const registrationClosedToUser = isRegistrationClosed(event, currentUser, event.participantsCount);
 
   return (
     <>
@@ -124,13 +130,13 @@ export default async function EventDetails({
             <Badge variant={event.isPaid ? "paid" : "free"} size="md">
               {event.isPaid ? "Платное" : "Бесплатное"}
             </Badge>
-            {isPastEvent && (
+            {(registrationClosedToUser || isPastEvent) && (
               <Badge variant="registration-closed" size="md" className="flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5" />
                 Регистрация закрыта
               </Badge>
             )}
-            {isFull && !isPastEvent && (
+            {isFull && !isPastEvent && !event.registrationManuallyClosed && (
               <Badge variant="warning" size="md">
                 Лимит достигнут
               </Badge>
@@ -170,13 +176,13 @@ export default async function EventDetails({
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row md:flex-col md:w-auto">
-          {isPastEvent ? (
+          {registrationClosedToUser ? (
             <Button variant="secondary" disabled className="w-full sm:w-auto">
               <Lock className="mr-2 h-4 w-4" />
               Регистрация закрыта
             </Button>
           ) : (
-            !isFull && !isUserRegistered && (
+            !isUserRegistered && (
               <ParticipantModal
                 mode="create"
                 eventId={event.id}
@@ -323,6 +329,13 @@ export default async function EventDetails({
             )}
           </div>
         </div>
+
+      {/* Danger Zone (Owner Only) */}
+      {isOwner && (
+        <div className="mt-8" id="event-danger-zone">
+          <EventDangerZone event={event} isOwner={isOwner} />
+        </div>
+      )}
 
       {/* Mobile Section Navigation */}
       <MobileSectionNav sections={mobileSections} />
