@@ -51,7 +51,7 @@ const PROTECTED_ROUTES = [
   
   // Auth endpoints
   '/api/auth/me',
-  '/api/auth/logout',
+  // NOTE: /api/auth/logout is NOT protected - must work even with expired/invalid token
   
   // AI endpoints (all require auth)
   '/api/ai',
