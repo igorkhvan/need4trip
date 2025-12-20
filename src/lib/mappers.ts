@@ -29,6 +29,8 @@ export interface DbEvent {
   price: number | null;
   currency_code: string | null; // ISO 4217 code (normalized)
   version: number; // Auto-incremented on each update for notification deduplication
+  allow_anonymous_registration: boolean; // NEW: Allow guests to register
+  registration_manually_closed: boolean; // NEW: Owner manually closed registration
 }
 
 export interface DbParticipant {
@@ -75,6 +77,8 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     isPaid: db.is_paid ?? false,
     price: db.price ?? null,
     currencyCode: db.currency_code ?? null, // ISO 4217 (normalized)
+    allowAnonymousRegistration: db.allow_anonymous_registration ?? true, // NEW
+    registrationManuallyClosed: db.registration_manually_closed ?? false, // NEW
   };
 }
 
