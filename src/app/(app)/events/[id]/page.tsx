@@ -136,7 +136,7 @@ export default async function EventDetails({
           {/* Badges */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             {/* Access badge FIRST */}
-            <EventAccessBadge event={event} variant="full" />
+            <EventAccessBadge event={event} variant="full" size="md" />
             
             {categoryLabel && event.category ? (
               <Badge variant={categoryBadgeVariant} size="md">
