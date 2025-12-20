@@ -194,7 +194,13 @@ export async function updateEvent(
     ...(payload.isClubEvent !== undefined ? { is_club_event: payload.isClubEvent } : {}),
     ...(payload.isPaid !== undefined ? { is_paid: payload.isPaid } : {}),
     ...(payload.price !== undefined ? { price: payload.price } : {}),
-    ...(payload.currencyCode !== undefined ? { currency_code: payload.currencyCode } : {}), // ISO 4217 (normalized)
+    ...(payload.currencyCode !== undefined ? { currency_code: payload.currencyCode } : {}),
+    ...(payload.allowAnonymousRegistration !== undefined 
+      ? { allow_anonymous_registration: payload.allowAnonymousRegistration } 
+      : {}),
+    ...(payload.registrationManuallyClosed !== undefined 
+      ? { registration_manually_closed: payload.registrationManuallyClosed } 
+      : {}),
     updated_at: new Date().toISOString(),
   };
 
