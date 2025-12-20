@@ -155,6 +155,7 @@ export function EventForm({
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
   const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? null);
+  const [allowAnonymousRegistration, setAllowAnonymousRegistration] = useState<boolean>(initialValues?.allowAnonymousRegistration ?? true); // NEW
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -370,6 +371,7 @@ export function EventForm({
         price: isPaid && price ? Number(price) : null,
         currencyCode: isPaid ? currencyCode : null,
         rules: rules.trim() || null,
+        allowAnonymousRegistration, // NEW
       };
 
       const response = await fetch("/api/ai/events/generate-rules", {
@@ -456,6 +458,7 @@ export function EventForm({
       isPaid,
       price: isPaid ? (trimmedPrice ? Number(trimmedPrice) : null) : null,
       currencyCode: isPaid ? currencyCode || null : null,
+      allowAnonymousRegistration, // NEW
     };
 
     try {
@@ -548,6 +551,7 @@ export function EventForm({
             price={price}
             currencyCode={currencyCode}
             isClubEvent={isClubEvent}
+            allowAnonymousRegistration={allowAnonymousRegistration}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
             onCategoryChange={setCategoryId}
@@ -562,6 +566,7 @@ export function EventForm({
             onPriceChange={setPrice}
             onCurrencyChange={setCurrencyCode}
             onIsClubEventChange={setIsClubEvent}
+            onAllowAnonymousRegistrationChange={setAllowAnonymousRegistration}
             categories={categories}
             loadingCategories={loadingCategories}
             clubLimits={clubLimits}

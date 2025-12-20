@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { FormField } from "@/components/ui/form-field";
@@ -44,6 +45,7 @@ interface EventBasicInfoSectionProps {
   price: string;
   currencyCode: string | null;
   isClubEvent: boolean;
+  allowAnonymousRegistration: boolean; // NEW
   
   // Change handlers
   onTitleChange: (value: string) => void;
@@ -57,6 +59,7 @@ interface EventBasicInfoSectionProps {
   onPriceChange: (value: string) => void;
   onCurrencyChange: (value: string | null) => void;
   onIsClubEventChange: (value: boolean) => void;
+  onAllowAnonymousRegistrationChange: (value: boolean) => void; // NEW
   
   // External data
   categories: EventCategoryDto[];
@@ -88,6 +91,7 @@ export function EventBasicInfoSection({
   price,
   currencyCode,
   isClubEvent,
+  allowAnonymousRegistration,
   onTitleChange,
   onDescriptionChange,
   onCategoryChange,
@@ -99,6 +103,7 @@ export function EventBasicInfoSection({
   onPriceChange,
   onCurrencyChange,
   onIsClubEventChange,
+  onAllowAnonymousRegistrationChange,
   categories,
   loadingCategories,
   clubLimits,
@@ -362,6 +367,40 @@ export function EventBasicInfoSection({
           </div>
         ) : (
           <div></div>
+        )}
+      </div>
+      
+      {/* Registration Controls */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background-subtle)] p-4 space-y-4">
+        <h3 className="text-base font-semibold text-[var(--color-text)]">
+          Настройки регистрации
+        </h3>
+        
+        {/* Allow Anonymous Registration */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1">
+            <Label htmlFor="allowAnonymousRegistration" className="text-sm font-medium text-[var(--color-text)]">
+              Разрешить регистрацию без авторизации
+            </Label>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              Если включено, незарегистрированные пользователи смогут присоединяться к событию
+            </p>
+          </div>
+          <Switch
+            id="allowAnonymousRegistration"
+            checked={allowAnonymousRegistration}
+            onCheckedChange={onAllowAnonymousRegistrationChange}
+            disabled={disabled}
+          />
+        </div>
+        
+        {/* Club Event (overrides anonymous) */}
+        {isClubEvent && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm text-amber-900">
+              <strong>Клубное событие:</strong> Регистрация доступна только членам клуба (независимо от настройки выше)
+            </p>
+          </div>
         )}
       </div>
     </div>
