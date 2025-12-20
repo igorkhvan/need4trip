@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
+import { useRouter } from "next/navigation";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 interface HeaderUserSectionProps {
@@ -14,6 +20,7 @@ interface HeaderUserSectionProps {
 export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectionProps) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
   const { openModal } = useAuthModalContext();
+  const router = useRouter();
 
   // Sync with auth state changes
   useEffect(() => {
@@ -49,27 +56,52 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
     return () => window.removeEventListener("auth-changed", handleAuthChange);
   }, [initialUser]);
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      
+      // Dispatch auth change event
+      window.dispatchEvent(new Event("auth-changed"));
+      
+      // Redirect to home
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   return (
     <div className="flex items-center gap-3">
       {currentUser ? (
-        /* User Profile Icon */
-        <Link 
-          href="/profile"
-          className="flex items-center justify-center transition-all hover:opacity-80"
-          title={currentUser.name || "Профиль"}
-        >
-          <Avatar className="h-10 w-10">
-            <AvatarImage
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=FF6F2C&color=fff&size=80`}
-              alt={currentUser.name ?? "Пользователь"}
+        /* User Profile Dropdown (Desktop only) */
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center justify-center transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 rounded-full"
+              title={currentUser.name || "Профиль"}
+            >
+              <Avatar className="h-10 w-10">
+                <AvatarImage
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=FF6F2C&color=fff&size=80`}
+                  alt={currentUser.name ?? "Пользователь"}
+                />
+                <AvatarFallback className="text-sm bg-[#FF6F2C] text-white font-semibold">
+                  {currentUser.name?.slice(0, 2).toUpperCase() ??
+                    currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
+                    "TG"}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="p-0">
+            <UserMenuItems
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              variant="dropdown"
             />
-            <AvatarFallback className="text-sm bg-[#FF6F2C] text-white font-semibold">
-              {currentUser.name?.slice(0, 2).toUpperCase() ??
-                currentUser.telegramHandle?.slice(0, 2).toUpperCase() ??
-                "TG"}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : (
         /* User Icon (opens login modal) */
         <button

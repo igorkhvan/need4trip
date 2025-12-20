@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 import { useCurrentUser } from "@/components/auth/use-current-user";
+import { useSaveScroll } from "@/hooks/use-scroll-save";
 import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
 import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
@@ -49,6 +50,7 @@ export function ParticipantForm({
 }: ParticipantFormProps) {
   const router = useRouter();
   const { user } = useCurrentUser();
+  const saveScroll = useSaveScroll();
   
   // При создании - берем из Telegram, при редактировании - из регистрации
   const initialDisplayName = mode === "edit" 
@@ -224,6 +226,10 @@ export function ParticipantForm({
       }
 
       setFieldErrors({});
+      
+      // Сохранить scroll position ПЕРЕД router.refresh()
+      saveScroll();
+      
       router.refresh();
       onSuccess?.();
     } catch (err) {

@@ -38,7 +38,7 @@ export async function MainHeader() {
           {/* Actions */}
           <div className="flex items-center gap-3">
             {/* Mobile Navigation */}
-            <MobileNav navItems={navItems} />
+            <MobileNav navItems={navItems} currentUser={currentUser} />
             
             {/* User Section */}
             <HeaderUserSection currentUser={currentUser} />

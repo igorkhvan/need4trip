@@ -18,6 +18,7 @@ import { EventRegistrationControl } from "@/components/events/event-registration
 import { EventDangerZone } from "@/components/events/event-danger-zone";
 import { EventAccessBadge } from "@/components/events/event-access-badge";
 import { LockedIndicator } from "@/components/ui/locked-indicator";
+import { ScrollRestorationWrapper } from "@/components/scroll-restoration-wrapper";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
@@ -110,7 +111,7 @@ export default async function EventDetails({
   const closedReason = getRegistrationClosedReason(event, currentUser, event.participantsCount);
 
   return (
-    <>
+    <ScrollRestorationWrapper storageKey={`event-${id}`}>
       {/* Back button */}
       <Button variant="ghost" asChild className="mb-6">
         <Link href="/events">← Назад к событиям</Link>
@@ -363,6 +364,6 @@ export default async function EventDetails({
 
       {/* Mobile Section Navigation */}
       <MobileSectionNav sections={mobileSections} />
-    </>
+    </ScrollRestorationWrapper>
   );
 }

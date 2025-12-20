@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { LockedIndicator } from "@/components/ui/locked-indicator";
+import { useSaveScroll } from "@/hooks/use-scroll-save";
 import type { Event } from "@/lib/types/event";
 
 interface EventRegistrationControlProps {
@@ -29,6 +30,7 @@ interface EventRegistrationControlProps {
 
 export function EventRegistrationControl({ event, isOwner }: EventRegistrationControlProps) {
   const router = useRouter();
+  const saveScroll = useSaveScroll();
   const [isToggling, setIsToggling] = useState(false);
   
   if (!isOwner) return null;
@@ -59,6 +61,9 @@ export function EventRegistrationControl({ event, isOwner }: EventRegistrationCo
           ? 'Участники снова могут регистрироваться на событие'
           : 'Только вы сможете добавлять участников',
       });
+
+      // Сохранить scroll position ПЕРЕД router.refresh()
+      saveScroll();
       
       router.refresh();
     } catch (err) {

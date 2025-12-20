@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { EventsGrid } from "@/components/events/events-grid";
 import { Event } from "@/lib/types/event";
+import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 
 interface EventsPageProps {
   searchParams?: { city?: string };
@@ -13,6 +14,9 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Restore scroll position
+  useScrollRestoration("events-list");
 
   useEffect(() => {
     async function loadData() {
