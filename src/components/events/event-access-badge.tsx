@@ -1,7 +1,7 @@
 /**
  * EventAccessBadge Component
  * 
- * Displays event access type badge:
+ * Displays event access type badge using standard Badge component:
  * - Anonymous allowed: "Доступно без регистрации"
  * - Users only: "Только пользователи"
  * - Club only: "Только члены клуба {clubName}"
@@ -9,16 +9,20 @@
  * Used in:
  * - EventCard (list of events)
  * - Event details page (badges row)
+ * 
+ * ВАЖНО: Использует стандартный Badge из ui/badge.tsx для унификации размеров
  */
 
 import { Users, Lock, Shield } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import type { Event } from "@/lib/types/event";
 
 export interface EventAccessBadgeProps {
   event: Event;
   /** Display variant */
   variant?: "full" | "compact";
+  /** Badge size (sm/md/lg) - стандартные размеры из Badge компонента */
+  size?: "sm" | "md" | "lg";
   /** Additional className */
   className?: string;
 }
@@ -26,6 +30,7 @@ export interface EventAccessBadgeProps {
 export function EventAccessBadge({ 
   event, 
   variant = "full",
+  size = "sm",
   className 
 }: EventAccessBadgeProps) {
   // Priority: Club events > Users only > Anonymous allowed
@@ -37,14 +42,10 @@ export function EventAccessBadge({
       : `Только члены клуба ${event.club.name}`;
       
     return (
-      <div className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium",
-        "bg-purple-50 text-purple-700",
-        className
-      )}>
-        <Shield className="h-3.5 w-3.5" />
-        <span>{text}</span>
-      </div>
+      <Badge variant="premium" size={size} className={className}>
+        <Shield className="h-3 w-3" />
+        {text}
+      </Badge>
     );
   }
   
@@ -55,14 +56,10 @@ export function EventAccessBadge({
       : "Только пользователи";
       
     return (
-      <div className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium",
-        "bg-blue-50 text-blue-700",
-        className
-      )}>
-        <Lock className="h-3.5 w-3.5" />
-        <span>{text}</span>
-      </div>
+      <Badge variant="info" size={size} className={className}>
+        <Lock className="h-3 w-3" />
+        {text}
+      </Badge>
     );
   }
   
@@ -72,13 +69,9 @@ export function EventAccessBadge({
     : "Доступно без регистрации";
     
   return (
-    <div className={cn(
-      "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium",
-      "bg-green-50 text-green-700",
-      className
-    )}>
-      <Users className="h-3.5 w-3.5" />
-      <span>{text}</span>
-    </div>
+    <Badge variant="success" size={size} className={className}>
+      <Users className="h-3 w-3" />
+      {text}
+    </Badge>
   );
 }

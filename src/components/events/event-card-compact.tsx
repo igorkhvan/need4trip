@@ -6,10 +6,9 @@
  * 
  * Показывает:
  * - Заголовок события
- * - EventAccessBadge (тип доступа)
+ * - EventAccessBadge (тип доступа) — унифицированный размер
  * - Категория
- * - Дата, место, участники
- * - Описание (3 строки)
+ * - Дата, место (кликабельная ссылка с NavigationChooser), участники
  * - Статус регистрации в футере
  * - Кнопка "Подробнее"
  */
@@ -28,6 +27,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EventAccessBadge } from "@/components/events/event-access-badge";
+import { NavigationChooser } from "@/components/events/locations/NavigationChooser";
 import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort } from "@/lib/utils/dates";
@@ -46,13 +46,22 @@ export function EventCardCompact({ event }: EventCardCompactProps) {
   const isClosedManually = event.registrationManuallyClosed;
   const isRegistrationClosed = isPastEvent || isClosedManually;
   
+  // Проверяем наличие координат у первой локации
+  const firstLocation = event.locations[0];
+  const hasCoordinates = 
+    firstLocation && 
+    firstLocation.latitude !== null && 
+    firstLocation.latitude !== undefined &&
+    firstLocation.longitude !== null && 
+    firstLocation.longitude !== undefined;
+  
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-2 flex-1">
             <span className="line-clamp-2">{event.title}</span>
-            <EventAccessBadge event={event} variant="compact" />
+            <EventAccessBadge event={event} variant="compact" size="sm" />
           </div>
           {event.category && (
             <Badge variant={getCategoryBadgeVariant(event.category)} size="sm" className="self-start sm:self-auto sm:shrink-0">
@@ -62,17 +71,30 @@ export function EventCardCompact({ event }: EventCardCompactProps) {
         </CardTitle>
         <CardDescription className="flex flex-wrap gap-3 text-sm">
           <span>🗓 {formatDateTimeShort(event.dateTime)}</span>
-          <span>📍 {event.locations[0]?.title || "Не указано"}</span>
+          
+          {/* Локация как кликабельная ссылка с NavigationChooser */}
+          {hasCoordinates ? (
+            <NavigationChooser
+              lat={firstLocation.latitude!}
+              lng={firstLocation.longitude!}
+              trigger={
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors hover:underline"
+                >
+                  📍 {firstLocation.title}
+                </button>
+              }
+            />
+          ) : (
+            <span>📍 {firstLocation?.title || "Не указано"}</span>
+          )}
+          
           {event.maxParticipants && (
             <span>👥 До {event.maxParticipants} экипажей</span>
           )}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <p className="line-clamp-3 text-sm text-muted-foreground">
-          {event.description}
-        </p>
-      </CardContent>
       <CardFooter className="flex items-center justify-between">
         {isRegistrationClosed ? (
           <Badge variant="registration-closed" size="sm" className="flex items-center gap-1.5">
