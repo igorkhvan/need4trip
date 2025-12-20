@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
-import { useRouter } from "next/navigation";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 interface HeaderUserSectionProps {
@@ -22,6 +22,7 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
   const [menuOpen, setMenuOpen] = useState(false);
   const { openModal } = useAuthModalContext();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Sync with auth state changes
   useEffect(() => {
@@ -83,7 +84,7 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
       reason: "REQUIRED",
       title: "Войти в Need4Trip",
       description: "Чтобы продолжить, войдите через Telegram.",
-      afterLoginRedirectTo: "/profile",
+      afterLoginRedirectTo: pathname || "/",
     });
   };
 

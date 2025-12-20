@@ -99,7 +99,7 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
       reason: "REQUIRED",
       title: "Войти в Need4Trip",
       description: "Чтобы продолжить, войдите через Telegram.",
-      afterLoginRedirectTo: "/profile",
+      afterLoginRedirectTo: pathname || "/",
     });
   };
 
