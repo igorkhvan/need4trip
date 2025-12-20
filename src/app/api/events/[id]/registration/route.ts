@@ -61,8 +61,9 @@ export async function PATCH(request: Request, { params }: Params) {
       throw new NotFoundError("Event not found");
     }
     
-    // Revalidate event page
-    revalidatePath(`/events/${id}`);
+    // Revalidate pages that display this event
+    revalidatePath(`/events/${id}`);  // Event details page
+    revalidatePath("/events");         // Events list page
     
     return respondJSON({ 
       success: true,
