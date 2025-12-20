@@ -73,13 +73,13 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
 
   return (
     <div className="flex items-center gap-3">
-      {currentUser ? (
-        /* User Profile Dropdown (Desktop only) */
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {currentUser ? (
+            /* User Avatar */
             <button
               className="flex items-center justify-center transition-all hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 rounded-full"
-              title={currentUser.name || "Профиль"}
+              title={currentUser.name || "Меню"}
             >
               <Avatar className="h-10 w-10">
                 <AvatarImage
@@ -93,29 +93,44 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
                 </AvatarFallback>
               </Avatar>
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="p-0">
+          ) : (
+            /* Guest User Icon */
+            <button
+              className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-[#F9FAFB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
+              title="Меню"
+            >
+              <User className="h-5 w-5 text-[#111827]" />
+            </button>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="p-0">
+          {currentUser ? (
             <UserMenuItems
               currentUser={currentUser}
               onLogout={handleLogout}
               variant="dropdown"
             />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : (
-        /* User Icon (opens login modal) */
-        <button
-          onClick={() => openModal({
-            reason: "REQUIRED",
-            title: "Войти в Need4Trip",
-            description: "Чтобы продолжить, войдите через Telegram.",
-            afterLoginRedirectTo: "/profile",
-          })}
-          className="flex h-10 w-10 items-center justify-center rounded-xl transition-all hover:bg-[#F9FAFB]"
-        >
-          <User className="h-5 w-5 text-[#111827]" />
-        </button>
-      )}
+          ) : (
+            /* Guest Menu */
+            <div className="w-56 py-1">
+              <button
+                onClick={() => {
+                  openModal({
+                    reason: "REQUIRED",
+                    title: "Войти в Need4Trip",
+                    description: "Чтобы продолжить, войдите через Telegram.",
+                    afterLoginRedirectTo: "/profile",
+                  });
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+              >
+                <User className="h-4 w-4 text-[var(--color-text-muted)]" />
+                <span>Войти</span>
+              </button>
+            </div>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
