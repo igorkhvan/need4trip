@@ -4,22 +4,32 @@
  * Централизованная логика выхода из системы.
  * Обрабатывает API вызов, events, и опциональный redirect.
  * 
+ * Автоматическое определение редиректа:
+ * - Если текущая страница защищённая → редирект на "/"
+ * - Если текущая страница публичная → остаться на текущей странице
+ * 
  * @example
  * ```tsx
  * const logout = useLogout({ 
  *   onBefore: () => setMenuOpen(false),
- *   redirect: "/"  // optional, defaults to "/"
  * });
  * 
- * await logout();
+ * await logout(); // Автоматически определит куда редиректить
+ * ```
+ * 
+ * @example
+ * ```tsx
+ * // Явно указать редирект
+ * const logout = useLogout({ redirect: "/pricing" });
  * ```
  */
 
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { dispatchAuthChanged } from "@/lib/events/auth-events";
+import { getLogoutRedirect } from "@/lib/config/protected-routes";
 
 export interface UseLogoutOptions {
   /**
@@ -36,9 +46,14 @@ export interface UseLogoutOptions {
   
   /**
    * URL для редиректа после logout
-   * @default "/"
+   * 
+   * Автоматическое определение (если не указан):
+   * - Защищённая страница → редирект на "/"
+   * - Публичная страница → остаться на текущей (false)
+   * 
+   * @default undefined (автоматическое определение)
    */
-  redirect?: string | false;  // false = no redirect
+  redirect?: string | false;
   
   /**
    * Использовать React.useTransition для редиректа
@@ -49,10 +64,11 @@ export interface UseLogoutOptions {
 
 export function useLogout(options: UseLogoutOptions = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const { 
     onBefore, 
     onSuccess, 
-    redirect = "/",
+    redirect = undefined, // Автоматическое определение
     useTransition = false 
   } = options;
 
@@ -70,17 +86,22 @@ export function useLogout(options: UseLogoutOptions = {}) {
       // Post-logout callback
       onSuccess?.();
       
+      // Определяем redirect: явно указанный ИЛИ автоматический
+      const targetRedirect = redirect !== undefined 
+        ? redirect 
+        : getLogoutRedirect(pathname);
+      
       // Redirect if needed
-      if (redirect) {
+      if (targetRedirect) {
         if (useTransition) {
           // React 18 transition для плавности
           const { startTransition } = await import("react");
           startTransition(() => {
-            router.push(redirect);
+            router.push(targetRedirect);
             router.refresh();
           });
         } else {
-          router.push(redirect);
+          router.push(targetRedirect);
           router.refresh();
         }
       } else {
@@ -92,5 +113,5 @@ export function useLogout(options: UseLogoutOptions = {}) {
       // Не пробрасываем ошибку дальше, чтобы не ломать UX
       // Компонент может добавить свою error handling через try/catch
     }
-  }, [router, onBefore, onSuccess, redirect, useTransition]);
+  }, [router, pathname, onBefore, onSuccess, redirect, useTransition]);
 }
