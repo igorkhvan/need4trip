@@ -23,6 +23,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { useSimpleOptimistic } from "@/hooks/use-optimistic-state";
+import { useLogout } from "@/lib/hooks/use-logout";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { ProfileContentSkeleton } from "@/components/ui/skeletons";
 import { NotificationSettingsForm } from "@/components/profile/notification-settings-form";
@@ -72,6 +73,10 @@ interface Stats {
 export function ProfilePageClient() {
   const router = useRouter();
   const { isPending, showLoading, startTransition } = useLoadingTransition(300);
+  
+  // Centralized logout hook with useTransition
+  const logout = useLogout({ useTransition: true });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'settings'>('overview');
   const [initialLoad, setInitialLoad] = useState(true);
@@ -296,23 +301,6 @@ export function ProfilePageClient() {
     setProfileFieldErrors({});
     // Reload profile data to reset changes
     loadProfileData();
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      
-      // Dispatch auth change event
-      window.dispatchEvent(new Event("auth-changed"));
-      
-      // Redirect to home
-      startTransition(() => {
-        router.push("/");
-        router.refresh();
-      });
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
   };
 
   const handleAddCar = async () => {
@@ -603,7 +591,7 @@ export function ProfilePageClient() {
             {/* Top Right Actions */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 disabled={isPending}
                 className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Выйти из системы"

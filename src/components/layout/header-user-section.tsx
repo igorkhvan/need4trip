@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
+import { useLogout } from "@/lib/hooks/use-logout";
+import { onAuthChanged } from "@/lib/events/auth-events";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 interface HeaderUserSectionProps {
@@ -21,8 +23,12 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
   const [menuOpen, setMenuOpen] = useState(false);
   const { openModal } = useAuthModalContext();
-  const router = useRouter();
   const pathname = usePathname();
+
+  // Centralized logout hook
+  const logout = useLogout({ 
+    onBefore: () => setMenuOpen(false) 
+  });
 
   // Sync with auth state changes
   useEffect(() => {
@@ -50,31 +56,12 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
     }
 
     // Listen for auth changes (e.g., after login)
-    const handleAuthChange = () => {
+    const cleanup = onAuthChanged(() => {
       checkAuth();
-    };
+    });
 
-    window.addEventListener("auth-changed", handleAuthChange);
-    return () => window.removeEventListener("auth-changed", handleAuthChange);
+    return cleanup;
   }, [initialUser]);
-
-  const handleLogout = async () => {
-    try {
-      // Close menu immediately
-      setMenuOpen(false);
-      
-      await fetch("/api/auth/logout", { method: "POST" });
-      
-      // Dispatch auth change event
-      window.dispatchEvent(new Event("auth-changed"));
-      
-      // Redirect to home
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
-  };
 
   const handleLoginClick = () => {
     // Close menu before opening login modal
@@ -124,7 +111,7 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
           {currentUser ? (
             <UserMenuItems
               currentUser={currentUser}
-              onLogout={handleLogout}
+              onLogout={logout}
               onItemClick={() => setMenuOpen(false)}
               variant="dropdown"
             />

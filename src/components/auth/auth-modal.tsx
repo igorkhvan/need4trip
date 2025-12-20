@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { dispatchAuthChanged } from "@/lib/events/auth-events";
 
 export type AuthModalReason = "REQUIRED" | "PAYWALL" | "REGISTER_ONLY" | "OWNER_ONLY";
 
@@ -136,7 +137,7 @@ export function AuthModal({
         await new Promise(resolve => setTimeout(resolve, 100));
         
         // Dispatch auth change event for components listening
-        window.dispatchEvent(new Event("auth-changed"));
+        dispatchAuthChanged();
         
         // Refresh to get new currentUser (ОДИН раз, но после того как cookie применен)
         router.refresh();

@@ -17,7 +17,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import {
@@ -30,6 +30,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
+import { useLogout } from "@/lib/hooks/use-logout";
+import { onAuthChanged } from "@/lib/events/auth-events";
 import { cn } from "@/lib/utils";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
@@ -47,8 +49,12 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
   const [open, setOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
   const pathname = usePathname();
-  const router = useRouter();
   const { openModal } = useAuthModalContext();
+
+  // Centralized logout hook
+  const logout = useLogout({ 
+    onBefore: () => setOpen(false) 
+  });
 
   // Sync with auth state changes
   useEffect(() => {
@@ -69,29 +75,12 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
     };
 
     // Listen for auth changes
-    const handleAuthChange = () => {
+    const cleanup = onAuthChanged(() => {
       checkAuth();
-    };
+    });
 
-    window.addEventListener("auth-changed", handleAuthChange);
-    return () => window.removeEventListener("auth-changed", handleAuthChange);
+    return cleanup;
   }, []);
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      
-      // Dispatch auth change event
-      window.dispatchEvent(new Event("auth-changed"));
-      
-      // Close menu and redirect
-      setOpen(false);
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
-  };
 
   const handleLoginClick = () => {
     setOpen(false);
@@ -149,7 +138,7 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
         {currentUser ? (
           <UserMenuItems
             currentUser={currentUser}
-            onLogout={handleLogout}
+            onLogout={logout}
             onItemClick={() => setOpen(false)}
             variant="sheet"
           />
