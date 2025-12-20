@@ -131,10 +131,14 @@ export function AuthModal({
         const container = containerRef.current;
         if (container) container.innerHTML = "";
         
+        // ВАЖНО: Подождать немного чтобы браузер применил Set-Cookie header
+        // Cookie устанавливается в ответе от /api/auth/telegram
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Dispatch auth change event for components listening
         window.dispatchEvent(new Event("auth-changed"));
         
-        // Refresh to get new currentUser
+        // Refresh to get new currentUser (ОДИН раз, но после того как cookie применен)
         router.refresh();
         
         // Call success callback
@@ -142,7 +146,7 @@ export function AuthModal({
           setTimeout(() => onSuccess(), 100);
         }
         
-        // Redirect if needed
+        // Redirect if needed (но НЕ на ту же страницу)
         if (afterLoginRedirectTo) {
           setTimeout(() => router.push(afterLoginRedirectTo), 200);
         }
