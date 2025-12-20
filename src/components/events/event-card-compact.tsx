@@ -8,7 +8,7 @@
  * - Заголовок события
  * - EventAccessBadge (тип доступа) — унифицированный размер
  * - Категория
- * - Дата, место (кликабельная ссылка с NavigationChooser), участники
+ * - Дата и количество участников
  * - Статус регистрации в футере
  * - Кнопка "Подробнее"
  */
@@ -27,7 +27,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EventAccessBadge } from "@/components/events/event-access-badge";
-import { NavigationChooser } from "@/components/events/locations/NavigationChooser";
 import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort } from "@/lib/utils/dates";
@@ -46,15 +45,6 @@ export function EventCardCompact({ event }: EventCardCompactProps) {
   const isClosedManually = event.registrationManuallyClosed;
   const isRegistrationClosed = isPastEvent || isClosedManually;
   
-  // Проверяем наличие координат у первой локации
-  const firstLocation = event.locations[0];
-  const hasCoordinates = 
-    firstLocation && 
-    firstLocation.latitude !== null && 
-    firstLocation.latitude !== undefined &&
-    firstLocation.longitude !== null && 
-    firstLocation.longitude !== undefined;
-  
   return (
     <Card className="h-full">
       <CardHeader>
@@ -71,24 +61,6 @@ export function EventCardCompact({ event }: EventCardCompactProps) {
         </CardTitle>
         <CardDescription className="flex flex-wrap gap-3 text-sm">
           <span>🗓 {formatDateTimeShort(event.dateTime)}</span>
-          
-          {/* Локация как кликабельная ссылка с NavigationChooser */}
-          {hasCoordinates ? (
-            <NavigationChooser
-              lat={firstLocation.latitude!}
-              lng={firstLocation.longitude!}
-              trigger={
-                <button
-                  type="button"
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors hover:underline"
-                >
-                  📍 {firstLocation.title}
-                </button>
-              }
-            />
-          ) : (
-            <span>📍 {firstLocation?.title || "Не указано"}</span>
-          )}
           
           {event.maxParticipants && (
             <span>👥 До {event.maxParticipants} экипажей</span>
