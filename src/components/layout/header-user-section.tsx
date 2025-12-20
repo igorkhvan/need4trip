@@ -19,6 +19,7 @@ interface HeaderUserSectionProps {
 
 export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectionProps) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { openModal } = useAuthModalContext();
   const router = useRouter();
 
@@ -58,6 +59,9 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
 
   const handleLogout = async () => {
     try {
+      // Close menu immediately
+      setMenuOpen(false);
+      
       await fetch("/api/auth/logout", { method: "POST" });
       
       // Dispatch auth change event
@@ -71,9 +75,21 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
     }
   };
 
+  const handleLoginClick = () => {
+    // Close menu before opening login modal
+    setMenuOpen(false);
+    
+    openModal({
+      reason: "REQUIRED",
+      title: "Войти в Need4Trip",
+      description: "Чтобы продолжить, войдите через Telegram.",
+      afterLoginRedirectTo: "/profile",
+    });
+  };
+
   return (
     <div className="flex items-center gap-3">
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           {currentUser ? (
             /* User Avatar */
@@ -108,20 +124,14 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
             <UserMenuItems
               currentUser={currentUser}
               onLogout={handleLogout}
+              onItemClick={() => setMenuOpen(false)}
               variant="dropdown"
             />
           ) : (
             /* Guest Menu */
             <div className="w-56 py-1">
               <button
-                onClick={() => {
-                  openModal({
-                    reason: "REQUIRED",
-                    title: "Войти в Need4Trip",
-                    description: "Чтобы продолжить, войдите через Telegram.",
-                    afterLoginRedirectTo: "/profile",
-                  });
-                }}
+                onClick={handleLoginClick}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
               >
                 <User className="h-4 w-4 text-[var(--color-text-muted)]" />

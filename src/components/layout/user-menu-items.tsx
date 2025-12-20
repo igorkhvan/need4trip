@@ -33,11 +33,13 @@ export function UserMenuItems({
   const router = useRouter();
 
   const handleProfileClick = () => {
+    // Close menu first
     onItemClick?.();
     router.push("/profile");
   };
 
   const handleLogoutClick = async () => {
+    // Close menu first
     onItemClick?.();
     await onLogout();
   };
