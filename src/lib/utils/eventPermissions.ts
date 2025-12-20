@@ -24,6 +24,12 @@ export type RegistrationBlockReason =
   | 'club_members_only'
   | 'already_registered';
 
+export type RegistrationClosedReason = 
+  | 'past_event'
+  | 'manually_closed'
+  | 'limit_reached'
+  | null;
+
 export interface RegistrationEligibility {
   canRegister: boolean;
   reason?: RegistrationBlockReason;
@@ -156,20 +162,57 @@ export function isRegistrationClosed(
   // Owner sees registration as open even if manually closed
   const isOwner = currentUser?.id === event.createdByUserId;
   
-  // Past event
+  // Past event (PRIORITY 1 - prevails over all)
   if (new Date(event.dateTime) <= new Date()) {
     return true;
   }
   
-  // Manually closed (owner bypass)
+  // Manually closed (PRIORITY 2 - owner bypass)
   if (event.registrationManuallyClosed && !isOwner) {
     return true;
   }
   
-  // Limit reached
+  // Limit reached (PRIORITY 3)
   if (event.maxParticipants && participantsCount !== undefined) {
     return participantsCount >= event.maxParticipants;
   }
   
   return false;
+}
+
+/**
+ * Get the reason why registration is closed
+ * 
+ * Priority order (first match wins):
+ * 1. Past event
+ * 2. Manually closed
+ * 3. Limit reached
+ * 
+ * @returns RegistrationClosedReason or null if open
+ */
+export function getRegistrationClosedReason(
+  event: Event,
+  currentUser: CurrentUser | null,
+  participantsCount?: number
+): RegistrationClosedReason {
+  const isOwner = currentUser?.id === event.createdByUserId;
+  
+  // PRIORITY 1: Past event (prevails over all)
+  if (new Date(event.dateTime) <= new Date()) {
+    return 'past_event';
+  }
+  
+  // PRIORITY 2: Manually closed (owner bypass)
+  if (event.registrationManuallyClosed && !isOwner) {
+    return 'manually_closed';
+  }
+  
+  // PRIORITY 3: Limit reached
+  if (event.maxParticipants && participantsCount !== undefined) {
+    if (participantsCount >= event.maxParticipants) {
+      return 'limit_reached';
+    }
+  }
+  
+  return null;
 }

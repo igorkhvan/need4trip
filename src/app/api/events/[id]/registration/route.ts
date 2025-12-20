@@ -43,6 +43,15 @@ export async function PATCH(request: Request, { params }: Params) {
       throw new AuthError("Недостаточно прав для управления регистрацией", undefined, 403);
     }
     
+    // ✅ SECURITY: Prevent toggling registration for past events
+    if (new Date(event.date_time) <= new Date()) {
+      throw new AuthError(
+        "Нельзя изменить регистрацию для прошедших событий",
+        undefined,
+        400
+      );
+    }
+    
     // Update registration status
     const updated = await updateEventRecord(id, {
       registrationManuallyClosed: parsed.registrationManuallyClosed,

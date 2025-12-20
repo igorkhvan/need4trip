@@ -4,15 +4,15 @@
  * Event Danger Zone Component
  * 
  * Owner-only section for critical event management actions:
- * - Toggle registration (manually close/open)
  * - Delete event
  * 
  * Only visible to event owner.
+ * Registration control moved to EventRegistrationControl component.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Lock, Unlock } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,44 +27,9 @@ interface EventDangerZoneProps {
 
 export function EventDangerZone({ event, isOwner }: EventDangerZoneProps) {
   const router = useRouter();
-  const [isTogglingRegistration, setIsTogglingRegistration] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
   
   if (!isOwner) return null;
-  
-  const handleToggleRegistration = async () => {
-    setIsTogglingRegistration(true);
-    try {
-      const res = await fetch(`/api/events/${event.id}/registration`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          registrationManuallyClosed: !event.registrationManuallyClosed
-        })
-      });
-      
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message || 'Не удалось изменить статус регистрации');
-      }
-      
-      toast({
-        title: event.registrationManuallyClosed ? 'Регистрация открыта' : 'Регистрация закрыта',
-        description: event.registrationManuallyClosed
-          ? 'Участники снова могут регистрироваться на событие'
-          : 'Только вы сможете добавлять участников',
-      });
-      
-      router.refresh();
-    } catch (err) {
-      toast({ 
-        title: 'Ошибка', 
-        description: err instanceof Error ? err.message : 'Произошла ошибка',
-      });
-    } finally {
-      setIsTogglingRegistration(false);
-    }
-  };
   
   const handleDeleteEvent = async () => {
     setIsDeletingEvent(true);
@@ -104,40 +69,7 @@ export function EventDangerZone({ event, isOwner }: EventDangerZoneProps) {
           Необратимые действия. Используйте с осторожностью.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Toggle Registration */}
-        <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex-1">
-            <p className="font-medium text-[var(--color-text)]">
-              {event.registrationManuallyClosed ? 'Открыть регистрацию' : 'Закрыть регистрацию'}
-            </p>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {event.registrationManuallyClosed 
-                ? 'Участники снова смогут регистрироваться на событие'
-                : 'Только вы сможете добавлять участников (даже если дата не прошла)'
-              }
-            </p>
-          </div>
-          <Button
-            variant={event.registrationManuallyClosed ? 'default' : 'destructive'}
-            onClick={handleToggleRegistration}
-            disabled={isTogglingRegistration}
-            className="w-full sm:w-auto"
-          >
-            {event.registrationManuallyClosed ? (
-              <>
-                <Unlock className="icon-sm mr-2" />
-                Открыть
-              </>
-            ) : (
-              <>
-                <Lock className="icon-sm mr-2" />
-                Закрыть
-              </>
-            )}
-          </Button>
-        </div>
-        
+      <CardContent>
         {/* Delete Event */}
         <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-danger)] bg-white p-4">
           <div>

@@ -14,14 +14,17 @@ import { ParticipantModal } from "@/components/events/participant-modal";
 import { EventLocationsCard } from "@/components/events/EventLocationsCard";
 import { LocationHeaderItem } from "@/components/events/LocationHeaderItem";
 import { MobileSectionNav } from "@/components/ui/mobile-section-nav";
+import { EventRegistrationControl } from "@/components/events/event-registration-control";
 import { EventDangerZone } from "@/components/events/event-danger-zone";
+import { EventAccessBadge } from "@/components/events/event-access-badge";
+import { LockedIndicator } from "@/components/ui/locked-indicator";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTime } from "@/lib/utils/dates";
-import { isRegistrationClosed } from "@/lib/utils/eventPermissions";
+import { isRegistrationClosed, getRegistrationClosedReason } from "@/lib/utils/eventPermissions";
 import { EventParticipantsAsync } from "./_components/participants-async";
 import { EventParticipantsSkeleton } from "@/components/ui/skeletons";
 
@@ -98,11 +101,13 @@ export default async function EventDetails({
       : []),
     { id: "event-vehicle", label: "Требования к авто" },
     ...(ownerUser ? [{ id: "event-organizer", label: "Организатор" }] : []),
+    ...(isOwner ? [{ id: "event-registration-control", label: "Управление регистрацией" }] : []),
     ...(isOwner ? [{ id: "event-danger-zone", label: "Опасная зона" }] : []),
   ];
 
   // ✅ USE CENTRALIZED LOGIC for registration status
   const registrationClosedToUser = isRegistrationClosed(event, currentUser, event.participantsCount);
+  const closedReason = getRegistrationClosedReason(event, currentUser, event.participantsCount);
 
   return (
     <>
@@ -114,13 +119,24 @@ export default async function EventDetails({
       {/* Header Section */}
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="flex-1">
-          {/* Title */}
-          <h1 className="mb-4 text-3xl font-bold leading-tight text-[var(--color-text)] md:text-4xl">
-            {event.title}
-          </h1>
+          {/* Title with locked indicator */}
+          <div className="mb-4 flex flex-col gap-2">
+            <h1 className="text-3xl font-bold leading-tight text-[var(--color-text)] md:text-4xl">
+              {event.title}
+            </h1>
+            {closedReason === 'manually_closed' && (
+              <LockedIndicator 
+                message="Регистрация закрыта организатором" 
+                size="md"
+              />
+            )}
+          </div>
 
           {/* Badges */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
+            {/* Access badge FIRST */}
+            <EventAccessBadge event={event} variant="full" />
+            
             {categoryLabel && event.category ? (
               <Badge variant={categoryBadgeVariant} size="md">
                 {categoryLabel}

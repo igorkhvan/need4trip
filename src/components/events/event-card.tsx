@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EventAccessBadge } from "@/components/events/event-access-badge";
 import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort } from "@/lib/utils/dates";
@@ -27,7 +28,10 @@ export function EventCard({ event }: EventCardProps) {
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <span className="line-clamp-2 flex-1">{event.title}</span>
+          <div className="flex flex-col gap-2 flex-1">
+            <span className="line-clamp-2">{event.title}</span>
+            <EventAccessBadge event={event} variant="compact" />
+          </div>
           {event.category && (
             <Badge variant={getCategoryBadgeVariant(event.category)} size="sm" className="self-start sm:self-auto sm:shrink-0">
               {getCategoryLabel(event.category)}
