@@ -194,6 +194,13 @@ function requiresAuth(pathname: string, method: string): boolean {
     }
   }
   
+  // ✅ EXCEPTION: Participants routes are NOT protected (guest access)
+  // /api/events/[id]/participants (POST) - guest registration
+  // /api/events/[id]/participants/[participantId] (PATCH, DELETE) - guest management
+  if (pathname.includes('/participants')) {
+    return false;
+  }
+  
   // Check protected routes
   for (const route of PROTECTED_ROUTES) {
     if (typeof route === 'string') {
