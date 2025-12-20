@@ -45,7 +45,7 @@ export async function PATCH(request: Request, { params }: Params) {
     
     // Update registration status
     const updated = await updateEventRecord(id, {
-      registration_manually_closed: parsed.registrationManuallyClosed,
+      registrationManuallyClosed: parsed.registrationManuallyClosed,
     });
     
     if (!updated) {

@@ -73,6 +73,7 @@ export type EventFormValues = {
   isPaid: boolean;
   price: string;
   currencyCode: string | null; // ISO 4217 code
+  allowAnonymousRegistration: boolean; // NEW
 };
 
 export type EventFormProps = {

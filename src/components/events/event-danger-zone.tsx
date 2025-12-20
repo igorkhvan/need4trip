@@ -60,7 +60,6 @@ export function EventDangerZone({ event, isOwner }: EventDangerZoneProps) {
       toast({ 
         title: 'Ошибка', 
         description: err instanceof Error ? err.message : 'Произошла ошибка',
-        variant: 'destructive'
       });
     } finally {
       setIsTogglingRegistration(false);
@@ -89,7 +88,6 @@ export function EventDangerZone({ event, isOwner }: EventDangerZoneProps) {
       toast({ 
         title: 'Ошибка', 
         description: err instanceof Error ? err.message : 'Произошла ошибка',
-        variant: 'destructive'
       });
       setIsDeletingEvent(false);
     }
@@ -162,19 +160,7 @@ export function EventDangerZone({ event, isOwner }: EventDangerZoneProps) {
               </Button>
             }
             title="Удалить событие навсегда?"
-            description={
-              <>
-                <p className="mb-2">Будет удалено:</p>
-                <ul className="list-inside list-disc space-y-1 text-sm">
-                  <li>Событие «{event.title}»</li>
-                  <li>Все регистрации участников ({event.participantsCount || 0})</li>
-                  <li>Все дополнительные данные</li>
-                </ul>
-                <p className="mt-3 font-semibold text-[var(--color-danger)]">
-                  Это действие нельзя отменить!
-                </p>
-              </>
-            }
+            description={`Будет удалено событие «${event.title}», все регистрации участников (${event.participantsCount || 0}) и все дополнительные данные. Это действие нельзя отменить!`}
             confirmText="Удалить навсегда"
             cancelText="Отмена"
             onConfirm={handleDeleteEvent}
