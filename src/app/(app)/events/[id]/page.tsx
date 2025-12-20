@@ -146,12 +146,16 @@ export default async function EventDetails({
             <Badge variant={event.isPaid ? "paid" : "free"} size="md">
               {event.isPaid ? "Платное" : "Бесплатное"}
             </Badge>
-            {(registrationClosedToUser || isPastEvent) && (
+            
+            {/* Show "Регистрация закрыта" badge */}
+            {(isPastEvent || event.registrationManuallyClosed || isFull) && (
               <Badge variant="registration-closed" size="md" className="flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5" />
                 Регистрация закрыта
               </Badge>
             )}
+            
+            {/* Warning: Limit reached (only if not manually closed and not past) */}
             {isFull && !isPastEvent && !event.registrationManuallyClosed && (
               <Badge variant="warning" size="md">
                 Лимит достигнут
