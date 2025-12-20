@@ -132,6 +132,8 @@ export interface Event {
   participantsCount?: number;
   ownerName?: string | null;
   ownerHandle?: string | null;
+  allowAnonymousRegistration: boolean; // NEW: Allow guests to register
+  registrationManuallyClosed: boolean; // NEW: Owner manually closed registration
 }
 
 export type DomainEvent = Event;
@@ -170,6 +172,7 @@ export const eventCreateSchema = z
     isPaid: z.boolean().default(false),
     price: z.number().finite().nonnegative().nullable().optional(),
     currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
+    allowAnonymousRegistration: z.boolean().default(true), // NEW: Allow guests to register
   })
   .superRefine((val, ctx) => {
     if (val.dateTime <= date5MinutesAgo()) {
@@ -198,11 +201,13 @@ const eventUpdateBaseSchema = z.object({
   vehicleTypeRequirement: vehicleTypeRequirementSchema.optional(),
   allowedBrandIds: z.array(z.string().uuid()).optional(),
   rules: z.string().trim().max(10000).optional().nullable(),
-    isClubEvent: z.boolean().optional(),
-    clubId: z.string().uuid().nullable().optional(),
-    isPaid: z.boolean().optional(),
-    price: z.number().finite().nonnegative().nullable().optional(),
-    currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
+  isClubEvent: z.boolean().optional(),
+  clubId: z.string().uuid().nullable().optional(),
+  isPaid: z.boolean().optional(),
+  price: z.number().finite().nonnegative().nullable().optional(),
+  currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
+  allowAnonymousRegistration: z.boolean().optional(), // NEW: Allow guests to register
+  registrationManuallyClosed: z.boolean().optional(), // NEW: Owner manually closed registration
 });
 
 // Note: Валидация dateTime перенесена в updateEvent сервис,
