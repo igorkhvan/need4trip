@@ -59,10 +59,12 @@ const PROTECTED_ROUTES = [
   // Clubs (write operations)
   { path: '/api/clubs', methods: ['POST'] },
   { path: '/api/clubs/', methods: ['PATCH', 'DELETE'] }, // /api/clubs/[id]
+  '/api/clubs/[id]/members', // All member management operations (POST, PATCH, DELETE)
+  '/api/clubs/[id]/export', // Export requires member authentication
   
   // Events (write operations only, GET is public)
   { path: '/api/events', methods: ['POST'] },
-  { path: '/api/events/', methods: ['PUT'] }, // /api/events/[id] - PUT only, PATCH/DELETE handled separately
+  { path: '/api/events/', methods: ['PUT', 'PATCH', 'DELETE'] }, // /api/events/[id] - All write operations
   
   // NOTE: Participants routes (/api/events/[id]/participants) are NOT protected
   // They allow guest registrations and guest management

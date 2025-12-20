@@ -1,0 +1,375 @@
+# API Security Rules (MANDATORY)
+
+## **🔒 Core Principle: Secure by Default**
+
+**ALL API endpoints MUST be protected by default unless explicitly marked as public.**
+
+When creating or modifying ANY API endpoint, you MUST follow this checklist:
+
+---
+
+## **📋 MANDATORY Security Checklist**
+
+### **Before Writing ANY API Route Handler:**
+
+1. **❓ Is this endpoint public?**
+   - ✅ **YES** → Document why in route file comments + verify in middleware
+   - ❌ **NO** → Continue to step 2
+
+2. **🔐 What authentication is required?**
+   - User authentication (JWT) → Add to middleware `PROTECTED_ROUTES`
+   - Guest allowed → Document guest handling in route file
+   - Admin only → Use `ADMIN_ROUTES` in middleware
+   - Cron only → Use `CRON_ROUTES` in middleware
+
+3. **⚙️ What HTTP methods are used?**
+   - GET only → May be public (verify business logic)
+   - POST/PUT/PATCH/DELETE → **ALWAYS require auth** unless guest registration
+
+4. **🎯 Update Middleware Configuration**
+   - Add path to `PROTECTED_ROUTES` in `src/middleware.ts`
+   - Specify methods if not all methods need protection
+   - **NEVER assume "it will work" - ALWAYS verify middleware config**
+
+5. **✅ Verify Route Handler**
+   - Use `getCurrentUserFromMiddleware(request)` for auth endpoints
+   - Check `if (!currentUser)` and throw `UnauthorizedError`
+   - Verify ownership/permissions for resource operations
+   - Add authorization logic (owner, admin, member checks)
+
+6. **📝 Document in Route File**
+   - Add comment explaining auth requirements
+   - Document guest handling if applicable
+   - Explain authorization rules
+
+---
+
+## **🚨 CRITICAL RULES (Never Violate)**
+
+### **Rule 1: Middleware First, Handler Second**
+
+```typescript
+// ❌ WRONG - Only handler check, middleware not configured
+export async function DELETE(request: Request) {
+  const user = await getCurrentUserFromMiddleware(request);
+  if (!user) throw new UnauthorizedError();
+  // ... delete logic
+}
+// Middleware: No protection configured → Always 401
+
+// ✅ CORRECT - Middleware + handler
+// Middleware: Add to PROTECTED_ROUTES
+{ path: '/api/events/', methods: ['DELETE'] }
+
+export async function DELETE(request: Request) {
+  const user = await getCurrentUserFromMiddleware(request);
+  if (!user) throw new UnauthorizedError();
+  // ... delete logic
+}
+```
+
+### **Rule 2: Path Matching Edge Cases**
+
+```typescript
+// ❌ WRONG - Does NOT protect subpaths
+{ path: '/api/clubs/', methods: ['POST'] } // Only /api/clubs/[id], not /api/clubs/[id]/members
+
+// ✅ CORRECT - Explicit subpath protection
+'/api/clubs/[id]/members', // Protects all methods on this path
+```
+
+### **Rule 3: Write Operations = Auth Required (Default)**
+
+```typescript
+// ❌ WRONG - Unprotected write operation
+export async function POST(request: Request) {
+  // No auth check - anyone can create!
+}
+
+// ✅ CORRECT - All writes protected
+const user = await getCurrentUserFromMiddleware(request);
+if (!user) throw new UnauthorizedError();
+```
+
+### **Rule 4: Guest Operations = Explicit Documentation**
+
+```typescript
+// ✅ CORRECT - Guest allowed, documented
+/**
+ * POST /api/events/[id]/participants
+ * 
+ * Auth: Optional (guests allowed via guest_session_id)
+ * 
+ * Guests can register for events without authentication.
+ * Middleware intentionally NOT protecting this endpoint.
+ */
+export async function POST(request: Request) {
+  const user = await getCurrentUserFromMiddleware(request);
+  const guestSessionId = !user ? await getGuestSessionId() : null;
+  // ... both paths handled
+}
+```
+
+---
+
+## **📂 File-Specific Rules**
+
+### **When modifying `src/middleware.ts`:**
+
+1. **Always update BOTH:**
+   - `PROTECTED_ROUTES` array
+   - Route file documentation
+
+2. **Pattern to use:**
+   ```typescript
+   // Simple path (all methods)
+   '/api/profile',
+   
+   // Method-specific (write operations only)
+   { path: '/api/events', methods: ['POST'] },
+   { path: '/api/events/', methods: ['PUT', 'PATCH', 'DELETE'] },
+   
+   // Subpath (all methods)
+   '/api/clubs/[id]/members',
+   ```
+
+3. **Comments must explain:**
+   - What is being protected
+   - Why these methods
+   - Guest handling if applicable
+
+### **When creating new `route.ts` file:**
+
+1. **MANDATORY header comment:**
+   ```typescript
+   /**
+    * [HTTP METHOD] /api/your/path
+    * 
+    * Auth: Required/Optional/Admin/Cron
+    * Permissions: Owner/Admin/Member/Public
+    * Guest Allowed: Yes/No
+    * 
+    * Description: What this endpoint does
+    * 
+    * Security: Why middleware protection is/isn't needed
+    */
+   ```
+
+2. **Import auth helpers:**
+   ```typescript
+   import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+   import { UnauthorizedError, AuthError } from "@/lib/errors";
+   ```
+
+3. **First lines of handler:**
+   ```typescript
+   export async function METHOD(request: Request) {
+     try {
+       // 1. Get user from middleware
+       const user = await getCurrentUserFromMiddleware(request);
+       
+       // 2. Check authentication
+       if (!user) {
+         throw new UnauthorizedError("Authentication required");
+       }
+       
+       // 3. Check authorization (ownership, role, etc.)
+       // ... your logic
+     }
+   }
+   ```
+
+---
+
+## **🔍 How to Verify Protection**
+
+### **Before Committing:**
+
+1. **Check middleware config:**
+   ```bash
+   grep -A5 "PROTECTED_ROUTES" src/middleware.ts
+   ```
+
+2. **Verify route handler:**
+   ```bash
+   grep "getCurrentUserFromMiddleware" src/app/api/your/path/route.ts
+   ```
+
+3. **Test unauthorized access:**
+   - Remove auth_token cookie
+   - Try to call endpoint
+   - Verify 401 response
+
+4. **Check API_SECURITY_AUDIT.md:**
+   - Add your endpoint to the list
+   - Mark protection status
+
+---
+
+## **📚 Reference Files**
+
+- **Middleware Config:** `src/middleware.ts` (lines 46-70)
+- **Auth Helpers:** `src/lib/auth/currentUser.ts`
+- **Security Audit:** `API_SECURITY_AUDIT.md`
+- **Error Types:** `src/lib/errors.ts`
+
+---
+
+## **🎯 Examples**
+
+### **Example 1: New Protected Endpoint**
+
+```typescript
+// 1. Add to middleware
+// File: src/middleware.ts
+const PROTECTED_ROUTES = [
+  // ... existing routes
+  '/api/my-new-feature', // All methods require auth
+];
+
+// 2. Create route with auth
+// File: src/app/api/my-new-feature/route.ts
+/**
+ * POST /api/my-new-feature
+ * 
+ * Auth: Required (JWT)
+ * Permissions: Authenticated users only
+ * Guest Allowed: No
+ */
+export async function POST(request: Request) {
+  const user = await getCurrentUserFromMiddleware(request);
+  
+  if (!user) {
+    throw new UnauthorizedError("Authentication required");
+  }
+  
+  // ... your logic
+}
+```
+
+### **Example 2: Public GET, Protected Writes**
+
+```typescript
+// 1. Add to middleware (method-specific)
+// File: src/middleware.ts
+const PROTECTED_ROUTES = [
+  { path: '/api/resources', methods: ['POST', 'PUT', 'PATCH', 'DELETE'] },
+];
+
+// 2. Create route
+// File: src/app/api/resources/route.ts
+/**
+ * GET /api/resources - Public
+ * POST /api/resources - Auth required
+ */
+
+export async function GET(request: Request) {
+  // Public - no auth check
+  // ... fetch logic
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUserFromMiddleware(request);
+  
+  if (!user) {
+    throw new UnauthorizedError();
+  }
+  
+  // ... create logic
+}
+```
+
+### **Example 3: Guest-Friendly Endpoint**
+
+```typescript
+// 1. Middleware: Intentionally NOT protected
+// Document why in route file
+
+// 2. Create route with dual auth
+// File: src/app/api/events/[id]/participants/route.ts
+/**
+ * POST /api/events/[id]/participants
+ * 
+ * Auth: Optional
+ * Guest Allowed: Yes (via guest_session_id)
+ * 
+ * Middleware Protection: NONE (intentionally public)
+ * Authorization: Handled in service layer (canRegisterForEvent)
+ */
+export async function POST(request: Request) {
+  // Support both authenticated and guest users
+  let user = await getCurrentUserFromMiddleware(request);
+  let guestSessionId: string | null = null;
+  
+  if (!user) {
+    guestSessionId = await getGuestSessionId();
+  }
+  
+  // ... registration logic with both user and guest support
+}
+```
+
+---
+
+## **🚀 Quick Decision Tree**
+
+```
+New API Endpoint?
+│
+├─ Is it GET-only AND public data?
+│  └─ ✅ OK to skip middleware protection
+│      └─ Document "Public endpoint" in route file
+│
+├─ Is it POST/PUT/PATCH/DELETE?
+│  ├─ Guest registration allowed?
+│  │  └─ ✅ Skip middleware, handle both auth + guest in handler
+│  │      └─ Document "Guest allowed" in route file
+│  │
+│  └─ Auth required?
+│      └─ ⚠️ MUST add to middleware PROTECTED_ROUTES
+│          └─ Specify methods: ['POST', 'PUT', 'PATCH', 'DELETE']
+│          └─ Add auth check in handler
+│          └─ Document protection in route file
+│
+└─ Is it Admin/Cron?
+   └─ Add to ADMIN_ROUTES or CRON_ROUTES
+       └─ Use secret-based protection
+```
+
+---
+
+## **⚠️ Common Mistakes to Avoid**
+
+1. ❌ **"I'll add auth later"** → Add it NOW
+2. ❌ **"Handler checks auth, middleware not needed"** → Middleware MUST be configured
+3. ❌ **"It's like other endpoint, should work"** → Verify path matching
+4. ❌ **"Only PUT is protected"** → PATCH and DELETE also need protection
+5. ❌ **"Subpath automatically protected"** → NO, must be explicit
+6. ❌ **"Will test on production"** → Test locally first
+
+---
+
+## **✅ Final Checklist Before Push**
+
+- [ ] Middleware configured for new/modified endpoints
+- [ ] Route handler has auth check
+- [ ] Authorization logic implemented (owner/admin/member)
+- [ ] Route file has security documentation comment
+- [ ] API_SECURITY_AUDIT.md updated
+- [ ] Tested unauthorized access (401)
+- [ ] Tested authorized access (success)
+- [ ] Tested authorization (403 for non-owner)
+
+---
+
+## **📖 TL;DR**
+
+**DEFAULT STANCE: Everything is protected unless proven public.**
+
+1. Add to middleware `PROTECTED_ROUTES`
+2. Check auth in route handler
+3. Document security in comments
+4. Test 401/403 responses
+5. Update security audit
+
+**When in doubt, ask: "What happens if an attacker calls this endpoint?"**
