@@ -135,6 +135,21 @@ export async function registerParticipant(
   }
   const event = mapDbEventToDomain(dbEvent);
 
+  // ✅ USE CENTRALIZED PERMISSION LOGIC
+  const { canRegisterForEvent } = await import("@/lib/utils/eventPermissions");
+  const eligibility = await canRegisterForEvent(
+    event,
+    currentUser,
+    guestSessionId ?? null,
+    eventId
+  );
+
+  if (!eligibility.canRegister) {
+    throw new ConflictError(eligibility.message || 'Регистрация недоступна', {
+      code: eligibility.reason,
+    });
+  }
+
   // For 'restricted' visibility, grant access automatically when user registers
   if (event.visibility === "restricted") {
     if (!currentUser) {
@@ -147,46 +162,15 @@ export async function registerParticipant(
     }
   }
 
-  if (new Date(event.dateTime) <= new Date()) {
-    throw new ConflictError("Event already in the past", { code: "EventInPast" });
-  }
-
-  if (event.maxParticipants) {
-    const currentCount = await countParticipants(eventId);
-    if (currentCount >= event.maxParticipants) {
-      throw new ConflictError("Регистрация закрыта: достигнут лимит участников", {
-        currentCount,
-        maxParticipants: event.maxParticipants,
-        code: "EventFull",
-      });
-    }
-  }
-
   const resolvedUserId = currentUser?.id ?? null;
   const resolvedGuestSessionId = resolvedUserId ? null : (guestSessionId ?? null);
 
-  // Check for duplicate registration
+  // Ensure user exists in database
   if (resolvedUserId) {
     await ensureUserExists(resolvedUserId, currentUser?.name ?? undefined);
-    const existingByUser = await findParticipantByUser(eventId, resolvedUserId);
-    if (existingByUser) {
-      throw new ConflictError("Вы уже зарегистрированы на это событие", {
-        code: "DuplicateRegistration",
-      });
-    }
-  } else if (resolvedGuestSessionId) {
-    // Check if guest with this session is already registered
-    const allParticipants = await listParticipantsRepo(eventId);
-    const existingGuest = allParticipants.find(
-      (p) => p.guest_session_id === resolvedGuestSessionId
-    );
-    if (existingGuest) {
-      throw new ConflictError("Вы уже зарегистрированы на это событие", {
-        code: "DuplicateRegistration",
-      });
-    }
   }
 
+  // Check if leader/tail role is available
   if (parsed.role === "leader" || parsed.role === "tail") {
     const roleCount = await countParticipantsByRole(eventId, parsed.role);
     if (roleCount > 0) {
@@ -366,9 +350,14 @@ export async function deleteParticipant(
   const participant = mapDbParticipantToDomain(dbParticipant);
 
   const isOwner = currentUser?.id === event.createdByUserId;
+  
+  // ✅ FIXED: Check guestSessionId REGARDLESS of currentUser
+  // This allows guests who later logged in to still delete themselves
   const isSelf =
+    // Authenticated user owns the participant record
     (currentUser && participant.userId && participant.userId === currentUser.id) ||
-    (!currentUser && guestSessionId && participant.guestSessionId && participant.guestSessionId === guestSessionId);
+    // OR: Guest session matches (works ALWAYS, even after login!)
+    (guestSessionId && participant.guestSessionId && participant.guestSessionId === guestSessionId);
 
   if (!isOwner && !isSelf) {
     throw new AuthError("Недостаточно прав для удаления регистрации", undefined, 403);

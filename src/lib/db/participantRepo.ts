@@ -141,6 +141,27 @@ export async function findParticipantByUser(
   return data ? (data as DbParticipant) : null;
 }
 
+export async function findParticipantByGuestSession(
+  eventId: string,
+  guestSessionId: string
+): Promise<DbParticipant | null> {
+  ensureClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from(table)
+    .select("*")
+    .eq("event_id", eventId)
+    .eq("guest_session_id", guestSessionId)
+    .maybeSingle();
+
+  if (error) {
+    log.error("Failed to find participant by guest session", { eventId, guestSessionId, error });
+    throw new InternalError("Failed to find participant by guest session", error);
+  }
+
+  return data ? (data as DbParticipant) : null;
+}
+
 export async function findParticipantByDisplayName(
   eventId: string,
   displayName: string
