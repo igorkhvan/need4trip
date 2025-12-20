@@ -31,10 +31,11 @@ import {
   mapDbParticipantToDomain,
 } from "@/lib/mappers";
 import {
-  EventUpdateInput,
+  type Event,
+  type EventCreateInput,
+  type EventUpdateInput,
   eventCreateSchema,
   eventUpdateSchema,
-  Event,
 } from "@/lib/types/event";
 import { DomainParticipant } from "@/lib/types/participant";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
@@ -380,13 +381,36 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
   }
-  const parsed = eventCreateSchema.parse(input);
+  const parsed = eventCreateSchema.parse(input) as any;
+  
+  // Apply defaults explicitly (Zod .default() doesn't infer correctly)
+  const validated: EventCreateInput = {
+    title: parsed.title,
+    description: parsed.description,
+    categoryId: parsed.categoryId ?? null,
+    dateTime: parsed.dateTime,
+    cityId: parsed.cityId,
+    locations: parsed.locations,
+    maxParticipants: parsed.maxParticipants ?? null,
+    customFieldsSchema: parsed.customFieldsSchema ?? [],
+    createdByUserId: parsed.createdByUserId ?? null,
+    visibility: parsed.visibility ?? "public",
+    vehicleTypeRequirement: parsed.vehicleTypeRequirement ?? "any",
+    allowedBrandIds: parsed.allowedBrandIds ?? [],
+    rules: parsed.rules ?? null,
+    isClubEvent: parsed.isClubEvent ?? false,
+    clubId: parsed.clubId ?? null,
+    isPaid: parsed.isPaid ?? false,
+    price: parsed.price ?? null,
+    currencyCode: parsed.currencyCode ?? null,
+    allowAnonymousRegistration: parsed.allowAnonymousRegistration ?? true,
+  };
   
   // ⚡ Check if club event requires active subscription
-  if (parsed.isClubEvent) {
+  if (validated.isClubEvent) {
     const { PaywallError } = await import("@/lib/errors");
     
-    if (!parsed.clubId) {
+    if (!validated.clubId) {
       // No club = personal event, cannot be club event
       throw new PaywallError({
         message: "Клубные события доступны только при наличии клуба с активной подпиской",
@@ -401,7 +425,7 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     
     // Check if club has active subscription
     const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
-    const subscription = await getClubSubscription(parsed.clubId);
+    const subscription = await getClubSubscription(validated.clubId);
     
     if (!subscription || subscription.status !== "active") {
       throw new PaywallError({
@@ -418,13 +442,13 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   
   // ⚡ Billing v2.0 Enforcement
   // Check if club can create event with given parameters
-  if (parsed.clubId) {
+  if (validated.clubId) {
     await enforceClubAction({
-      clubId: parsed.clubId,
-      action: parsed.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
+      clubId: validated.clubId,
+      action: validated.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
       context: {
-        eventParticipantsCount: parsed.maxParticipants ?? undefined,
-        isPaidEvent: parsed.isPaid,
+        eventParticipantsCount: validated.maxParticipants ?? undefined,
+        isPaidEvent: validated.isPaid,
       },
     });
   } else {
@@ -435,7 +459,7 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     const freePlan = await getPlanById("free");
     
     // Check paid events limit
-    if (parsed.isPaid && !freePlan.allowPaidEvents) {
+    if (validated.isPaid && !freePlan.allowPaidEvents) {
       throw new PaywallError({
         message: "Платные события доступны только на платных тарифах",
         reason: "PAID_EVENTS_NOT_ALLOWED",
@@ -448,15 +472,15 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     }
     
     // Check participants limit
-    if (parsed.maxParticipants && freePlan.maxEventParticipants !== null && 
-        parsed.maxParticipants > freePlan.maxEventParticipants) {
+    if (validated.maxParticipants && freePlan.maxEventParticipants !== null && 
+        validated.maxParticipants > freePlan.maxEventParticipants) {
       throw new PaywallError({
-        message: `Превышен лимит участников (${parsed.maxParticipants} > ${freePlan.maxEventParticipants})`,
+        message: `Превышен лимит участников (${validated.maxParticipants} > ${freePlan.maxEventParticipants})`,
         reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
         currentPlanId: "free",
         requiredPlanId: "club_50",
         meta: {
-          requested: parsed.maxParticipants,
+          requested: validated.maxParticipants,
           limit: freePlan.maxEventParticipants,
         },
       });
@@ -465,16 +489,16 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
   const db = await createEventRecord({
-    ...parsed,
+    ...validated,
     createdByUserId: currentUser.id,
   });
-  if (parsed.allowedBrandIds?.length) {
-    await replaceAllowedBrands(db.id, parsed.allowedBrandIds);
+  if (validated.allowedBrandIds?.length) {
+    await replaceAllowedBrands(db.id, validated.allowedBrandIds);
   }
   
   // Create locations (default first location or from input)
-  if (parsed.locations && parsed.locations.length > 0) {
-    await saveLocations(db.id, parsed.locations);
+  if (validated.locations && validated.locations.length > 0) {
+    await saveLocations(db.id, validated.locations);
   } else {
     // Create default first location if not provided
     await createDefaultLocation(db.id, "Точка сбора");
@@ -546,7 +570,7 @@ async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
       cityName: city.name,
       categoryName: category?.nameRu ?? "Событие",
       dateTime: event.dateTime,
-      locationText: event.locations?.[0]?.title ?? event.locationText ?? "Не указано", // Fallback: locations → locationText → default
+      locationText: event.locations[0]?.title ?? "Не указано",
       creatorId,
     });
   } catch (err) {
@@ -608,7 +632,29 @@ export async function updateEvent(
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для изменения события", undefined, 401);
   }
-  const parsed = eventUpdateSchema.parse(input);
+  const parsed = eventUpdateSchema.parse(input) as any;
+  
+  // Apply defaults explicitly for EventUpdateInput
+  const validated: EventUpdateInput = {
+    ...parsed,
+    // Ensure null coalescing for optional fields
+    categoryId: parsed.categoryId !== undefined ? parsed.categoryId : undefined,
+    maxParticipants: parsed.maxParticipants !== undefined ? parsed.maxParticipants : undefined,
+    customFieldsSchema: parsed.customFieldsSchema !== undefined ? parsed.customFieldsSchema : undefined,
+    createdByUserId: parsed.createdByUserId !== undefined ? parsed.createdByUserId : undefined,
+    visibility: parsed.visibility !== undefined ? parsed.visibility : undefined,
+    vehicleTypeRequirement: parsed.vehicleTypeRequirement !== undefined ? parsed.vehicleTypeRequirement : undefined,
+    allowedBrandIds: parsed.allowedBrandIds !== undefined ? parsed.allowedBrandIds : undefined,
+    rules: parsed.rules !== undefined ? parsed.rules : undefined,
+    isClubEvent: parsed.isClubEvent !== undefined ? parsed.isClubEvent : undefined,
+    clubId: parsed.clubId !== undefined ? parsed.clubId : undefined,
+    isPaid: parsed.isPaid !== undefined ? parsed.isPaid : undefined,
+    price: parsed.price !== undefined ? parsed.price : undefined,
+    currencyCode: parsed.currencyCode !== undefined ? parsed.currencyCode : undefined,
+    allowAnonymousRegistration: parsed.allowAnonymousRegistration !== undefined ? parsed.allowAnonymousRegistration : undefined,
+    registrationManuallyClosed: parsed.registrationManuallyClosed !== undefined ? parsed.registrationManuallyClosed : undefined,
+  };
+  
   const existing = await getEventById(id);
   if (!existing) {
     throw new NotFoundError("Event not found");
@@ -619,9 +665,9 @@ export async function updateEvent(
 
   // Валидация даты: разрешаем менять прошедшие события на будущие даты
   // Новая дата всегда должна быть в будущем (минимум через 5 минут)
-  if (parsed.dateTime) {
+  if (validated.dateTime) {
     const date5MinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    if (parsed.dateTime <= date5MinutesAgo) {
+    if (validated.dateTime <= date5MinutesAgo) {
       throw new ValidationError(
         "Дата события должна быть в будущем (минимум через 5 минут)"
       );
@@ -630,17 +676,17 @@ export async function updateEvent(
 
   const participantsCount = await countParticipants(id);
 
-  if (parsed.maxParticipants !== undefined && parsed.maxParticipants !== null) {
-    if (parsed.maxParticipants < participantsCount) {
+  if (validated.maxParticipants !== undefined && validated.maxParticipants !== null) {
+    if (validated.maxParticipants < participantsCount) {
       throw new ConflictError("maxParticipants is below current registered users", {
         currentCount: participantsCount,
       });
     }
   }
 
-  if (participantsCount > 0 && parsed.customFieldsSchema !== undefined) {
+  if (participantsCount > 0 && validated.customFieldsSchema !== undefined) {
     const validation = validateCustomFieldsUpdate(
-      parsed.customFieldsSchema,
+      validated.customFieldsSchema,
       existing.custom_fields_schema
     );
     if (!validation.valid) {
@@ -690,11 +736,11 @@ export async function updateEvent(
   
   // ⚡ Billing v2.0 Enforcement for updates
   // Check if changes violate plan limits
-  const finalMaxParticipants = parsed.maxParticipants !== undefined 
-    ? parsed.maxParticipants 
+  const finalMaxParticipants = validated.maxParticipants !== undefined 
+    ? validated.maxParticipants 
     : existing.max_participants;
-  const finalIsPaid = parsed.isPaid !== undefined 
-    ? parsed.isPaid 
+  const finalIsPaid = validated.isPaid !== undefined 
+    ? validated.isPaid 
     : existing.is_paid;
   
   if (existing.club_id) {
@@ -823,11 +869,10 @@ async function queueEventUpdatedNotificationsAsync(
     const changes = {
       dateTimeChanged: parsed.dateTime !== undefined && 
         new Date(existing.date_time).getTime() !== new Date(updated.date_time).getTime(),
-      locationChanged: (parsed.locationText !== undefined && 
-        existing.location_text !== updated.location_text) || locationsChanged,
+      locationChanged: locationsChanged,
       rulesChanged: parsed.rules !== undefined && 
         existing.rules !== updated.rules,
-      maxParticipantsChanged: parsed.maxParticipants !== undefined && 
+      maxParticipantsChanged: parsed.maxParticipants !== undefined &&
         existing.max_participants !== updated.max_participants,
       paymentChanged: (parsed.isPaid !== undefined && existing.is_paid !== updated.is_paid) ||
         (parsed.price !== undefined && existing.price !== updated.price),

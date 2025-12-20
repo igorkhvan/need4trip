@@ -27,9 +27,8 @@ type Event = {
   categoryId: string | null; // FK to event_categories
   category?: EventCategoryDto | null; // Hydrated category
   dateTime: string;
-  cityId?: string | null; // FK на cities table (normalized)
-  locationText: string;
-  locations?: Array<{ // NEW: Multiple location points
+  cityId: string;
+  locations: Array<{
     id?: string;
     sortOrder: number;
     title: string;
@@ -253,9 +252,8 @@ export default function EditEventPage() {
           description: event.description,
           categoryId: event.categoryId,
           dateTime: event.dateTime,
-          cityId: event.cityId ?? null,
-          locationText: event.locationText,
-          locations: event.locations ?? [{ sortOrder: 1, title: "Точка сбора", latitude: null, longitude: null, rawInput: null }],
+          cityId: event.cityId,
+          locations: event.locations || [{ sortOrder: 1, title: "Точка сбора", latitude: null, longitude: null, rawInput: null }],
           maxParticipants: event.maxParticipants,
           customFieldsSchema: event.customFieldsSchema || [],
           visibility: event.visibility,

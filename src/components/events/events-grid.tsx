@@ -103,7 +103,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       (e) =>
         e.title.toLowerCase().includes(query) ||
         e.description?.toLowerCase().includes(query) ||
-        e.locationText.toLowerCase().includes(query) ||
+        e.locations[0]?.title?.toLowerCase().includes(query) ||
         e.ownerName?.toLowerCase().includes(query) ||
         e.ownerHandle?.toLowerCase().includes(query)
     );
@@ -479,7 +479,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
                       <div className="mb-1 text-sm text-[var(--color-text-muted)]">Место сбора</div>
                       <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
                         <MapPin className="h-4 w-4 text-[var(--color-text-muted)]" />
-                        <span className="truncate">{event.locationText}</span>
+                        <span className="truncate">{event.locations[0]?.title || "Не указано"}</span>
                       </div>
                     </div>
                     <div>

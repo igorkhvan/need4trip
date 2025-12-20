@@ -150,7 +150,7 @@ export function CreateEventPageContent({
         onSubmit={handleSubmit}
         initialValues={{
           isClubEvent: !!clubId,
-          cityId: initialCityId,
+          cityId: initialCityId || "",
         }}
         club={club}
       />

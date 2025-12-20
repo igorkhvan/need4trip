@@ -2,7 +2,7 @@ import { z } from "zod";
 import { CityHydrated } from "./city";
 import { CurrencyHydrated } from "./currency";
 import { EventCategoryDto } from "./eventCategory";
-import { EventLocation, eventLocationsArraySchema } from "./eventLocation";
+import { EventLocation, EventLocationInput, eventLocationsArraySchema } from "./eventLocation";
 
 // Legacy enum - kept for backward compatibility during migration
 // Will be removed after full migration to event_categories table
@@ -103,12 +103,9 @@ export interface Event {
   categoryId: string | null; // FK to event_categories
   category?: EventCategoryDto | null; // Hydrated category info
   dateTime: string;
-  cityId: string | null; // FK на cities table (обязательно при создании, но может быть null для старых записей)
-  city?: CityHydrated | null; // Hydrated city info
-  locationText: string;
-  locationLat: number | null;
-  locationLng: number | null;
-  locations?: EventLocation[]; // NEW: Multiple location points
+  cityId: string;
+  city?: CityHydrated | null;
+  locations: EventLocation[];
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchemaItem[];
   createdByUserId: string | null;
@@ -149,17 +146,75 @@ const eventDateSchema = z.preprocess((val) => {
   return val;
 }, z.date({ invalid_type_error: "dateTime must be a valid date" }));
 
+// ============================================================================
+// TypeScript Interfaces (Compile-time types)
+// ============================================================================
+
+/**
+ * Event Create Input
+ * Used for type-safe event creation with all required fields
+ */
+export interface EventCreateInput {
+  title: string;
+  description: string;
+  categoryId: string | null;
+  dateTime: Date | string;
+  cityId: string; // Required after migration
+  locations: EventLocationInput[]; // Required, at least 1
+  maxParticipants: number | null;
+  customFieldsSchema: EventCustomFieldSchemaItem[];
+  createdByUserId?: string | null;
+  visibility: Visibility;
+  vehicleTypeRequirement: VehicleTypeRequirement;
+  allowedBrandIds: string[];
+  rules?: string | null;
+  isClubEvent: boolean;
+  clubId?: string | null;
+  isPaid: boolean;
+  price?: number | null;
+  currencyCode?: string | null;
+  allowAnonymousRegistration: boolean;
+}
+
+/**
+ * Event Update Input
+ * All fields optional except those that must be explicitly set
+ */
+export interface EventUpdateInput {
+  title?: string;
+  description?: string;
+  categoryId?: string | null;
+  dateTime?: Date | string;
+  cityId?: string;
+  locations?: EventLocationInput[];
+  maxParticipants?: number | null;
+  customFieldsSchema?: EventCustomFieldSchemaItem[];
+  createdByUserId?: string | null;
+  visibility?: Visibility;
+  vehicleTypeRequirement?: VehicleTypeRequirement;
+  allowedBrandIds?: string[];
+  rules?: string | null;
+  isClubEvent?: boolean;
+  clubId?: string | null;
+  isPaid?: boolean;
+  price?: number | null;
+  currencyCode?: string | null;
+  allowAnonymousRegistration?: boolean;
+  registrationManuallyClosed?: boolean;
+}
+
+// ============================================================================
+// Zod Schemas (Runtime validation)
+// ============================================================================
+
 export const eventCreateSchema = z
   .object({
     title: z.string().trim().min(3).max(150),
     description: z.string().trim().min(1).max(5000),
     categoryId: z.string().uuid().nullable().optional(), // Changed from category enum
     dateTime: eventDateSchema,
-    cityId: z.string().uuid(), // FK на cities table (обязательное поле)
-    locationText: z.string().trim().min(1).optional(), // DEPRECATED: Use locations array instead
-    locationLat: z.number().finite().nullable().optional(),
-    locationLng: z.number().finite().nullable().optional(),
-    locations: eventLocationsArraySchema.optional(), // NEW: Multiple location points
+    cityId: z.string().uuid(),
+    locations: eventLocationsArraySchema,
     maxParticipants: z.number().int().min(1).nullable().optional(), // Backend enforces plan limits
     customFieldsSchema: eventCustomFieldsSchema.default([]),
     createdByUserId: z.string().uuid().optional().nullable(),
@@ -189,11 +244,8 @@ const eventUpdateBaseSchema = z.object({
   description: z.string().trim().min(1).max(5000).optional(),
   categoryId: z.string().uuid().nullable().optional(), // Changed from category enum
   dateTime: eventDateSchema.optional(),
-  cityId: z.string().uuid().optional(), // FK на cities table (обязательное при передаче)
-  locationText: z.string().trim().min(1).optional(),
-  locationLat: z.number().finite().nullable().optional(),
-  locationLng: z.number().finite().nullable().optional(),
-  locations: eventLocationsArraySchema.optional(), // NEW: Multiple location points
+  cityId: z.string().uuid().optional(),
+  locations: eventLocationsArraySchema.optional(),
   maxParticipants: z.number().int().min(1).max(500).nullable().optional(),
   customFieldsSchema: eventCustomFieldsSchema.optional(),
   createdByUserId: z.string().uuid().optional().nullable(),
@@ -213,6 +265,3 @@ const eventUpdateBaseSchema = z.object({
 // Note: Валидация dateTime перенесена в updateEvent сервис,
 // т.к. нужен контекст существующей даты события
 export const eventUpdateSchema = eventUpdateBaseSchema;
-
-export type EventCreateInput = z.infer<typeof eventCreateSchema>;
-export type EventUpdateInput = z.infer<typeof eventUpdateSchema>;

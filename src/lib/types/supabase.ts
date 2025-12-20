@@ -641,9 +641,10 @@ export type Database = {
       }
       events: {
         Row: {
+          allow_anonymous_registration: boolean
           category: string | null
           category_id: string | null
-          city_id: string | null
+          city_id: string
           club_id: string | null
           created_at: string
           created_by_user_id: string | null
@@ -655,11 +656,9 @@ export type Database = {
           id: string
           is_club_event: boolean
           is_paid: boolean
-          location_lat: number | null
-          location_lng: number | null
-          location_text: string
           max_participants: number | null
           price: number | null
+          registration_manually_closed: boolean
           rules: string | null
           title: string
           updated_at: string
@@ -668,9 +667,10 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          allow_anonymous_registration?: boolean
           category?: string | null
           category_id?: string | null
-          city_id?: string | null
+          city_id: string
           club_id?: string | null
           created_at?: string
           created_by_user_id?: string | null
@@ -682,11 +682,9 @@ export type Database = {
           id?: string
           is_club_event?: boolean
           is_paid?: boolean
-          location_lat?: number | null
-          location_lng?: number | null
-          location_text: string
           max_participants?: number | null
           price?: number | null
+          registration_manually_closed?: boolean
           rules?: string | null
           title: string
           updated_at?: string
@@ -695,9 +693,10 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          allow_anonymous_registration?: boolean
           category?: string | null
           category_id?: string | null
-          city_id?: string | null
+          city_id?: string
           club_id?: string | null
           created_at?: string
           created_by_user_id?: string | null
@@ -709,11 +708,9 @@ export type Database = {
           id?: string
           is_club_event?: boolean
           is_paid?: boolean
-          location_lat?: number | null
-          location_lng?: number | null
-          location_text?: string
           max_participants?: number | null
           price?: number | null
+          registration_manually_closed?: boolean
           rules?: string | null
           title?: string
           updated_at?: string

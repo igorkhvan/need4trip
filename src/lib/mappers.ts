@@ -11,10 +11,7 @@ export interface DbEvent {
   description: string;
   category_id: string | null; // FK to event_categories
   date_time: string;
-  city_id: string | null; // FK на cities (normalized)
-  location_text: string;
-  location_lat: number | null;
-  location_lng: number | null;
+  city_id: string;
   max_participants: number | null;
   custom_fields_schema: EventCustomFieldsSchema;
   created_by_user_id: string | null;
@@ -57,12 +54,10 @@ export function mapDbEventToDomain(db: DbEvent): DomainEvent {
     id: db.id,
     title: db.title,
     description: db.description,
-    categoryId: db.category_id ?? null, // FK to event_categories
+    categoryId: db.category_id ?? null,
     dateTime: db.date_time,
-    cityId: db.city_id ?? null, // FK на cities (normalized)
-    locationText: db.location_text,
-    locationLat: db.location_lat,
-    locationLng: db.location_lng,
+    cityId: db.city_id,
+    locations: [],
     maxParticipants: db.max_participants,
     customFieldsSchema: db.custom_fields_schema ?? [],
     createdByUserId: db.created_by_user_id ?? null,

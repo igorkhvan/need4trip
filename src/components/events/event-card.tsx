@@ -36,7 +36,7 @@ export function EventCard({ event }: EventCardProps) {
         </CardTitle>
         <CardDescription className="flex flex-wrap gap-3 text-sm">
           <span>🗓 {formatDateTimeShort(event.dateTime)}</span>
-          <span>📍 {event.locationText}</span>
+          <span>📍 {event.locations[0]?.title || "Не указано"}</span>
           {event.maxParticipants && (
             <span>👥 До {event.maxParticipants} экипажей</span>
           )}

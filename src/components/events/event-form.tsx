@@ -60,9 +60,8 @@ export type EventFormValues = {
   description: string;
   categoryId: string | null; // FK to event_categories
   dateTime: string;
-  cityId: string | null; // FK на cities
-  locationText: string;
-  locations: EventLocationInput[]; // NEW: Multiple location points
+  cityId: string;
+  locations: EventLocationInput[];
   maxParticipants: number | null;
   customFieldsSchema: EventCustomFieldSchema[];
   visibility: Visibility;

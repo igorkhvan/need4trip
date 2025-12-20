@@ -151,15 +151,11 @@ export default async function EventDetails({
             </div>
             
             {/* Location - First point with navigation */}
-            {event.locations && event.locations.length > 0 ? (
+            {event.locations && event.locations.length > 0 && (
               <LocationHeaderItem
                 location={event.locations[0]}
               />
-            ) : event.locationText ? (
-              <LocationHeaderItem
-                fallbackText={event.locationText}
-              />
-            ) : null}
+            )}
             
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 flex-shrink-0" />

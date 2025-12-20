@@ -116,27 +116,25 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
   const insertPayload = {
     title: payload.title,
     description: payload.description,
-    category_id: payload.categoryId ?? null, // FK to event_categories
+    category_id: payload.categoryId,
     date_time:
       payload.dateTime instanceof Date
         ? payload.dateTime.toISOString()
         : payload.dateTime,
-    city_id: payload.cityId ?? null, // FK на cities (normalized)
-    location_text: payload.locationText ?? "", // DEPRECATED: Fallback to empty string for DB
-    location_lat: payload.locationLat ?? null,
-    location_lng: payload.locationLng ?? null,
-    max_participants: payload.maxParticipants ?? null,
-    custom_fields_schema: payload.customFieldsSchema ?? [],
-    created_by_user_id: payload.createdByUserId ?? null,
+    city_id: payload.cityId,
+    max_participants: payload.maxParticipants,
+    custom_fields_schema: payload.customFieldsSchema,
+    created_by_user_id: payload.createdByUserId,
     created_at: now,
     updated_at: now,
-    visibility: payload.visibility ?? "public",
-    vehicle_type_requirement: payload.vehicleTypeRequirement ?? "any",
-    rules: payload.rules ?? null,
-    is_club_event: payload.isClubEvent ?? false,
-    is_paid: payload.isPaid ?? false,
-    price: payload.price ?? null,
-    currency_code: payload.currencyCode ?? null, // ISO 4217 (normalized)
+    visibility: payload.visibility,
+    vehicle_type_requirement: payload.vehicleTypeRequirement,
+    rules: payload.rules,
+    is_club_event: payload.isClubEvent,
+    is_paid: payload.isPaid,
+    price: payload.price,
+    currency_code: payload.currencyCode,
+    allow_anonymous_registration: payload.allowAnonymousRegistration,
   };
 
   const { data, error } = await supabase
@@ -178,10 +176,7 @@ export async function updateEvent(
               : payload.dateTime,
         }
       : {}),
-    ...(payload.cityId !== undefined ? { city_id: payload.cityId } : {}), // FK на cities (normalized)
-    ...(payload.locationText !== undefined ? { location_text: payload.locationText } : {}),
-    ...(payload.locationLat !== undefined ? { location_lat: payload.locationLat } : {}),
-    ...(payload.locationLng !== undefined ? { location_lng: payload.locationLng } : {}),
+    ...(payload.cityId !== undefined ? { city_id: payload.cityId } : {}),
     ...(payload.maxParticipants !== undefined
       ? { max_participants: payload.maxParticipants }
       : {}),
