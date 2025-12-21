@@ -808,14 +808,14 @@ export function ProfilePageClient() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
+                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                       <Mail className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Email</div>
                         <div className="text-base">{userData.email}</div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
+                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                       <Phone className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Телефон</div>
@@ -823,7 +823,7 @@ export function ProfilePageClient() {
                       </div>
                     </div>
                     {userData.location && (
-                      <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
+                      <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                         <MapPin className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                         <div>
                           <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Город</div>
@@ -831,7 +831,7 @@ export function ProfilePageClient() {
                         </div>
                       </div>
                     )}
-                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
+                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
                       <User className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
