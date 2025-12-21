@@ -335,7 +335,7 @@ export function ParticipantForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6 shadow-sm">
       {event?.isPaid && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
