@@ -66,8 +66,17 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-          throw new Error(data.message || data.error || "Auth failed");
+          const data = (await res.json().catch(() => ({}))) as { 
+            error?: string | { message?: string }; 
+            message?: string 
+          };
+          // Extract message from nested error object or direct properties
+          const message = 
+            (typeof data.error === 'object' && data.error?.message) || 
+            (typeof data.error === 'string' && data.error) ||
+            data.message || 
+            "Auth failed";
+          throw new Error(message);
         }
         setHasAuthed(true);
         const container = containerRef.current;

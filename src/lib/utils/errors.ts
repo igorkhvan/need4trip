@@ -10,36 +10,45 @@
 export async function handleApiError(response: Response): Promise<never> {
   const body = await response.json().catch(() => ({}));
   
-  // Специфичные HTTP статусы
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("Недостаточно прав / войдите через Telegram");
-  }
-  
-  if (response.status === 404) {
-    throw new Error("Ресурс не найден");
-  }
-  
-  if (response.status === 409) {
-    throw new Error(body?.message || "Конфликт данных");
-  }
-  
-  if (response.status === 400) {
-    throw new Error(body?.message || "Ошибка валидации");
-  }
-
-  // 402 Payment Required - PaywallError
-  if (response.status === 402) {
-    // Extract message, handle both string and object formats
-    const message = typeof body?.message === 'string' 
-      ? body.message 
-      : "Эта функция доступна на платных тарифах";
+  // Rate Limiting (429)
+  if (response.status === 429) {
+    const message = body?.error?.message || body?.message || "Слишком много запросов. Попробуйте позже.";
     throw new Error(message);
   }
   
-  // Общая ошибка
-  throw new Error(
-    body?.message || body?.error || `Ошибка сервера (${response.status})`
-  );
+  // Auth errors (401, 403)
+  if (response.status === 401 || response.status === 403) {
+    const message = body?.error?.message || body?.message || "Недостаточно прав / войдите через Telegram";
+    throw new Error(message);
+  }
+  
+  // Not Found (404)
+  if (response.status === 404) {
+    const message = body?.error?.message || body?.message || "Ресурс не найден";
+    throw new Error(message);
+  }
+  
+  // Conflict (409)
+  if (response.status === 409) {
+    const message = body?.error?.message || body?.message || "Конфликт данных";
+    throw new Error(message);
+  }
+  
+  // Validation (400)
+  if (response.status === 400) {
+    const message = body?.error?.message || body?.message || "Ошибка валидации";
+    throw new Error(message);
+  }
+
+  // Payment Required (402) - PaywallError
+  if (response.status === 402) {
+    const message = body?.error?.message || body?.message || "Эта функция доступна на платных тарифах";
+    throw new Error(message);
+  }
+  
+  // Общая ошибка - извлекаем из body.error.message или body.message
+  const message = body?.error?.message || body?.message || `Ошибка сервера (${response.status})`;
+  throw new Error(message);
 }
 
 /**
@@ -48,8 +57,15 @@ export async function handleApiError(response: Response): Promise<never> {
  * Handles multiple error formats:
  * - Error instances: error.message
  * - String errors: direct value
- * - Objects with nested messages: error.details.message, error.error.message
- * - Wrapped errors: tries multiple paths to find readable message
+ * - API responses: error.error.message (middleware/route handlers)
+ * - Wrapped errors: error.details.message, error.error.message
+ * - Object messages: tries multiple paths to find readable message
+ * 
+ * Priority order:
+ * 1. error.error.message (middleware format like rate limiting)
+ * 2. error.message (direct message or Error instance)
+ * 3. error.details.message (wrapped errors)
+ * 4. Fallback message
  * 
  * @param error - Unknown error type to extract message from
  * @param fallback - Default message if extraction fails
@@ -72,19 +88,25 @@ export function getErrorMessage(error: unknown, fallback = "Произошла �
   if (typeof error === 'object') {
     const err = error as any;
     
-    // Try different paths to extract message
+    // Priority 1: err.error.message (API response from middleware/routes)
+    // This handles: {error: {code: "...", message: "..."}}
+    if (err.error?.message && typeof err.error.message === 'string') {
+      return err.error.message;
+    }
+    
+    // Priority 2: err.message (direct message string)
     if (err.message && typeof err.message === 'string') {
       return err.message;
     }
     
-    // Check nested details.message (wrapped errors like InternalError)
+    // Priority 3: err.details.message (wrapped errors like InternalError)
     if (err.details?.message && typeof err.details.message === 'string') {
       return err.details.message;
     }
     
-    // Check error.error.message (API response format)
-    if (err.error?.message && typeof err.error.message === 'string') {
-      return err.error.message;
+    // Edge case: err.message is an object with message property
+    if (err.message && typeof err.message === 'object' && err.message.message) {
+      return String(err.message.message);
     }
   }
   

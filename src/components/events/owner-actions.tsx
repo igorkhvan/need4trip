@@ -34,7 +34,8 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
           setError("Недостаточно прав / войдите через Telegram");
         } else {
           const body = await res.json().catch(() => ({}));
-          setError(body?.message || "Не удалось удалить событие");
+          const message = body?.error?.message || body?.message || "Не удалось удалить событие";
+          setError(message);
         }
         return;
       }

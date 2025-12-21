@@ -83,9 +83,10 @@ export function ParticipantsTableClient({
           });
         } else {
           const body = await res.json().catch(() => ({}));
+          const message = body?.error?.message || body?.message || "Не удалось удалить участника";
           toast({ 
             title: "Ошибка", 
-            description: body?.message || "Не удалось удалить участника",
+            description: message,
           });
         }
         return;
