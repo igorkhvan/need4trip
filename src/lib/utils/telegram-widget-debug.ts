@@ -39,20 +39,33 @@ export function debugTelegramWidget() {
     })),
   };
 
-  // 4. Script Tags
+  // 4. Script Tags (with Performance API for load status)
   const scripts = document.querySelectorAll('script[src*="telegram"]');
+  
+  // Use Performance API to check if scripts are loaded (standard Web API)
+  const performanceEntries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+  
   report.telegramScripts = {
     count: scripts.length,
-    details: Array.from(scripts).map((script, idx) => ({
-      index: idx,
-      src: (script as HTMLScriptElement).src,
-      async: (script as HTMLScriptElement).async,
-      loaded: (script as HTMLScriptElement).readyState || 'unknown',
-      attributes: Array.from(script.attributes).map(attr => ({
-        name: attr.name,
-        value: attr.value,
-      })),
-    })),
+    details: Array.from(scripts).map((script, idx) => {
+      const src = (script as HTMLScriptElement).src;
+      const perfEntry = performanceEntries.find(entry => entry.name === src);
+      
+      return {
+        index: idx,
+        src,
+        async: (script as HTMLScriptElement).async,
+        loadStatus: perfEntry 
+          ? (perfEntry.responseEnd > 0 ? 'loaded' : 'loading')
+          : 'unknown',
+        loadTime: perfEntry ? Math.round(perfEntry.duration) + 'ms' : null,
+        transferSize: perfEntry ? perfEntry.transferSize + ' bytes' : null,
+        attributes: Array.from(script.attributes).map(attr => ({
+          name: attr.name,
+          value: attr.value,
+        })),
+      };
+    }),
   };
 
   // 5. Telegram iframes
