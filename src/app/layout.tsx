@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Inter } from "next/font/google";
 import { MainHeader } from "@/components/layout/main-header";
 import { MainFooter } from "@/components/layout/main-footer";
 import { AuthModalProvider } from "@/components/auth/auth-modal-provider";
 import { AuthModalHost } from "@/components/auth/auth-modal-host";
 import { ScrollRestorationProvider } from "@/app/scroll-restoration-provider";
+import { TelegramScriptLoader } from "@/components/TelegramScriptLoader";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -46,19 +46,8 @@ export default function RootLayout({
           </AuthModalProvider>
         </ScrollRestorationProvider>
         
-        {/* Telegram Login Widget - загружается ОДИН РАЗ глобально */}
-        <Script
-          src="https://telegram.org/js/telegram-widget.js?22"
-          strategy="lazyOnload"
-          onLoad={() => {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('[telegram] Widget script loaded globally ✅');
-            }
-          }}
-          onError={(e: Error) => {
-            console.error('[telegram] Failed to load widget script:', e);
-          }}
-        />
+        {/* Telegram Login Widget - Client Component with observability */}
+        <TelegramScriptLoader />
       </body>
     </html>
   );
