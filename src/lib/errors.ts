@@ -130,3 +130,39 @@ export function isAppError(err: unknown): err is AppError {
 export function isPaywallError(err: unknown): err is PaywallError {
   return err instanceof PaywallError;
 }
+
+/**
+ * Check if error is a PostgreSQL unique constraint violation
+ * 
+ * Detects errors from:
+ * - Supabase: error.code === '23505'
+ * - Raw Postgres: SQLSTATE 23505
+ * - Error messages containing "unique" or "duplicate"
+ * 
+ * Used to handle duplicate registration attempts gracefully.
+ * 
+ * @example
+ * ```typescript
+ * try {
+ *   await createParticipant(payload);
+ * } catch (err) {
+ *   if (isUniqueViolationError(err)) {
+ *     throw new ConflictError('Already registered');
+ *   }
+ *   throw err;
+ * }
+ * ```
+ */
+export function isUniqueViolationError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  
+  // PostgreSQL error code for unique_violation
+  const code = (err as { code?: string }).code;
+  if (code === '23505') return true;
+  
+  // Check error message for unique/duplicate keywords
+  const message = (err as { message?: string }).message?.toLowerCase() || '';
+  return message.includes('unique') || 
+         message.includes('duplicate') ||
+         message.includes('already exists');
+}

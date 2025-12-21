@@ -13,7 +13,6 @@
 import { Event } from "@/lib/types/event";
 import { CurrentUser } from "@/lib/auth/currentUser";
 import { countParticipants } from "@/lib/db/participantRepo";
-import { findParticipantByUser, findParticipantByGuestSession } from "@/lib/db/participantRepo";
 import { isClubMember } from "@/lib/db/clubMemberRepo";
 
 export type RegistrationBlockReason =
@@ -120,26 +119,12 @@ export async function canRegisterForEvent(
     }
   }
   
-  // 7. Check duplicate registration
-  if (currentUser) {
-    const existing = await findParticipantByUser(eventId, currentUser.id);
-    if (existing) {
-      return {
-        canRegister: false,
-        reason: 'already_registered',
-        message: 'Вы уже зарегистрированы на это событие'
-      };
-    }
-  } else if (guestSessionId) {
-    const existing = await findParticipantByGuestSession(eventId, guestSessionId);
-    if (existing) {
-      return {
-        canRegister: false,
-        reason: 'already_registered',
-        message: 'Вы уже зарегистрированы на это событие'
-      };
-    }
-  }
+  // ✅ REMOVED: Duplicate registration check
+  // Database has UNIQUE constraint on (event_id, user_id) for authenticated users
+  // and (event_id, guest_session_id, display_name) for guests.
+  // The INSERT operation will fail atomically if duplicate exists.
+  // This eliminates race condition and reduces database queries.
+  // See: supabase/migrations/20241222_add_user_registration_unique.sql
   
   return { canRegister: true };
 }

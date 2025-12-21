@@ -13,7 +13,7 @@ import {
 import { getEventById } from "@/lib/db/eventRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { upsertEventAccess } from "@/lib/db/eventAccessRepo";
-import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { AuthError, ConflictError, NotFoundError, ValidationError, isUniqueViolationError } from "@/lib/errors";
 import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
 import { Event, EventCustomFieldValues } from "@/lib/types/event";
 import {
@@ -197,7 +197,22 @@ export async function registerParticipant(
     customFieldValues: sanitizedCustomValues,
   };
 
-  const dbParticipant = await registerParticipantRepo(payload);
+  // ✅ OPTIMISTIC INSERT: Try to insert, let DB enforce uniqueness
+  // DB has UNIQUE constraint on (event_id, user_id) for authenticated users
+  // and (event_id, guest_session_id, display_name) for guests
+  let dbParticipant;
+  try {
+    dbParticipant = await registerParticipantRepo(payload);
+  } catch (err) {
+    // Handle unique constraint violation from database
+    if (isUniqueViolationError(err)) {
+      throw new ConflictError('Вы уже зарегистрированы на это событие', {
+        code: 'already_registered',
+      });
+    }
+    throw err;
+  }
+  
   const participant = mapDbParticipantToDomain(dbParticipant);
   
   // Queue notification to event organizer (non-blocking)
