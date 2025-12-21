@@ -41,6 +41,13 @@ export function EventsGrid({ events, currentUserId, isAuthenticated, initialTab 
   };
   
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
+  
+  // Sync activeTab with URL parameter changes
+  useEffect(() => {
+    const validTab = getInitialTab();
+    setActiveTab(validTab);
+  }, [initialTab]);
+  
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterCity, setFilterCity] = useState<string>("all");
   const [filterPrice, setFilterPrice] = useState<PriceFilter>("all");
