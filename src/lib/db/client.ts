@@ -46,16 +46,6 @@ export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
     })
   : null;
 
-// Admin client for server-side operations (bypasses RLS)
-export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-  ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    })
-  : null;
-
 /**
  * Ensure Supabase client is initialized
  * Throws error if client is not available
