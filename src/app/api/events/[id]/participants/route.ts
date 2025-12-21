@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { listParticipants, registerParticipant } from "@/lib/services/participants";
@@ -23,12 +23,12 @@ export async function POST(request: Request, context: Params) {
   try {
     const { id } = await context.params;
     
-    // POST /api/events/[id]/participants is special:
-    // - Middleware requires auth for POST
-    // - BUT we want to allow guest registrations
-    // - Solution: Check middleware user first, fallback to guest session
+    // POST /api/events/[id]/participants uses Optional Auth pattern:
+    // - Middleware doesn't block this route (allows guest registrations)
+    // - Check JWT directly from cookies for authenticated users
+    // - Fallback to guest session if not authenticated
     
-    let currentUser = await getCurrentUserFromMiddleware(request);
+    let currentUser = await getCurrentUser();
     let guestSessionId: string | null = null;
     
     if (!currentUser) {

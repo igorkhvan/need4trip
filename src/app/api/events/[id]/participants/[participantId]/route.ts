@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { deleteParticipant, updateParticipant } from "@/lib/services/participants";
 
@@ -10,9 +10,11 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     const { id, participantId } = await params;
     
-    // PATCH can be done by authenticated user OR guest
-    // Middleware doesn't block this - check both
-    let currentUser = await getCurrentUserFromMiddleware(request);
+    // PATCH uses Optional Auth pattern:
+    // - Middleware doesn't block this route (allows guest editing)
+    // - Check JWT directly from cookies for authenticated users
+    // - Fallback to guest session if not authenticated
+    let currentUser = await getCurrentUser();
     let guestSessionId: string | null = null;
     
     if (!currentUser) {
@@ -36,9 +38,11 @@ export async function DELETE(request: Request, { params }: Params) {
   try {
     const { id, participantId } = await params;
     
-    // DELETE can be done by authenticated user OR guest
-    // Middleware doesn't block this - check both
-    let currentUser = await getCurrentUserFromMiddleware(request);
+    // DELETE uses Optional Auth pattern:
+    // - Middleware doesn't block this route (allows guest deletion)
+    // - Check JWT directly from cookies for authenticated users
+    // - Fallback to guest session if not authenticated
+    let currentUser = await getCurrentUser();
     let guestSessionId: string | null = null;
     
     if (!currentUser) {
