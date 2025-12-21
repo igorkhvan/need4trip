@@ -69,7 +69,6 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
       events={events} 
       currentUserId={currentUserId} 
       isAuthenticated={isAuthenticated}
-      initialTab={searchParams?.tab}
     />
   );
 }

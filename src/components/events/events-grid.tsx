@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Calendar, Users, TrendingUp, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,32 +21,25 @@ interface EventsGridProps {
   events: Event[];
   currentUserId: string | null;
   isAuthenticated: boolean;
-  initialTab?: string;
 }
 
 type TabType = "all" | "upcoming" | "my";
 type PriceFilter = "all" | "free" | "paid";
 type SortBy = "date" | "participants" | "name";
 
-export function EventsGrid({ events, currentUserId, isAuthenticated, initialTab }: EventsGridProps) {
+export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGridProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Initialize activeTab from URL parameter (if valid)
-  const getInitialTab = (): TabType => {
-    if (initialTab === "upcoming" || initialTab === "my" || initialTab === "all") {
-      return initialTab;
+  // Read activeTab directly from URL (single source of truth)
+  const activeTab = useMemo((): TabType => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "upcoming" || tabParam === "my" || tabParam === "all") {
+      return tabParam;
     }
     return "all";
-  };
-  
-  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
-  
-  // Sync activeTab with URL parameter changes
-  useEffect(() => {
-    const validTab = getInitialTab();
-    setActiveTab(validTab);
-  }, [initialTab]);
+  }, [searchParams]);
   
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterCity, setFilterCity] = useState<string>("all");
@@ -249,11 +242,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated, initialTab 
         onChange={(tabId) => {
           startTransition(() => {
             const newTab = tabId as TabType;
-            setActiveTab(newTab);
             setCurrentPage(1);
             
-            // Update URL with tab parameter
-            const params = new URLSearchParams(window.location.search);
+            // Update URL with tab parameter (URL is single source of truth)
+            const params = new URLSearchParams(searchParams.toString());
             if (newTab === "all") {
               params.delete("tab");
             } else {
