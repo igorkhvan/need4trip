@@ -11,7 +11,7 @@ const securityHeaders = [
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live",
-      "frame-src https://telegram.org",
+      "frame-src https://telegram.org https://oauth.telegram.org",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
