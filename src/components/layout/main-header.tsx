@@ -40,8 +40,10 @@ export async function MainHeader() {
             {/* Mobile Navigation */}
             <MobileNav navItems={navItems} currentUser={currentUser} />
             
-            {/* User Section */}
-            <HeaderUserSection currentUser={currentUser} />
+            {/* User Section - Desktop only */}
+            <div className="hidden md:flex">
+              <HeaderUserSection currentUser={currentUser} />
+            </div>
           </div>
         </div>
       </div>

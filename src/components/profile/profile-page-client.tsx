@@ -588,8 +588,8 @@ export function ProfilePageClient() {
           <div className="h-32 md:h-48 bg-gradient-to-r from-[var(--color-primary)] to-orange-600 rounded-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             
-            {/* Top Right Actions */}
-            <div className="absolute top-4 right-4 flex items-center gap-2">
+            {/* Top Right Actions - Desktop only */}
+            <div className="absolute top-4 right-4 hidden md:flex items-center gap-2">
               <button
                 onClick={logout}
                 disabled={isPending}
