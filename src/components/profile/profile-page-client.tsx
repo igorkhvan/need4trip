@@ -641,19 +641,19 @@ export function ProfilePageClient() {
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.totalEvents}</div>
               <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Всего событий</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-success)] mb-1">{stats.completedEvents}</div>
               <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Завершено</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
+            <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.organizedEvents}</div>
               <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Организовано</div>
             </CardContent>
@@ -684,7 +684,7 @@ export function ProfilePageClient() {
           <div className="space-y-6">
             {/* Personal Info */}
             <Card>
-              <CardContent className="p-5 md:p-6">
+              <CardContent className="p-4 sm:p-5 md:p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3>Личная информация</h3>
                   {!isEditing && (
@@ -808,14 +808,14 @@ export function ProfilePageClient() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
+                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
                       <Mail className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Email</div>
                         <div className="text-base">{userData.email}</div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
+                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
                       <Phone className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Телефон</div>
@@ -823,7 +823,7 @@ export function ProfilePageClient() {
                       </div>
                     </div>
                     {userData.location && (
-                      <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
+                      <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
                         <MapPin className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                         <div>
                           <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Город</div>
@@ -831,7 +831,7 @@ export function ProfilePageClient() {
                         </div>
                       </div>
                     )}
-                    <div className="flex items-start gap-3 p-3 bg-[var(--color-bg-subtle)] rounded-xl">
+                    <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl" replace_all="true">>
                       <User className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
@@ -845,7 +845,7 @@ export function ProfilePageClient() {
 
             {/* Cars Section */}
             <Card>
-              <CardContent className="p-5 md:p-6">
+              <CardContent className="p-4 sm:p-5 md:p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3>Мои автомобили</h3>
                   <Button 
@@ -866,7 +866,7 @@ export function ProfilePageClient() {
 
                 {/* Add Car Form */}
                 {showAddCar && (
-                  <div className="mb-4 p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-4">
+                  <div className="mb-4 p-3 sm:p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-3 sm:space-y-4">
                     <FormField
                       id="car-brand"
                       label="Марка"
@@ -983,7 +983,7 @@ export function ProfilePageClient() {
                       
                       return isEditing ? (
                         // Edit form (same as add form)
-                        <div key={car.id} className="p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-4 border-2 border-[var(--color-primary)]">
+                        <div key={car.id} className="p-3 sm:p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-3 sm:space-y-4 border-2 border-[var(--color-primary)]">
                           <FormField
                             id="edit-car-brand"
                             label="Марка"
@@ -1086,7 +1086,7 @@ export function ProfilePageClient() {
                         // Display mode
                         <div
                           key={car.id}
-                          className={`p-4 rounded-xl border-2 transition-all ${
+                          className={`p-3 sm:p-4 rounded-xl border-2 transition-all ${
                             car.isPrimary
                               ? 'bg-[var(--color-primary-bg)] border-[var(--color-primary)]'
                               : 'bg-[var(--color-bg-subtle)] border-transparent hover:border-[var(--color-border)]'
@@ -1169,7 +1169,7 @@ export function ProfilePageClient() {
 
         {activeTab === 'events' && (
           <Card>
-            <CardContent className="p-8 text-center">
+            <CardContent className="p-6 sm:p-8 text-center">
               <p className="text-[var(--color-text-muted)]">История событий появится здесь</p>
             </CardContent>
           </Card>

@@ -108,7 +108,7 @@ export default function EditEventPage() {
 
   if (loading) {
     return (
-      <div className="page-container space-y-6 pb-10 pt-12">
+      <div className="page-container space-y-6 pb-6 pt-8 sm:pb-10 sm:pt-12">
         {/* Back Button Skeleton */}
         <div className="h-12 w-32 animate-pulse rounded-lg bg-[#F7F7F8]" />
         
@@ -119,9 +119,9 @@ export default function EditEventPage() {
         </div>
 
         {/* Form Cards Skeleton */}
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           {[1, 2, 3, 4].map((cardNum) => (
-            <div key={cardNum} className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
+            <div key={cardNum} className="rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-6 shadow-sm">
               {/* Card Header */}
               <div className="mb-6 flex items-center gap-3">
                 <div className="h-8 w-8 animate-pulse rounded-full bg-[#FF6F2C]/20" />
