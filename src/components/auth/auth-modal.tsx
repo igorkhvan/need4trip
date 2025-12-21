@@ -188,13 +188,11 @@ export function AuthModal({
   // Load Telegram widget when modal opens
   useEffect(() => {
     if (!open || !username || isAuthed) {
-      if (open && !username) {
-        console.error("[auth-modal] ❌ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set!");
+      if (open && !username && process.env.NODE_ENV === 'development') {
+        console.error("[auth-modal] NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set");
       }
       return;
     }
-
-    console.log("[auth-modal] 🔄 Starting widget initialization...");
 
     // Wait for container to be mounted with a retry mechanism
     let timeoutId: NodeJS.Timeout;
@@ -204,35 +202,22 @@ export function AuthModal({
     const initWidget = () => {
       const container = containerRef.current;
       
-      console.log(`[auth-modal] 🔍 Init attempt #${retryCount + 1}:`, {
-        open,
-        hasContainer: !!container,
-        username,
-        authUrl,
-        isAuthed,
-        timestamp: new Date().toISOString(),
-      });
-      
       if (!container) {
         // Retry if container is not ready yet
         if (retryCount < maxRetries) {
           retryCount++;
-          console.warn(`[auth-modal] ⚠️ Container not ready, retrying... (${retryCount}/${maxRetries})`);
           timeoutId = setTimeout(initWidget, 50);
         } else {
-          console.error("[auth-modal] ❌ Container ref is null after max retries!");
-          console.error("[auth-modal] 🐛 Run window.debugTelegramWidget() in console for detailed diagnostics");
+          console.error("[auth-modal] Container ref is null after max retries");
         }
         return;
       }
 
       // Clear container (safe method - no XSS risk)
-      console.log("[auth-modal] 🧹 Clearing container...");
       while (container.firstChild) {
         container.removeChild(container.firstChild);
       }
 
-      console.log("[auth-modal] 📜 Creating script element...");
       const script = document.createElement("script");
       script.src = "https://telegram.org/js/telegram-widget.js?22";
       script.async = true;
@@ -244,48 +229,18 @@ export function AuthModal({
       script.setAttribute("data-request-access", "write");
       script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
       
-      // Add load/error handlers for diagnostics
-      script.onload = () => {
-        console.log("[auth-modal] ✅ Telegram Widget script loaded successfully");
-        console.log("[auth-modal] ⏳ Waiting for iframe to be injected by Telegram...");
-        
-        // Check if iframe appeared after a delay
-        setTimeout(() => {
-          const iframe = container.querySelector('iframe');
-          if (iframe) {
-            console.log("[auth-modal] ✅ Telegram iframe found:", {
-              src: iframe.src,
-              width: iframe.width,
-              height: iframe.height,
-            });
-          } else {
-            console.error("[auth-modal] ❌ Telegram iframe NOT found after script load!");
-            console.error("[auth-modal] 🐛 Run window.debugTelegramWidget() in console");
-          }
-        }, 1000);
-      };
-      
+      // Add error handler
       script.onerror = (error) => {
-        console.error("[auth-modal] ❌ Failed to load Telegram Widget script:", error);
-        console.error("[auth-modal] 🌐 Network issue or CSP blocking?");
-        console.error("[auth-modal] 🐛 Run window.debugTelegramWidget() in console");
+        console.error("[auth-modal] Failed to load Telegram Widget script:", error);
       };
       
-      console.log("[auth-modal] ➕ Appending script to container", { 
-        username, 
-        authUrl,
-        scriptSrc: script.src,
-      });
       container.appendChild(script);
-      
-      console.log("[auth-modal] ✅ Script element appended to DOM");
     };
     
     // Start initialization with a small delay
     timeoutId = setTimeout(initWidget, 100);
 
     return () => {
-      console.log("[auth-modal] 🧹 Cleanup: clearing timeout and container");
       clearTimeout(timeoutId);
       const container = containerRef.current;
       if (container) {
@@ -310,27 +265,29 @@ export function AuthModal({
         </DialogHeader>
         
         <div className="flex flex-col gap-4 py-4">
-          {/* Debug Info - ALWAYS VISIBLE */}
-          <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs">
-            <div className="font-semibold mb-1">🔍 Debug Info:</div>
-            <div>• open: {String(open)}</div>
-            <div>• username: {username || '❌ NOT SET'}</div>
-            <div>• authUrl: {authUrl || 'auto'}</div>
-            <div>• isSubmitting: {String(isSubmitting)}</div>
-            <div>• hasContainer: {String(!!containerRef.current)}</div>
-            <div className="mt-2 pt-2 border-t border-blue-300">
-              <button
-                type="button"
-                onClick={() => {
-                  console.clear();
-                  debugTelegramWidget();
-                }}
-                className="text-blue-700 underline hover:text-blue-900"
-              >
-                🐛 Run Diagnostics (check console)
-              </button>
+          {/* Debug Info - только в development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs">
+              <div className="font-semibold mb-1">🔍 Debug Info:</div>
+              <div>• open: {String(open)}</div>
+              <div>• username: {username || '❌ NOT SET'}</div>
+              <div>• authUrl: {authUrl || 'auto'}</div>
+              <div>• isSubmitting: {String(isSubmitting)}</div>
+              <div>• hasContainer: {String(!!containerRef.current)}</div>
+              <div className="mt-2 pt-2 border-t border-blue-300">
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.clear();
+                    debugTelegramWidget();
+                  }}
+                  className="text-blue-700 underline hover:text-blue-900"
+                >
+                  🐛 Run Diagnostics (check console)
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           
           {/* Telegram Widget Container */}
           <div className="flex justify-center">
