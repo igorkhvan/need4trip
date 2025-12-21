@@ -95,9 +95,9 @@ export function UserMenuItems({
         <p className="text-base font-semibold text-[var(--color-text)] truncate">
           {currentUser.name || "Пользователь"}
         </p>
-        {currentUser.email && (
+        {currentUser.telegramHandle && (
           <p className="text-sm text-[var(--color-text-muted)] truncate mt-1">
-            {currentUser.email}
+            @{currentUser.telegramHandle}
           </p>
         )}
       </div>

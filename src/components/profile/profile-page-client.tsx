@@ -27,6 +27,7 @@ import { useLogout } from "@/lib/hooks/use-logout";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { ProfileContentSkeleton } from "@/components/ui/skeletons";
 import { NotificationSettingsForm } from "@/components/profile/notification-settings-form";
+import { FormField } from "@/components/ui/form-field";
 import { 
   Select,
   SelectContent,
@@ -701,10 +702,12 @@ export function ProfilePageClient() {
 
                 {isEditing ? (
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Имя и фамилия <span className="text-[var(--color-danger)]">*</span>
-                      </label>
+                    <FormField
+                      id="profile-name"
+                      label="Имя и фамилия"
+                      required
+                      error={profileFieldErrors.name}
+                    >
                       <Input
                         value={userData.name}
                         onChange={(e) => {
@@ -719,12 +722,13 @@ export function ProfilePageClient() {
                         }}
                         className={profileFieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                       />
-                      <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.name ?? ''}</div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Email
-                      </label>
+                    </FormField>
+                    
+                    <FormField
+                      id="profile-email"
+                      label="Email"
+                      error={profileFieldErrors.email}
+                    >
                       <Input
                         type="email"
                         value={userData.email}
@@ -740,12 +744,13 @@ export function ProfilePageClient() {
                         }}
                         className={profileFieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                       />
-                      <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.email ?? ''}</div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Телефон
-                      </label>
+                    </FormField>
+                    
+                    <FormField
+                      id="profile-phone"
+                      label="Телефон"
+                      error={profileFieldErrors.phone}
+                    >
                       <Input
                         value={userData.phone}
                         onChange={(e) => {
@@ -760,8 +765,7 @@ export function ProfilePageClient() {
                         }}
                         className={profileFieldErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}
                       />
-                      <div className="min-h-[20px] text-xs text-red-600">{profileFieldErrors.phone ?? ''}</div>
-                    </div>
+                    </FormField>
                     <div>
                       <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
                         Город
@@ -863,10 +867,12 @@ export function ProfilePageClient() {
                 {/* Add Car Form */}
                 {showAddCar && (
                   <div className="mb-4 p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Марка <span className="text-[var(--color-danger)]">*</span>
-                      </label>
+                    <FormField
+                      id="car-brand"
+                      label="Марка"
+                      required
+                      error={carFieldErrors.carBrandId}
+                    >
                       <BrandSelect
                         options={brands}
                         value={newCar.carBrandId}
@@ -883,13 +889,14 @@ export function ProfilePageClient() {
                         error={!!carFieldErrors.carBrandId}
                         placeholder="Выберите марку"
                       />
-                      <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.carBrandId ?? ''}</div>
-                    </div>
+                    </FormField>
 
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Тип <span className="text-[var(--color-danger)]">*</span>
-                      </label>
+                    <FormField
+                      id="car-type"
+                      label="Тип"
+                      required
+                      error={carFieldErrors.type}
+                    >
                       <Select
                         value={newCar.type}
                         onValueChange={(value) => {
@@ -918,8 +925,7 @@ export function ProfilePageClient() {
                           )}
                         </SelectContent>
                       </Select>
-                      <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.type ?? ''}</div>
-                    </div>
+                    </FormField>
 
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-[var(--color-text)]">
@@ -978,10 +984,12 @@ export function ProfilePageClient() {
                       return isEditing ? (
                         // Edit form (same as add form)
                         <div key={car.id} className="p-4 bg-[var(--color-bg-subtle)] rounded-xl space-y-4 border-2 border-[var(--color-primary)]">
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-[var(--color-text)]">
-                              Марка <span className="text-[var(--color-danger)]">*</span>
-                            </label>
+                          <FormField
+                            id="edit-car-brand"
+                            label="Марка"
+                            required
+                            error={carFieldErrors.carBrandId}
+                          >
                             <BrandSelect
                               options={brands}
                               value={newCar.carBrandId}
@@ -998,13 +1006,14 @@ export function ProfilePageClient() {
                               error={!!carFieldErrors.carBrandId}
                               placeholder="Выберите марку"
                             />
-                            <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.carBrandId ?? ''}</div>
-                          </div>
+                          </FormField>
 
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-[var(--color-text)]">
-                              Тип <span className="text-[var(--color-danger)]">*</span>
-                            </label>
+                          <FormField
+                            id="edit-car-type"
+                            label="Тип"
+                            required
+                            error={carFieldErrors.type}
+                          >
                             <Select
                               value={newCar.type}
                               onValueChange={(value) => {
@@ -1033,8 +1042,7 @@ export function ProfilePageClient() {
                                 )}
                               </SelectContent>
                             </Select>
-                            <div className="min-h-[20px] text-xs text-red-600">{carFieldErrors.type ?? ''}</div>
-                          </div>
+                          </FormField>
 
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-[var(--color-text)]">
