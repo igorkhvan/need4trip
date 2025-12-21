@@ -74,7 +74,7 @@ END $$;
 
 -- Step 8: Add comments for documentation
 COMMENT ON COLUMN public.events.club_id IS 'ID клуба-организатора (NULL = личное событие)';
-COMMENT ON CONSTRAINT events_visibility_check ON public.events IS 'Уровни видимости: public (все), unlisted (по ссылке), restricted (только участники/клуб)';
+COMMENT ON CONSTRAINT events_visibility_check ON public.events IS 'Уровни видимости: public (доступно всем), unlisted (по ссылке всем), restricted (по ссылке только авторизованным)';
 COMMENT ON CONSTRAINT events_club_consistency_check ON public.events IS 'Гарантирует синхронизацию is_club_event и club_id (is_club_event = TRUE <=> club_id IS NOT NULL)';
 
 -- Step 9: Create function to auto-update is_club_event when club_id changes

@@ -171,9 +171,9 @@ type Visibility = "public" | "unlisted" | "restricted";
 ```
 
 **Семантика:**
-- `public` - Видно всем (как раньше)
-- `unlisted` - Доступно только по прямой ссылке (новое)
-- `restricted` - Только участникам/клубу (было `link_registered`)
+- `public` - Публичный (доступно всем)
+- `unlisted` - Скрытый (по ссылке доступно всем)
+- `restricted` - Скрытый (по ссылке доступно авторизованным)
 
 #### Добавлены поля в Event interface
 ```typescript

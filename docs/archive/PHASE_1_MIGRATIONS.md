@@ -151,9 +151,9 @@ WHERE visibility = 'link_registered';
 ```
 
 **Новая семантика:**
-- `public` - видно всем (как раньше)
-- `unlisted` - доступно только по прямой ссылке (новое)
-- `restricted` - только участникам/клубу (было `link_registered`)
+- `public` - Публичный (доступно всем)
+- `unlisted` - Скрытый (по ссылке доступно всем)
+- `restricted` - Скрытый (по ссылке доступно авторизованным)
 
 **Новый constraint `events_club_consistency_check`:**
 ```sql

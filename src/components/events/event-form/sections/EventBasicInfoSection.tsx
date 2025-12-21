@@ -254,9 +254,9 @@ export function EventBasicInfoSection({
               <SelectValue placeholder="Кто видит событие" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="public">Публичный (видно всем)</SelectItem>
-              <SelectItem value="unlisted">По прямой ссылке</SelectItem>
-              <SelectItem value="restricted">Только участникам/клубу</SelectItem>
+              <SelectItem value="public">Публичный (доступно всем)</SelectItem>
+              <SelectItem value="unlisted">Скрытый (по ссылке доступно всем)</SelectItem>
+              <SelectItem value="restricted">Скрытый (по ссылке доступно авторизованным)</SelectItem>
             </SelectContent>
           </Select>
         </FormField>
