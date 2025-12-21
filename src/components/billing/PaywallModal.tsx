@@ -73,11 +73,11 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{message.title}</DialogTitle>
-          <DialogDescription>{message.description}</DialogDescription>
+          <DialogTitle className="heading-h3">{message.title}</DialogTitle>
+          <DialogDescription className="text-body-small">{message.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-2 text-sm">
+        <div className="py-3 sm:py-4 space-y-2 text-sm">
           {error.currentPlanId && (
             <p>
               <strong>Текущий план:</strong>{" "}

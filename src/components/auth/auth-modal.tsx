@@ -256,15 +256,15 @@ export function AuthModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-[var(--color-text)]">
+          <DialogTitle className="heading-h3 text-[var(--color-text)]">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-base text-[var(--color-text-muted)]">
+          <DialogDescription className="text-body-small">
             {finalDescription}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-col gap-4 py-4">
+        <div className="flex flex-col gap-3 py-3 sm:gap-4 sm:py-4">
           {/* Debug Info - только в development */}
           {process.env.NODE_ENV === 'development' && (
             <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs">
