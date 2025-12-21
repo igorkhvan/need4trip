@@ -35,11 +35,12 @@ export interface VisibilityCheckResult {
  * Check if user can view a single event (with DB queries)
  * 
  * Order of checks (early return pattern):
- * 1. Public visibility → always allowed
- * 2. Owner → always allowed
- * 3. Authenticated check (for non-public)
- * 4. Participant/Access check (database)
- * 5. Auto-grant for restricted (if enabled)
+ * 1. Public visibility → always allowed (all users)
+ * 2. Owner → always allowed (owner can see their own events)
+ * 3. Unlisted → always allowed (anyone with direct link, including anonymous)
+ * 4. Restricted requires authentication (anonymous users blocked)
+ * 5. Participant/Access check (database lookup)
+ * 6. Auto-grant for restricted (if enabled, creates access record)
  * 
  * @param event Event to check
  * @param currentUser Current user (or null if anonymous)
@@ -65,7 +66,14 @@ export async function canViewEvent(
     return { canView: true };
   }
   
-  // 3. Non-authenticated users cannot view non-public events
+  // 3. Unlisted events are accessible to EVERYONE by direct link
+  // This includes anonymous users - no authentication required
+  if (event.visibility === "unlisted") {
+    return { canView: true };
+  }
+  
+  // 4. Restricted events require authentication
+  // Anonymous users cannot view restricted events
   if (!currentUser) {
     return {
       canView: false,
@@ -74,7 +82,8 @@ export async function canViewEvent(
     };
   }
   
-  // 4. Check if user has access (participant or explicitly granted)
+  // 5. Check if user has access (participant or explicitly granted)
+  // At this point: event is 'restricted' and user is authenticated
   let allowed = false;
   try {
     const [participantEventIds, accessEventIds] = await Promise.all([
@@ -91,7 +100,8 @@ export async function canViewEvent(
     return { canView: true };
   }
   
-  // 5. For 'restricted' events, auto-grant access on first visit
+  // 6. For 'restricted' events, auto-grant access on first visit
+  // Creates a record in event_user_access for future access
   if (event.visibility === "restricted" && autoGrant) {
     try {
       await upsertEventAccess(event.id, currentUser.id, "link");
