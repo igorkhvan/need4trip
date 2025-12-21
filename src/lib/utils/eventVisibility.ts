@@ -136,6 +136,42 @@ export function isPubliclyVisible(event: Event): boolean {
 }
 
 /**
+ * Check if event should be visible on homepage
+ * 
+ * Homepage is a public showcase of events for all users (including new visitors).
+ * 
+ * Rules:
+ * - Public events → visible to everyone (including anonymous)
+ * - Owner's own events → visible (including unlisted/restricted)
+ * - Participants' events → NOT visible (homepage is public showcase, not personal list)
+ * 
+ * Personal events (including unlisted where user is participant) are shown in /events page.
+ * 
+ * @param event Event to check
+ * @param currentUser Current user (or null if anonymous)
+ * @returns true if event should appear on homepage
+ */
+export function isVisibleOnHomepage(
+  event: Event,
+  currentUser: CurrentUser | null
+): boolean {
+  // 1. Public events visible to everyone
+  if (isPubliclyVisible(event)) {
+    return true;
+  }
+  
+  // 2. Owner sees their own events (including unlisted/restricted)
+  if (currentUser && event.createdByUserId === currentUser.id) {
+    return true;
+  }
+  
+  // 3. Participants do NOT see unlisted/restricted events on homepage
+  // Homepage = public showcase, not personal list
+  // Personal events are shown in /events page
+  return false;
+}
+
+/**
  * Check if user can see event in lists (lightweight, no extra DB queries)
  * 
  * Used for filtering event lists when participant/access IDs are already loaded.

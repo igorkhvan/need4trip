@@ -8,19 +8,20 @@
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { listVisibleEventsForUser } from "@/lib/services/events";
 import { EventCardCompact } from "@/components/events/event-card-compact";
-import { isPubliclyVisible } from "@/lib/utils/eventVisibility";
+import { isVisibleOnHomepage } from "@/lib/utils/eventVisibility";
 
 export async function UpcomingEventsAsync() {
   // Загружаем события
   const currentUser = await getCurrentUserSafe();
   const eventsData = await listVisibleEventsForUser(currentUser?.id ?? null);
   
-  // Фильтруем только предстоящие публичные (для homepage)
+  // Фильтруем только предстоящие события для homepage
+  // Homepage = витрина для всех (public события + свои события для владельцев)
   const now = new Date();
   const upcomingPublicEvents = eventsData
     .filter((e) => {
       const eventDate = new Date(e.dateTime);
-      return isPubliclyVisible(e) && eventDate >= now; // ← Централизованная проверка
+      return isVisibleOnHomepage(e, currentUser) && eventDate >= now;
     })
     .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
     .slice(0, 3);
