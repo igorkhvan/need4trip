@@ -18,6 +18,7 @@ import { Lock, Unlock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ActionCard } from "@/components/ui/action-card";
 import { toast } from "@/components/ui/use-toast";
 import { LockedIndicator } from "@/components/ui/locked-indicator";
 import { useSaveScroll } from "@/hooks/use-scroll-save";
@@ -98,37 +99,35 @@ export function EventRegistrationControl({ event, isOwner }: EventRegistrationCo
         )}
         
         {/* Toggle Registration Control */}
-        <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-border)] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex-1">
-            <p className="font-medium text-[var(--color-text)]">
-              {event.registrationManuallyClosed ? 'Открыть регистрацию' : 'Закрыть регистрацию'}
-            </p>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {event.registrationManuallyClosed 
-                ? 'Участники снова смогут регистрироваться на событие'
-                : 'Только вы сможете добавлять участников (даже если дата не прошла)'
-              }
-            </p>
-          </div>
-          <Button
-            variant={event.registrationManuallyClosed ? 'default' : 'destructive'}
-            onClick={handleToggleRegistration}
-            disabled={isDisabled}
-            className="w-full sm:w-auto"
-          >
-            {event.registrationManuallyClosed ? (
-              <>
-                <Unlock className="icon-sm mr-2" />
-                Открыть
-              </>
-            ) : (
-              <>
-                <Lock className="icon-sm mr-2" />
-                Закрыть
-              </>
-            )}
-          </Button>
-        </div>
+        <ActionCard
+          variant="default"
+          title={event.registrationManuallyClosed ? 'Открыть регистрацию' : 'Закрыть регистрацию'}
+          description={
+            event.registrationManuallyClosed 
+              ? 'Участники снова смогут регистрироваться на событие'
+              : 'Только вы сможете добавлять участников (даже если дата не прошла)'
+          }
+          action={
+            <Button
+              variant={event.registrationManuallyClosed ? 'default' : 'destructive'}
+              onClick={handleToggleRegistration}
+              disabled={isDisabled}
+              className="w-full sm:w-auto"
+            >
+              {event.registrationManuallyClosed ? (
+                <>
+                  <Unlock className="icon-sm mr-2" />
+                  Открыть
+                </>
+              ) : (
+                <>
+                  <Lock className="icon-sm mr-2" />
+                  Закрыть
+                </>
+              )}
+            </Button>
+          }
+        />
         
         {/* Past Event Hint */}
         {isPastEvent && (

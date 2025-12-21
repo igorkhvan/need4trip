@@ -16,6 +16,7 @@ import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ActionCard } from "@/components/ui/action-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/use-toast";
 import type { Event } from "@/lib/types/event";
@@ -71,34 +72,31 @@ export function EventDangerZone({ event, isOwner }: EventDangerZoneProps) {
       </CardHeader>
       <CardContent>
         {/* Delete Event */}
-        <div className="flex flex-col gap-4 rounded-xl border border-[var(--color-danger)] bg-white p-4">
-          <div>
-            <p className="font-medium text-[var(--color-danger)]">
-              Удалить событие навсегда
-            </p>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Событие и все регистрации участников будут удалены безвозвратно
-            </p>
-          </div>
-          <ConfirmDialog
-            trigger={
-              <Button 
-                variant="destructive" 
-                className="w-full"
-                disabled={isDeletingEvent}
-              >
-                <Trash2 className="icon-sm mr-2" />
-                {isDeletingEvent ? 'Удаление...' : 'Удалить событие'}
-              </Button>
-            }
-            title="Удалить событие навсегда?"
-            description={`Будет удалено событие «${event.title}», все регистрации участников (${event.participantsCount || 0}) и все дополнительные данные. Это действие нельзя отменить!`}
-            confirmText="Удалить навсегда"
-            cancelText="Отмена"
-            onConfirm={handleDeleteEvent}
-            destructive
-          />
-        </div>
+        <ActionCard
+          variant="danger"
+          title="Удалить событие навсегда"
+          description="Событие и все регистрации участников будут удалены безвозвратно"
+          action={
+            <ConfirmDialog
+              trigger={
+                <Button 
+                  variant="destructive" 
+                  className="w-full sm:w-auto"
+                  disabled={isDeletingEvent}
+                >
+                  <Trash2 className="icon-sm mr-2" />
+                  {isDeletingEvent ? 'Удаление...' : 'Удалить событие'}
+                </Button>
+              }
+              title="Удалить событие навсегда?"
+              description={`Будет удалено событие «${event.title}», все регистрации участников (${event.participantsCount || 0}) и все дополнительные данные. Это действие нельзя отменить!`}
+              confirmText="Удалить навсегда"
+              cancelText="Отмена"
+              onConfirm={handleDeleteEvent}
+              destructive
+            />
+          }
+        />
       </CardContent>
     </Card>
   );
