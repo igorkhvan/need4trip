@@ -199,44 +199,76 @@ export function AuthModal({
       return;
     }
 
-    // Clear container (safe method - no XSS risk)
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
-    }
-
-    // Create widget element (NOT script - script loaded globally in layout.tsx)
-    const widgetDiv = document.createElement("div");
-    widgetDiv.id = `telegram-login-${Date.now()}`;
-    widgetDiv.setAttribute("data-telegram-login", username);
-    widgetDiv.setAttribute("data-size", "large");
-    if (authUrl) {
-      widgetDiv.setAttribute("data-auth-url", authUrl);
-    }
-    widgetDiv.setAttribute("data-request-access", "write");
-    widgetDiv.setAttribute("data-onauth", "onTelegramAuthModal(user)");
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log("[auth-modal] Creating Telegram Widget element", { 
-        username, 
-        authUrl,
-        hasTelegramAPI: !!window.Telegram 
-      });
-    }
-    
-    container.appendChild(widgetDiv);
-
-    // Initialize widget using Telegram API (script already loaded globally)
-    if (window.Telegram?.Login) {
-      try {
-        window.Telegram.Login.init(widgetDiv);
-        if (process.env.NODE_ENV === 'development') {
-          console.log("[auth-modal] ✅ Telegram Widget initialized");
-        }
-      } catch (error) {
-        console.error("[auth-modal] Failed to initialize Telegram Widget:", error);
+    // Function to initialize widget
+    const initWidget = () => {
+      // Clear container (safe method - no XSS risk)
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
       }
+
+      // Create widget element (NOT script - script loaded globally in layout.tsx)
+      const widgetDiv = document.createElement("div");
+      widgetDiv.id = `telegram-login-${Date.now()}`;
+      widgetDiv.setAttribute("data-telegram-login", username);
+      widgetDiv.setAttribute("data-size", "large");
+      if (authUrl) {
+        widgetDiv.setAttribute("data-auth-url", authUrl);
+      }
+      widgetDiv.setAttribute("data-request-access", "write");
+      widgetDiv.setAttribute("data-onauth", "onTelegramAuthModal(user)");
+      
+      container.appendChild(widgetDiv);
+
+      // Initialize widget using Telegram API (script already loaded globally)
+      if (window.Telegram?.Login) {
+        try {
+          window.Telegram.Login.init(widgetDiv);
+          if (process.env.NODE_ENV === 'development') {
+            console.log("[auth-modal] ✅ Telegram Widget initialized");
+          }
+        } catch (error) {
+          console.error("[auth-modal] Failed to initialize Telegram Widget:", error);
+        }
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn("[auth-modal] ⚠️ Telegram Widget API not available yet, will retry...");
+        }
+      }
+    };
+
+    // Try to initialize immediately
+    if (window.Telegram?.Login) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log("[auth-modal] Telegram API available, initializing widget", { 
+          username, 
+          authUrl,
+        });
+      }
+      initWidget();
     } else {
-      console.warn("[auth-modal] ⚠️ Telegram Widget API not available yet");
+      // If script not loaded yet, wait for it with retry mechanism
+      if (process.env.NODE_ENV === 'development') {
+        console.log("[auth-modal] Waiting for Telegram script to load...");
+      }
+      
+      let retryCount = 0;
+      const maxRetries = 20; // 20 * 100ms = 2 seconds max
+      
+      const checkAndInit = () => {
+        if (window.Telegram?.Login) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[auth-modal] ✅ Telegram API loaded after ${retryCount * 100}ms`);
+          }
+          initWidget();
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(checkAndInit, 100);
+        } else {
+          console.error("[auth-modal] ❌ Telegram script failed to load after 2 seconds");
+        }
+      };
+      
+      setTimeout(checkAndInit, 100);
     }
 
     return () => {

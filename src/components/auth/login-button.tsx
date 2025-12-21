@@ -101,31 +101,54 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     const container = containerRef.current;
     if (!container || !username || isAuthenticated || hasAuthed) return;
 
-    // Clear container (safe method - no XSS risk)
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
-    }
-
-    // Create widget element (NOT script - script loaded globally in layout.tsx)
-    const widgetDiv = document.createElement("div");
-    widgetDiv.id = `telegram-login-${Date.now()}`;
-    widgetDiv.setAttribute("data-telegram-login", username);
-    widgetDiv.setAttribute("data-size", "large");
-    if (authUrl) {
-      widgetDiv.setAttribute("data-auth-url", authUrl);
-    }
-    widgetDiv.setAttribute("data-request-access", "write");
-    widgetDiv.setAttribute("data-onauth", "onTelegramAuth(user)");
-    
-    container.appendChild(widgetDiv);
-
-    // Initialize widget using Telegram API (script already loaded globally)
-    if (window.Telegram?.Login) {
-      try {
-        window.Telegram.Login.init(widgetDiv);
-      } catch (error) {
-        console.error("[login-button] Failed to initialize Telegram Widget:", error);
+    // Function to initialize widget
+    const initWidget = () => {
+      // Clear container (safe method - no XSS risk)
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
       }
+
+      // Create widget element (NOT script - script loaded globally in layout.tsx)
+      const widgetDiv = document.createElement("div");
+      widgetDiv.id = `telegram-login-${Date.now()}`;
+      widgetDiv.setAttribute("data-telegram-login", username);
+      widgetDiv.setAttribute("data-size", "large");
+      if (authUrl) {
+        widgetDiv.setAttribute("data-auth-url", authUrl);
+      }
+      widgetDiv.setAttribute("data-request-access", "write");
+      widgetDiv.setAttribute("data-onauth", "onTelegramAuth(user)");
+      
+      container.appendChild(widgetDiv);
+
+      // Initialize widget using Telegram API (script already loaded globally)
+      if (window.Telegram?.Login) {
+        try {
+          window.Telegram.Login.init(widgetDiv);
+        } catch (error) {
+          console.error("[login-button] Failed to initialize Telegram Widget:", error);
+        }
+      }
+    };
+
+    // Try to initialize immediately or wait for script
+    if (window.Telegram?.Login) {
+      initWidget();
+    } else {
+      // Wait for script to load with retry
+      let retryCount = 0;
+      const maxRetries = 20;
+      
+      const checkAndInit = () => {
+        if (window.Telegram?.Login) {
+          initWidget();
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(checkAndInit, 100);
+        }
+      };
+      
+      setTimeout(checkAndInit, 100);
     }
 
     return () => {
