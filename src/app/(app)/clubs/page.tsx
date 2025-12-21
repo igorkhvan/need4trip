@@ -140,29 +140,31 @@ export default function ClubsPage() {
         </div>
 
         {/* Статистика */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Всего клубов</div>
-            <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
-              {clubs.length}
+        <div className="mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
+          <div className="flex gap-4 sm:grid sm:grid-cols-2 md:grid-cols-4 min-w-max sm:min-w-0">
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
+              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Всего клубов</div>
+              <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
+                {clubs.length}
+              </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Участников</div>
-            <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
-              {totalMembers}
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
+              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Участников</div>
+              <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
+                {totalMembers}
+              </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Событий</div>
-            <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
-              {totalEvents}
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
+              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Событий</div>
+              <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
+                {totalEvents}
+              </div>
             </div>
-          </div>
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Городов</div>
-            <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
-              {totalCities}
+            <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
+              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Городов</div>
+              <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
+                {totalCities}
+              </div>
             </div>
           </div>
         </div>
