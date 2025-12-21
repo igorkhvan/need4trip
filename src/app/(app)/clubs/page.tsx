@@ -123,7 +123,7 @@ export default function ClubsPage() {
       {/* Заголовок и кнопка создания */}
       <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="mb-1 text-3xl font-bold leading-tight text-[var(--color-text)] md:text-4xl">
+            <h1 className="heading-h1 mb-1">
               Автомобильные клубы
             </h1>
             <p className="text-sm text-[var(--color-text-muted)] md:text-base">

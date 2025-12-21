@@ -173,7 +173,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold leading-tight text-[var(--color-text)] sm:text-5xl">
+          <h1 className="heading-hero">
             Все события
           </h1>
           <p className="text-base text-[var(--color-text-muted)]">
@@ -187,48 +187,50 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="border-[var(--color-border)] shadow-sm">
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего событий</div>
-              <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                {stats.totalEvents}
+      <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
+        <div className="flex gap-4 md:grid md:grid-cols-3 min-w-max md:min-w-0">
+          <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
+            <CardContent className="flex items-center justify-between p-6">
+              <div>
+                <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего событий</div>
+                <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
+                  {stats.totalEvents}
+                </div>
               </div>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
-              <Calendar className="h-6 w-6 text-[var(--color-primary)]" />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
+                <Calendar className="h-6 w-6 text-[var(--color-primary)]" />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-[var(--color-border)] shadow-sm">
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <div className="mb-2 text-sm text-[var(--color-text-muted)]">Активных регистраций</div>
-              <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                {stats.activeRegistrations}
+          <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
+            <CardContent className="flex items-center justify-between p-6">
+              <div>
+                <div className="mb-2 text-sm text-[var(--color-text-muted)]">Активных регистраций</div>
+                <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
+                  {stats.activeRegistrations}
+                </div>
               </div>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-success-bg)]">
-              <TrendingUp className="h-6 w-6 text-[var(--color-success)]" />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-success-bg)]">
+                <TrendingUp className="h-6 w-6 text-[var(--color-success)]" />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-[var(--color-border)] shadow-sm">
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего участников</div>
-              <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                {stats.totalParticipants}
+          <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
+            <CardContent className="flex items-center justify-between p-6">
+              <div>
+                <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего участников</div>
+                <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
+                  {stats.totalParticipants}
+                </div>
               </div>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
-              <Users className="h-6 w-6 text-[var(--color-primary)]" />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
+                <Users className="h-6 w-6 text-[var(--color-primary)]" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -422,7 +424,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-bg-subtle)]">
             <Search className="h-8 w-8 text-[var(--color-text-muted)]" />
           </div>
-          <h3 className="mb-2 text-2xl font-semibold text-[var(--color-text)]">Ничего не найдено</h3>
+          <h3 className="heading-h2 mb-2">Ничего не найдено</h3>
           <p className="mb-6 text-base text-[var(--color-text-muted)]">
             Попробуйте изменить поисковый запрос или фильтр
           </p>
