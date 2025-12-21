@@ -43,48 +43,27 @@ import { CurrentUser } from "@/lib/auth/currentUser";
 import { upsertEventAccess, listAccessibleEventIds } from "@/lib/db/eventAccessRepo";
 import { enforceClubAction } from "@/lib/services/accessControl";
 import { log } from "@/lib/utils/logger";
+import { enforceEventVisibility as enforceVisibility, canViewInList } from "@/lib/utils/eventVisibility";
 
 type EventAccessOptions = {
   currentUser?: CurrentUser | null;
   enforceVisibility?: boolean;
 };
 
+/**
+ * Ensure event visibility (internal wrapper)
+ * 
+ * Delegates to centralized enforceEventVisibility from eventVisibility.ts
+ * Preserves existing API (enforceVisibility flag).
+ */
 async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
   const enforce = opts?.enforceVisibility ?? false;
   if (!enforce) return;
-  if (event.visibility === "public") return;
-
-  const currentUser = opts?.currentUser ?? null;
-  if (!currentUser) {
-    throw new AuthError("Недостаточно прав для просмотра события", undefined, 403);
-  }
-  if (event.createdByUserId === currentUser.id) return;
-
-  let allowed = false;
-  try {
-    const [participantEventIds, accessEventIds] = await Promise.all([
-      listEventIdsForUser(currentUser.id),
-      listAccessibleEventIds(currentUser.id),
-    ]);
-    const allowedIds = new Set<string>([...participantEventIds, ...accessEventIds]);
-    allowed = allowedIds.has(event.id);
-  } catch (err) {
-    log.errorWithStack("Failed to check event visibility access", err, { eventId: event.id });
-  }
-
-  // For 'restricted' visibility, grant access automatically when user visits via link
-  if (!allowed && event.visibility === "restricted") {
-    try {
-      await upsertEventAccess(event.id, currentUser.id, "link");
-      allowed = true;
-    } catch (err) {
-      log.errorWithStack("Failed to upsert access for restricted event", err, { eventId: event.id });
-    }
-  }
-
-  if (!allowed) {
-    throw new AuthError("Недостаточно прав для просмотра события", undefined, 403);
-  }
+  
+  // Delegate to centralized visibility helper
+  await enforceVisibility(event, opts?.currentUser ?? null, {
+    autoGrantAccessForRestricted: true,
+  });
 }
 
 export async function listEvents(page = 1, limit = 12): Promise<{
@@ -170,13 +149,13 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
     new Map(allEvents.map((e) => [e.id, e])).values()
   );
 
-  // For non-public events, check if user has access
-  const allowedIds = new Set([...participantEventIds, ...accessEventIds]);
-  const filtered = uniqueEvents.filter(
-    (e) => 
-      e.visibility === "public" || 
-      e.createdByUserId === userId || 
-      allowedIds.has(e.id)
+  // ✅ NEW: Use centralized visibility filter (eliminates duplication)
+  const participantIds = new Set(participantEventIds);
+  const accessIds = new Set(accessEventIds);
+  const currentUser = { id: userId } as CurrentUser; // Lightweight user object for filtering
+  
+  const filtered = uniqueEvents.filter(e => 
+    canViewInList(e, currentUser, participantIds, accessIds)
   );
 
   const eventIds = filtered.map((e) => e.id);

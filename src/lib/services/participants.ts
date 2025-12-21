@@ -151,6 +151,8 @@ export async function registerParticipant(
   }
 
   // For 'restricted' visibility, grant access automatically when user registers
+  // Note: This is handled by canViewEvent in eventVisibility.ts, but we also
+  // ensure it here for participants registration flow
   if (event.visibility === "restricted") {
     if (!currentUser) {
       throw new AuthError("Регистрация доступна только авторизованным пользователям", undefined, 401);

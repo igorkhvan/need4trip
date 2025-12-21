@@ -8,6 +8,7 @@
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { listVisibleEventsForUser } from "@/lib/services/events";
 import { EventCardCompact } from "@/components/events/event-card-compact";
+import { isPubliclyVisible } from "@/lib/utils/eventVisibility";
 
 export async function UpcomingEventsAsync() {
   // Загружаем события
@@ -19,7 +20,7 @@ export async function UpcomingEventsAsync() {
   const upcomingPublicEvents = eventsData
     .filter((e) => {
       const eventDate = new Date(e.dateTime);
-      return e.visibility === "public" && eventDate >= now;
+      return isPubliclyVisible(e) && eventDate >= now; // ← Централизованная проверка
     })
     .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
     .slice(0, 3);
