@@ -141,11 +141,11 @@ GRANT SELECT ON public.user_public_profiles TO anon, authenticated;
 
 DO $$
 BEGIN
-  IF NOT (SELECT relrowsecurity FROM pg_class WHERE relname = 'users') THEN
-    RAISE EXCEPTION 'RLS is not enabled on users table';
+  IF NOT (SELECT relrowsecurity FROM pg_class WHERE relname = 'users' AND relnamespace = 'public'::regnamespace) THEN
+    RAISE EXCEPTION 'RLS is not enabled on public.users table';
   END IF;
   
-  RAISE NOTICE 'RLS successfully enabled on users table';
+  RAISE NOTICE 'RLS successfully enabled on public.users table';
   RAISE NOTICE 'Created 4 policies: 2 SELECT, 1 INSERT, 1 UPDATE';
   RAISE NOTICE 'DELETE is BLOCKED (no policy) - use soft delete';
   RAISE NOTICE 'Created user_public_profiles view for safe public access';
