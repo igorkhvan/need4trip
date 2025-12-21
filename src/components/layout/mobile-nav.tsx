@@ -6,11 +6,11 @@
  * 
  * Features:
  * - Touch-friendly menu button (48px × 48px)
- * - Slide-in drawer from left
+ * - Slide-in drawer from left with swipe-to-close gesture
  * - Navigation links
  * - User menu (Profile + Logout)
  * - Auto-close on route change
- * - Swipe to close gesture (built-in via Radix UI Sheet)
+ * - Swipe gesture powered by vaul
  */
 
 "use client";
@@ -21,12 +21,12 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  SwipeableSheet,
+  SwipeableSheetContent,
+  SwipeableSheetHeader,
+  SwipeableSheetTitle,
+  SwipeableSheetTrigger,
+} from "@/components/ui/swipeable-sheet";
 import { Button } from "@/components/ui/button";
 import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
@@ -93,8 +93,8 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild className="md:hidden">
+    <SwipeableSheet open={open} onOpenChange={setOpen}>
+      <SwipeableSheetTrigger asChild className="md:hidden">
         <Button
           variant="ghost"
           size="icon"
@@ -103,11 +103,11 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
         >
           <Menu className="h-5 w-5" />
         </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[320px]">
-        <SheetHeader className="mb-6">
-          <SheetTitle>Навигация</SheetTitle>
-        </SheetHeader>
+      </SwipeableSheetTrigger>
+      <SwipeableSheetContent side="left" className="w-[280px] sm:w-[320px]">
+        <SwipeableSheetHeader className="mb-6">
+          <SwipeableSheetTitle>Навигация</SwipeableSheetTitle>
+        </SwipeableSheetHeader>
         
         {/* Navigation Links */}
         <nav className="flex flex-col gap-2 mb-6">
@@ -150,7 +150,7 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
             Войти через Telegram
           </Button>
         )}
-      </SheetContent>
-    </Sheet>
+      </SwipeableSheetContent>
+    </SwipeableSheet>
   );
 }
