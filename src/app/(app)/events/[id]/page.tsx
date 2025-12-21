@@ -36,15 +36,22 @@ export default async function EventDetails({
 }) {
   const { id } = await params;
   
-  // Загружаем критичные данные сразу
-  const [currentUser, guestSessionId, event] = await Promise.all([
+  // 1. Загружаем currentUser и guestSessionId параллельно
+  const [currentUser, guestSessionId] = await Promise.all([
     getCurrentUserSafe(),
     (async () => {
       const u = await getCurrentUserSafe();
       return u ? null : await getGuestSessionId();
     })(),
-    getEventBasicInfo(id, { enforceVisibility: true }).catch(() => null),
   ]);
+  
+  // 2. Загружаем событие с контекстом пользователя (после загрузки currentUser)
+  // ВАЖНО: currentUser должен быть загружен ДО проверки видимости,
+  // чтобы владельцы могли видеть свои unlisted/restricted события
+  const event = await getEventBasicInfo(id, {
+    currentUser,
+    enforceVisibility: true
+  }).catch(() => null);
   
   if (!event) return notFound();
   

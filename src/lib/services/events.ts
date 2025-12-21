@@ -283,6 +283,26 @@ export async function getEventWithParticipants(
  * Получить базовую информацию о событии (без участников)
  * Для быстрой загрузки с Streaming SSR
  * Включает только счетчик участников (быстрый запрос)
+ * 
+ * ВАЖНО: Для правильной проверки видимости всегда передавайте currentUser:
+ * 
+ * @example
+ * // ✅ Правильно:
+ * const currentUser = await getCurrentUser();
+ * const event = await getEventBasicInfo(id, {
+ *   currentUser,              // Обязательно для владельцев unlisted/restricted событий
+ *   enforceVisibility: true
+ * });
+ * 
+ * // ❌ Неправильно (Race Condition):
+ * const [currentUser, event] = await Promise.all([
+ *   getCurrentUser(),
+ *   getEventBasicInfo(id, { enforceVisibility: true }) // currentUser ещё не загружен!
+ * ]);
+ * 
+ * @param id Event ID
+ * @param options Access options (currentUser, enforceVisibility)
+ * @returns Event with basic info + participantsCount, or null if not found/no access
  */
 export async function getEventBasicInfo(
   id: string,
