@@ -37,7 +37,7 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <div className="page-container py-16 text-center">
+      <div className="py-16 text-center">
         <p className="text-[#6B7280]">Загрузка тарифов...</p>
       </div>
     );
@@ -45,14 +45,14 @@ export default function PricingPage() {
 
   if (error || plans.length === 0) {
     return (
-      <div className="page-container py-16 text-center">
+      <div className="py-16 text-center">
         <p className="text-[#EF4444]">Ошибка загрузки тарифов</p>
       </div>
     );
   }
 
   return (
-    <div className="page-container py-12 md:py-16">
+    <div className="py-12 md:py-16">
       <div className="mb-12 text-center">
         <h1 className="mb-4 text-3xl font-bold text-[#1F2937] md:text-4xl">Тарифы Need4Trip</h1>
         <p className="text-lg text-[#6B7280] md:text-xl">

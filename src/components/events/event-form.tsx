@@ -505,7 +505,7 @@ export function EventForm({
   }, [hasLockedFields, lockedFieldIds, sortedFields]);
 
   return (
-    <div className="page-container space-y-6 pb-6 pt-8 sm:pb-10 sm:pt-12">
+    <div className="space-y-6 pb-6 pt-8 sm:pb-10 sm:pt-12">
       <div className="space-y-4">
         <ConfirmDialog
           trigger={

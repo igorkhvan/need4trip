@@ -108,7 +108,7 @@ export default function EditEventPage() {
 
   if (loading) {
     return (
-      <div className="page-container space-y-6 pb-6 pt-8 sm:pb-10 sm:pt-12">
+      <div className="space-y-6 pb-6 pt-8 sm:pb-10 sm:pt-12">
         {/* Back Button Skeleton */}
         <div className="h-12 w-32 animate-pulse rounded-lg bg-[#F7F7F8]" />
         
@@ -216,24 +216,20 @@ export default function EditEventPage() {
   return (
     <div className="space-y-6">
       {authMissing && (
-        <div className="page-container">
-          <Alert>
-            <AlertTitle>Требуется авторизация</AlertTitle>
-            <AlertDescription>
-              Войдите через Telegram, чтобы редактировать событие.
-            </AlertDescription>
-          </Alert>
-        </div>
+        <Alert>
+          <AlertTitle>Требуется авторизация</AlertTitle>
+          <AlertDescription>
+            Войдите через Telegram, чтобы редактировать событие.
+          </AlertDescription>
+        </Alert>
       )}
       {!isOwner && !authMissing && (
-        <div className="page-container">
-          <Alert variant="destructive">
-            <AlertTitle>Нет прав</AlertTitle>
-            <AlertDescription>
-              Только владелец может редактировать это событие.
-            </AlertDescription>
-          </Alert>
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Нет прав</AlertTitle>
+          <AlertDescription>
+            Только владелец может редактировать это событие.
+          </AlertDescription>
+        </Alert>
       )}
       <EventForm
         mode="edit"
