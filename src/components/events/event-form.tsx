@@ -505,7 +505,7 @@ export function EventForm({
   }, [hasLockedFields, lockedFieldIds, sortedFields]);
 
   return (
-    <div className="page-container space-y-6 pb-10 pt-12">
+    <div className="page-container space-y-6 pb-6 pt-8 sm:pb-10 sm:pt-12">
       <div className="space-y-4">
         <ConfirmDialog
           trigger={
@@ -520,22 +520,22 @@ export function EventForm({
           onConfirm={() => router.push(backHref)}
         />
         <div className="space-y-3">
-          <h1 className="text-5xl font-bold leading-tight text-[#0F172A]">
+          <h1 className="heading-hero">
             {headerTitle}
           </h1>
-          <p className="text-base text-[#6B7280]">{headerDescription}</p>
+          <p className="text-body-small">{headerDescription}</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+        <Card className="border border-[#E5E7EB] shadow-sm">
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
               1
             </div>
             <div>
-              <p className="text-2xl font-semibold text-[#0F172A]">Основные данные</p>
-              <p className="text-xs text-[#6B7280]">Название, описание, дата, место, видимость</p>
+              <p className="heading-h2">Основные данные</p>
+              <p className="text-body-small">Название, описание, дата, место, видимость</p>
             </div>
           </div>
 
@@ -588,7 +588,7 @@ export function EventForm({
         </Card>
 
         {/* Section 2: Event Locations */}
-        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] shadow-sm">
           <EventLocationsSection
             locations={locations}
             onLocationsChange={setLocations}
@@ -606,14 +606,14 @@ export function EventForm({
         </Card>
 
         {/* Section 3: Vehicle Requirements */}
-        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] shadow-sm">
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
               3
             </div>
             <div>
-              <p className="text-2xl font-semibold text-[#0F172A]">Требования к автомобилю</p>
-              <p className="text-xs text-[#6B7280]">Тип авто и допустимые марки</p>
+              <p className="heading-h2">Требования к автомобилю</p>
+              <p className="text-body-small">Тип авто и допустимые марки</p>
             </div>
           </div>
           <EventVehicleSection
@@ -628,7 +628,7 @@ export function EventForm({
           />
         </Card>
 
-        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] shadow-sm">
           <EventRulesSection
             rules={rules}
             onRulesChange={setRules}
@@ -640,7 +640,7 @@ export function EventForm({
           />
         </Card>
 
-        <Card className="border border-[#E5E7EB] p-5 shadow-sm md:p-6 lg:p-7">
+        <Card className="border border-[#E5E7EB] shadow-sm">
           <EventCustomFieldsSection
             sortedFields={sortedFields}
             onAddField={addField}
