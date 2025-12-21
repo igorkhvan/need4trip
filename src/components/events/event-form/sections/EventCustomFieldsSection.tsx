@@ -149,7 +149,6 @@ export function EventCustomFieldsSection({
             })}
           </div>
         )}
-      </div>
 
       <div className="mt-4 flex justify-end">
         <Button
@@ -163,6 +162,7 @@ export function EventCustomFieldsSection({
           Добавить поле
         </Button>
       </div>
+
       {hasLockedFields && (
         <p className="mt-2 text-xs text-[#6B7280]">
           Вы можете добавлять новые поля, но не можете удалять существующие, так как они используются участниками.

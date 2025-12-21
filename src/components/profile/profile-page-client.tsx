@@ -581,7 +581,8 @@ export function ProfilePageClient() {
   }
 
   return (
-    <div className="page-container space-y-6 py-6 md:py-10">
+    <>
+      <div className="page-container space-y-6 py-6 md:py-10">
       {/* Header with Cover Photo */}
       <div className="relative">
         {/* Cover Image */}
@@ -1218,6 +1219,6 @@ export function ProfilePageClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
