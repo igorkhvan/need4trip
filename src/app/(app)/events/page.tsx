@@ -6,7 +6,10 @@ import { Event } from "@/lib/types/event";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 
 interface EventsPageProps {
-  searchParams?: { city?: string };
+  searchParams?: { 
+    city?: string;
+    tab?: string;
+  };
 }
 
 export default function EventsPage({ searchParams }: EventsPageProps) {
@@ -66,6 +69,7 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
       events={events} 
       currentUserId={currentUserId} 
       isAuthenticated={isAuthenticated}
+      initialTab={searchParams?.tab}
     />
   );
 }

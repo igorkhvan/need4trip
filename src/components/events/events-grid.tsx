@@ -21,16 +21,26 @@ interface EventsGridProps {
   events: Event[];
   currentUserId: string | null;
   isAuthenticated: boolean;
+  initialTab?: string;
 }
 
 type TabType = "all" | "upcoming" | "my";
 type PriceFilter = "all" | "free" | "paid";
 type SortBy = "date" | "participants" | "name";
 
-export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGridProps) {
+export function EventsGrid({ events, currentUserId, isAuthenticated, initialTab }: EventsGridProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<TabType>("all");
+  
+  // Initialize activeTab from URL parameter (if valid)
+  const getInitialTab = (): TabType => {
+    if (initialTab === "upcoming" || initialTab === "my" || initialTab === "all") {
+      return initialTab;
+    }
+    return "all";
+  };
+  
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterCity, setFilterCity] = useState<string>("all");
   const [filterPrice, setFilterPrice] = useState<PriceFilter>("all");
@@ -231,8 +241,23 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
         activeTab={activeTab}
         onChange={(tabId) => {
           startTransition(() => {
-            setActiveTab(tabId as TabType);
+            const newTab = tabId as TabType;
+            setActiveTab(newTab);
             setCurrentPage(1);
+            
+            // Update URL with tab parameter
+            const params = new URLSearchParams(window.location.search);
+            if (newTab === "all") {
+              params.delete("tab");
+            } else {
+              params.set("tab", newTab);
+            }
+            
+            const newUrl = params.toString() 
+              ? `/events?${params.toString()}`
+              : "/events";
+            
+            router.push(newUrl, { scroll: false });
           });
         }}
       />

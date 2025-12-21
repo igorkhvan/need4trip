@@ -14,7 +14,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, PlusCircle, Calendar } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 interface UserMenuItemsProps {
@@ -32,14 +32,22 @@ export function UserMenuItems({
 }: UserMenuItemsProps) {
   const router = useRouter();
 
+  const handleCreateEventClick = () => {
+    onItemClick?.();
+    router.push("/events/new");
+  };
+
+  const handleMyEventsClick = () => {
+    onItemClick?.();
+    router.push("/events?tab=my");
+  };
+
   const handleProfileClick = () => {
-    // Close menu first
     onItemClick?.();
     router.push("/profile");
   };
 
   const handleLogoutClick = async () => {
-    // Close menu first
     onItemClick?.();
     await onLogout();
   };
@@ -64,6 +72,20 @@ export function UserMenuItems({
 
         {/* Menu Items */}
         <div className="py-1">
+          <button
+            onClick={handleCreateEventClick}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] transition-colors"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Создать событие</span>
+          </button>
+          <button
+            onClick={handleMyEventsClick}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+          >
+            <Calendar className="h-4 w-4 text-[var(--color-text-muted)]" />
+            <span>Мои события</span>
+          </button>
           <button
             onClick={handleProfileClick}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
@@ -103,6 +125,20 @@ export function UserMenuItems({
       </div>
 
       {/* Menu Items */}
+      <button
+        onClick={handleCreateEventClick}
+        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-base font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] transition-colors"
+      >
+        <PlusCircle className="h-5 w-5" />
+        <span>Создать событие</span>
+      </button>
+      <button
+        onClick={handleMyEventsClick}
+        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-base font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+      >
+        <Calendar className="h-5 w-5 text-[var(--color-text-muted)]" />
+        <span>Мои события</span>
+      </button>
       <button
         onClick={handleProfileClick}
         className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-base font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"

@@ -6,9 +6,9 @@
  * 
  * Features:
  * - Touch-friendly menu button (48px × 48px)
- * - Slide-in drawer from left with swipe-to-close gesture
+ * - Slide-in drawer from right with swipe-to-close gesture
  * - Navigation links
- * - User menu (Profile + Logout)
+ * - User menu (Create Event, My Events, Profile, Logout)
  * - Auto-close on route change
  * - Swipe gesture powered by react-swipeable
  */
@@ -104,7 +104,7 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SwipeableSheetContent side="left" onOpenChange={setOpen} className="w-[280px] sm:w-[320px]">
+      <SwipeableSheetContent side="right" onOpenChange={setOpen} className="w-[320px] sm:w-[400px]">
         <SheetHeader className="mb-6">
           <SheetTitle>Навигация</SheetTitle>
         </SheetHeader>
