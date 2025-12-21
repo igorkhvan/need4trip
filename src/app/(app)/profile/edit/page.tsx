@@ -147,7 +147,7 @@ export default function ProfileEditPage() {
 
   if (loading) {
     return (
-      <div className="container-custom py-12">
+      <div className="page-container py-12">
         <div className="flex justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
@@ -157,7 +157,7 @@ export default function ProfileEditPage() {
 
   return (
     <div className="py-6 md:py-12">
-      <div className="container-custom max-w-3xl">
+      <div className="page-container max-w-3xl">
         {/* Header - точно по Figma */}
         <div className="mb-6">
           <button

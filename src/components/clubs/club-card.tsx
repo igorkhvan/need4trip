@@ -27,7 +27,7 @@ export function ClubCard({ club }: ClubCardProps) {
   return (
     <Link
       href={`/clubs/${club.id}`}
-      className="group block rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-md lg:p-6"
+      className="group block rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-md sm:p-5 lg:p-6"
     >
       {/* Логотип и название */}
       <div className="mb-4 flex items-start gap-4">
@@ -51,7 +51,7 @@ export function ClubCard({ club }: ClubCardProps) {
         )}
 
         <div className="min-w-0 flex-1">
-          <h4 className="mb-1 truncate text-lg font-semibold text-[var(--color-text)] transition-colors group-hover:text-[var(--color-primary)]">
+          <h4 className="mb-1 line-clamp-2 text-lg font-semibold text-[var(--color-text)] transition-colors group-hover:text-[var(--color-primary)]">
             {club.name}
           </h4>
           {club.planId && club.planId !== "free" && (

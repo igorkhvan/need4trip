@@ -69,7 +69,7 @@ const steps = [
 
 function HowItWorksSection() {
   return (
-    <section className="bg-white py-20 md:py-24 lg:py-32">
+    <section className="bg-white py-12 md:py-20 lg:py-24">
       <div className="page-container">
         <div className="mb-12 text-center md:mb-16">
           <h2 className="heading-section mb-4 md:mb-6">Как это работает</h2>
@@ -100,7 +100,7 @@ function HowItWorksSection() {
 
 function Features() {
   return (
-    <section className="bg-[#F7F7F8] py-20 md:py-24 lg:py-32">
+    <section className="bg-[#F7F7F8] py-12 md:py-20 lg:py-24">
       <div className="page-container">
         <div className="mb-12 text-center md:mb-16">
           <h2 className="heading-section mb-4 md:mb-6">Что умеет Need4Trip</h2>
@@ -152,7 +152,7 @@ export default async function HomePage() {
       </Suspense>
       
       {/* CTA секция */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#E86223] py-20 text-center text-white md:py-24 lg:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#FF6F2C] to-[#E86223] py-12 text-center text-white md:py-20 lg:py-24">
         <div
           className="absolute inset-0 opacity-50"
           aria-hidden

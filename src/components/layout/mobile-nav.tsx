@@ -98,10 +98,10 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10"
+          className="h-12 w-12"
           aria-label="Открыть меню"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
       <SwipeableSheetContent side="right" onOpenChange={setOpen} className="w-[320px] sm:w-[400px]">

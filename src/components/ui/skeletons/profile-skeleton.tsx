@@ -71,7 +71,7 @@ export function ProfileCardSkeleton() {
  */
 export function ProfileContentSkeleton() {
   return (
-    <div className="container-custom space-y-6 py-12">
+    <div className="page-container space-y-6 py-12">
       <ProfileHeaderSkeleton />
       <ProfileTabsSkeleton />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

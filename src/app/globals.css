@@ -85,6 +85,19 @@
     @apply bg-background text-foreground antialiased min-h-screen font-sans;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   }
+
+  /* Smooth scroll behavior with accessibility support */
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px; /* Account for sticky header */
+  }
+  
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 }
 
 @layer components {
@@ -93,13 +106,9 @@
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
-  .container-custom {
-    @apply mx-auto w-full max-w-[1280px] px-5 sm:px-6 md:px-8;
-  }
-
-  /* Sections */
+  /* Sections - Optimized for mobile */
   .section {
-    @apply py-24 md:py-32;
+    @apply py-12 md:py-20 lg:py-24;
   }
 
   .section-inner {
@@ -117,6 +126,32 @@
 
   .text-lead {
     @apply text-base text-[#6B7280];
+  }
+
+  /* Adaptive heading utilities for better mobile typography */
+  .heading-h1 {
+    @apply text-[28px] leading-[34px] font-bold text-[#111827] md:text-[32px] md:leading-[36px];
+  }
+
+  .heading-h2 {
+    @apply text-[24px] leading-[30px] font-semibold text-[#111827] md:text-[28px] md:leading-[34px];
+  }
+
+  .heading-h3 {
+    @apply text-[18px] leading-[24px] font-semibold text-[#111827] md:text-[20px] md:leading-[26px];
+  }
+
+  .heading-h4 {
+    @apply text-[16px] leading-[22px] font-semibold text-[#111827] md:text-[18px] md:leading-[24px];
+  }
+
+  /* Body text utilities */
+  .text-body {
+    @apply text-[15px] leading-[22px] text-[#111827];
+  }
+
+  .text-body-small {
+    @apply text-[14px] leading-[20px] text-[#6B7280];
   }
 
   /* Spacing utilities */
@@ -171,5 +206,39 @@
   
   .icon-xl {
     @apply h-8 w-8;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Line clamp utilities for text truncation */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }

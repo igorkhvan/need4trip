@@ -129,7 +129,7 @@ export default async function EventDetails({
         <div className="flex-1">
           {/* Title with locked indicator */}
           <div className="mb-4 flex flex-col gap-2">
-            <h1 className="text-3xl font-bold leading-tight text-[var(--color-text)] md:text-4xl">
+            <h1 className="heading-h1">
               {event.title}
             </h1>
             {closedReason === 'manually_closed' && (

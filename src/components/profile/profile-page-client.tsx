@@ -620,7 +620,7 @@ export function ProfilePageClient() {
 
                 {/* Name and Location */}
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-2xl md:text-4xl font-bold mb-1 text-white drop-shadow-lg">{userData.name}</h1>
+                  <h1 className="heading-h1 mb-1 text-white drop-shadow-lg">{userData.name}</h1>
                   <div className="flex flex-wrap items-center gap-2 md:gap-3 text-sm md:text-base text-white/90">
                     <div className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
