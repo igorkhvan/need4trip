@@ -28,10 +28,10 @@ function mapUserCar(row: DbUserCar): UserCar {
  * Получить все автомобили пользователя
  */
 export async function getUserCars(userId: string): Promise<UserCar[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("user_cars")
     .select("*")
     .eq("user_id", userId)
@@ -199,10 +199,10 @@ export async function setPrimaryUserCar(userId: string, carId: string): Promise<
  * Получить основной автомобиль пользователя
  */
 export async function getPrimaryUserCar(userId: string): Promise<UserCar | null> {
-  ensureClient();
-  if (!supabase) return null;
+  ensureAdminClient();
+  if (!supabaseAdmin) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("user_cars")
     .select("*")
     .eq("user_id", userId)

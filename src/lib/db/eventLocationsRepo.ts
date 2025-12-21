@@ -3,7 +3,7 @@
  * CRUD operations for event_locations table
  */
 
-import { ensureClient } from "./client";
+import { ensureAdminClient } from "./client";
 import { log } from "@/lib/utils/logger";
 import { InternalError } from "@/lib/errors";
 import {
@@ -20,14 +20,14 @@ const table = "event_locations";
  * Get all locations for an event (sorted by sort_order)
  */
 export async function getLocationsByEventId(eventId: string): Promise<EventLocation[]> {
-  ensureClient();
-  const { supabase } = await import("./client");
+  ensureAdminClient();
+  const { supabaseAdmin } = await import("./client");
   
-  if (!supabase) {
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*")
     .eq("event_id", eventId)
@@ -62,7 +62,7 @@ export async function saveLocations(
   eventId: string,
   locations: EventLocationInput[]
 ): Promise<EventLocation[]> {
-  ensureClient();
+  ensureAdminClient();
   const { supabaseAdmin } = await import("./client");
   
   if (!supabaseAdmin) {
@@ -138,7 +138,7 @@ export async function saveLocations(
  * Database trigger will prevent deletion of first location
  */
 export async function deleteLocation(locationId: string): Promise<void> {
-  ensureClient();
+  ensureAdminClient();
   const { supabaseAdmin } = await import("./client");
   
   if (!supabaseAdmin) {
@@ -170,7 +170,7 @@ export async function updateLocation(
   locationId: string,
   updates: Partial<EventLocationInput>
 ): Promise<EventLocation> {
-  ensureClient();
+  ensureAdminClient();
   const { supabaseAdmin } = await import("./client");
   
   if (!supabaseAdmin) {
@@ -212,7 +212,7 @@ export async function createDefaultLocation(
   eventId: string,
   title: string = "Точка сбора"
 ): Promise<EventLocation> {
-  ensureClient();
+  ensureAdminClient();
   const { supabaseAdmin } = await import("./client");
   
   if (!supabaseAdmin) {
@@ -252,14 +252,14 @@ export async function createDefaultLocation(
  * Get count of locations for an event
  */
 export async function getLocationsCount(eventId: string): Promise<number> {
-  ensureClient();
-  const { supabase } = await import("./client");
+  ensureAdminClient();
+  const { supabaseAdmin } = await import("./client");
   
-  if (!supabase) {
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { count, error } = await supabase
+  const { count, error } = await supabaseAdmin
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);

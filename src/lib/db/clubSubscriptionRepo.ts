@@ -5,7 +5,7 @@
  * Source: docs/BILLING_AND_LIMITS.md
  */
 
-import { supabase, ensureClient } from "./client";
+import { supabaseAdmin, ensureAdminClient } from "./client";
 import type { ClubSubscription, SubscriptionStatus, PlanId } from "@/lib/types/billing";
 import { InternalError } from "@/lib/errors";
 import { log } from "@/lib/utils/logger";
@@ -52,10 +52,10 @@ function mapDbSubscriptionToDomain(db: DbClubSubscription): ClubSubscription {
 export async function getClubSubscription(
   clubId: string
 ): Promise<ClubSubscription | null> {
-  ensureClient();
-  if (!supabase) return null;
+  ensureAdminClient();
+  if (!supabaseAdmin) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('club_subscriptions')
     .select('*')
     .eq('club_id', clubId)
@@ -79,8 +79,8 @@ export async function getClubSubscription(
 export async function upsertClubSubscription(
   subscription: Omit<ClubSubscription, 'createdAt' | 'updatedAt'>
 ): Promise<ClubSubscription> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -94,7 +94,7 @@ export async function upsertClubSubscription(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('club_subscriptions')
     .upsert(dbData, { onConflict: 'club_id' })
     .select()
@@ -116,8 +116,8 @@ export async function setClubSubscriptionStatus(
   status: SubscriptionStatus,
   graceUntil?: string | null
 ): Promise<void> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -130,7 +130,7 @@ export async function setClubSubscriptionStatus(
     updates.grace_until = graceUntil;
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('club_subscriptions')
     .update(updates)
     .eq('club_id', clubId);

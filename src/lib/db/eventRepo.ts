@@ -17,7 +17,7 @@ export async function listEvents(page = 1, limit = 12): Promise<{
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdminAdmin
+  const { data, error, count } = await supabaseAdmin
     .from(table)
     .select("*", { count: "exact" })
     .order("date_time", { ascending: false })

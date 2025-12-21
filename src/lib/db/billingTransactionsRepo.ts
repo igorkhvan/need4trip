@@ -5,7 +5,7 @@
  * Source: docs/BILLING_AND_LIMITS.md
  */
 
-import { supabase, ensureClient } from "./client";
+import { supabaseAdmin, ensureAdminClient } from "./client";
 import type { BillingTransaction, TransactionStatus, PlanId } from "@/lib/types/billing";
 import { InternalError } from "@/lib/errors";
 import { log } from "@/lib/utils/logger";
@@ -66,8 +66,8 @@ export async function createPendingTransaction(params: {
   periodStart?: string;
   periodEnd?: string;
 }): Promise<BillingTransaction> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -83,7 +83,7 @@ export async function createPendingTransaction(params: {
     period_end: params.periodEnd ?? null,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('billing_transactions')
     .insert(dbData)
     .select()
@@ -104,8 +104,8 @@ export async function markTransactionPaid(
   transactionId: string,
   providerPaymentId?: string
 ): Promise<void> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -118,7 +118,7 @@ export async function markTransactionPaid(
     updates.provider_payment_id = providerPaymentId;
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('billing_transactions')
     .update(updates)
     .eq('id', transactionId);
@@ -133,12 +133,12 @@ export async function markTransactionPaid(
  * Mark transaction as failed
  */
 export async function markTransactionFailed(transactionId: string): Promise<void> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('billing_transactions')
     .update({
       status: 'failed',
@@ -159,10 +159,10 @@ export async function getClubTransactions(
   clubId: string,
   limit: number = 50
 ): Promise<BillingTransaction[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('billing_transactions')
     .select('*')
     .eq('club_id', clubId)

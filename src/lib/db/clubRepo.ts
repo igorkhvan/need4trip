@@ -351,8 +351,8 @@ export async function getClubCityIds(clubId: string): Promise<string[]> {
  * Get city IDs for multiple clubs (batch)
  */
 export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, string[]>> {
-  ensureClient();
-  if (!supabase || clubIds.length === 0) return new Map();
+  ensureAdminClient();
+  if (!supabaseAdmin || clubIds.length === 0) return new Map();
 
   const { data, error } = await supabaseAdmin
     .from("club_cities")

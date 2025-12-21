@@ -1,4 +1,4 @@
-import { supabase, ensureClient } from "@/lib/db/client";
+import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 import { log } from "@/lib/utils/logger";
@@ -39,8 +39,8 @@ export async function addMember(
   role: ClubRole,
   invitedBy: string | null = null
 ): Promise<DbClubMember> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
@@ -57,7 +57,7 @@ export async function addMember(
     // joined_at will be set by DB DEFAULT NOW()
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -78,10 +78,10 @@ export async function getMember(
   clubId: string,
   userId: string
 ): Promise<DbClubMember | null> {
-  ensureClient();
-  if (!supabase) return null;
+  ensureAdminClient();
+  if (!supabaseAdmin) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*")
     .eq("club_id", clubId)
@@ -103,10 +103,10 @@ export async function getMemberWithUser(
   clubId: string,
   userId: string
 ): Promise<DbClubMemberWithUser | null> {
-  ensureClient();
-  if (!supabase) return null;
+  ensureAdminClient();
+  if (!supabaseAdmin) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -125,10 +125,10 @@ export async function getMemberWithUser(
  * List all members of a club
  */
 export async function listMembers(clubId: string): Promise<DbClubMember[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*")
     .eq("club_id", clubId)
@@ -148,10 +148,10 @@ export async function listMembers(clubId: string): Promise<DbClubMember[]> {
 export async function listMembersWithUser(
   clubId: string
 ): Promise<DbClubMemberWithUser[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -169,10 +169,10 @@ export async function listMembersWithUser(
  * List clubs for a user
  */
 export async function listUserClubs(userId: string): Promise<string[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("club_id")
     .eq("user_id", userId)
@@ -190,10 +190,10 @@ export async function listUserClubs(userId: string): Promise<string[]> {
  * List clubs for a user with role info
  */
 export async function listUserClubsWithRole(userId: string): Promise<DbClubMember[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*")
     .eq("user_id", userId)
@@ -216,12 +216,12 @@ export async function updateMemberRole(
   userId: string,
   role: ClubRole
 ): Promise<DbClubMember | null> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .update({ role: role as string })
     .eq("club_id", clubId)
@@ -241,12 +241,12 @@ export async function updateMemberRole(
  * Remove member from club
  */
 export async function removeMember(clubId: string, userId: string): Promise<boolean> {
-  ensureClient();
-  if (!supabase) {
+  ensureAdminClient();
+  if (!supabaseAdmin) {
     throw new InternalError("Supabase client is not configured");
   }
 
-  const { error, count } = await supabase
+  const { error, count } = await supabaseAdmin
     .from(table)
     .delete({ count: "exact" })
     .eq("club_id", clubId)
@@ -268,10 +268,10 @@ export async function removeMember(clubId: string, userId: string): Promise<bool
  * List pending members (waiting for approval)
  */
 export async function listPendingMembers(clubId: string): Promise<DbClubMemberWithUser[]> {
-  ensureClient();
-  if (!supabase) return [];
+  ensureAdminClient();
+  if (!supabaseAdmin) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from(table)
     .select("*, user:users!user_id(id, name, telegram_handle, avatar_url)")
     .eq("club_id", clubId)
@@ -303,10 +303,10 @@ export async function countMembersByRole(
   clubId: string,
   role: ClubRole
 ): Promise<number> {
-  ensureClient();
-  if (!supabase) return 0;
+  ensureAdminClient();
+  if (!supabaseAdmin) return 0;
 
-  const { count, error } = await supabase
+  const { count, error } = await supabaseAdmin
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
@@ -324,10 +324,10 @@ export async function countMembersByRole(
  * Count total members (excluding pending)
  */
 export async function countMembers(clubId: string): Promise<number> {
-  ensureClient();
-  if (!supabase) return 0;
+  ensureAdminClient();
+  if (!supabaseAdmin) return 0;
 
-  const { count, error } = await supabase
+  const { count, error } = await supabaseAdmin
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
