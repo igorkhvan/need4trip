@@ -34,7 +34,7 @@ export function UserMenuItems({
 
   const handleCreateEventClick = () => {
     onItemClick?.();
-    router.push("/events/new");
+    router.push("/events/create");
   };
 
   const handleMyEventsClick = () => {
