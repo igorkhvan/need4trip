@@ -66,42 +66,21 @@ async function ensureEventVisibility(event: Event, opts?: EventAccessOptions) {
   });
 }
 
-export async function listEvents(page = 1, limit = 12): Promise<{
-  events: Event[];
-  total: number;
-  hasMore: boolean;
-}> {
-  const result = await listEventsWithOwner(page, limit);
-  const mapped = result.data.map(mapDbEventWithOwnerToDomain);
-  
-  return {
-    events: mapped,
-    total: result.total,
-    hasMore: result.hasMore,
-  };
-}
-
-export async function listEventsSafe(page = 1, limit = 12): Promise<{
-  events: Event[];
-  total: number;
-  hasMore: boolean;
-}> {
-  try {
-    const result = await listEventsWithOwner(page, limit);
-    return {
-      events: result.data.map(mapDbEventWithOwnerToDomain),
-      total: result.total,
-      hasMore: result.hasMore,
-    };
-  } catch (err) {
-    log.errorWithStack("Failed to list events safely", err);
-    return {
-      events: [],
-      total: 0,
-      hasMore: false,
-    };
-  }
-}
+/**
+ * DEPRECATED: listEvents() and listEventsSafe() were removed for security reasons.
+ * 
+ * These functions returned ALL events without visibility filtering,
+ * causing information disclosure vulnerability (events with visibility='unlisted' or 'restricted'
+ * were exposed to unauthorized users).
+ * 
+ * Use listVisibleEventsForUser() instead, which properly filters events based on:
+ * - Event visibility setting (public/unlisted/restricted)
+ * - Current user context (anonymous vs authenticated)
+ * - User's relationship to event (owner, participant, explicit access)
+ * 
+ * @see listVisibleEventsForUser
+ * @deprecated Removed in security fix - use listVisibleEventsForUser()
+ */
 
 export async function listVisibleEventsForUser(userId: string | null): Promise<Event[]> {
   // If no user, load only public events
