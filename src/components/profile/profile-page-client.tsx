@@ -581,12 +581,11 @@ export function ProfilePageClient() {
   }
 
   return (
-    <div>
-      <div className="page-container">
-        {/* Header with Cover Photo */}
-        <div className="relative mb-6 md:mb-8">
-          {/* Cover Image */}
-          <div className="h-32 md:h-48 bg-gradient-to-r from-[var(--color-primary)] to-orange-600 rounded-2xl relative overflow-hidden">
+    <div className="page-container space-y-6 py-6 md:py-10">
+      {/* Header with Cover Photo */}
+      <div className="relative">
+        {/* Cover Image */}
+        <div className="h-32 md:h-48 bg-gradient-to-r from-[var(--color-primary)] to-orange-600 rounded-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             
             {/* Top Right Actions - Desktop only */}
@@ -635,11 +634,11 @@ export function ProfilePageClient() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
+      </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.totalEvents}</div>
@@ -660,24 +659,23 @@ export function ProfilePageClient() {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs
-          tabs={[
-            { id: "overview", label: "Обзор" },
-            { id: "events", label: "События" },
-            { id: "settings", label: "Настройки" },
-          ]}
-          activeTab={activeTab}
-          onChange={(tabId) => {
-            startTransition(() => {
-              setActiveTab(tabId as 'overview' | 'events' | 'settings');
-            });
-          }}
-          className="md:mb-8"
-        />
+      {/* Tabs */}
+      <Tabs
+        tabs={[
+          { id: "overview", label: "Обзор" },
+          { id: "events", label: "События" },
+          { id: "settings", label: "Настройки" },
+        ]}
+        activeTab={activeTab}
+        onChange={(tabId) => {
+          startTransition(() => {
+            setActiveTab(tabId as 'overview' | 'events' | 'settings');
+          });
+        }}
+      />
 
-        {/* Delayed loading indicator for tab transitions */}
-        <DelayedSpinner show={showLoading} className="mb-6" />
+      {/* Delayed loading indicator for tab transitions */}
+      <DelayedSpinner show={showLoading} />
 
         {/* Tab Content */}
         {activeTab === 'overview' && (

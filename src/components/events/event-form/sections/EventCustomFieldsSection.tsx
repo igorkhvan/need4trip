@@ -50,9 +50,6 @@ interface EventCustomFieldsSectionProps {
   
   // UI state
   disabled?: boolean;
-  
-  // Section number for display
-  sectionNumber?: number;
 }
 
 export function EventCustomFieldsSection({
@@ -65,25 +62,11 @@ export function EventCustomFieldsSection({
   fieldErrors,
   clearFieldError,
   disabled,
-  sectionNumber,
 }: EventCustomFieldsSectionProps) {
   const fieldError = (path: string) => fieldErrors[path];
   
   return (
-    <>
-      <div className="flex items-center gap-3">
-        {sectionNumber && (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
-            {sectionNumber}
-          </div>
-        )}
-        <div>
-          <p className="text-2xl font-semibold text-[#0F172A]">Дополнительные поля регистрации</p>
-          <p className="text-xs text-[#6B7280]">Поля, которые заполняют участники</p>
-        </div>
-      </div>
-
-      <div className="mt-4 space-y-4">
+    <div className="space-y-4">
         {sortedFields.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center text-sm text-[#6B7280]">
             Добавьте первое поле регистрации
@@ -185,6 +168,6 @@ export function EventCustomFieldsSection({
           Вы можете добавлять новые поля, но не можете удалять существующие, так как они используются участниками.
         </p>
       )}
-    </>
+    </div>
   );
 }

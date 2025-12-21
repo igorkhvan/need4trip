@@ -17,7 +17,6 @@ interface EventLocationsSectionProps {
   fieldErrors: Record<string, string>;
   clearFieldError: (field: string) => void;
   disabled?: boolean;
-  sectionNumber: number;
 }
 
 export function EventLocationsSection({
@@ -26,7 +25,6 @@ export function EventLocationsSection({
   fieldErrors,
   clearFieldError,
   disabled,
-  sectionNumber,
 }: EventLocationsSectionProps) {
   // Sort locations by sortOrder
   const sortedLocations = [...locations].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -67,19 +65,6 @@ export function EventLocationsSection({
 
   return (
     <div className="space-y-4">
-      {/* Section Header */}
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-sm font-semibold text-white">
-          {sectionNumber}
-        </div>
-        <div>
-          <p className="text-2xl font-semibold text-[#0F172A]">Точки маршрута</p>
-          <p className="text-xs text-[#6B7280]">
-            Укажите места сбора и остановок. Первая точка обязательна.
-          </p>
-        </div>
-      </div>
-
       {/* Locations List */}
       <div className="space-y-4">
         {sortedLocations.map((location, index) => (

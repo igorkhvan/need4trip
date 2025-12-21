@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -529,136 +529,204 @@ export function EventForm({
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <Card className="border border-[#E5E7EB] shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
-              1
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
+                1
+              </div>
+              <div>
+                <CardTitle className="heading-h2 !mb-0">Основные данные</CardTitle>
+                <CardDescription className="text-body-small !mt-1">
+                  Название, описание, дата, место, видимость
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <p className="heading-h2">Основные данные</p>
-              <p className="text-body-small">Название, описание, дата, место, видимость</p>
-            </div>
-          </div>
+          </CardHeader>
 
-          <EventBasicInfoSection
-            title={title}
-            description={description}
-            categoryId={categoryId}
-            dateTime={dateTime}
-            cityId={cityId}
-            maxParticipants={maxParticipants}
-            visibility={visibility}
-            isPaid={isPaid}
-            price={price}
-            currencyCode={currencyCode}
-            isClubEvent={isClubEvent}
-            allowAnonymousRegistration={allowAnonymousRegistration}
-            onTitleChange={setTitle}
-            onDescriptionChange={setDescription}
-            onCategoryChange={setCategoryId}
-            onDateTimeChange={setDateTime}
-            onCityChange={setCityId}
-            onMaxParticipantsChange={(value, userEdited) => {
-              if (userEdited) setHasUserSetMaxParticipants(true);
-              setMaxParticipants(value);
-            }}
-            onVisibilityChange={setVisibility}
-            onIsPaidChange={setIsPaid}
-            onPriceChange={setPrice}
-            onCurrencyChange={setCurrencyCode}
-            onIsClubEventChange={setIsClubEvent}
-            onAllowAnonymousRegistrationChange={setAllowAnonymousRegistration}
-            categories={categories}
-            loadingCategories={loadingCategories}
-            clubLimits={clubLimits}
-            loadingPlan={loadingPlan}
-            maxAllowedParticipants={maxAllowedParticipants}
-            fieldErrors={fieldErrors}
-            clearFieldError={(field) => {
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next[field];
-                return next;
-              });
-            }}
-            disabled={disabled}
-            club={club}
-          />
-
-          {/* EventPricingSection no longer needed - integrated into EventBasicInfoSection */}
+          <CardContent>
+            <EventBasicInfoSection
+              title={title}
+              description={description}
+              categoryId={categoryId}
+              dateTime={dateTime}
+              cityId={cityId}
+              maxParticipants={maxParticipants}
+              visibility={visibility}
+              isPaid={isPaid}
+              price={price}
+              currencyCode={currencyCode}
+              isClubEvent={isClubEvent}
+              allowAnonymousRegistration={allowAnonymousRegistration}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onCategoryChange={setCategoryId}
+              onDateTimeChange={setDateTime}
+              onCityChange={setCityId}
+              onMaxParticipantsChange={(value, userEdited) => {
+                if (userEdited) setHasUserSetMaxParticipants(true);
+                setMaxParticipants(value);
+              }}
+              onVisibilityChange={setVisibility}
+              onIsPaidChange={setIsPaid}
+              onPriceChange={setPrice}
+              onCurrencyChange={setCurrencyCode}
+              onIsClubEventChange={setIsClubEvent}
+              onAllowAnonymousRegistrationChange={setAllowAnonymousRegistration}
+              categories={categories}
+              loadingCategories={loadingCategories}
+              clubLimits={clubLimits}
+              loadingPlan={loadingPlan}
+              maxAllowedParticipants={maxAllowedParticipants}
+              fieldErrors={fieldErrors}
+              clearFieldError={(field) => {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next[field];
+                  return next;
+                });
+              }}
+              disabled={disabled}
+              club={club}
+            />
+          </CardContent>
         </Card>
 
         {/* Section 2: Event Locations */}
         <Card className="border border-[#E5E7EB] shadow-sm">
-          <EventLocationsSection
-            locations={locations}
-            onLocationsChange={setLocations}
-            fieldErrors={fieldErrors}
-            clearFieldError={(field) => {
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next[field];
-                return next;
-              });
-            }}
-            disabled={disabled}
-            sectionNumber={2}
-          />
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
+                2
+              </div>
+              <div>
+                <CardTitle className="heading-h2 !mb-0">Точки маршрута</CardTitle>
+                <CardDescription className="text-body-small !mt-1">
+                  Укажите места сбора и остановок. Первая точка обязательна.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <EventLocationsSection
+              locations={locations}
+              onLocationsChange={setLocations}
+              fieldErrors={fieldErrors}
+              clearFieldError={(field) => {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next[field];
+                  return next;
+                });
+              }}
+              disabled={disabled}
+            />
+          </CardContent>
         </Card>
 
         {/* Section 3: Vehicle Requirements */}
         <Card className="border border-[#E5E7EB] shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
-              3
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
+                3
+              </div>
+              <div>
+                <CardTitle className="heading-h2 !mb-0">Требования к автомобилю</CardTitle>
+                <CardDescription className="text-body-small !mt-1">
+                  Тип авто и допустимые марки
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <p className="heading-h2">Требования к автомобилю</p>
-              <p className="text-body-small">Тип авто и допустимые марки</p>
-            </div>
-          </div>
-          <EventVehicleSection
-            vehicleType={vehicleType}
-            allowedBrandIds={allowedBrandIds}
-            onVehicleTypeChange={setVehicleType}
-            onAllowedBrandsChange={setAllowedBrandIds}
-            brands={brands}
-            vehicleTypes={vehicleTypes}
-            fieldErrors={fieldErrors}
-            disabled={disabled}
-          />
+          </CardHeader>
+
+          <CardContent>
+            <EventVehicleSection
+              vehicleType={vehicleType}
+              allowedBrandIds={allowedBrandIds}
+              onVehicleTypeChange={setVehicleType}
+              onAllowedBrandsChange={setAllowedBrandIds}
+              brands={brands}
+              vehicleTypes={vehicleTypes}
+              fieldErrors={fieldErrors}
+              disabled={disabled}
+            />
+          </CardContent>
         </Card>
 
+        {/* Section 4: Rules */}
         <Card className="border border-[#E5E7EB] shadow-sm">
-          <EventRulesSection
-            rules={rules}
-            onRulesChange={setRules}
-            onGenerateAi={handleAiButtonClick}
-            isGeneratingRules={isGeneratingRules}
-            disabled={disabled}
-            isSubmitting={isSubmitting}
-            sectionNumber={4}
-          />
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
+                  4
+                </div>
+                <div>
+                  <CardTitle className="heading-h2 !mb-0">Правила участия</CardTitle>
+                  <CardDescription className="text-body-small !mt-1">
+                    Показываются в карточке события
+                  </CardDescription>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAiButtonClick}
+                disabled={disabled || isGeneratingRules || isSubmitting}
+              >
+                ✨ AI
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <EventRulesSection
+              rules={rules}
+              onRulesChange={setRules}
+              onGenerateAi={handleAiButtonClick}
+              isGeneratingRules={isGeneratingRules}
+              disabled={disabled}
+              isSubmitting={isSubmitting}
+            />
+          </CardContent>
         </Card>
 
+        {/* Section 5: Custom Fields */}
         <Card className="border border-[#E5E7EB] shadow-sm">
-          <EventCustomFieldsSection
-            sortedFields={sortedFields}
-            onAddField={addField}
-            onUpdateField={updateField}
-            onRemoveField={removeField}
-            lockedFieldIds={lockedFieldIds}
-            hasLockedFields={hasLockedFields}
-            fieldErrors={fieldErrors}
-            clearFieldError={(field) => {
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next[field];
-                return next;
-              });
-            }}
-            disabled={disabled}
-            sectionNumber={5}
-          />
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#FF6F2C] text-xs sm:text-sm font-semibold text-white">
+                5
+              </div>
+              <div>
+                <CardTitle className="heading-h2 !mb-0">Дополнительные поля регистрации</CardTitle>
+                <CardDescription className="text-body-small !mt-1">
+                  Поля, которые заполняют участники
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <EventCustomFieldsSection
+              sortedFields={sortedFields}
+              onAddField={addField}
+              onUpdateField={updateField}
+              onRemoveField={removeField}
+              lockedFieldIds={lockedFieldIds}
+              hasLockedFields={hasLockedFields}
+              fieldErrors={fieldErrors}
+              clearFieldError={(field) => {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next[field];
+                  return next;
+                });
+              }}
+              disabled={disabled}
+            />
+          </CardContent>
         </Card>
 
         <div className="flex flex-wrap items-center justify-end gap-3 bg-transparent px-2 pt-2">
