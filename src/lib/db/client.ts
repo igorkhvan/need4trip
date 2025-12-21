@@ -21,11 +21,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Client for browser/public use (with RLS)
+// NOTE: This client is used in Server Components where we don't have access to user session
+// RLS policies that use auth.uid() won't work with this client
+// For server-side operations, use supabaseAdmin (service role) instead
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: true,
+      },
+    })
+  : null;
+
+// Admin client for server-side operations (bypasses RLS)
+// Use this for operations where you've already done authorization checks in application code
+// This is necessary because we use custom JWT auth (not Supabase Auth)
+// so auth.uid() in RLS policies doesn't work for our authenticated users
+export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+  ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     })
   : null;
