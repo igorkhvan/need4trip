@@ -1,154 +1,148 @@
 /**
  * SwipeableSheet Component
  * 
- * Drawer component with swipe-to-close gesture support.
- * Built on top of vaul (https://github.com/emilkowalski/vaul)
+ * Wrapper around Radix UI Sheet with swipe-to-close gesture support.
+ * Uses react-swipeable for touch gesture detection.
  * 
- * API compatible with Radix UI Sheet for easy migration.
+ * Architecture:
+ * - Sheet (Radix UI) → Handles UI, animations, positioning
+ * - react-swipeable → Handles touch gesture detection
+ * - This wrapper → Connects them together
  * 
  * Features:
  * - Swipe gesture to close (native mobile UX)
- * - Proper physics (velocity, spring animation)
- * - Touch-friendly
- * - Keyboard support (Escape to close)
+ * - Left drawer: swipe left to close
+ * - Right drawer: swipe right to close
+ * - Touch-friendly, prevents scroll during swipe
+ * - Keyboard support inherited from Radix UI (Escape)
  * 
  * Usage:
  * ```tsx
- * <SwipeableSheet>
- *   <SwipeableSheetTrigger asChild>
+ * <Sheet open={open} onOpenChange={setOpen}>
+ *   <SheetTrigger asChild>
  *     <Button>Open Menu</Button>
- *   </SwipeableSheetTrigger>
- *   <SwipeableSheetContent side="left">
- *     <SwipeableSheetHeader>
- *       <SwipeableSheetTitle>Menu</SwipeableSheetTitle>
- *     </SwipeableSheetHeader>
+ *   </SheetTrigger>
+ *   <SwipeableSheetContent side="left" onOpenChange={setOpen}>
+ *     <SheetHeader>
+ *       <SheetTitle>Menu</SheetTitle>
+ *     </SheetHeader>
  *     <nav>...</nav>
  *   </SwipeableSheetContent>
- * </SwipeableSheet>
+ * </Sheet>
  * ```
  */
 
 "use client";
 
 import * as React from "react";
-import { Drawer } from "vaul";
-import { X } from "lucide-react";
+import { useSwipeable } from "react-swipeable";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { SheetPortal, SheetOverlay } from "./sheet";
+import { X } from "lucide-react";
 
-// Root component
-const SwipeableSheet = Drawer.Root;
+// Import sheetVariants from sheet.tsx
+const sheetVariants = cva(
+  "fixed z-50 gap-4 bg-white p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  {
+    variants: {
+      side: {
+        top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        bottom:
+          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
+        right:
+          "inset-y-0 right-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+      },
+    },
+    defaultVariants: {
+      side: "right",
+    },
+  }
+);
 
-// Trigger
-const SwipeableSheetTrigger = Drawer.Trigger;
-
-// Close button
-const SwipeableSheetClose = Drawer.Close;
-
-// Portal
-const SwipeableSheetPortal = Drawer.Portal;
-
-// Overlay
-const SwipeableSheetOverlay = React.forwardRef<
-  React.ElementRef<typeof Drawer.Overlay>,
-  React.ComponentPropsWithoutRef<typeof Drawer.Overlay>
->(({ className, ...props }, ref) => (
-  <Drawer.Overlay
-    ref={ref}
-    className={cn(
-      "fixed inset-0 z-50 bg-black/80",
-      "data-[state=open]:animate-in data-[state=closed]:animate-out",
-      "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
-    )}
-    {...props}
-  />
-));
-SwipeableSheetOverlay.displayName = "SwipeableSheetOverlay";
-
-// Content (main drawer component with swipe support)
 interface SwipeableSheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof Drawer.Content> {
-  side?: "left" | "right";
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
+    VariantProps<typeof sheetVariants> {
+  onOpenChange?: (open: boolean) => void;
 }
 
-const SwipeableSheetContent = React.forwardRef<
-  React.ElementRef<typeof Drawer.Content>,
+/**
+ * SheetContent with swipe-to-close gesture support
+ * 
+ * Automatically detects swipe direction based on `side` prop:
+ * - side="left" → swipe left to close
+ * - side="right" → swipe right to close
+ */
+export const SwipeableSheetContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
   SwipeableSheetContentProps
->(({ side = "left", className, children, ...props }, ref) => (
-  <SwipeableSheetPortal>
-    <SwipeableSheetOverlay />
-    <Drawer.Content
-      ref={ref}
-      className={cn(
-        "fixed z-50 bg-white p-6 shadow-lg",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:duration-300 data-[state=open]:duration-500",
-        side === "left" 
-          ? "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm"
-          : "inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <Drawer.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#FF6F2C] focus:ring-offset-2 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Закрыть</span>
-      </Drawer.Close>
-    </Drawer.Content>
-  </SwipeableSheetPortal>
-));
+>(({ side = "left", onOpenChange, className, children, ...props }, forwardedRef) => {
+  // Configure swipe handlers based on drawer side
+  const handlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (side === "left") {
+        onOpenChange?.(false);
+      }
+    },
+    onSwipedRight: () => {
+      if (side === "right") {
+        onOpenChange?.(false);
+      }
+    },
+    // Only track touch events (not mouse)
+    trackMouse: false,
+    // Prevent page scroll while swiping
+    preventScrollOnSwipe: true,
+    // Swipe velocity threshold (pixels per second)
+    delta: 10,
+  });
+
+  // Merge refs: useSwipeable ref + forwarded ref
+  const mergedRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      // Apply swipeable ref
+      handlers.ref(node);
+      
+      // Apply forwarded ref
+      if (typeof forwardedRef === "function") {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        forwardedRef.current = node;
+      }
+    },
+    [handlers.ref, forwardedRef]
+  );
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <DialogPrimitive.Content
+        ref={mergedRef}
+        className={cn(sheetVariants({ side }), className)}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#FF6F2C] focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-[#F7F7F8]">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Закрыть</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </SheetPortal>
+  );
+});
+
 SwipeableSheetContent.displayName = "SwipeableSheetContent";
 
-// Header
-const SwipeableSheetHeader = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
-      className
-    )}
-    {...props}
-  />
-);
-SwipeableSheetHeader.displayName = "SwipeableSheetHeader";
-
-// Title
-const SwipeableSheetTitle = React.forwardRef<
-  React.ElementRef<typeof Drawer.Title>,
-  React.ComponentPropsWithoutRef<typeof Drawer.Title>
->(({ className, ...props }, ref) => (
-  <Drawer.Title
-    ref={ref}
-    className={cn("text-lg font-semibold text-[#111827]", className)}
-    {...props}
-  />
-));
-SwipeableSheetTitle.displayName = "SwipeableSheetTitle";
-
-// Description (optional)
-const SwipeableSheetDescription = React.forwardRef<
-  React.ElementRef<typeof Drawer.Description>,
-  React.ComponentPropsWithoutRef<typeof Drawer.Description>
->(({ className, ...props }, ref) => (
-  <Drawer.Description
-    ref={ref}
-    className={cn("text-sm text-[#6B7280]", className)}
-    {...props}
-  />
-));
-SwipeableSheetDescription.displayName = "SwipeableSheetDescription";
-
+// Re-export everything else from sheet.tsx for convenience
 export {
-  SwipeableSheet,
-  SwipeableSheetPortal,
-  SwipeableSheetOverlay,
-  SwipeableSheetTrigger,
-  SwipeableSheetClose,
-  SwipeableSheetContent,
-  SwipeableSheetHeader,
-  SwipeableSheetTitle,
-  SwipeableSheetDescription,
-};
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from "./sheet";
+

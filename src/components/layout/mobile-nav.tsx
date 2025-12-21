@@ -10,7 +10,7 @@
  * - Navigation links
  * - User menu (Profile + Logout)
  * - Auto-close on route change
- * - Swipe gesture powered by vaul
+ * - Swipe gesture powered by react-swipeable
  */
 
 "use client";
@@ -21,11 +21,11 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import {
-  SwipeableSheet,
+  Sheet,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
   SwipeableSheetContent,
-  SwipeableSheetHeader,
-  SwipeableSheetTitle,
-  SwipeableSheetTrigger,
 } from "@/components/ui/swipeable-sheet";
 import { Button } from "@/components/ui/button";
 import { UserMenuItems } from "@/components/layout/user-menu-items";
@@ -93,8 +93,8 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
   };
 
   return (
-    <SwipeableSheet open={open} onOpenChange={setOpen}>
-      <SwipeableSheetTrigger asChild className="md:hidden">
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild className="md:hidden">
         <Button
           variant="ghost"
           size="icon"
@@ -103,11 +103,11 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
         >
           <Menu className="h-5 w-5" />
         </Button>
-      </SwipeableSheetTrigger>
-      <SwipeableSheetContent side="left" className="w-[280px] sm:w-[320px]">
-        <SwipeableSheetHeader className="mb-6">
-          <SwipeableSheetTitle>Навигация</SwipeableSheetTitle>
-        </SwipeableSheetHeader>
+      </SheetTrigger>
+      <SwipeableSheetContent side="left" onOpenChange={setOpen} className="w-[280px] sm:w-[320px]">
+        <SheetHeader className="mb-6">
+          <SheetTitle>Навигация</SheetTitle>
+        </SheetHeader>
         
         {/* Navigation Links */}
         <nav className="flex flex-col gap-2 mb-6">
@@ -151,6 +151,6 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
           </Button>
         )}
       </SwipeableSheetContent>
-    </SwipeableSheet>
+    </Sheet>
   );
 }
