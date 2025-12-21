@@ -5,7 +5,6 @@ import { MainFooter } from "@/components/layout/main-footer";
 import { AuthModalProvider } from "@/components/auth/auth-modal-provider";
 import { AuthModalHost } from "@/components/auth/auth-modal-host";
 import { ScrollRestorationProvider } from "@/app/scroll-restoration-provider";
-import { TelegramScriptLoader } from "@/components/TelegramScriptLoader";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -45,9 +44,6 @@ export default function RootLayout({
             </div>
           </AuthModalProvider>
         </ScrollRestorationProvider>
-        
-        {/* Telegram Login Widget - Client Component with observability */}
-        <TelegramScriptLoader />
       </body>
     </html>
   );
