@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface ClubMembersListProps {
   clubId: string;
@@ -70,7 +71,7 @@ export function ClubMembersList({
       document.body.removeChild(a);
     } catch (err) {
       console.error("Failed to export:", err);
-      alert("Не удалось экспортировать участников");
+      showError(err, "Не удалось экспортировать участников");
     } finally {
       setExporting(false);
     }
@@ -105,10 +106,12 @@ export function ClubMembersList({
 
     try {
       await onRemoveMember(actionUserId);
+      toast(TOAST.club.memberRemoved);
       setShowRemoveConfirm(false);
       setActionUserId(null);
     } catch (err) {
       console.error("Failed to remove member", err);
+      showError(err, "Не удалось удалить участника");
     }
   };
 
@@ -117,8 +120,10 @@ export function ClubMembersList({
 
     try {
       await onUpdateRole(userId, newRole);
+      toast(TOAST.club.memberRoleUpdated);
     } catch (err) {
       console.error("Failed to update role", err);
+      showError(err, "Не удалось изменить роль");
     }
   };
 

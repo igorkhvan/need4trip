@@ -18,6 +18,7 @@ import { FormField } from "@/components/ui/form-field";
 import { MultiBrandSelect, MultiBrandSelectOption } from "@/components/multi-brand-select";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import type { City } from "@/lib/types/city";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface ProfileEditForm {
   name: string;
@@ -82,7 +83,7 @@ export default function ProfileEditPage() {
         setAvatarUrl(user.avatarUrl || null);
       } catch (err) {
         console.error("Failed to load profile:", err);
-        setError("Не удалось загрузить профиль");
+        showError(err, "Не удалось загрузить профиль");
       } finally {
         setLoading(false);
       }
@@ -135,11 +136,12 @@ export default function ProfileEditPage() {
         throw new Error(errorData.error || "Failed to update profile");
       }
       
-      // Redirect to profile page
+      // Show success toast and redirect
+      toast(TOAST.profile.updated);
       router.push("/profile");
     } catch (err: any) {
       console.error("Failed to update profile:", err);
-      setError(err.message || "Не удалось обновить профиль");
+      showError(err, "Не удалось обновить профиль");
     } finally {
       setSaving(false);
     }

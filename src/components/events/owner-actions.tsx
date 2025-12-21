@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface OwnerActionsProps {
   eventId: string;
@@ -22,7 +23,7 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
 
   const handleDelete = async () => {
     if (authMissing) {
-      setError("Недостаточно прав / войдите через Telegram");
+      showError("Недостаточно прав / войдите через Telegram");
       return;
     }
     setError(null);
@@ -31,17 +32,18 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
       const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          setError("Недостаточно прав / войдите через Telegram");
+          showError("Недостаточно прав / войдите через Telegram");
         } else {
           const body = await res.json().catch(() => ({}));
           const message = body?.error?.message || body?.message || "Не удалось удалить событие";
-          setError(message);
+          showError(message);
         }
         return;
       }
+      toast(TOAST.event.deleted);
       router.push("/events");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось удалить событие");
+      showError(e, "Не удалось удалить событие");
     } finally {
       setIsDeleting(false);
     }

@@ -17,6 +17,7 @@ import { getErrorMessage } from "@/lib/utils/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import type { Club, ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
 import type { City } from "@/lib/types/city";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface ClubFormProps {
   mode: "create" | "edit";
@@ -97,13 +98,16 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
 
       const { club: savedClub } = await res.json();
 
+      // Show success toast
+      toast(mode === "create" ? TOAST.club.created : TOAST.club.updated);
+      
       if (onSuccess) {
         onSuccess(savedClub);
       } else {
         router.push(`/clubs/${savedClub.id}`);
       }
     } catch (err) {
-      setError(getErrorMessage(err));
+      showError(err, mode === "create" ? "Не удалось создать клуб" : "Не удалось сохранить изменения");
     } finally {
       setLoading(false);
     }

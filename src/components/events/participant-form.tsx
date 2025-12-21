@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormField } from "@/components/ui/form-field";
-import { toast } from "@/components/ui/use-toast";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
 import { useCurrentUser } from "@/components/auth/use-current-user";
@@ -22,6 +21,7 @@ import { useSaveScroll } from "@/hooks/use-scroll-save";
 import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
 import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface ParticipantFormProps {
   mode: "create" | "edit";
@@ -218,11 +218,9 @@ export function ParticipantForm({
             sortedFields.map((field) => [field.id, getDefaultCustomFieldValue(field.type)])
           )
         );
+        toast(TOAST.participant.created);
       } else {
-        toast({ 
-          title: "Обновлено", 
-          description: "Регистрация успешно сохранена" 
-        });
+        toast(TOAST.participant.updated);
       }
 
       setFieldErrors({});
@@ -233,7 +231,7 @@ export function ParticipantForm({
       router.refresh();
       onSuccess?.();
     } catch (err) {
-      setError(getErrorMessage(err, "Произошла ошибка. Повторите попытку."));
+      showError(err, "Не удалось зарегистрироваться на событие");
     } finally {
       setIsSubmitting(false);
     }

@@ -16,6 +16,7 @@ import {
   NotificationTypeLabel, 
   NotificationTypeDescription 
 } from "@/lib/constants/notificationTypes";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 export function NotificationSettingsForm() {
   const [loading, setLoading] = useState(true);
@@ -49,7 +50,7 @@ export function NotificationSettingsForm() {
       setSettings(data.data);
     } catch (err) {
       console.error('[NotificationSettingsForm] Load error:', err);
-      setError('Не удалось загрузить настройки');
+      showError(err, "Не удалось загрузить настройки");
     } finally {
       setLoading(false);
     }
@@ -84,12 +85,13 @@ export function NotificationSettingsForm() {
       const data = await res.json();
       setSettings(data.data);
       
-      // Show success indicator
+      // Show success toast
+      toast(TOAST.profile.notificationSettingsSaved);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       console.error('[NotificationSettingsForm] Save error:', err);
-      setError('Не удалось сохранить настройки');
+      showError(err, "Не удалось сохранить настройки");
     } finally {
       setSaving(false);
     }

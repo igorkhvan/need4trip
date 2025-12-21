@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2024-12-22] - Унификация Toast уведомлений
+
+### ✨ Изменения
+- **Toast Унификация** - Реализован простой и надежный подход к toast уведомлениям
+  - Созданы константы `TOAST` для всех текстов уведомлений (`src/lib/utils/toastMessages.ts`)
+  - Добавлен helper `showError()` для упрощенной обработки ошибок (`src/lib/utils/toastHelpers.ts`)
+  - Единая точка импорта через `toastHelpers.ts` - все toast функции и константы в одном месте
+  - Убраны `alert()` из всех компонентов
+  - **7 компонентов обновлены:**
+    - `src/components/clubs/club-members-list.tsx` - убран `alert()`, добавлены toast
+    - `src/components/events/participant-form.tsx` - унифицированы toast сообщения
+    - `src/components/events/owner-actions.tsx` - убраны inline errors, добавлены toast
+    - `src/components/events/participant-actions.tsx` - убраны inline errors, добавлены toast
+    - `src/components/clubs/club-form.tsx` - унифицированы toast сообщения
+    - `src/components/profile/notification-settings-form.tsx` - убраны inline errors, добавлены toast
+    - `src/app/(app)/profile/edit/page.tsx` - унифицированы toast сообщения
+
+### 🎯 Архитектурные принципы
+- **KISS** (Keep It Simple, Stupid) - простое решение без over-engineering
+- **DRY** (Don't Repeat Yourself) - все тексты в одном месте
+- **Single Source of Truth** - единая точка для всех toast констант
+- **Type Safety** - TypeScript проверяет корректность использования констант
+
+### 📋 Структура
+```typescript
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
+
+// Успех - прямой вызов с константой
+toast(TOAST.participant.created);
+
+// Ошибка - helper функция
+catch (err) {
+  showError(err, "Не удалось удалить");
+}
+```
+
+---
+
 ## [2024-12-22] - Исправление отображения всех сообщений об ошибках
 
 ### 🐛 Исправлено

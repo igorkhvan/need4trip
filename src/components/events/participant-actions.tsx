@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ParticipantModal } from "@/components/events/participant-modal";
 import { Event, EventCustomFieldSchema } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
+import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface ParticipantActionsProps {
   eventId: string;
@@ -46,7 +47,7 @@ export function ParticipantActions({
 
   const handleDelete = async () => {
     if (!canRemove || authMissing) {
-      setError("Недостаточно прав / войдите через Telegram");
+      showError("Недостаточно прав / войдите через Telegram");
       return;
     }
     setError(null);
@@ -58,9 +59,7 @@ export function ParticipantActions({
         await onDeleteSuccess();
       }
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Произошла ошибка. Повторите попытку."
-      );
+      showError(e, "Не удалось удалить участника");
     } finally {
       setIsDeleting(false);
     }
