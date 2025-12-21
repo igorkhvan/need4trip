@@ -6,7 +6,7 @@ import { CreateEventButton } from "@/components/events/create-event-button";
 
 export function Hero({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white py-24 md:py-40">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#F7F7F8] to-white py-16 md:py-32 lg:py-40">
       <div className="page-container">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="heading-hero mb-6">
