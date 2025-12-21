@@ -193,67 +193,55 @@ export function AuthModal({
       return;
     }
 
-    // Wait for container to be mounted with a retry mechanism
-    let timeoutId: NodeJS.Timeout;
-    let retryCount = 0;
-    const maxRetries = 10;
+    const container = containerRef.current;
+    if (!container) {
+      console.error("[auth-modal] ❌ Container ref is null!");
+      return;
+    }
+
+    // Clear container (safe method - no XSS risk)
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+
+    // Create widget element (NOT script - script loaded globally in layout.tsx)
+    const widgetDiv = document.createElement("div");
+    widgetDiv.id = `telegram-login-${Date.now()}`;
+    widgetDiv.setAttribute("data-telegram-login", username);
+    widgetDiv.setAttribute("data-size", "large");
+    if (authUrl) {
+      widgetDiv.setAttribute("data-auth-url", authUrl);
+    }
+    widgetDiv.setAttribute("data-request-access", "write");
+    widgetDiv.setAttribute("data-onauth", "onTelegramAuthModal(user)");
     
-    const initWidget = () => {
-      const container = containerRef.current;
-      
-      // Debug logging (only in development)
-      if (process.env.NODE_ENV === 'development') {
-        console.log("[auth-modal] Widget init attempt:", {
-          open,
-          hasContainer: !!container,
-          username,
-          authUrl,
-          isAuthed,
-          retryCount,
-        });
-      }
-      
-      if (!container) {
-        // Retry if container is not ready yet
-        if (retryCount < maxRetries) {
-          retryCount++;
-          timeoutId = setTimeout(initWidget, 50);
-        } else {
-          console.error("[auth-modal] ❌ Container ref is null after max retries!");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[auth-modal] Creating Telegram Widget element", { 
+        username, 
+        authUrl,
+        hasTelegramAPI: !!window.Telegram 
+      });
+    }
+    
+    container.appendChild(widgetDiv);
+
+    // Initialize widget using Telegram API (script already loaded globally)
+    if (window.Telegram?.Login) {
+      try {
+        window.Telegram.Login.init(widgetDiv);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("[auth-modal] ✅ Telegram Widget initialized");
         }
-        return;
+      } catch (error) {
+        console.error("[auth-modal] Failed to initialize Telegram Widget:", error);
       }
-
-      // Clear container (safe method - no XSS risk)
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
-      }
-
-      const script = document.createElement("script");
-      script.src = "https://telegram.org/js/telegram-widget.js?22";
-      script.async = true;
-      script.setAttribute("data-telegram-login", username);
-      script.setAttribute("data-size", "large");
-      if (authUrl) {
-        script.setAttribute("data-auth-url", authUrl);
-      }
-      script.setAttribute("data-request-access", "write");
-      script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log("[auth-modal] ✅ Appending Telegram Widget script", { username, authUrl });
-      }
-      container.appendChild(script);
-    };
-    
-    // Start initialization with a small delay
-    timeoutId = setTimeout(initWidget, 100);
+    } else {
+      console.warn("[auth-modal] ⚠️ Telegram Widget API not available yet");
+    }
 
     return () => {
-      clearTimeout(timeoutId);
-      const container = containerRef.current;
+      // Cleanup: remove only DOM elements, NOT the global script
       if (container) {
-        // Clear container (safe method - no XSS risk)
         while (container.firstChild) {
           container.removeChild(container.firstChild);
         }

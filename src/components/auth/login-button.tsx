@@ -106,20 +106,30 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
       container.removeChild(container.firstChild);
     }
 
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", username);
-    script.setAttribute("data-size", "large");
+    // Create widget element (NOT script - script loaded globally in layout.tsx)
+    const widgetDiv = document.createElement("div");
+    widgetDiv.id = `telegram-login-${Date.now()}`;
+    widgetDiv.setAttribute("data-telegram-login", username);
+    widgetDiv.setAttribute("data-size", "large");
     if (authUrl) {
-      script.setAttribute("data-auth-url", authUrl);
+      widgetDiv.setAttribute("data-auth-url", authUrl);
     }
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    container.appendChild(script);
+    widgetDiv.setAttribute("data-request-access", "write");
+    widgetDiv.setAttribute("data-onauth", "onTelegramAuth(user)");
+    
+    container.appendChild(widgetDiv);
+
+    // Initialize widget using Telegram API (script already loaded globally)
+    if (window.Telegram?.Login) {
+      try {
+        window.Telegram.Login.init(widgetDiv);
+      } catch (error) {
+        console.error("[login-button] Failed to initialize Telegram Widget:", error);
+      }
+    }
 
     return () => {
-      // Clear container (safe method - no XSS risk)
+      // Cleanup: remove only DOM elements, NOT the global script
       if (container) {
         while (container.firstChild) {
           container.removeChild(container.firstChild);
