@@ -131,24 +131,30 @@ COMMENT ON FUNCTION can_view_club_subscription IS
 CREATE OR REPLACE VIEW public.club_subscription_limits AS
 SELECT 
   cs.club_id,
-  cs.plan,
-  cs.active,
-  -- Derived limits based on plan
-  CASE cs.plan
-    WHEN 'club_free' THEN 1
-    WHEN 'club_basic' THEN 3
-    WHEN 'club_pro' THEN NULL -- unlimited
+  cs.plan_id,
+  cs.status,
+  -- Derived limits based on plan_id (v2.0 structure)
+  CASE cs.plan_id
+    WHEN 'club_50' THEN 50
+    WHEN 'club_500' THEN 500
+    WHEN 'club_unlimited' THEN NULL -- unlimited
+    ELSE 0 -- fallback
   END as max_events,
+  -- Active flag (derived from status)
+  CASE 
+    WHEN cs.status IN ('active', 'grace') THEN true
+    ELSE false
+  END as is_active,
   -- Expiration flag (not exact date)
   CASE 
-    WHEN cs.valid_until IS NULL THEN false
-    WHEN cs.valid_until < NOW() THEN true
+    WHEN cs.current_period_end IS NULL THEN false
+    WHEN cs.current_period_end < NOW() AND cs.status = 'expired' THEN true
     ELSE false
   END as is_expired
 FROM public.club_subscriptions cs;
 
 COMMENT ON VIEW public.club_subscription_limits IS 
-  'Public view of club subscription limits without financial details. Safe for feature checks.';
+  'Public view of club subscription limits without financial details. Safe for feature checks. v2.0 structure (plan_id, status).';
 
 -- Grant SELECT on view to authenticated users
 GRANT SELECT ON public.club_subscription_limits TO authenticated;
@@ -186,19 +192,28 @@ END $$;
 -- | Service    | ✅     | ✅     | ✅     | ✅     |
 
 -- SENSITIVE FIELDS (protected):
--- - valid_until: Exact expiration date (financial planning)
+-- - current_period_start: Billing period start (financial planning)
+-- - current_period_end: Exact expiration date (financial planning)
+-- - grace_until: Grace period end date
 -- - created_at/updated_at: Subscription history
 
 -- SAFE FOR PUBLIC (via view):
--- - plan: For feature access checks (already visible in UI)
--- - active: Boolean flag (no financial details)
+-- - plan_id: For feature access checks (already visible in UI)
+-- - status: Status flag (pending/active/grace/expired)
 -- - max_events: Derived limit (not sensitive)
+-- - is_active: Boolean flag (no financial details)
 -- - is_expired: Boolean flag (not exact date)
 
 -- APPLICATION RESPONSIBILITY:
 -- 1. Use club_subscription_limits view for feature checks
--- 2. Never expose valid_until to non-owners
+-- 2. Never expose current_period_end to non-owners
 -- 3. All subscription modifications via service role
 -- 4. Billing webhooks run as service role
+-- 5. Free plan = no record in club_subscriptions (NULL check)
+
+-- NOTE: v2.0 STRUCTURE
+-- - Old: plan (text), active (boolean), valid_until (timestamptz)
+-- - New: plan_id (text FK), status (enum), current_period_start/end, grace_until
+-- - Free plan: NO record in table (migrated to "no subscription" model)
 
 -- ============================================================================
