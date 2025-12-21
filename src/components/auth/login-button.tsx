@@ -71,7 +71,12 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
         }
         setHasAuthed(true);
         const container = containerRef.current;
-        if (container) container.innerHTML = "";
+        if (container) {
+          // Clear container (safe method - no XSS risk)
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
+        }
         router.refresh();
       } catch (err) {
         console.error("Telegram auth failed", err);
@@ -96,7 +101,10 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     const container = containerRef.current;
     if (!container || !username || isAuthenticated || hasAuthed) return;
 
-    container.innerHTML = "";
+    // Clear container (safe method - no XSS risk)
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
 
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
@@ -111,7 +119,12 @@ export function LoginButton({ isAuthenticated }: LoginButtonProps) {
     container.appendChild(script);
 
     return () => {
-      container.innerHTML = "";
+      // Clear container (safe method - no XSS risk)
+      if (container) {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
+      }
     };
   }, [authUrl, username, isAuthenticated, hasAuthed]);
 

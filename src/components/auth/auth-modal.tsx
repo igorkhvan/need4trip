@@ -128,9 +128,13 @@ export function AuthModal({
         
         setIsAuthed(true);
         
-        // Clear the widget
+        // Clear the widget (safe method - no XSS risk)
         const container = containerRef.current;
-        if (container) container.innerHTML = "";
+        if (container) {
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
+        }
         
         // ВАЖНО: Подождать немного чтобы браузер применил Set-Cookie header
         // Cookie устанавливается в ответе от /api/auth/telegram
@@ -220,7 +224,10 @@ export function AuthModal({
         return;
       }
 
-      container.innerHTML = "";
+      // Clear container (safe method - no XSS risk)
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
 
       const script = document.createElement("script");
       script.src = "https://telegram.org/js/telegram-widget.js?22";
@@ -246,7 +253,10 @@ export function AuthModal({
       clearTimeout(timeoutId);
       const container = containerRef.current;
       if (container) {
-        container.innerHTML = "";
+        // Clear container (safe method - no XSS risk)
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
       }
     };
   }, [open, authUrl, username, isAuthed]);
