@@ -44,14 +44,50 @@ export async function handleApiError(response: Response): Promise<never> {
 
 /**
  * Безопасно извлечь сообщение об ошибке из неизвестного типа
+ * 
+ * Handles multiple error formats:
+ * - Error instances: error.message
+ * - String errors: direct value
+ * - Objects with nested messages: error.details.message, error.error.message
+ * - Wrapped errors: tries multiple paths to find readable message
+ * 
+ * @param error - Unknown error type to extract message from
+ * @param fallback - Default message if extraction fails
+ * @returns Human-readable error message
  */
 export function getErrorMessage(error: unknown, fallback = "Произошла ошибка"): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
+  if (!error) return fallback;
+  
+  // Handle string errors
   if (typeof error === "string") {
     return error;
   }
+  
+  // Handle Error instances
+  if (error instanceof Error) {
+    return error.message;
+  }
+  
+  // Handle object errors (API responses, wrapped errors)
+  if (typeof error === 'object') {
+    const err = error as any;
+    
+    // Try different paths to extract message
+    if (err.message && typeof err.message === 'string') {
+      return err.message;
+    }
+    
+    // Check nested details.message (wrapped errors like InternalError)
+    if (err.details?.message && typeof err.details.message === 'string') {
+      return err.details.message;
+    }
+    
+    // Check error.error.message (API response format)
+    if (err.error?.message && typeof err.error.message === 'string') {
+      return err.error.message;
+    }
+  }
+  
   return fallback;
 }
 
