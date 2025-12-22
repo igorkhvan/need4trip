@@ -127,7 +127,7 @@ export function MapPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl mx-4 sm:mx-auto p-0 gap-0">
+      <DialogContent className="max-w-3xl sm:mx-auto p-0 gap-0">
         {/* Header - DialogContent already has close button */}
         <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4">
           <DialogTitle className="text-lg sm:text-xl font-semibold leading-tight text-[#1F2937]">
@@ -171,7 +171,7 @@ export function MapPreviewModal({
             trigger={
               <Button type="button" size="sm" className="gap-2">
                 <Navigation className="h-4 w-4" />
-                <span className="hidden sm:inline">Открыть в навигации</span>
+                <span>Открыть в навигации</span>
               </Button>
             }
           />
