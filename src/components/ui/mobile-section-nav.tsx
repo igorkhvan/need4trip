@@ -1,9 +1,18 @@
 /**
- * MobileSectionNav Component
+ * MobileSectionNav Component - Slider Version
  * 
- * Universal mobile floating navigation with dots and connecting lines.
+ * Slider-based mobile navigation with continuous track and animated thumb.
  * Auto-detects visible sections using Intersection Observer.
- * Provides smooth scroll to sections on click.
+ * 
+ * Features:
+ * - Intersection Observer for active section tracking
+ * - Smooth slider animation on scroll
+ * - Active mark highlighting
+ * - Click/tap to scroll to section
+ * - Adaptive width (scales to screen size)
+ * - Touch-friendly targets (≥24px)
+ * - Accessibility (ARIA labels, keyboard navigation)
+ * - iOS safe area support
  * 
  * Usage:
  * ```tsx
@@ -14,23 +23,6 @@
  * 
  * <MobileSectionNav sections={sections} />
  * ```
- * 
- * Features:
- * - Intersection Observer for active section tracking
- *   - Maintains entry map for all observed sections
- *   - Re-evaluates ALL sections on any intersection change
- *   - Selects section with highest intersection ratio
- * - Smooth scroll behavior with configurable offset
- * - Touch-friendly targets (28-30px effective area)
- * - Accessibility (ARIA labels, keyboard navigation)
- * - iOS safe area support
- * - Performance optimized (debounced via thresholds)
- * 
- * Accessibility:
- * - Touch targets meet WCAG 2.1 AAA guidelines (~28-30px)
- * - Full keyboard navigation support
- * - Screen reader friendly (ARIA labels)
- * - Focus indicators
  */
 
 "use client";
@@ -156,6 +148,13 @@ export function MobileSectionNav({
     xl: "xl:hidden",
   }[hideOnBreakpoint];
 
+  // Calculate slider position (0% to 100%)
+  const sliderPosition = (activeIndex / (sections.length - 1)) * 100;
+
+  // Adaptive sizes based on number of sections
+  const markSize = sections.length <= 5 ? "w-1 h-4" : "w-0.5 h-3";
+  const thumbSize = sections.length <= 5 ? "w-7 h-7" : "w-6 h-6";
+
   return (
     <div
       className={cn(
@@ -174,72 +173,100 @@ export function MobileSectionNav({
       role="navigation"
       aria-label="Навигация по секциям"
     >
-      <div
-        className={cn(
-          // Background with blur
-          "bg-white/95 backdrop-blur-md",
-          // Shape
-          "rounded-full",
-          // Spacing - increased for better touch targets
-          "px-5 py-3",
-          // Shadow
-          "shadow-lg",
-          // Enable pointer events for this container
-          "pointer-events-auto",
-          // Layout - increased gap for easier targeting
-          "flex items-center gap-2"
-        )}
-      >
-        {sections.map((section, index) => (
-          <div key={section.id} className="flex items-center gap-2">
-            {/* Dot Button - Variant 4: larger dot + padding for touch target */}
-            <button
-              type="button"
-              onClick={() => scrollToSection(index)}
-              className={cn(
-                // Touch target padding (8px = 28-30px total area)
-                "p-2",
-                // Base styles
-                "rounded-full transition-all duration-300",
-                "focus:outline-none focus:ring-2 focus:ring-[#FF6F2C] focus:ring-offset-2",
-                // Smooth transitions
-                "transform"
-              )}
-              aria-label={`Перейти к секции: ${section.label}`}
-              aria-current={activeIndex === index ? "true" : undefined}
-            >
-              {/* Visual dot - increased from 10px to 12px */}
-              <span
-                className={cn(
-                  // Size - Variant 4: 12px base size
-                  "block h-3 w-3",
-                  // Shape
-                  "rounded-full transition-all duration-300",
-                  // Active state - increased scale for visibility
-                  activeIndex === index
-                    ? "scale-140 bg-[#FF6F2C] shadow-sm"
-                    : "border-2 border-[#D1D5DB] hover:border-[#9CA3AF] hover:scale-110",
-                  // Smooth transitions
-                  "transform"
-                )}
-              />
-            </button>
+      {/* Sizing container - adaptive width */}
+      <div className="w-[calc(100vw-2rem)] max-w-sm pointer-events-auto">
+        {/* Visual container */}
+        <div
+          className={cn(
+            // Background with blur
+            "bg-white/95 backdrop-blur-md",
+            // Shape
+            "rounded-full",
+            // Spacing - adaptive
+            "px-4 py-3 sm:px-5 sm:py-3.5",
+            // Shadow
+            "shadow-lg"
+          )}
+        >
+          {/* Track container */}
+          <div className="relative h-8 flex items-center">
+            {/* Base track - continuous line */}
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2 bg-gray-200 rounded-full" />
 
-            {/* Connecting Line - increased gap */}
-            {index < sections.length - 1 && (
-              <div
-                className={cn(
-                  "h-px transition-all duration-300",
-                  // Dynamic width based on proximity to active
-                  Math.abs(index - activeIndex) === 0 || Math.abs(index + 1 - activeIndex) === 0
-                    ? "w-6 bg-[#FF6F2C]/40"
-                    : "w-5 bg-[#E5E7EB]"
-                )}
-                aria-hidden="true"
-              />
-            )}
+            {/* Progress fill - filled portion before slider */}
+            <div
+              style={{
+                width: `${sliderPosition}%`,
+              }}
+              className="absolute top-1/2 left-0 h-1 -translate-y-1/2 bg-[#FF6F2C]/30 rounded-full transition-all duration-300 ease-out"
+            />
+
+            {/* Marks - section indicators */}
+            {sections.map((section, index) => {
+              const isActive = index === activeIndex;
+              const position = (index / (sections.length - 1)) * 100;
+
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => scrollToSection(index)}
+                  style={{
+                    left: `${position}%`,
+                  }}
+                  className={cn(
+                    // Position
+                    "absolute top-1/2 -translate-y-1/2 -translate-x-1/2",
+                    // Touch target (≥24px)
+                    "p-3",
+                    // Focus state
+                    "rounded-full focus:outline-none focus:ring-2 focus:ring-[#FF6F2C] focus:ring-offset-2",
+                    // z-index для кликабельности
+                    "z-10"
+                  )}
+                  aria-label={`Перейти к секции: ${section.label}`}
+                  aria-current={isActive ? "true" : undefined}
+                >
+                  {/* Visual mark */}
+                  <span
+                    className={cn(
+                      // Base styles
+                      "block rounded-full transition-all duration-300",
+                      // Size and color based on state
+                      isActive
+                        ? cn("w-1.5 h-5 bg-[#FF6F2C]", markSize.includes("h-3") && "h-4") // Active: taller, primary color
+                        : cn(markSize, "bg-gray-400 hover:bg-gray-500") // Inactive: smaller, gray
+                    )}
+                  />
+                </button>
+              );
+            })}
+
+            {/* Slider thumb - animated indicator */}
+            <div
+              style={{
+                left: `${sliderPosition}%`,
+              }}
+              className={cn(
+                // Position
+                "absolute top-1/2 -translate-y-1/2 -translate-x-1/2",
+                // Size
+                thumbSize,
+                // Appearance
+                "bg-[#FF6F2C] rounded-full shadow-md",
+                // Ring effect
+                "ring-2 ring-white",
+                // Animation
+                "transition-all duration-300 ease-out",
+                // z-index выше меток
+                "z-20",
+                // Pointer events off (метки обрабатывают клики)
+                "pointer-events-none"
+              )}
+              aria-hidden="true"
+            />
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
