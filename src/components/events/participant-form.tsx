@@ -401,7 +401,7 @@ export function ParticipantForm({
       )}
       
       {mode === "create" && (
-        <p className="text-left text-sm text-[#6B7280]">
+        <p className="text-left text-sm text-muted-foreground">
           После отправки вы появитесь в списке участников, а организатор получит ваши данные.
         </p>
       )}

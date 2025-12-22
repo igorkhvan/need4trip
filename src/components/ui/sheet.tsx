@@ -144,7 +144,7 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-body-small text-[#6B7280]", className)}
+    className={cn("text-body-small text-muted-foreground", className)}
     {...props}
   />
 ));

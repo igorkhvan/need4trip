@@ -267,12 +267,12 @@ export default function ClubsPage() {
           <div className="rounded-lg border-2 border-dashed border-[#E5E7EB] bg-white py-16 text-center">
             <div className="mx-auto max-w-md">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F9FAFB]">
-                <Search className="h-8 w-8 text-[#6B7280]" />
+                <Search className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="mb-2 text-[18px] font-semibold text-[#1F2937]">
                 {searchQuery || selectedCity ? "Клубы не найдены" : "Пока нет клубов"}
               </h3>
-              <p className="mb-6 text-[15px] text-[#6B7280]">
+              <p className="mb-6 text-[15px] text-muted-foreground">
                 {searchQuery || selectedCity
                   ? "Попробуйте изменить поисковый запрос или фильтр"
                   : "Создайте первый клуб и соберите единомышленников"}

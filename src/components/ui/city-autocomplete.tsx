@@ -148,12 +148,12 @@ export function CityAutocomplete({
             className={cn(
               "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
               error ? "border-red-500 focus:border-red-500" : "",
-              !selectedCity && "text-[#6B7280]",
+              !selectedCity && "text-muted-foreground",
               className
             )}
           >
             <div className="flex items-center gap-2">
-              <MapPin className={cn("h-4 w-4", selectedCity ? "text-[#6B7280]" : "text-[#6B7280]")} />
+              <MapPin className={cn("h-4 w-4", selectedCity ? "text-muted-foreground" : "text-muted-foreground")} />
               <span className="truncate">{displayValue}</span>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -186,7 +186,7 @@ export function CityAutocomplete({
                   <div className="flex flex-col">
                     <span className="font-medium">{city.name}</span>
                     {city.region && (
-                      <span className="text-xs text-[#6B7280]">{city.region}</span>
+                      <span className="text-xs text-muted-foreground">{city.region}</span>
                     )}
                   </div>
                   {city.isPopular && (
@@ -202,7 +202,7 @@ export function CityAutocomplete({
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="w-full text-[#6B7280] hover:text-[#374151]"
+                className="w-full text-muted-foreground hover:text-[#374151]"
               >
                 Очистить выбор
               </Button>

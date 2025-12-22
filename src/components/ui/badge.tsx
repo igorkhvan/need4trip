@@ -24,7 +24,7 @@ const badgeVariants = cva(
         "starting-soon": "border-transparent bg-[#FFFBEB] text-[#D97706]",
         "almost-full": "border-transparent bg-[#FFFBEB] text-[#D97706]",
         "completed": "border-transparent bg-[#FEF2F2] text-[#DC2626]",
-        "neutral": "border-transparent bg-[#F3F4F6] text-[#6B7280]",
+        "neutral": "border-transparent bg-[#F3F4F6] text-muted-foreground",
         "attention": "border-transparent bg-[#FFF4EF] text-[#E86223]",
         
         // Generic Subtle Badges

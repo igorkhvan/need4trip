@@ -88,7 +88,7 @@ function HowItWorksSection() {
                   {index + 1}
                 </div>
                 <h3 className="mb-3 text-lg font-semibold leading-tight text-[#111827] md:mb-4 md:text-xl">{item.title}</h3>
-                <p className="text-sm text-[#6B7280] md:text-base">{item.description}</p>
+                <p className="text-sm text-muted-foreground md:text-base">{item.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -121,7 +121,7 @@ function Features() {
                     <Icon className="h-6 w-6 text-[#FF6F2C]" strokeWidth={2} />
                   </div>
                   <h4 className="mb-2 text-lg font-semibold leading-tight text-[#111827] md:mb-3 md:text-xl">{item.title}</h4>
-                  <p className="text-sm text-[#6B7280] md:text-base">{item.description}</p>
+                  <p className="text-sm text-muted-foreground md:text-base">{item.description}</p>
                 </CardContent>
               </Card>
             );

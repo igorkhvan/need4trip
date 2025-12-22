@@ -80,7 +80,7 @@ export function LocationPointDisplay({
             }
           />
         ) : (
-          <span className="flex-1 text-sm font-semibold text-[#6B7280] truncate">
+          <span className="flex-1 text-sm font-semibold text-muted-foreground truncate">
             {location.title}
           </span>
         )}
@@ -100,7 +100,7 @@ export function LocationPointDisplay({
                   {copied ? (
                     <Check className="h-3.5 w-3.5 text-green-600" />
                   ) : (
-                    <Copy className="h-3.5 w-3.5 text-[#6B7280]" />
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </Button>
               </TooltipTrigger>

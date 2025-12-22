@@ -792,7 +792,7 @@ export function EventForm({
                 <li>Дополнительные поля регистрации</li>
                 <li>Платность события</li>
               </ul>
-              <p className="text-sm text-[#6B7280]">
+              <p className="text-sm text-muted-foreground">
                 Чем больше информации вы укажете, тем более точными и релевантными будут сгенерированные правила.
               </p>
             </AlertDialogDescription>

@@ -107,7 +107,7 @@ export function NavigationChooser({
           {/* Header */}
           <div className="px-2 py-1.5">
             <p className="text-xs font-semibold text-[#111827]">Открыть в навигации</p>
-            <p className="text-xs text-[#6B7280]">{coordsText}</p>
+            <p className="text-xs text-muted-foreground">{coordsText}</p>
           </div>
 
           {/* Divider */}
@@ -136,7 +136,7 @@ export function NavigationChooser({
             onClick={handleCopyCoords}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#374151] hover:bg-[#F9FAFB] transition-colors"
           >
-            <Copy className="h-4 w-4 text-[#6B7280]" />
+            <Copy className="h-4 w-4 text-muted-foreground" />
             <span className="flex-1 text-left">
               {copied ? '✓ Скопировано!' : 'Скопировать координаты'}
             </span>

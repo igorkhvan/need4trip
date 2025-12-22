@@ -145,7 +145,7 @@ export default function EditEventPage() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Spinner size="lg" />
-            <p className="mt-4 text-base text-[#6B7280]">Загрузка данных события...</p>
+            <p className="mt-4 text-base text-muted-foreground">Загрузка данных события...</p>
           </div>
         </div>
       </div>

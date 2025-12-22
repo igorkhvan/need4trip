@@ -47,7 +47,7 @@ export function PaywallModal({
             {message}
           </DialogDescription>
           {requiredPlanId && (
-            <p className="text-center text-sm text-[#6B7280] pt-2">
+            <p className="text-center text-sm text-muted-foreground pt-2">
               Требуется тариф: <span className="font-semibold">{getClubPlanLabel(requiredPlanId)}</span>
             </p>
           )}

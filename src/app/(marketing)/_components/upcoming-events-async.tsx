@@ -32,7 +32,7 @@ export async function UpcomingEventsAsync() {
       <section className="page-container py-24 md:py-32">
         <div className="mb-16 text-center">
           <h2 className="heading-section mb-4">Предстоящие поездки</h2>
-          <p className="mx-auto max-w-2xl text-base text-[#6B7280] md:text-lg">
+          <p className="mx-auto max-w-2xl text-base text-muted-foreground md:text-lg">
             Новые события появятся здесь в ближайшее время
           </p>
         </div>
@@ -45,7 +45,7 @@ export async function UpcomingEventsAsync() {
     <section className="page-container py-24 md:py-32">
       <div className="mb-16 text-center">
         <h2 className="heading-section mb-4">Предстоящие поездки</h2>
-        <p className="mx-auto max-w-2xl text-base text-[#6B7280] md:text-lg">
+        <p className="mx-auto max-w-2xl text-base text-muted-foreground md:text-lg">
           Присоединяйтесь к ближайшим автомобильным событиям
         </p>
       </div>

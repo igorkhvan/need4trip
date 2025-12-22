@@ -87,7 +87,7 @@ export function EventVehicleSection({
           error={fieldError("allowedBrandIds")}
           disabled={disabled}
         />
-        <p className="text-sm text-[#6B7280]">
+        <p className="text-sm text-muted-foreground">
           Если не выбрано ни одной марки, участвовать могут любые автомобили.
         </p>
       </div>

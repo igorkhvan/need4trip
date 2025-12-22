@@ -67,7 +67,7 @@ export function FormField({
 
       {/* Hint text - always visible if provided */}
       {hint && !hasError && (
-        <p className="text-xs text-[#6B7280]">{hint}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
       )}
     </div>
   );

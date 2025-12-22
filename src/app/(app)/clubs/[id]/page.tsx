@@ -100,7 +100,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                   )}
 
                   {/* Метаинформация */}
-                  <div className="flex flex-wrap gap-4 text-[14px] text-[#6B7280]">
+                  <div className="flex flex-wrap gap-4 text-[14px] text-muted-foreground">
                     {club.cities && club.cities.length > 0 && (
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-4 w-4 flex-shrink-0" />
@@ -160,7 +160,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
                   {club.cities && club.cities.length > 0 && (
                     <div>
                       <h2 className="mb-3 flex items-center gap-2 text-[18px] font-semibold text-[#1F2937]">
-                        <MapPin className="h-5 w-5 text-[#6B7280]" />
+                        <MapPin className="h-5 w-5 text-muted-foreground" />
                         <span>Города клуба</span>
                       </h2>
                       <div className="flex flex-wrap gap-2">

@@ -84,7 +84,7 @@ export function ClubMembersList({
       case "organizer":
         return <Shield className="h-4 w-4 text-[#3B82F6]" />;
       case "member":
-        return <UsersIcon className="h-4 w-4 text-[#6B7280]" />;
+        return <UsersIcon className="h-4 w-4 text-muted-foreground" />;
       case "pending":
         return <Clock className="h-4 w-4 text-[#9CA3AF]" />;
     }
@@ -182,7 +182,7 @@ export function ClubMembersList({
                   href={`https://t.me/${member.user.telegramHandle}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[14px] text-[#6B7280] hover:text-[var(--color-primary)]"
+                  className="text-[14px] text-muted-foreground hover:text-[var(--color-primary)]"
                 >
                   @{member.user.telegramHandle}
                 </a>
@@ -202,7 +202,7 @@ export function ClubMembersList({
               <div className="relative">
                 <button
                   onClick={() => setActionUserId(member.userId)}
-                  className="rounded-xl p-2 text-[#9CA3AF] transition-colors hover:bg-[#F9FAFB] hover:text-[#6B7280]"
+                  className="rounded-xl p-2 text-[#9CA3AF] transition-colors hover:bg-[#F9FAFB] hover:text-muted-foreground"
                 >
                   <MoreVertical className="h-5 w-5" />
                 </button>
@@ -246,7 +246,7 @@ export function ClubMembersList({
         ))}
 
         {members.length === 0 && (
-          <div className="py-12 text-center text-[#6B7280]">
+          <div className="py-12 text-center text-muted-foreground">
             <UsersIcon className="mx-auto mb-3 h-12 w-12 text-[#9CA3AF]" />
             <p>Пока нет участников</p>
           </div>

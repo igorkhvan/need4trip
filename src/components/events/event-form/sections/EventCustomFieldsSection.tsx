@@ -68,7 +68,7 @@ export function EventCustomFieldsSection({
   return (
     <div className="space-y-4">
         {sortedFields.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center text-sm text-[#6B7280]">
+          <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center text-sm text-muted-foreground">
             Добавьте первое поле регистрации
           </div>
         ) : (
@@ -164,7 +164,7 @@ export function EventCustomFieldsSection({
       </div>
 
       {hasLockedFields && (
-        <p className="mt-2 text-xs text-[#6B7280]">
+        <p className="mt-2 text-xs text-muted-foreground">
           Вы можете добавлять новые поля, но не можете удалять существующие, так как они используются участниками.
         </p>
       )}

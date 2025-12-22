@@ -208,7 +208,7 @@ export function EventBasicInfoSection({
           error={fieldErrors.categoryId}
         >
           {loadingCategories ? (
-            <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-[#6B7280]">
+            <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-muted-foreground">
               Загрузка категорий...
             </div>
           ) : (

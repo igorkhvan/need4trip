@@ -38,7 +38,7 @@ export default function PricingPage() {
   if (loading) {
     return (
       <div className="py-16 text-center">
-        <p className="text-[#6B7280]">Загрузка тарифов...</p>
+        <p className="text-muted-foreground">Загрузка тарифов...</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function PricingPage() {
     <div className="py-12 md:py-16">
       <div className="mb-12 text-center">
         <h1 className="mb-4 text-3xl font-bold text-[#1F2937] md:text-4xl">Тарифы Need4Trip</h1>
-        <p className="text-lg text-[#6B7280] md:text-xl">
+        <p className="text-lg text-muted-foreground md:text-xl">
           Выберите план для вашего клуба
         </p>
       </div>
@@ -73,7 +73,7 @@ export default function PricingPage() {
                 {plan.priceMonthlyKzt === 0 ? "Free" : `${plan.priceMonthlyKzt.toLocaleString()} ₸`}
               </span>
               {plan.priceMonthlyKzt > 0 && (
-                <span className="text-[#6B7280]">/месяц</span>
+                <span className="text-muted-foreground">/месяц</span>
               )}
             </div>
 
@@ -117,7 +117,7 @@ export default function PricingPage() {
         ))}
       </div>
 
-      <div className="mt-12 text-center text-sm text-[#6B7280]">
+      <div className="mt-12 text-center text-sm text-muted-foreground">
         <p>
           Нужна помощь с выбором?{" "}
           <a href="mailto:support@need4trip.kz" className="text-[#FF6F2C] underline hover:text-[#E86223]">

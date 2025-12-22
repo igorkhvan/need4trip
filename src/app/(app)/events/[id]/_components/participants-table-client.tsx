@@ -193,7 +193,7 @@ export function ParticipantsTableClient({
                         if (value === null || value === undefined) return null;
                         return (
                           <div key={field.id}>
-                            <span className="text-[#6B7280]">
+                            <span className="text-muted-foreground">
                               {field.label}:{" "}
                             </span>
                             <span className="font-medium">

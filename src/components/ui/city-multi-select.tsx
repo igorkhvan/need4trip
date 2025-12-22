@@ -120,7 +120,7 @@ export function CityMultiSelect({
         <div className="flex flex-col flex-1">
           <span className="font-medium">{city.name}</span>
           {city.region && (
-            <span className="text-xs text-[#6B7280]">{city.region}</span>
+            <span className="text-xs text-muted-foreground">{city.region}</span>
           )}
         </div>
         {city.isPopular && (
