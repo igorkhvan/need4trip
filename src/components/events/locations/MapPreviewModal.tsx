@@ -40,7 +40,7 @@ function GoogleMapEmbed({ lat, lng, title }: { lat: number; lng: number; title: 
   const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&hl=ru&z=15&output=embed`;
 
   return (
-    <div className="relative h-[400px] w-full overflow-hidden rounded-xl border border-[#E5E7EB]">
+    <div className="relative h-[300px] sm:h-[400px] w-full overflow-hidden rounded-lg border border-[#E5E7EB]">
       <iframe
         title={`Карта: ${title}`}
         src={mapUrl}
@@ -49,7 +49,7 @@ function GoogleMapEmbed({ lat, lng, title }: { lat: number; lng: number; title: 
         style={{ border: 0 }}
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
-        className="rounded-xl"
+        className="rounded-lg"
       />
     </div>
   );
@@ -97,7 +97,7 @@ function LeafletMapFallback({ lat, lng, title }: { lat: number; lng: number; tit
 
   if (!Map) {
     return (
-      <div className="flex h-[400px] items-center justify-center rounded-xl border border-[#E5E7EB] bg-[#F9FAFB]">
+      <div className="flex h-[300px] sm:h-[400px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="text-center">
           <MapPin className="mx-auto h-12 w-12 text-[#9CA3AF]" />
           <p className="mt-2 text-sm text-[#6B7280]">Загрузка карты...</p>
@@ -133,13 +133,13 @@ export function MapPreviewModal({
           <DialogTitle className="heading-h3">
             {location.title}
           </DialogTitle>
-          <p className="text-body-small text-[var(--color-text-muted)] mt-1">
+          <p className="text-body-small text-muted mt-1">
             {coordsText}
           </p>
         </DialogHeader>
 
         {/* Map - Google Maps by default */}
-        <div className="px-4 pt-3 sm:px-6 sm:pt-4">
+        <div className="px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-6">
           <GoogleMapEmbed
             lat={location.lat}
             lng={location.lng}
@@ -148,25 +148,30 @@ export function MapPreviewModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between gap-3 border-t border-[#E5E7EB] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex items-center justify-between gap-2 border-t border-[#E5E7EB] px-4 py-3 sm:px-6 sm:py-4">
+          {/* Copy Button - Icon only on mobile, with text on desktop */}
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleCopyCoords}
             className="gap-2"
+            title={copied ? "Скопировано" : "Скопировать координаты"}
           >
             <Copy className="h-4 w-4" />
-            {copied ? "✓ Скопировано" : "Скопировать координаты"}
+            <span className="hidden sm:inline">
+              {copied ? "✓ Скопировано" : "Скопировать координаты"}
+            </span>
           </Button>
 
+          {/* Navigation Button */}
           <NavigationChooser
             lat={location.lat}
             lng={location.lng}
             trigger={
               <Button type="button" size="sm" className="gap-2">
                 <Navigation className="h-4 w-4" />
-                Открыть в навигации
+                <span className="hidden sm:inline">Открыть в навигации</span>
               </Button>
             }
           />
