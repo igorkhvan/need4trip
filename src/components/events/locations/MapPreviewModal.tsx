@@ -100,7 +100,7 @@ function LeafletMapFallback({ lat, lng, title }: { lat: number; lng: number; tit
       <div className="flex h-[300px] sm:h-[400px] items-center justify-center rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="text-center">
           <MapPin className="mx-auto h-12 w-12 text-[#9CA3AF]" />
-          <p className="mt-2 text-sm text-[#6B7280]">Загрузка карты...</p>
+          <p className="mt-2 text-sm text-muted-foreground">Загрузка карты...</p>
         </div>
       </div>
     );
@@ -133,7 +133,7 @@ export function MapPreviewModal({
           <DialogTitle className="text-lg sm:text-xl font-semibold leading-tight text-[#1F2937]">
             {location.title}
           </DialogTitle>
-          <p className="text-sm text-[#6B7280] !mt-1">
+          <p className="text-sm text-muted-foreground !mt-1">
             {coordsText}
           </p>
         </DialogHeader>

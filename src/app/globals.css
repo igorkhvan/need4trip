@@ -151,7 +151,7 @@
   }
 
   .text-body-small {
-    @apply text-[14px] leading-[20px] text-[#6B7280];
+    @apply text-sm text-muted-foreground;
   }
 
   /* Spacing utilities */
@@ -210,6 +210,11 @@
 }
 
 @layer utilities {
+  /* Muted text alias for convenience */
+  .text-muted {
+    @apply text-muted-foreground;
+  }
+
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
