@@ -131,7 +131,7 @@ export function EventRegistrationControl({ event, isOwner }: EventRegistrationCo
         
         {/* Past Event Hint */}
         {isPastEvent && (
-          <div className="rounded-lg bg-gray-50 p-3 text-sm text-[var(--color-text-muted)]">
+          <div className="rounded-lg bg-gray-50 p-3 text-sm text-muted-foreground">
             Событие уже прошло, поэтому управление регистрацией недоступно
           </div>
         )}

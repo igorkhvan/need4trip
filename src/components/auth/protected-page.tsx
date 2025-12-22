@@ -45,7 +45,7 @@ export function ProtectedPage({
           <h2 className="mb-2 text-xl font-semibold text-[var(--color-text)]">
             {title || "Требуется авторизация"}
           </h2>
-          <p className="mb-6 text-base text-[var(--color-text-muted)]">
+          <p className="mb-6 text-base text-muted-foreground">
             {description || "Для доступа к этой странице необходимо войти через Telegram."}
           </p>
           <button

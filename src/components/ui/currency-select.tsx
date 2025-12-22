@@ -118,11 +118,11 @@ export function CurrencySelect({
             disabled={disabled}
             className={cn(
               "h-12 w-full justify-between rounded-xl text-left font-normal shadow-none hover:bg-white",
-              !selectedCurrency && "text-[var(--color-text-muted)]"
+              !selectedCurrency && "text-muted-foreground"
             )}
           >
             <div className="flex items-center gap-2">
-              <DollarSign className={cn("h-4 w-4", selectedCurrency ? "text-[var(--color-text-muted)]" : "text-[var(--color-text-muted)]")} />
+              <DollarSign className={cn("h-4 w-4", selectedCurrency ? "text-muted-foreground" : "text-muted-foreground")} />
               {selectedCurrency ? (
                 <span className="truncate text-[var(--color-text)]">
                   {selectedCurrency.symbol} {selectedCurrency.nameRu} ({selectedCurrency.code})
@@ -167,7 +167,7 @@ export function CurrencySelect({
                           <span className="text-lg font-semibold">{currency.symbol}</span>
                           <div className="flex flex-col">
                             <span className="font-medium">{currency.nameRu}</span>
-                            <span className="text-xs text-[var(--color-text-muted)]">
+                            <span className="text-xs text-muted-foreground">
                               {currency.code}
                             </span>
                           </div>

@@ -64,7 +64,7 @@ export function ClubCard({ club }: ClubCardProps) {
 
       {/* Описание */}
       {club.description && (
-        <p className="mb-4 line-clamp-2 min-h-[40px] text-sm text-[var(--color-text-muted)]">
+        <p className="mb-4 line-clamp-2 min-h-[40px] text-sm text-muted-foreground">
           {club.description}
         </p>
       )}
@@ -72,7 +72,7 @@ export function ClubCard({ club }: ClubCardProps) {
       {/* Статистика */}
       <div className="mb-3 grid grid-cols-2 gap-3 rounded-xl bg-[var(--color-bg-subtle)] p-3">
         <div>
-          <div className="mb-1 text-xs text-[var(--color-text-muted)]">Участников</div>
+          <div className="mb-1 text-xs text-muted-foreground">Участников</div>
           <div className="flex items-center gap-1">
             <Users className="h-4 w-4 text-[var(--color-primary)]" />
             <span className="text-base font-semibold text-[var(--color-text)]">
@@ -81,7 +81,7 @@ export function ClubCard({ club }: ClubCardProps) {
           </div>
         </div>
         <div>
-          <div className="mb-1 text-xs text-[var(--color-text-muted)]">Событий</div>
+          <div className="mb-1 text-xs text-muted-foreground">Событий</div>
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
             <span className="text-base font-semibold text-[var(--color-text)]">
@@ -93,7 +93,7 @@ export function ClubCard({ club }: ClubCardProps) {
 
       {/* Города */}
       {club.cities && club.cities.length > 0 && (
-        <div className="text-sm text-[var(--color-text-muted)]">
+        <div className="text-sm text-muted-foreground">
           📍{" "}
           {club.cities.length === 1
             ? club.cities[0].region

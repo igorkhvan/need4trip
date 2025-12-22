@@ -20,7 +20,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           // Transition
           "transition-colors",
           // Placeholder
-          "placeholder:text-[var(--color-text-muted)]",
+          "placeholder:text-muted-foreground",
           // Disabled
           "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
           // Resize

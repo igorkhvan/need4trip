@@ -50,7 +50,7 @@ export function ProgressBar({
     <div className={cn("w-full", className)}>
       {showLabel && (
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="text-[var(--color-text-muted)]">{label}</span>
+          <span className="text-muted-foreground">{label}</span>
           <span className="font-medium text-[var(--color-text)]">{Math.round(normalizedValue)}%</span>
         </div>
       )}

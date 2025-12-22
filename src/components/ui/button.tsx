@@ -16,7 +16,7 @@ const buttonVariants = cva(
         outline:
           "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] hover:border-[#D1D5DB] focus-visible:border-[var(--color-primary)]",
         ghost:
-          "bg-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)] shadow-none",
+          "bg-transparent text-muted-foreground hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)] shadow-none",
         "ghost-icon":
           "bg-transparent text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] hover:text-[var(--color-primary-hover)] shadow-none",
         destructive:

@@ -172,7 +172,7 @@ export default async function EventDetails({
           </div>
 
           {/* Info Grid */}
-          <div className="grid grid-cols-1 gap-4 text-base text-[var(--color-text-muted)] md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 text-base text-muted-foreground md:grid-cols-2">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 flex-shrink-0" />
               <span>{formattedDateTime}</span>
@@ -291,7 +291,7 @@ export default async function EventDetails({
                   <p className="text-3xl font-bold leading-none text-[var(--color-text)]">
                     {event.price ?? 0} {event.currency?.symbol ?? event.currencyCode ?? ""}
                   </p>
-                  <p className="text-sm text-[var(--color-text-muted)]">за экипаж</p>
+                  <p className="text-sm text-muted-foreground">за экипаж</p>
                 </CardContent>
               </Card>
             )}
@@ -310,14 +310,14 @@ export default async function EventDetails({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <p className="text-sm font-medium text-[var(--color-text-muted)]">Тип автомобиля</p>
+                  <p className="text-sm font-medium text-muted-foreground">Тип автомобиля</p>
                   <p className="text-base font-semibold text-[var(--color-text)]">
                     {vehicleTypeLabel}
                   </p>
                 </div>
                 {event.allowedBrands.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-[var(--color-text-muted)]">Рекомендуемые марки</p>
+                    <p className="text-sm font-medium text-muted-foreground">Рекомендуемые марки</p>
                     <div className="flex flex-wrap gap-2">
                       {event.allowedBrands.map((brand) => (
                         <Badge 
@@ -346,7 +346,7 @@ export default async function EventDetails({
                     {ownerUser.name || ownerUser.telegramHandle || "Организатор"}
                   </p>
                   {ownerUser.telegramHandle && (
-                    <p className="text-sm text-[var(--color-text-muted)]">@{ownerUser.telegramHandle}</p>
+                    <p className="text-sm text-muted-foreground">@{ownerUser.telegramHandle}</p>
                   )}
                 </CardContent>
               </Card>

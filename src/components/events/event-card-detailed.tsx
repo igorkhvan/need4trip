@@ -64,7 +64,7 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
             <h3 className="mb-2 text-2xl font-semibold leading-tight text-[var(--color-text)]">
               {event.title}
             </h3>
-            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <CategoryIcon className="h-4 w-4" />
                 <span>{categoryLabel}</span>
@@ -83,28 +83,28 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
         {/* Info Grid */}
         <div className="mb-4 grid grid-cols-2 gap-4 rounded-xl bg-[var(--color-bg-subtle)] p-4">
           <div>
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Дата и время</div>
+            <div className="mb-1 text-sm text-muted-foreground">Дата и время</div>
             <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
-              <Clock className="h-4 w-4 text-[var(--color-text-muted)]" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
               <span>{formatDateTimeShort(event.dateTime)}</span>
             </div>
           </div>
           <div>
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Место сбора</div>
+            <div className="mb-1 text-sm text-muted-foreground">Место сбора</div>
             <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
-              <MapPin className="h-4 w-4 text-[var(--color-text-muted)]" />
+              <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="truncate">{event.locations[0]?.title || "Не указано"}</span>
             </div>
           </div>
           <div>
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Участники</div>
+            <div className="mb-1 text-sm text-muted-foreground">Участники</div>
             <div className="text-base text-[var(--color-text)]">
               {event.participantsCount ?? 0}
               {event.maxParticipants ? ` / ${event.maxParticipants}` : ""}
             </div>
           </div>
           <div>
-            <div className="mb-1 text-sm text-[var(--color-text-muted)]">Стоимость</div>
+            <div className="mb-1 text-sm text-muted-foreground">Стоимость</div>
             <div className="text-base text-[var(--color-text)]">{priceLabel}</div>
           </div>
         </div>

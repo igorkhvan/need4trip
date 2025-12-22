@@ -115,7 +115,7 @@ export function ParticipantsTableClient({
   if (optimisticParticipants.length === 0) {
     return (
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-12 text-center">
-        <p className="text-base text-[var(--color-text-muted)]">
+        <p className="text-base text-muted-foreground">
           Пока нет зарегистрированных участников
         </p>
       </div>
@@ -127,22 +127,22 @@ export function ParticipantsTableClient({
       <Table>
         <TableHeader className="bg-[var(--color-bg-subtle)]">
           <TableRow className="border-b border-[var(--color-border)]">
-            <TableHead className="hidden w-16 text-center text-xs font-semibold uppercase text-[var(--color-text-muted)] md:table-cell">
+            <TableHead className="hidden w-16 text-center text-xs font-semibold uppercase text-muted-foreground md:table-cell">
               №
             </TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+            <TableHead className="text-xs font-semibold uppercase text-muted-foreground">
               Экипаж
             </TableHead>
-            <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+            <TableHead className="text-xs font-semibold uppercase text-muted-foreground">
               Роль
             </TableHead>
             {sortedCustomFields.length > 0 && (
-              <TableHead className="text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+              <TableHead className="text-xs font-semibold uppercase text-muted-foreground">
                 Доп. поля
               </TableHead>
             )}
             {(isOwner || currentUserId || guestSessionId) && (
-              <TableHead className="w-24 text-right text-xs font-semibold uppercase text-[var(--color-text-muted)]">
+              <TableHead className="w-24 text-right text-xs font-semibold uppercase text-muted-foreground">
                 Действия
               </TableHead>
             )}

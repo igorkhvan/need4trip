@@ -51,7 +51,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
         {/* Кнопка назад */}
         <Link
           href="/clubs"
-          className="inline-flex items-center gap-2 text-base text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+          className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
         >
           <ArrowLeft className="h-5 w-5" />
           <span>Все клубы</span>

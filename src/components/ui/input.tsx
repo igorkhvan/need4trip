@@ -21,7 +21,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           // Transition for smooth color change
           "transition-colors",
           // Placeholder
-          "placeholder:text-[var(--color-text-muted)]",
+          "placeholder:text-muted-foreground",
           // Disabled state
           "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
           // File input

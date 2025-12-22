@@ -183,7 +183,7 @@ export function NotificationSettingsForm() {
                 <h3 className="text-base font-semibold mb-1">
                   Уведомления в Telegram
                 </h3>
-                <p className="text-sm text-[var(--color-text-muted)]">
+                <p className="text-sm text-muted-foreground">
                   {settings.isTelegramEnabled
                     ? "Вы будете получать уведомления в Telegram согласно выбранным настройкам"
                     : "Уведомления отключены. Включите для получения важных обновлений"}
@@ -214,7 +214,7 @@ export function NotificationSettingsForm() {
                     <div className="font-medium text-sm mb-1">
                       {NotificationTypeLabel[type]}
                     </div>
-                    <div className="text-xs text-[var(--color-text-muted)]">
+                    <div className="text-xs text-muted-foreground">
                       {NotificationTypeDescription[type]}
                     </div>
                   </div>

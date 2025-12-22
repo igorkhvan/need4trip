@@ -64,7 +64,7 @@ export function UserMenuItems({
             {currentUser.name || "Пользователь"}
           </p>
           {currentUser.email && (
-            <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {currentUser.email}
             </p>
           )}
@@ -83,14 +83,14 @@ export function UserMenuItems({
             onClick={handleMyEventsClick}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
           >
-            <Calendar className="h-4 w-4 text-[var(--color-text-muted)]" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>Мои события</span>
           </button>
           <button
             onClick={handleProfileClick}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
           >
-            <User className="h-4 w-4 text-[var(--color-text-muted)]" />
+            <User className="h-4 w-4 text-muted-foreground" />
             <span>Профиль</span>
           </button>
         </div>
@@ -118,7 +118,7 @@ export function UserMenuItems({
           {currentUser.name || "Пользователь"}
         </p>
         {currentUser.telegramHandle && (
-          <p className="text-sm text-[var(--color-text-muted)] truncate mt-1">
+          <p className="text-sm text-muted-foreground truncate mt-1">
             @{currentUser.telegramHandle}
           </p>
         )}
@@ -136,14 +136,14 @@ export function UserMenuItems({
         onClick={handleMyEventsClick}
         className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-base font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
       >
-        <Calendar className="h-5 w-5 text-[var(--color-text-muted)]" />
+        <Calendar className="h-5 w-5 text-muted-foreground" />
         <span>Мои события</span>
       </button>
       <button
         onClick={handleProfileClick}
         className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-base font-medium text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
       >
-        <User className="h-5 w-5 text-[var(--color-text-muted)]" />
+        <User className="h-5 w-5 text-muted-foreground" />
         <span>Профиль</span>
       </button>
 

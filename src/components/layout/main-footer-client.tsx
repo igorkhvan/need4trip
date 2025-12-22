@@ -17,7 +17,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
               </div>
               <span className="text-lg font-semibold text-[var(--color-text)] md:text-xl">Need4Trip</span>
             </div>
-            <p className="max-w-md text-sm text-[var(--color-text-muted)] md:text-base">
+            <p className="max-w-md text-sm text-muted-foreground md:text-base">
               Организация автомобильных поездок и учёт экипажей в пару кликов
             </p>
           </div>
@@ -29,7 +29,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
               <li>
                 <Link
                   href="/events"
-                  className="text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
                 >
                   События
                 </Link>
@@ -37,7 +37,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
               <li>
                 <Link
                   href="/#how-it-works"
-                  className="text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
                 >
                   Как это работает
                 </Link>
@@ -48,7 +48,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
                     // This will be handled by the global modal
                     // For simplicity, let's keep the link visual
                   }}
-                  className="text-left text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  className="text-left text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
                 >
                   Создать событие
                 </button>
@@ -65,7 +65,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
                   href="https://t.me/need4trip"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
                 >
                   Telegram
                 </a>
@@ -73,7 +73,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
               <li>
                 <a
                   href="mailto:support@need4trip.app"
-                  className="text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
                 >
                   Поддержка
                 </a>
@@ -83,7 +83,7 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
         </div>
 
         <div className="mt-6 border-t border-[var(--color-border)] pt-6 text-center md:mt-8 md:pt-8">
-          <p className="text-xs text-[var(--color-text-muted)] md:text-sm">
+          <p className="text-xs text-muted-foreground md:text-sm">
             © {new Date().getFullYear()} Need4Trip · бета-версия · Made in KZ 🇰🇿
           </p>
         </div>

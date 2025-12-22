@@ -176,7 +176,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <h1 className="heading-hero">
             Все события
           </h1>
-          <p className="text-base text-[var(--color-text-muted)]">
+          <p className="text-base text-muted-foreground">
             Найдите подходящую автомобильную поездку или создайте свою
           </p>
         </div>
@@ -192,7 +192,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
             <CardContent className="flex items-center justify-between p-6">
               <div>
-                <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего событий</div>
+                <div className="mb-2 text-sm text-muted-foreground">Всего событий</div>
                 <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
                   {stats.totalEvents}
                 </div>
@@ -206,7 +206,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
             <CardContent className="flex items-center justify-between p-6">
               <div>
-                <div className="mb-2 text-sm text-[var(--color-text-muted)]">Активных регистраций</div>
+                <div className="mb-2 text-sm text-muted-foreground">Активных регистраций</div>
                 <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
                   {stats.activeRegistrations}
                 </div>
@@ -220,7 +220,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
             <CardContent className="flex items-center justify-between p-6">
               <div>
-                <div className="mb-2 text-sm text-[var(--color-text-muted)]">Всего участников</div>
+                <div className="mb-2 text-sm text-muted-foreground">Всего участников</div>
                 <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
                   {stats.totalParticipants}
                 </div>
@@ -266,7 +266,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {/* Search */}
       <div className="max-w-md">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-[var(--color-text-muted)]" />
+          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Поиск по названию, организатору или месту..."
@@ -283,13 +283,13 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       {/* Filters */}
       <div className="rounded-xl bg-[var(--color-bg-subtle)] p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Filter className="h-4 w-4 text-[var(--color-text-muted)]" />
-          <span className="text-sm font-medium text-[var(--color-text-muted)]">Фильтры и сортировка</span>
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Фильтры и сортировка</span>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {/* Category filter */}
           <div className="space-y-1">
-            <label className="text-sm text-[var(--color-text-muted)]">Тип события</label>
+            <label className="text-sm text-muted-foreground">Тип события</label>
             <Select
               value={filterCategory}
               onValueChange={(value) => {
@@ -315,7 +315,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
           {/* City filter */}
           <div className="space-y-1">
-            <label className="text-sm text-[var(--color-text-muted)]">Город</label>
+            <label className="text-sm text-muted-foreground">Город</label>
             <Select
               value={filterCity}
               onValueChange={(value) => {
@@ -341,7 +341,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
           {/* Price filter */}
           <div className="space-y-1">
-            <label className="text-sm text-[var(--color-text-muted)]">Стоимость</label>
+            <label className="text-sm text-muted-foreground">Стоимость</label>
             <Select
               value={filterPrice}
               onValueChange={(value: PriceFilter) => {
@@ -364,7 +364,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
           {/* Sort by */}
           <div className="space-y-1">
-            <label className="text-sm text-[var(--color-text-muted)]">Сортировка</label>
+            <label className="text-sm text-muted-foreground">Сортировка</label>
             <Select value={sortBy} onValueChange={(value: SortBy) => {
               startTransition(() => setSortBy(value));
             }}>
@@ -383,7 +383,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
 
       {/* Results count */}
       {filteredAndSorted.length > 0 && (
-        <div className="text-sm text-[var(--color-text-muted)]">
+        <div className="text-sm text-muted-foreground">
           Найдено событий: <span className="font-medium text-[var(--color-text)]">{filteredAndSorted.length}</span>
         </div>
       )}
@@ -422,10 +422,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
         // Empty State
         <div className="py-16 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-bg-subtle)]">
-            <Search className="h-8 w-8 text-[var(--color-text-muted)]" />
+            <Search className="h-8 w-8 text-muted-foreground" />
           </div>
           <h3 className="heading-h2 mb-2">Ничего не найдено</h3>
-          <p className="mb-6 text-base text-[var(--color-text-muted)]">
+          <p className="mb-6 text-base text-muted-foreground">
             Попробуйте изменить поисковый запрос или фильтр
           </p>
           <Button variant="ghost" onClick={() => setSearchQuery("")}>

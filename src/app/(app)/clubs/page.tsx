@@ -126,7 +126,7 @@ export default function ClubsPage() {
             <h1 className="heading-h1 mb-1">
               Автомобильные клубы
             </h1>
-            <p className="text-sm text-[var(--color-text-muted)] md:text-base">
+            <p className="text-sm text-muted-foreground md:text-base">
               Найдите клуб по интересам или создайте свой
             </p>
           </div>
@@ -143,25 +143,25 @@ export default function ClubsPage() {
         <div className="mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
           <div className="flex gap-4 sm:grid sm:grid-cols-2 md:grid-cols-4 min-w-max sm:min-w-0">
             <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
-              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Всего клубов</div>
+              <div className="mb-1 text-sm text-muted-foreground">Всего клубов</div>
               <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
                 {clubs.length}
               </div>
             </div>
             <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
-              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Участников</div>
+              <div className="mb-1 text-sm text-muted-foreground">Участников</div>
               <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
                 {totalMembers}
               </div>
             </div>
             <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
-              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Событий</div>
+              <div className="mb-1 text-sm text-muted-foreground">Событий</div>
               <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
                 {totalEvents}
               </div>
             </div>
             <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm min-w-[140px] sm:min-w-0">
-              <div className="mb-1 text-sm text-[var(--color-text-muted)]">Городов</div>
+              <div className="mb-1 text-sm text-muted-foreground">Городов</div>
               <div className="text-2xl font-bold text-[var(--color-text)] md:text-3xl">
                 {totalCities}
               </div>
@@ -173,13 +173,13 @@ export default function ClubsPage() {
         <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-12">
           {/* Поиск по названию */}
           <form onSubmit={handleSearchSubmit} className="relative md:col-span-6">
-            <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-[var(--color-text-muted)]" />
+            <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск клубов..."
-              className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-white pl-12 pr-4 text-base placeholder:text-[var(--color-text-muted)] transition-colors hover:border-[#D1D5DB] focus:border-[var(--color-primary)] focus:outline-none"
+              className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-white pl-12 pr-4 text-base placeholder:text-muted-foreground transition-colors hover:border-[#D1D5DB] focus:border-[var(--color-primary)] focus:outline-none"
               disabled={!!selectedCityId}
             />
           </form>
@@ -197,7 +197,7 @@ export default function ClubsPage() {
 
         {/* Active filters */}
         {(selectedCity || searchQuery) && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
             {selectedCity && (
               <div className="flex items-center gap-2 rounded-full bg-[var(--color-primary-bg)] px-3 py-1 text-[var(--color-primary)]">
                 <MapPin className="h-4 w-4" />

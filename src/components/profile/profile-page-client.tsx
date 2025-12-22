@@ -641,19 +641,19 @@ export function ProfilePageClient() {
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.totalEvents}</div>
-              <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Всего событий</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Всего событий</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-success)] mb-1">{stats.completedEvents}</div>
-              <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Завершено</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Завершено</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
               <div className="text-2xl md:text-3xl font-bold text-[var(--color-primary)] mb-1">{stats.organizedEvents}</div>
-              <div className="text-xs md:text-sm text-[var(--color-text-muted)]">Организовано</div>
+              <div className="text-xs md:text-sm text-muted-foreground">Организовано</div>
             </CardContent>
           </Card>
         </div>
@@ -764,7 +764,7 @@ export function ProfilePageClient() {
                       />
                     </FormField>
                     <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-muted-foreground mb-1.5">
                         Город
                       </label>
                       <CitySelect
@@ -775,7 +775,7 @@ export function ProfilePageClient() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm text-[var(--color-text-muted)] mb-1.5">
+                      <label className="block text-sm text-muted-foreground mb-1.5">
                         О себе
                       </label>
                       <textarea
@@ -784,7 +784,7 @@ export function ProfilePageClient() {
                         rows={3}
                         className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-white text-base text-[var(--color-text)]
                           hover:border-[var(--color-border-hover)] focus:outline-none focus:border-[var(--color-primary)]
-                          transition-colors resize-none placeholder:text-[var(--color-text-muted)]"
+                          transition-colors resize-none placeholder:text-muted-foreground"
                       />
                     </div>
 
@@ -806,32 +806,32 @@ export function ProfilePageClient() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
-                      <Mail className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                      <Mail className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Email</div>
+                        <div className="text-sm text-muted-foreground mb-0.5">Email</div>
                         <div className="text-base">{userData.email}</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
-                      <Phone className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                      <Phone className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Телефон</div>
+                        <div className="text-sm text-muted-foreground mb-0.5">Телефон</div>
                         <div className="text-base">{userData.phone}</div>
                       </div>
                     </div>
                     {userData.location && (
                       <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
-                        <MapPin className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                        <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                         <div>
-                          <div className="text-sm text-[var(--color-text-muted)] mb-0.5">Город</div>
+                          <div className="text-sm text-muted-foreground mb-0.5">Город</div>
                           <div className="text-base">{userData.location}</div>
                         </div>
                       </div>
                     )}
                     <div className="flex items-start gap-3 p-2.5 sm:p-3 bg-[var(--color-bg-subtle)] rounded-xl">
-                      <User className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                      <User className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-sm text-[var(--color-text-muted)] mb-1">О себе</div>
+                        <div className="text-sm text-muted-foreground mb-1">О себе</div>
                         <div className="text-base">{userData.bio}</div>
                       </div>
                     </div>
@@ -926,7 +926,7 @@ export function ProfilePageClient() {
 
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Гос номер <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
+                        Гос номер <span className="text-xs text-muted-foreground">(опционально)</span>
                       </label>
                       <Input
                         placeholder="A 123 BC 01"
@@ -937,7 +937,7 @@ export function ProfilePageClient() {
 
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-[var(--color-text)]">
-                        Цвет <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
+                        Цвет <span className="text-xs text-muted-foreground">(опционально)</span>
                       </label>
                       <Input
                         placeholder="Белый"
@@ -969,7 +969,7 @@ export function ProfilePageClient() {
 
                 {/* Cars List */}
                 {optimisticCars.length === 0 ? (
-                  <div className="text-center py-8 text-[var(--color-text-muted)]">
+                  <div className="text-center py-8 text-muted-foreground">
                     <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>У вас пока нет добавленных автомобилей</p>
                   </div>
@@ -1043,7 +1043,7 @@ export function ProfilePageClient() {
 
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-[var(--color-text)]">
-                              Гос номер <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
+                              Гос номер <span className="text-xs text-muted-foreground">(опционально)</span>
                             </label>
                             <Input
                               placeholder="A 123 BC 01"
@@ -1054,7 +1054,7 @@ export function ProfilePageClient() {
 
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-[var(--color-text)]">
-                              Цвет <span className="text-xs text-[var(--color-text-muted)]">(опционально)</span>
+                              Цвет <span className="text-xs text-muted-foreground">(опционально)</span>
                             </label>
                             <Input
                               placeholder="Белый"
@@ -1094,7 +1094,7 @@ export function ProfilePageClient() {
                               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                 car.isPrimary
                                   ? 'bg-[var(--color-primary)] text-white'
-                                  : 'bg-white text-[var(--color-text-muted)]'
+                                  : 'bg-white text-muted-foreground'
                               }`}>
                                 <Car className="w-5 h-5" />
                               </div>
@@ -1107,7 +1107,7 @@ export function ProfilePageClient() {
                                     <Badge variant="default">Основной</Badge>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-muted)]">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                                   <span>{vehicleTypes.find(t => t.value === car.type)?.label || car.type}</span>
                                   {car.plate && (
                                     <>
@@ -1167,7 +1167,7 @@ export function ProfilePageClient() {
         {activeTab === 'events' && (
           <Card>
             <CardContent className="p-6 sm:p-8 text-center">
-              <p className="text-[var(--color-text-muted)]">История событий появится здесь</p>
+              <p className="text-muted-foreground">История событий появится здесь</p>
             </CardContent>
           </Card>
         )}

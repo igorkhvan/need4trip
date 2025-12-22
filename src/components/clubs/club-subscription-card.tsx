@@ -55,7 +55,7 @@ export function ClubSubscriptionCard({
             {planId === "club_unlimited" && <Crown className="h-6 w-6" />}
             {getClubPlanLabel(planId)}
           </h3>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          <p className="mt-1 text-sm text-muted-foreground">
             Текущий тариф клуба
           </p>
         </div>
@@ -77,7 +77,7 @@ export function ClubSubscriptionCard({
       {/* Срок действия */}
       {subscription?.currentPeriodEnd && (
         <div className="mb-6 rounded-xl bg-[var(--color-bg-subtle)] p-4">
-          <div className="mb-1 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+          <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>Действует до</span>
           </div>
@@ -96,15 +96,15 @@ export function ClubSubscriptionCard({
       <div className="mb-6">
         <h4 className="mb-3 text-sm font-medium text-[var(--color-text)]">Возможности тарифа:</h4>
         <ul className="space-y-2">
-          <li className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
+          <li className="flex items-start gap-2 text-sm text-muted-foreground">
             <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-success)]" />
             <span>Управление клубом</span>
           </li>
-          <li className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
+          <li className="flex items-start gap-2 text-sm text-muted-foreground">
             <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-success)]" />
             <span>Создание событий</span>
           </li>
-          <li className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
+          <li className="flex items-start gap-2 text-sm text-muted-foreground">
             <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-success)]" />
             <span>Управление участниками</span>
           </li>

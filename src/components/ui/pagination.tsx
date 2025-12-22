@@ -62,7 +62,7 @@ export function Pagination({
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] transition-colors",
+          "flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-muted-foreground transition-colors",
           currentPage === 1
             ? "cursor-not-allowed opacity-40"
             : "hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"
@@ -77,7 +77,7 @@ export function Pagination({
           return (
             <span
               key={`ellipsis-${index}`}
-              className="flex h-11 w-11 items-center justify-center text-base text-[var(--color-text-muted)]"
+              className="flex h-11 w-11 items-center justify-center text-base text-muted-foreground"
             >
               ...
             </span>
@@ -94,7 +94,7 @@ export function Pagination({
               "flex h-11 w-11 items-center justify-center rounded-xl text-base font-medium transition-colors",
               isActive
                 ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
-                : "border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"
+                : "border border-[var(--color-border)] bg-white text-muted-foreground hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"
             )}
           >
             {page}
@@ -107,7 +107,7 @@ export function Pagination({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-text-muted)] transition-colors",
+          "flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-muted-foreground transition-colors",
           currentPage === totalPages
             ? "cursor-not-allowed opacity-40"
             : "hover:border-[#D1D5DB] hover:bg-[var(--color-bg-subtle)]"

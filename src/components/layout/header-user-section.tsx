@@ -122,7 +122,7 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
                 onClick={handleLoginClick}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] transition-colors"
               >
-                <User className="h-4 w-4 text-[var(--color-text-muted)]" />
+                <User className="h-4 w-4 text-muted-foreground" />
                 <span>Войти</span>
               </button>
             </div>

@@ -164,14 +164,14 @@ export default function ProfileEditPage() {
         <div className="mb-6">
           <button
             onClick={() => router.push("/profile")}
-            className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors mb-4"
+            className="flex items-center gap-2 text-muted-foreground hover:text-[var(--color-text-main)] transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-[14px]">Назад к профилю</span>
           </button>
           {/* h1 - используем глобальные стили по Figma */}
           <h1 className="mb-1">Редактировать профиль</h1>
-          <p className="text-[var(--color-text-muted)] text-[14px]">
+          <p className="text-muted-foreground text-[14px]">
             Обновите свою личную информацию и настройки
           </p>
         </div>
@@ -207,7 +207,7 @@ export default function ProfileEditPage() {
                   </button>
                 </div>
                 <div>
-                  <p className="text-[14px] text-[var(--color-text-muted)] mb-2">
+                  <p className="text-[14px] text-muted-foreground mb-2">
                     Рекомендуемый размер: 400x400 пикселей
                   </p>
                   <Button type="button" variant="secondary" size="sm">

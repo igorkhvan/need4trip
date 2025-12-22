@@ -292,7 +292,7 @@ export function AuthModal({
           {/* Telegram Widget Container */}
           <div className="flex justify-center">
             {isSubmitting ? (
-              <div className="flex items-center gap-2 text-base text-[var(--color-text-muted)]">
+              <div className="flex items-center gap-2 text-base text-muted-foreground">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent"></div>
                 <span>Авторизация...</span>
               </div>
@@ -320,7 +320,7 @@ export function AuthModal({
           
           {/* Info */}
           {!error && !isSubmitting && username && (
-            <div className="text-center text-sm text-[var(--color-text-muted)]">
+            <div className="text-center text-sm text-muted-foreground">
               Войдите через Telegram, чтобы получить доступ ко всем возможностям Need4Trip
             </div>
           )}

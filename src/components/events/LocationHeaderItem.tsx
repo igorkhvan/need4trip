@@ -56,8 +56,8 @@ export function LocationHeaderItem({
   if (!location && fallbackText) {
     return (
       <div className="flex items-center gap-2">
-        <MapPin className="h-5 w-5 flex-shrink-0 text-[var(--color-text-muted)]" />
-        <span className="text-base text-[var(--color-text-muted)]">{fallbackText}</span>
+        <MapPin className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+        <span className="text-base text-muted-foreground">{fallbackText}</span>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function LocationHeaderItem({
 
   return (
     <div className="flex items-center gap-2">
-      <MapPin className="h-5 w-5 flex-shrink-0 text-[var(--color-text-muted)]" />
+      <MapPin className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
       
       {/* Title as clickable link (opens NavigationChooser) */}
       {hasCoordinates ? (
@@ -100,7 +100,7 @@ export function LocationHeaderItem({
                   {copied ? (
                     <Check className="h-3.5 w-3.5 text-green-600" />
                   ) : (
-                    <Copy className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -111,7 +111,7 @@ export function LocationHeaderItem({
           </TooltipProvider>
         </>
       ) : (
-        <span className="text-base text-[var(--color-text-muted)]">{location.title}</span>
+        <span className="text-base text-muted-foreground">{location.title}</span>
       )}
     </div>
   );

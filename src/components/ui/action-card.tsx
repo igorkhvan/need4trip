@@ -82,7 +82,7 @@ export function ActionCard({
       {/* Text Block */}
       <div className="flex-1">
         <p className={cn("font-medium", titleClass)}>{title}</p>
-        <p className="text-sm text-[var(--color-text-muted)]">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
       {/* Action */}

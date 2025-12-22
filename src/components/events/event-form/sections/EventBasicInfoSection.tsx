@@ -382,7 +382,7 @@ export function EventBasicInfoSection({
             <Label htmlFor="allowAnonymousRegistration" className="text-sm font-medium text-[var(--color-text)]">
               Разрешить регистрацию без авторизации
             </Label>
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            <p className="mt-1 text-sm text-muted-foreground">
               Если включено, незарегистрированные пользователи смогут присоединяться к событию
             </p>
           </div>
