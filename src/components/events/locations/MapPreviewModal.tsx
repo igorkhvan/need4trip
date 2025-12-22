@@ -127,9 +127,9 @@ export function MapPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl mx-4 sm:mx-auto p-0">
+      <DialogContent className="max-w-3xl mx-4 sm:mx-auto p-0 gap-0">
         {/* Header - DialogContent already has close button */}
-        <DialogHeader className="border-b border-[#E5E7EB] px-4 py-3 sm:px-6">
+        <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4">
           <DialogTitle className="text-lg sm:text-xl font-semibold leading-tight text-[#1F2937]">
             {location.title}
           </DialogTitle>
@@ -139,7 +139,7 @@ export function MapPreviewModal({
         </DialogHeader>
 
         {/* Map - Google Maps by default */}
-        <div className="px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-6">
+        <div className="px-4 py-4 sm:px-6">
           <GoogleMapEmbed
             lat={location.lat}
             lng={location.lng}
@@ -148,7 +148,7 @@ export function MapPreviewModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between gap-2 border-t border-[#E5E7EB] px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6">
           {/* Copy Button - Icon only on mobile, with text on desktop */}
           <Button
             type="button"
