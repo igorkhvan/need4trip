@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { PaywallError as PaywallErrorType } from "@/lib/types/billing";
+import { getClubPlanLabel } from "@/lib/types/club";
 
 interface PaywallModalProps {
   open: boolean;
@@ -81,14 +82,14 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
           {error.currentPlanId && (
             <p>
               <strong>Текущий план:</strong>{" "}
-              <span className="capitalize">{error.currentPlanId}</span>
+              <span>{getClubPlanLabel(error.currentPlanId)}</span>
             </p>
           )}
           
           {error.requiredPlanId && (
             <p>
               <strong>Требуется:</strong>{" "}
-              <span className="capitalize">{error.requiredPlanId}</span> или выше
+              <span>{getClubPlanLabel(error.requiredPlanId)}</span> или выше
             </p>
           )}
 
