@@ -6,8 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
-import { PaywallModal } from "@/components/billing/paywall-modal";
-import { PaywallError } from "@/lib/errors/PaywallError";
+import { usePaywall } from "@/components/billing/PaywallModal";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamic(
@@ -28,11 +27,9 @@ export function CreateEventPageContent({
   
   const [club, setClub] = useState<Club | null>(null);
   const [loading, setLoading] = useState(!!clubId);
-  const [paywallOpen, setPaywallOpen] = useState(false);
-  const [paywallData, setPaywallData] = useState<{
-    message: string;
-    requiredPlanId?: string;
-  } | null>(null);
+  
+  // ⚡ Billing v2.0: Paywall hook
+  const { showPaywall, PaywallModalComponent } = usePaywall();
   
   const { execute } = useProtectedAction(isAuthenticated);
 
@@ -78,35 +75,14 @@ export function CreateEventPageContent({
     });
     
     if (!res.ok) {
-      // Handle paywall error (402) - show modal and throw special error
+      // ⚡ Billing v2.0: Handle paywall error (402)
       if (res.status === 402) {
-        try {
-          const errorData = await res.json();
-          const error = errorData.error || errorData;
-          
-          const paywallInfo = {
-            message: error.message || "Эта функция доступна на платных тарифах",
-            requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
-          };
-          
-          setPaywallData(paywallInfo);
-          setPaywallOpen(true);
-          
-          // Throw special error that EventForm will recognize and ignore
-          throw new PaywallError("PAYWALL_SHOWN", paywallInfo);
-        } catch (e: unknown) {
-          // If it's already our paywall error, re-throw it
-          if (PaywallError.isPaywallError(e)) throw e;
-          
-          // If parsing fails, show generic paywall
-          setPaywallData({
-            message: "Эта функция доступна на платных тарифах",
-          });
-          setPaywallOpen(true);
-          
-          throw new PaywallError("PAYWALL_SHOWN", {
-            message: "Эта функция доступна на платных тарифах",
-          });
+        const errorData = await res.json();
+        const paywallError = errorData.error?.details || errorData.error;
+        
+        if (paywallError) {
+          showPaywall(paywallError);
+          return; // Don't show additional error
         }
       }
       
@@ -155,14 +131,8 @@ export function CreateEventPageContent({
         club={club}
       />
       
-      {paywallData && (
-        <PaywallModal
-          isOpen={paywallOpen}
-          onClose={() => setPaywallOpen(false)}
-          message={paywallData.message}
-          requiredPlanId={paywallData.requiredPlanId}
-        />
-      )}
+      {/* ⚡ Billing v2.0: Paywall Modal */}
+      {PaywallModalComponent}
     </>
   );
 }

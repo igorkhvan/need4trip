@@ -11,8 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { handleApiError } from "@/lib/utils/errors";
 import { VehicleTypeRequirement, Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
-import { PaywallModal } from "@/components/billing/paywall-modal";
-import { PaywallError } from "@/lib/errors/PaywallError";
+import { usePaywall } from "@/components/billing/PaywallModal";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamicImport(
@@ -58,11 +57,9 @@ export default function EditEventPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [paywallOpen, setPaywallOpen] = useState(false);
-  const [paywallData, setPaywallData] = useState<{
-    message: string;
-    requiredPlanId?: string;
-  } | null>(null);
+  
+  // ⚡ Billing v2.0: Paywall hook
+  const { showPaywall, PaywallModalComponent } = usePaywall();
 
   useEffect(() => {
     async function loadEvent() {
@@ -172,35 +169,14 @@ export default function EditEventPage() {
     });
     
     if (!res.ok) {
-      // Handle paywall error (402) - show modal and throw special error
+      // ⚡ Billing v2.0: Handle paywall error (402)
       if (res.status === 402) {
-        try {
-          const errorData = await res.json();
-          const error = errorData.error || errorData;
-          
-          const paywallInfo = {
-            message: error.message || "Эта функция доступна на платных тарифах",
-            requiredPlanId: error.details?.requiredPlanId || error.requiredPlanId,
-          };
-          
-          setPaywallData(paywallInfo);
-          setPaywallOpen(true);
-          
-          // Throw special error that EventForm will recognize and ignore
-          throw new PaywallError("PAYWALL_SHOWN", paywallInfo);
-        } catch (e: unknown) {
-          // If it's already our paywall error, re-throw it
-          if (PaywallError.isPaywallError(e)) throw e;
-          
-          // If parsing fails, show generic paywall
-          setPaywallData({
-            message: "Эта функция доступна на платных тарифах",
-          });
-          setPaywallOpen(true);
-          
-          throw new PaywallError("PAYWALL_SHOWN", {
-            message: "Эта функция доступна на платных тарифах",
-          });
+        const errorData = await res.json();
+        const paywallError = errorData.error?.details || errorData.error;
+        
+        if (paywallError) {
+          showPaywall(paywallError);
+          return; // Don't show additional error
         }
       }
       
@@ -264,14 +240,8 @@ export default function EditEventPage() {
         onSubmit={handleSubmit}
       />
       
-      {paywallData && (
-        <PaywallModal
-          isOpen={paywallOpen}
-          onClose={() => setPaywallOpen(false)}
-          message={paywallData.message}
-          requiredPlanId={paywallData.requiredPlanId}
-        />
-      )}
+      {/* ⚡ Billing v2.0: Paywall Modal */}
+      {PaywallModalComponent}
     </div>
   );
 }
