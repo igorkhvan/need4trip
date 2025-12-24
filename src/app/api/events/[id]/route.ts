@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { UnauthorizedError } from "@/lib/errors";
@@ -38,6 +39,12 @@ export async function PUT(request: Request, { params }: Params) {
     
     const payload = await request.json();
     const updated = await updateEvent(id, payload, currentUser);
+    
+    // Revalidate pages that display this event
+    revalidatePath(`/events/${id}`);        // Event detail page
+    revalidatePath(`/events/${id}/edit`);   // Event edit page
+    revalidatePath("/events");              // Events list page
+    
     return respondJSON({ event: updated });
   } catch (err) {
     return respondError(err);
@@ -56,6 +63,11 @@ export async function DELETE(request: Request, { params }: Params) {
     }
     
     await deleteEvent(id, currentUser);
+    
+    // Revalidate pages that displayed this event
+    revalidatePath(`/events/${id}`);   // Event detail page (will show 404)
+    revalidatePath("/events");         // Events list page
+    
     return respondJSON({ ok: true });
   } catch (err) {
     return respondError(err);
