@@ -8,7 +8,7 @@
 "use client";
 
 import * as React from "react";
-import { Clock, X } from "lucide-react";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { generateTimeSlots } from "@/lib/utils/date-time";
@@ -48,11 +48,6 @@ export function TimePicker({
     ? timeSlots.find((slot) => slot.value === value)?.label || value
     : null;
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange?.("");
-  };
-
   const handleSelect = (time: string) => {
     onChange?.(time);
     setOpen(false);
@@ -89,12 +84,6 @@ export function TimePicker({
             <Clock className="h-4 w-4 shrink-0" />
             <span className="truncate">{displayValue || placeholder}</span>
           </span>
-          {displayValue && !disabled && (
-            <X
-              className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-              onClick={handleClear}
-            />
-          )}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">

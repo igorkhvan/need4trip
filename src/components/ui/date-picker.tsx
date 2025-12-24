@@ -8,7 +8,7 @@
 "use client";
 
 import * as React from "react";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -52,11 +52,6 @@ export function DatePicker({
       })
     : null;
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange?.(null);
-  };
-
   const handleSelect = (date: Date) => {
     onChange?.(date);
     setOpen(false);
@@ -84,12 +79,6 @@ export function DatePicker({
             <CalendarIcon className="h-4 w-4 shrink-0" />
             <span className="truncate">{displayValue || placeholder}</span>
           </span>
-          {displayValue && !disabled && (
-            <X
-              className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-              onClick={handleClear}
-            />
-          )}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
