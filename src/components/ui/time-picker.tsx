@@ -44,11 +44,19 @@ export function TimePicker({
 }: TimePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selectedRef = React.useRef<HTMLButtonElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
 
   const timeSlots = React.useMemo(() => generateTimeSlots(minuteStep), [minuteStep]);
 
-  const displayValue = value
-    ? timeSlots.find((slot) => slot.value === value)?.label || value
+  // Нормализуем value к формату HH:mm (на случай если приходит HH:mm:ss)
+  const normalizedValue = React.useMemo(() => {
+    if (!value) return "";
+    // Берём только первые 5 символов (HH:mm)
+    return value.substring(0, 5);
+  }, [value]);
+
+  const displayValue = normalizedValue
+    ? timeSlots.find((slot) => slot.value === normalizedValue)?.label || normalizedValue
     : null;
 
   const handleSelect = (time: string) => {
@@ -58,16 +66,30 @@ export function TimePicker({
 
   // Scroll to selected time when opened
   React.useEffect(() => {
-    if (open && selectedRef.current) {
-      // Даём время на рендер, затем прокручиваем
+    if (open) {
       requestAnimationFrame(() => {
-        selectedRef.current?.scrollIntoView({ 
-          block: "center",
-          behavior: "instant"
-        });
+        // Если есть выбранное значение - скроллим к нему
+        if (selectedRef.current) {
+          selectedRef.current.scrollIntoView({ 
+            block: "center",
+            behavior: "instant"
+          });
+        } 
+        // Если нет выбранного, скроллим к 09:00 (рабочее время)
+        else if (listRef.current) {
+          const defaultTime = timeSlots.findIndex(slot => slot.value === "09:00");
+          if (defaultTime !== -1) {
+            const children = listRef.current.children;
+            const defaultElement = children[defaultTime] as HTMLElement;
+            defaultElement?.scrollIntoView({ 
+              block: "center",
+              behavior: "instant"
+            });
+          }
+        }
       });
     }
-  }, [open]);
+  }, [open, timeSlots]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -95,9 +117,9 @@ export function TimePicker({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
-        <div className="max-h-[300px] overflow-y-auto p-1">
+        <div ref={listRef} className="max-h-[300px] overflow-y-auto p-1">
           {timeSlots.map((slot) => {
-            const isSelected = value === slot.value;
+            const isSelected = normalizedValue === slot.value;
             
             return (
               <button
