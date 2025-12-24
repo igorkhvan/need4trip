@@ -324,8 +324,19 @@ export async function middleware(request: NextRequest) {
           const ip = getClientIp(request);
           const identifier = getRateLimitIdentifier(null, ip);
           
+          const rateLimitStart = Date.now();
           // Check rate limit
           const { success, limit, remaining, reset } = await limiter.limit(identifier);
+          const rateLimitDuration = Date.now() - rateLimitStart;
+          
+          // 🐛 DEBUG: Log slow rate limit checks
+          if (rateLimitDuration > 100) {
+            console.warn('[Middleware] ⚠️ Slow rate limit check', {
+              pathname,
+              duration: `${rateLimitDuration}ms`,
+              tier,
+            });
+          }
           
           // Add rate limit headers to response
           const headers: RateLimitHeaders = {

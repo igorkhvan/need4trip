@@ -5,8 +5,8 @@ import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { listParticipants, registerParticipant } from "@/lib/services/participants";
 
-// ⚡ Edge Runtime: 10-50ms cold start vs 500-1000ms on Node.js
-export const runtime = 'edge';
+// ❌ Edge Runtime не совместим с revalidatePath
+// Используем Node.js runtime с оптимизированными запросами
 
 type Params = { params: Promise<{ id: string }> };
 

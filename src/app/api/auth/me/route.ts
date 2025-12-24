@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 
-// ⚡ Edge Runtime: 10-50ms cold start vs 500-1000ms on Node.js
-export const runtime = 'edge';
+// ❌ Edge Runtime не совместим с Supabase
+// Используем Node.js runtime с оптимизированными запросами
 
 /**
  * GET /api/auth/me
