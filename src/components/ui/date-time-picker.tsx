@@ -333,7 +333,7 @@ export function DateTimePicker({
             )}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto min-w-[320px] p-0" align="start">
+        <PopoverContent className="!w-auto p-0" align="start" style={{ minWidth: '360px' }}>
           <DateTimePickerContent
             value={value}
             onChange={onChange}
