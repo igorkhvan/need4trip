@@ -82,13 +82,13 @@ function TimeSelector({ value, onChange, minuteStep }: TimeSelectorProps) {
   }, []);
 
   return (
-    <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-subtle)] pt-3 px-3 pb-3">
+    <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-[var(--color-border)] bg-[var(--color-bg-subtle)] pt-3 px-3 pb-3 lg:min-w-[200px]">
       <div className="flex items-center gap-2 mb-3">
         <Clock className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-semibold text-[var(--color-text)]">Время</span>
       </div>
       
-      <div className="max-h-[200px] overflow-y-auto rounded-lg border border-[var(--color-border)] bg-white">
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border border-[var(--color-border)] bg-white">
         {timeSlots.map((slot) => {
           const isSelected = value === slot.value;
           
@@ -202,24 +202,29 @@ function DateTimePickerContent({
   };
 
   return (
-    <div className="flex flex-col w-full">
-      {/* Calendar */}
-      <Calendar
-        selected={selectedDate}
-        onSelect={handleDateSelect}
-        minDate={minDateTime}
-        maxDate={maxDateTime}
-      />
+    <div className="flex flex-col w-full max-h-[85vh] lg:max-h-none">
+      {/* Calendar + Time в адаптивном layout */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+        {/* Calendar */}
+        <div className="flex-shrink-0">
+          <Calendar
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            minDate={minDateTime}
+            maxDate={maxDateTime}
+          />
+        </div>
 
-      {/* Time Selector */}
-      <TimeSelector
-        value={selectedTime}
-        onChange={handleTimeSelect}
-        minuteStep={minuteStep}
-      />
+        {/* Time Selector */}
+        <TimeSelector
+          value={selectedTime}
+          onChange={handleTimeSelect}
+          minuteStep={minuteStep}
+        />
+      </div>
 
       {/* Quick Actions */}
-      <div className="border-t-2 border-[var(--color-border)] bg-white pt-3 px-3 pb-3">
+      <div className="border-t-2 border-[var(--color-border)] bg-white pt-3 px-3 pb-3 flex-shrink-0">
         <div className="grid grid-cols-3 gap-2">
           <Button
             type="button"
@@ -333,7 +338,7 @@ export function DateTimePicker({
             )}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[360px] p-0" align="start">
+        <PopoverContent className="w-auto p-0" align="start">
           <DateTimePickerContent
             value={value}
             onChange={onChange}
@@ -381,18 +386,20 @@ export function DateTimePicker({
           )}
         </button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
-        <SheetHeader>
+      <SheetContent side="bottom" className="h-[85vh] flex flex-col p-4">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>Выберите дату и время</SheetTitle>
         </SheetHeader>
-        <DateTimePickerContent
-          value={value}
-          onChange={onChange}
-          minuteStep={minuteStep}
-          minDateTime={minDateTime}
-          maxDateTime={maxDateTime}
-          onClose={() => setOpen(false)}
-        />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <DateTimePickerContent
+            value={value}
+            onChange={onChange}
+            minuteStep={minuteStep}
+            minDateTime={minDateTime}
+            maxDateTime={maxDateTime}
+            onClose={() => setOpen(false)}
+          />
+        </div>
       </SheetContent>
     </Sheet>
   );

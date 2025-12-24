@@ -167,7 +167,7 @@ export function Calendar({
   };
 
   return (
-    <div className={cn("w-full min-w-[280px] p-3", className)}>
+    <div className={cn("w-full min-w-[280px] p-2 md:p-3", className)}>
       {/* Заголовок с навигацией */}
       <div className="flex items-center justify-between mb-4">
         <Button
