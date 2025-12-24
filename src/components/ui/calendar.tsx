@@ -172,11 +172,10 @@ export function Calendar({
       <div className="flex items-center justify-between mb-4">
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon-xs"
           onClick={handlePrevMonth}
           disabled={disabled}
           type="button"
-          className="h-8 w-8"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -187,11 +186,10 @@ export function Calendar({
         
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon-xs"
           onClick={handleNextMonth}
           disabled={disabled}
           type="button"
-          className="h-8 w-8"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -221,7 +219,7 @@ export function Calendar({
               onClick={() => handleSelectDate(day.date, day.isDisabled)}
               disabled={disabled || day.isDisabled}
               className={cn(
-                "h-9 w-full text-sm font-medium rounded-lg transition-colors",
+                "h-9 w-full text-sm font-medium rounded-xl transition-colors",
                 "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1",
                 // Дни не текущего месяца
                 !day.isCurrentMonth && "text-muted-foreground opacity-40",
