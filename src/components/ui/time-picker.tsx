@@ -59,9 +59,13 @@ export function TimePicker({
   // Scroll to selected time when opened
   React.useEffect(() => {
     if (open && selectedRef.current) {
-      setTimeout(() => {
-        selectedRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
-      }, 0);
+      // Даём время на рендер, затем прокручиваем
+      requestAnimationFrame(() => {
+        selectedRef.current?.scrollIntoView({ 
+          block: "center",
+          behavior: "instant"
+        });
+      });
     }
   }, [open]);
 
