@@ -70,7 +70,7 @@ interface TimeSelectorProps {
   minuteStep: number;
 }
 
-function TimeSelector({ value, onChange, minuteStep }: TimeSelectorProps) {
+function TimeSelector({ value, onChange, minuteStep, variant = "popover" }: TimeSelectorProps & { variant?: "popover" | "sheet" }) {
   const timeSlots = React.useMemo(() => generateTimeSlots(minuteStep), [minuteStep]);
   const selectedRef = React.useRef<HTMLButtonElement>(null);
 
@@ -82,7 +82,10 @@ function TimeSelector({ value, onChange, minuteStep }: TimeSelectorProps) {
   }, []);
 
   return (
-    <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-[var(--color-border)] bg-[var(--color-bg-subtle)] pt-3 px-3 pb-3 lg:min-w-[200px]">
+    <div className={cn(
+      "flex flex-col border-t border-[var(--color-border)] bg-[var(--color-bg-subtle)] pt-3 px-3 pb-3",
+      variant === "sheet" && "md:border-t-0 md:border-l md:min-w-[220px]"
+    )}>
       <div className="flex items-center gap-2 mb-3">
         <Clock className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-semibold text-[var(--color-text)]">Время</span>
@@ -126,7 +129,8 @@ function DateTimePickerContent({
   minDateTime,
   maxDateTime,
   onClose,
-}: DateTimePickerProps & { onClose?: () => void }) {
+  variant = "popover",
+}: DateTimePickerProps & { onClose?: () => void; variant?: "popover" | "sheet" }) {
   // Локальное состояние для редактирования
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(value ?? null);
   const [selectedTime, setSelectedTime] = React.useState<string>(() => {
@@ -202,9 +206,15 @@ function DateTimePickerContent({
   };
 
   return (
-    <div className="flex flex-col w-full max-h-[85vh] lg:max-h-none">
+    <div className={cn(
+      "flex flex-col w-full",
+      variant === "sheet" && "max-h-[85vh]"
+    )}>
       {/* Calendar + Time в адаптивном layout */}
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+      <div className={cn(
+        "flex flex-col flex-1 min-h-0",
+        variant === "sheet" && "md:flex-row overflow-hidden"
+      )}>
         {/* Calendar */}
         <div className="flex-shrink-0">
           <Calendar
@@ -220,6 +230,7 @@ function DateTimePickerContent({
           value={selectedTime}
           onChange={handleTimeSelect}
           minuteStep={minuteStep}
+          variant={variant}
         />
       </div>
 
@@ -338,7 +349,7 @@ export function DateTimePicker({
             )}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-[360px] p-0" align="start">
           <DateTimePickerContent
             value={value}
             onChange={onChange}
@@ -346,6 +357,7 @@ export function DateTimePicker({
             minDateTime={minDateTime}
             maxDateTime={maxDateTime}
             onClose={() => setOpen(false)}
+            variant="popover"
           />
         </PopoverContent>
       </Popover>
@@ -398,6 +410,7 @@ export function DateTimePicker({
             minDateTime={minDateTime}
             maxDateTime={maxDateTime}
             onClose={() => setOpen(false)}
+            variant="sheet"
           />
         </div>
       </SheetContent>
