@@ -28,7 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { FormField } from "@/components/ui/form-field";
-import { DateTimeField } from "@/components/ui/date-time-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import type { Club } from "@/lib/types/club";
@@ -184,25 +184,70 @@ export function EventBasicInfoSection({
         />
       </FormField>
 
-      {/* DateTime & Category - grid layout */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <DateTimeField
-          id="dateTime"
-          label="Дата и время"
-          value={dateTime}
-          onChange={onDateTimeChange}
+      {/* Date, Time & Category - grid layout */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <FormField
+          id="eventDate"
+          label="Дата"
           required
           error={fieldErrors.dateTime}
-          onErrorClear={() => clearFieldError("dateTime")}
-          disabled={disabled}
-          minuteStep={15}
-          minDateTime={new Date(Date.now() - 5 * 60 * 1000)} // 5 минут назад (допуск)
-          placeholder="Выберите дату и время события"
-        />
+        >
+          <DatePicker
+            id="eventDate"
+            value={dateTime ? new Date(dateTime) : null}
+            onChange={(date) => {
+              if (date) {
+                // Сохраняем время, если оно было
+                const timeMatch = dateTime.match(/T(\d{2}:\d{2})/);
+                const time = timeMatch ? timeMatch[1] : "09:00";
+                const combined = `${date.toISOString().split('T')[0]}T${time}`;
+                onDateTimeChange(combined);
+              } else {
+                onDateTimeChange("");
+              }
+              if (fieldErrors.dateTime) {
+                clearFieldError("dateTime");
+              }
+            }}
+            minDate={new Date(Date.now() - 24 * 60 * 60 * 1000)} // вчера
+            disabled={disabled}
+            placeholder="Выберите дату"
+          />
+        </FormField>
+
+        <FormField
+          id="eventTime"
+          label="Время"
+          required
+          error={fieldErrors.dateTime}
+        >
+          <Input
+            id="eventTime"
+            type="time"
+            value={dateTime ? dateTime.split('T')[1]?.substring(0, 5) || "" : ""}
+            onChange={(e) => {
+              const time = e.target.value;
+              if (dateTime) {
+                const date = dateTime.split('T')[0];
+                onDateTimeChange(`${date}T${time}`);
+              } else {
+                // Если даты нет, ставим сегодня
+                const today = new Date().toISOString().split('T')[0];
+                onDateTimeChange(`${today}T${time}`);
+              }
+              if (fieldErrors.dateTime) {
+                clearFieldError("dateTime");
+              }
+            }}
+            disabled={disabled}
+            placeholder="09:00"
+            step="900"
+          />
+        </FormField>
 
         <FormField
           id="category"
-          label="Категория события"
+          label="Категория"
           required
           error={fieldErrors.categoryId}
         >
