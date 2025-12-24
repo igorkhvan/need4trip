@@ -22,6 +22,8 @@ export interface TimePickerProps {
   minuteStep?: 5 | 10 | 15 | 30;
   /** Disabled состояние */
   disabled?: boolean;
+  /** Error состояние */
+  error?: boolean;
   /** Placeholder */
   placeholder?: string;
   /** CSS класс */
@@ -35,6 +37,7 @@ export function TimePicker({
   onChange,
   minuteStep = 15,
   disabled,
+  error,
   placeholder = "Выберите время",
   className,
   id,
@@ -77,6 +80,7 @@ export function TimePicker({
             "transition-colors",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
             !displayValue && "text-muted-foreground",
+            error && "border-red-500 focus:border-red-500",
             className
           )}
         >

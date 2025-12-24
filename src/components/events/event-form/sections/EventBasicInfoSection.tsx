@@ -214,6 +214,7 @@ export function EventBasicInfoSection({
               }}
               minDate={new Date(Date.now() - 24 * 60 * 60 * 1000)} // вчера
               disabled={disabled}
+              error={!!fieldErrors.dateTime}
               placeholder="Выберите дату"
             />
           </FormField>
@@ -242,6 +243,7 @@ export function EventBasicInfoSection({
               }}
               minuteStep={15}
               disabled={disabled}
+              error={!!fieldErrors.dateTime}
               placeholder="Выберите время"
             />
           </FormField>

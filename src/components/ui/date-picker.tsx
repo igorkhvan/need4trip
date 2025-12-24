@@ -24,6 +24,8 @@ export interface DatePickerProps {
   maxDate?: Date;
   /** Disabled состояние */
   disabled?: boolean;
+  /** Error состояние */
+  error?: boolean;
   /** Placeholder */
   placeholder?: string;
   /** CSS класс */
@@ -38,6 +40,7 @@ export function DatePicker({
   minDate,
   maxDate,
   disabled,
+  error,
   placeholder = "Выберите дату",
   className,
   id,
@@ -72,6 +75,7 @@ export function DatePicker({
             "transition-colors",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--color-bg-subtle)]",
             !displayValue && "text-muted-foreground",
+            error && "border-red-500 focus:border-red-500",
             className
           )}
         >
