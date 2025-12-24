@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { FormField } from "@/components/ui/form-field";
+import { DateTimeField } from "@/components/ui/date-time-field";
 import { Visibility } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import type { Club } from "@/lib/types/club";
@@ -185,21 +186,19 @@ export function EventBasicInfoSection({
 
       {/* DateTime & Category - grid layout */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField
+        <DateTimeField
           id="dateTime"
           label="Дата и время"
+          value={dateTime}
+          onChange={onDateTimeChange}
           required
           error={fieldErrors.dateTime}
-        >
-          <Input
-            id="dateTime"
-            type="datetime-local"
-            value={dateTime}
-            onChange={(e) => onDateTimeChange(e.target.value)}
-            disabled={disabled}
-            className={fieldErrors.dateTime ? "border-red-500 focus:border-red-500" : ""}
-          />
-        </FormField>
+          onErrorClear={() => clearFieldError("dateTime")}
+          disabled={disabled}
+          minuteStep={15}
+          minDateTime={new Date(Date.now() - 5 * 60 * 1000)} // 5 минут назад (допуск)
+          placeholder="Выберите дату и время события"
+        />
 
         <FormField
           id="category"
