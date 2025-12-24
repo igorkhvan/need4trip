@@ -11,11 +11,14 @@
  * - User menu (Create Event, My Events, Profile, Logout)
  * - Auto-close on route change
  * - Swipe gesture powered by react-swipeable
+ * 
+ * Performance:
+ * - Uses AuthContext instead of fetching /api/auth/me (0 API calls)
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
@@ -31,9 +34,8 @@ import { Button } from "@/components/ui/button";
 import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useLogout } from "@/lib/hooks/use-logout";
-import { onAuthChanged } from "@/lib/events/auth-events";
+import { useAuth } from "@/components/auth/auth-provider";
 import { cn } from "@/lib/utils";
-import type { CurrentUser } from "@/lib/auth/currentUser";
 
 interface NavItem {
   href: string;
@@ -42,12 +44,14 @@ interface NavItem {
 
 interface MobileNavProps {
   navItems: NavItem[];
-  currentUser: CurrentUser | null;
 }
 
-export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps) {
+export function MobileNav({ navItems }: MobileNavProps) {
+  // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
+  // Before: Every mobile nav mount → fetch /api/auth/me (~200ms)
+  // After: Read from context → instant (0ms)
+  const { user: currentUser } = useAuth();
   const [open, setOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
   const pathname = usePathname();
   const { openModal } = useAuthModalContext();
 
@@ -55,32 +59,6 @@ export function MobileNav({ navItems, currentUser: initialUser }: MobileNavProps
   const logout = useLogout({ 
     onBefore: () => setOpen(false) 
   });
-
-  // Sync with auth state changes
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const response = await res.json();
-          const data = response.data || response;
-          setCurrentUser(data.user || null);
-        } else {
-          setCurrentUser(null);
-        }
-      } catch (err) {
-        console.error("[mobile-nav] Failed to check auth:", err);
-        setCurrentUser(null);
-      }
-    };
-
-    // Listen for auth changes
-    const cleanup = onAuthChanged(() => {
-      checkAuth();
-    });
-
-    return cleanup;
-  }, []);
 
   const handleLoginClick = () => {
     setOpen(false);

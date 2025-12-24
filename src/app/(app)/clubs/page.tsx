@@ -17,15 +17,17 @@ import { Pagination } from "@/components/ui/pagination";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { ClubCardSkeleton } from "@/components/ui/skeletons";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
+import { useAuth } from "@/components/auth/auth-provider";
 import type { City } from "@/lib/types/city";
 import type { Club } from "@/lib/types/club";
 
 export default function ClubsPage() {
+  // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
+  const { isAuthenticated } = useAuth();
   const [clubs, setClubs] = useState<(Club & { memberCount?: number; eventCount?: number })[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalClubs, setTotalClubs] = useState(0);
   const itemsPerPage = 12;
@@ -50,14 +52,6 @@ export default function ClubsPage() {
       });
     }
   }, [currentPage]);
-
-  // Check authentication
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => setIsAuthenticated(!!data?.user))
-      .catch(() => setIsAuthenticated(false));
-  }, []);
 
   const loadClubs = async (page: number) => {
     try {

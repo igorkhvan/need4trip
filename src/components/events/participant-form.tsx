@@ -16,7 +16,7 @@ import {
 import { FormField } from "@/components/ui/form-field";
 import { Event, EventCustomFieldSchema, EventCustomFieldType } from "@/lib/types/event";
 import { ParticipantRole } from "@/lib/types/participant";
-import { useCurrentUser } from "@/components/auth/use-current-user";
+import { useAuth } from "@/components/auth/auth-provider";
 import { useSaveScroll } from "@/hooks/use-scroll-save";
 import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
 import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
@@ -49,7 +49,8 @@ export function ParticipantForm({
   onSuccess,
 }: ParticipantFormProps) {
   const router = useRouter();
-  const { user } = useCurrentUser();
+  // ⚡ PERFORMANCE: Use auth context instead of useCurrentUser hook
+  const { user } = useAuth();
   const saveScroll = useSaveScroll();
   
   // При создании - берем из Telegram, при редактировании - из регистрации

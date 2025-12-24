@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { EventsGrid } from "@/components/events/events-grid";
 import { Event } from "@/lib/types/event";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
+import { useAuth } from "@/components/auth/auth-provider";
 
 interface EventsPageProps {
   searchParams?: { 
@@ -13,9 +14,9 @@ interface EventsPageProps {
 }
 
 export default function EventsPage({ searchParams }: EventsPageProps) {
+  // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
+  const { user: currentUser, isAuthenticated } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Restore scroll position
@@ -24,22 +25,14 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        const [eventsRes, userRes] = await Promise.all([
-          fetch("/api/events", { cache: 'no-store' }),
-          fetch("/api/auth/me", { cache: 'no-store' }),
-        ]);
+        // Only fetch events (auth already in context)
+        const eventsRes = await fetch("/api/events", { cache: 'no-store' });
 
         if (eventsRes.ok) {
           const response = await eventsRes.json();
           // API returns: {success: true, data: {events: [...], total: ...}}
           const data = response.data || response;
           setEvents(data.events || []);
-        }
-
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setCurrentUserId(userData.user?.id || null);
-          setIsAuthenticated(!!userData.user);
         }
       } catch (error) {
         console.error("Failed to load events:", error);
@@ -67,7 +60,7 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
   return (
     <EventsGrid 
       events={events} 
-      currentUserId={currentUserId} 
+      currentUserId={currentUser?.id || null} 
       isAuthenticated={isAuthenticated}
     />
   );

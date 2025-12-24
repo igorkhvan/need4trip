@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,15 +12,13 @@ import {
 import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useLogout } from "@/lib/hooks/use-logout";
-import { onAuthChanged } from "@/lib/events/auth-events";
-import type { CurrentUser } from "@/lib/auth/currentUser";
+import { useAuth } from "@/components/auth/auth-provider";
 
-interface HeaderUserSectionProps {
-  currentUser: CurrentUser | null;
-}
-
-export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectionProps) {
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(initialUser);
+export function HeaderUserSection() {
+  // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
+  // Before: Every header mount → fetch /api/auth/me (~200ms)
+  // After: Read from context → instant (0ms)
+  const { user: currentUser } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const { openModal } = useAuthModalContext();
   const pathname = usePathname();
@@ -29,39 +27,6 @@ export function HeaderUserSection({ currentUser: initialUser }: HeaderUserSectio
   const logout = useLogout({ 
     onBefore: () => setMenuOpen(false) 
   });
-
-  // Sync with auth state changes
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const response = await res.json();
-          const data = response.data || response;
-          setCurrentUser(data.user || null);
-        } else {
-          // Clear state on auth failure (401/403)
-          setCurrentUser(null);
-        }
-      } catch (err) {
-        console.error("[header] Failed to check auth:", err);
-        // Clear state on network/fetch error
-        setCurrentUser(null);
-      }
-    };
-
-    // Check auth on mount if no initial user
-    if (!initialUser) {
-      checkAuth();
-    }
-
-    // Listen for auth changes (e.g., after login)
-    const cleanup = onAuthChanged(() => {
-      checkAuth();
-    });
-
-    return cleanup;
-  }, [initialUser]);
 
   const handleLoginClick = () => {
     // Close menu before opening login modal

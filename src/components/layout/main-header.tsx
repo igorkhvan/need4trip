@@ -3,7 +3,6 @@ import { Car, Menu } from "lucide-react";
 
 import { HeaderUserSection } from "@/components/layout/header-user-section";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const navItems = [
   { href: "/events", label: "События" },
@@ -11,9 +10,11 @@ const navItems = [
   { href: "/pricing", label: "Тарифы" },
 ];
 
-export async function MainHeader() {
-  const currentUser = await getCurrentUser();
-
+export function MainHeader() {
+  // ⚡ PERFORMANCE: Components use AuthContext (no props needed)
+  // User loaded once in root layout via SSR (getCurrentUser)
+  // HeaderUserSection and MobileNav read from context (0 API calls)
+  
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-white/80 backdrop-blur-md">
       <div className="page-container">
@@ -38,11 +39,11 @@ export async function MainHeader() {
           {/* Actions */}
           <div className="flex items-center gap-3">
             {/* Mobile Navigation */}
-            <MobileNav navItems={navItems} currentUser={currentUser} />
+            <MobileNav navItems={navItems} />
             
             {/* User Section - Desktop only */}
             <div className="hidden md:flex">
-              <HeaderUserSection currentUser={currentUser} />
+              <HeaderUserSection />
             </div>
           </div>
         </div>

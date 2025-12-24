@@ -4,7 +4,9 @@ import { MainHeader } from "@/components/layout/main-header";
 import { MainFooter } from "@/components/layout/main-footer";
 import { AuthModalProvider } from "@/components/auth/auth-modal-provider";
 import { AuthModalHost } from "@/components/auth/auth-modal-host";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import { ScrollRestorationProvider } from "@/app/scroll-restoration-provider";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -25,24 +27,30 @@ export const viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ⚡ SSR: Load user once on server (eliminates 3× client-side /api/auth/me calls)
+  // This runs on every page navigation but is fast (JWT decode + 1 DB query)
+  const currentUser = await getCurrentUser();
+  
   return (
     <html lang="en" className={inter.className}>
       <body className="min-h-screen bg-[#F9FAFB] text-foreground antialiased">
         <ScrollRestorationProvider>
-          <AuthModalProvider>
-            <div className="flex min-h-screen flex-col">
-              <MainHeader />
-              <main className="flex-1">{children}</main>
-              <MainFooter />
-              <Toaster />
-              <AuthModalHost />
-            </div>
-          </AuthModalProvider>
+          <AuthProvider initialUser={currentUser}>
+            <AuthModalProvider>
+              <div className="flex min-h-screen flex-col">
+                <MainHeader />
+                <main className="flex-1">{children}</main>
+                <MainFooter />
+                <Toaster />
+                <AuthModalHost />
+              </div>
+            </AuthModalProvider>
+          </AuthProvider>
         </ScrollRestorationProvider>
       </body>
     </html>
