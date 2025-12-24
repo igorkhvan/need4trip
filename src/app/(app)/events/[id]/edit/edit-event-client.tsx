@@ -14,10 +14,10 @@ import { EventForm } from "@/components/events/event-form";
 import { usePaywall } from "@/components/billing/PaywallModal";
 import { handleApiError } from "@/lib/utils/errors";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
-import type { HydratedEvent } from "@/lib/services/events";
+import type { Event } from "@/lib/types/event";
 
 interface EditEventPageClientProps {
-  event: HydratedEvent;
+  event: Event;
   planLimits: ClubPlanLimits;
   currentUserId: string;
 }
