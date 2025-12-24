@@ -305,12 +305,7 @@ export async function middleware(request: NextRequest) {
   // =========================================================================
   
   // Skip rate limiting for admin/cron routes (they have secret protection)
-  // ⚠️ TEMPORARY: Disable Upstash rate limiting for performance testing
-  // Upstash adds 150-250ms latency per request (confirmed in logs)
-  // TODO: Re-enable after fixing Upstash region or migrating to Vercel KV
-  const RATE_LIMITING_ENABLED = false; // Set to true to re-enable
-  
-  if (!isAdminRoute(pathname) && !isCronRoute(pathname) && RATE_LIMITING_ENABLED) {
+  if (!isAdminRoute(pathname) && !isCronRoute(pathname)) {
     const limiters = initializeRateLimiting();
     
     if (limiters) {
