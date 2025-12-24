@@ -216,7 +216,7 @@ export function EventBasicInfoSection({
                   clearFieldError("dateTime");
                 }
               }}
-              minDate={new Date(Date.now() - 24 * 60 * 60 * 1000)} // вчера
+              minDate={new Date(new Date().setHours(0, 0, 0, 0))} // сегодня (начало дня)
               disabled={disabled}
               error={!!fieldErrors.dateTime}
               placeholder="Выберите дату"
