@@ -93,9 +93,9 @@ export function EventLocationsSection({
         <Button
           type="button"
           variant="secondary"
+          size="sm"
           onClick={handleAddLocation}
           disabled={disabled}
-          className="h-11 gap-2"
         >
           <Plus className="h-4 w-4" />
           Добавить точку маршрута
