@@ -203,7 +203,11 @@ export function EventBasicInfoSection({
                   // Сохраняем время, если оно было
                   const timeMatch = dateTime.match(/T(\d{2}:\d{2})/);
                   const time = timeMatch ? timeMatch[1] : "09:00";
-                  const combined = `${date.toISOString().split('T')[0]}T${time}`;
+                  // Используем локальную дату без конвертации в UTC
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const combined = `${year}-${month}-${day}T${time}`;
                   onDateTimeChange(combined);
                 } else {
                   onDateTimeChange("");
