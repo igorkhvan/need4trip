@@ -6,6 +6,10 @@ import { log } from "@/lib/utils/logger";
  * GET /api/event-categories
  * Returns list of active event categories
  * Public endpoint (no auth required)
+ * 
+ * ⚡ PERFORMANCE: Cached for 1 hour
+ * - CDN/Browser cache: 1 hour
+ * - Stale-while-revalidate: 24 hours
  */
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +25,15 @@ export async function GET(req: NextRequest) {
       isDefault: cat.isDefault,
     }));
 
-    return NextResponse.json({ categories: dtoCategories });
+    const response = NextResponse.json({ categories: dtoCategories });
+    
+    // ⚡ HTTP Cache Headers for CDN and Browser
+    response.headers.set(
+      'Cache-Control',
+      'public, s-maxage=3600, stale-while-revalidate=86400'
+    );
+    
+    return response;
   } catch (error) {
     log.errorWithStack("Failed to fetch event categories", error);
     return NextResponse.json(
@@ -31,3 +43,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ⚡ Next.js Route Segment Config
+// Revalidate this route every 1 hour (ISR)
+export const revalidate = 3600;

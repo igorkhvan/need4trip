@@ -7,8 +7,11 @@ import { log } from "@/lib/utils/logger";
  * GET /api/vehicle-types
  * 
  * Get all active vehicle types
- * Cached on backend for 24h
  * Public endpoint (no auth required)
+ * 
+ * ⚡ PERFORMANCE: Cached for 1 hour
+ * - CDN/Browser cache: 1 hour
+ * - Stale-while-revalidate: 24 hours
  */
 export async function GET() {
   try {
@@ -22,9 +25,21 @@ export async function GET() {
       label: type.nameRu,
     }));
     
-    return respondSuccess({ vehicleTypes: options });
+    const response = respondSuccess({ vehicleTypes: options });
+    
+    // ⚡ HTTP Cache Headers for CDN and Browser
+    response.headers.set(
+      'Cache-Control',
+      'public, s-maxage=3600, stale-while-revalidate=86400'
+    );
+    
+    return response;
   } catch (error) {
     log.errorWithStack("Failed to get vehicle types", error);
     return respondError(error);
   }
 }
+
+// ⚡ Next.js Route Segment Config
+// Revalidate this route every 1 hour (ISR)
+export const revalidate = 3600;

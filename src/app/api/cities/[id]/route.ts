@@ -3,6 +3,10 @@
  * 
  * GET /api/cities/[id] - Get city by ID
  * Public endpoint (no auth required)
+ * 
+ * ⚡ PERFORMANCE: Cached for 24 hours (cities rarely change)
+ * - CDN/Browser cache: 24 hours
+ * - Stale-while-revalidate: 7 days
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -32,7 +36,16 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ city });
+    const response = NextResponse.json({ city });
+    
+    // ⚡ HTTP Cache Headers for CDN and Browser
+    // Cities rarely change, cache aggressively
+    response.headers.set(
+      'Cache-Control',
+      'public, s-maxage=86400, stale-while-revalidate=604800'
+    );
+    
+    return response;
   } catch (error) {
     log.errorWithStack("Failed to fetch city by ID", error, { cityId: id });
     return NextResponse.json(
@@ -42,3 +55,6 @@ export async function GET(
   }
 }
 
+// ⚡ Next.js Route Segment Config
+// Revalidate this route every 24 hours (ISR)
+export const revalidate = 86400;
