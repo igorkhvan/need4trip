@@ -33,7 +33,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import {
   formatDateTime,
   generateTimeSlots,
-  combineDateAndTime,
+  combineDateTime,
   extractTime,
   getNowRounded,
   addHours,
@@ -146,7 +146,7 @@ function DateTimePickerContent({
     setSelectedDate(date);
     
     // Комбинируем выбранную дату с текущим временем
-    const combined = combineDateAndTime(date, selectedTime);
+    const combined = combineDateTime(date, selectedTime);
     
     // Проверяем constraints
     if (isDateInRange(combined, minDateTime, maxDateTime)) {
@@ -159,7 +159,7 @@ function DateTimePickerContent({
     setSelectedTime(time);
     
     if (selectedDate) {
-      const combined = combineDateAndTime(selectedDate, time);
+      const combined = combineDateTime(selectedDate, time);
       
       // Проверяем constraints
       if (isDateInRange(combined, minDateTime, maxDateTime)) {
