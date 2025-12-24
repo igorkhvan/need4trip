@@ -67,8 +67,7 @@ interface EventBasicInfoSectionProps {
   categories: EventCategoryDto[];
   loadingCategories: boolean;
   
-  // Club limits (for maxParticipants)
-  clubLimits: { maxEventParticipants: number | null } | null;
+  // Plan limits (for maxParticipants validation)
   loadingPlan: boolean;
   maxAllowedParticipants: number;
   
@@ -108,7 +107,6 @@ export function EventBasicInfoSection({
   onAllowAnonymousRegistrationChange,
   categories,
   loadingCategories,
-  clubLimits,
   loadingPlan,
   maxAllowedParticipants,
   fieldErrors,
@@ -319,8 +317,8 @@ export function EventBasicInfoSection({
           required
           error={fieldErrors.maxParticipants}
           hint={
-            clubLimits && !loadingPlan
-              ? `Ваш лимит: ${maxAllowedParticipants === null || maxAllowedParticipants === Infinity ? '∞' : maxAllowedParticipants}`
+            !loadingPlan
+              ? `Ваш лимит: ${maxAllowedParticipants === Infinity ? '∞' : maxAllowedParticipants}`
               : undefined
           }
         >

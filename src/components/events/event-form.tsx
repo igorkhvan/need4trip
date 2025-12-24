@@ -589,7 +589,6 @@ export function EventForm({
               onAllowAnonymousRegistrationChange={setAllowAnonymousRegistration}
               categories={categories}
               loadingCategories={loadingCategories}
-              clubLimits={clubLimits}
               loadingPlan={loadingPlan}
               maxAllowedParticipants={maxAllowedParticipants}
               fieldErrors={fieldErrors}
