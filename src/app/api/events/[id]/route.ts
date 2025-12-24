@@ -3,6 +3,9 @@ import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/current
 import { UnauthorizedError } from "@/lib/errors";
 import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
 
+// ⚡ Edge Runtime: 10-50ms cold start vs 500-1000ms on Node.js
+export const runtime = 'edge';
+
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_: Request, { params }: Params) {

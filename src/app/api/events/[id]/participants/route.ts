@@ -5,6 +5,9 @@ import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { listParticipants, registerParticipant } from "@/lib/services/participants";
 
+// ⚡ Edge Runtime: 10-50ms cold start vs 500-1000ms on Node.js
+export const runtime = 'edge';
+
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_: Request, context: Params) {

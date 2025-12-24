@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 
+// ⚡ Edge Runtime: 10-50ms cold start vs 500-1000ms on Node.js
+export const runtime = 'edge';
+
 /**
  * GET /api/auth/me
  * 
