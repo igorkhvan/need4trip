@@ -85,7 +85,13 @@ export type EventFormProps = {
   disabled?: boolean;
   headerTitle: string;
   headerDescription: string;
-  club?: Club | null; // Клуб, если событие создается от клуба
+  club?: Club | null; // Клуб, если событие создается от клуба (deprecated - use planLimits)
+  planLimits?: {
+    maxMembers: number | null;
+    maxEventParticipants: number | null;
+    allowPaidEvents: boolean;
+    allowCsvExport: boolean;
+  } | null; // Plan limits (from SSR or API)
 };
 
 function buildEmptyField(order: number): EventCustomFieldSchema {
@@ -110,15 +116,24 @@ export function EventForm({
   headerTitle,
   headerDescription,
   club,
+  planLimits: planLimitsProp,
 }: EventFormProps) {
   const router = useRouter();
   
-  // ⚡ Billing v2.0: Load club plan limits dynamically
-  const { plan, limits: clubLimits, loading: loadingPlan } = useClubPlan(club?.id);
+  // ⚡ Billing v2.0: Support both SSR (planLimits prop) and CSR (useClubPlan hook)
+  // Prefer planLimits prop if provided (SSR, instant, no API call)
+  // Fall back to useClubPlan hook for backward compatibility (CSR, API call)
+  const { limits: clubLimitsFromHook, loading: loadingPlan } = useClubPlan(
+    planLimitsProp ? null : club?.id
+  );
+  
   const { showPaywall, PaywallModalComponent } = usePaywall();
   
-  // Determine max participants based on club plan (default to 15 for Free)
-  const maxAllowedParticipants = clubLimits?.maxEventParticipants ?? 15;
+  // Use planLimits prop if available (SSR), otherwise use hook result (CSR)
+  const effectiveLimits = planLimitsProp ?? clubLimitsFromHook;
+  
+  // Determine max participants based on plan limits (default to 30 for Free)
+  const maxAllowedParticipants = effectiveLimits?.maxEventParticipants ?? 30;
   
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
@@ -174,13 +189,13 @@ export function EventForm({
   
   // Auto-fill maxParticipants with plan limit for new events (only once, on initial load)
   useEffect(() => {
-    if (mode === 'create' && maxParticipants === null && clubLimits && !loadingPlan && !hasUserSetMaxParticipants) {
+    if (mode === 'create' && maxParticipants === null && effectiveLimits && !loadingPlan && !hasUserSetMaxParticipants) {
       // Set default maxParticipants to plan limit
-      if (clubLimits.maxEventParticipants !== null && clubLimits.maxEventParticipants > 0) {
-        setMaxParticipants(clubLimits.maxEventParticipants);
+      if (effectiveLimits.maxEventParticipants !== null && effectiveLimits.maxEventParticipants > 0) {
+        setMaxParticipants(effectiveLimits.maxEventParticipants);
       }
     }
-  }, [mode, maxParticipants, clubLimits, loadingPlan, hasUserSetMaxParticipants]);
+  }, [mode, maxParticipants, effectiveLimits, loadingPlan, hasUserSetMaxParticipants]);
 
   useEffect(() => {
     const loadData = async () => {
