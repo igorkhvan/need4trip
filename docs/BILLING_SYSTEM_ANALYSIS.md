@@ -1,13 +1,21 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 4.0 ⚡  
+> **Версия:** 4.1 ⚡  
 > **Дата:** 26 декабря 2024  
-> **Статус:** Production (v4 - One-off Credits + Club Billing)
+> **Статус:** Production (v4.1 - Publish Endpoint Integrated)
 
 ---
 
-## 🆕 Что нового в v4
+## 🆕 Что нового в v4.1
+
+**26 December 2024:**
+- ✅ **Publish endpoint integrated** - create/edit flows call `/api/events/:id/publish`
+- ✅ **409 handling** - CreditConfirmationModal fully integrated
+- ✅ **Frontend complete** - all v4 features now working end-to-end
+- ✅ **TypeScript ✅ Build ✅** - production ready
+
+## 🆕 Что нового в v4.0
 
 **Major Changes:**
 - ✅ **billing_products** table - SSOT для pricing (NO HARDCODE!)
@@ -742,6 +750,17 @@ src/lib/db/
 │   ├── getRequiredPlanForParticipants()
 │   └── getRequiredPlanForMembers()
 │
+├── billingProductsRepo.ts          — Products (v4 NEW) ⚡
+│   ├── getBillingProductByCode()
+│   ├── listActiveBillingProducts()
+│   └── SSOT для one-off pricing
+│
+├── billingCreditsRepo.ts           — Credits (v4 NEW) ⚡
+│   ├── findAvailableCredit()
+│   ├── createBillingCredit()
+│   ├── consumeCredit()
+│   └── getUserCredits()
+│
 ├── clubSubscriptionRepo.ts         — Подписки клубов
 │   ├── getClubSubscription()
 │   ├── upsertClubSubscription()
@@ -765,7 +784,8 @@ src/lib/db/
 ```
 src/lib/services/
 ├── accessControl.ts                — Enforcement системы
-│   ├── enforceClubAction()         ← Главная функция проверки
+│   ├── enforceClubAction()         ← Club billing
+│   ├── enforcePublish()            ← Personal events (v4 NEW) ⚡
 │   ├── enforceFreeLimit()
 │   ├── enforcePlanLimits()
 │   └── getClubCurrentPlan()
@@ -781,6 +801,19 @@ src/lib/services/
 
 ```
 src/app/api/
+├── billing/ (v4 NEW) ⚡
+│   ├── products/
+│   │   └── route.ts                — GET /api/billing/products
+│   ├── purchase-intent/
+│   │   └── route.ts                — POST /api/billing/purchase-intent
+│   ├── transactions/
+│   │   └── status/
+│   │       └── route.ts            — GET /api/billing/transactions/status
+│   └── dev/
+│       └── billing/
+│           └── settle/
+│               └── route.ts        — POST /api/dev/billing/settle (DEV)
+│
 ├── plans/
 │   └── route.ts                    — GET /api/plans
 │
@@ -794,7 +827,9 @@ src/app/api/
 └── events/
     ├── route.ts                    — GET, POST /api/events
     └── [id]/
-        └── route.ts                — GET, PUT /api/events/:id
+        ├── route.ts                — GET, PUT /api/events/:id
+        └── publish/ (v4 NEW) ⚡
+            └── route.ts            — POST /api/events/:id/publish
 ```
 
 #### Errors & Response Handling
@@ -825,8 +860,8 @@ src/lib/types/
 ```
 src/components/
 ├── billing/
-│   ├── PaywallModal.tsx            — Новый paywall modal (типизированный)
-│   └── paywall-modal.tsx           — Старый paywall modal (упрощённый)
+│   ├── PaywallModal.tsx            — v4 Modal (purchase-intent + polling) ⚡
+│   └── CreditConfirmationModal.tsx — 409 handling (v4 NEW) ⚡
 │
 ├── events/
 │   ├── event-form.tsx              — Использует useClubPlan(), usePaywall()
@@ -856,10 +891,10 @@ src/app/(app)/
 │
 └── events/
     ├── create/
-    │   └── page.tsx
+    │   └── create-event-client.tsx — ✅ Calls publish endpoint (v4) ⚡
     └── [id]/
         └── edit/
-            └── page.tsx
+            └── edit-event-client.tsx — ✅ Calls publish endpoint (v4) ⚡
 ```
 
 ### Database
@@ -1882,6 +1917,62 @@ User pays Kaspi  → Webhook / DEV: POST /api/dev/billing/settle
 
 ## ⚡ Publish Enforcement (v4)
 
+### Frontend Integration ✅ (26 Dec 2024)
+
+**Files:**
+- `src/app/(app)/events/create/create-event-client.tsx`
+- `src/app/(app)/events/[id]/edit/edit-event-client.tsx`
+
+**Flow:**
+```typescript
+// CREATE FLOW
+1. User submits form → POST /api/events (create draft)
+2. Success → call handlePublish(eventId)
+3. POST /api/events/:id/publish
+   - 200 → redirect to /events ✅
+   - 402 → show PaywallModal ✅
+   - 409 → show CreditConfirmationModal ✅
+4. User confirms (409) → POST /api/events/:id/publish?confirm_credit=1
+
+// EDIT FLOW
+1. User submits form → PUT /api/events/:id (update event)
+2. Success → call handlePublish(eventId)
+3. POST /api/events/:id/publish (re-enforce)
+   - 200 → redirect to /events/:id ✅
+   - 402 → show PaywallModal ✅
+   - 409 → show CreditConfirmationModal ✅
+```
+
+**Why publish after update:**
+- User may change `maxParticipants` (increase/decrease)
+- User may toggle `isClubEvent`
+- These parameters affect paywall logic
+- Publish enforcement guarantees up-to-date limits
+
+**409 Handling:**
+```typescript
+if (publishRes.status === 409) {
+  const error409 = await publishRes.json();
+  showConfirmation({
+    creditCode: error409.error.meta.creditCode,
+    eventId: error409.error.meta.eventId,
+    requestedParticipants: error409.error.meta.requestedParticipants
+  });
+}
+
+// User confirms
+onConfirm={async () => {
+  hideConfirmation();
+  await handlePublish(eventId, true); // ?confirm_credit=1
+}}
+```
+
+**CreditConfirmationModal:**
+- ⚠️ Warning: "Это действие нельзя отменить"
+- 📋 Details: credit type, participant count
+- ✅ Confirm button: "Подтвердить и опубликовать"
+- ❌ Cancel button: "Отмена"
+
 ### Algorithm (STRICT Decision Tree)
 
 ```typescript
@@ -2035,10 +2126,19 @@ npx supabase gen types typescript > src/lib/db/types.ts
 
 ### Frontend
 
-**TODO (not yet done):**
-- Update PaywallModal to use `/api/billing/purchase-intent`
-- Add polling for transaction status
-- Remove old endpoint references
+**✅ COMPLETED (26 Dec 2024):**
+- ✅ Integrated publish endpoint in create flow (`create-event-client.tsx`)
+- ✅ Integrated publish endpoint in edit flow (`edit-event-client.tsx`)
+- ✅ Added 409 CREDIT_CONFIRMATION_REQUIRED handling
+- ✅ CreditConfirmationModal integration
+- ✅ Confirm flow with `?confirm_credit=1`
+- ✅ PaywallModal updated (v4 - purchase-intent + polling)
+
+**Files Updated:**
+- `src/app/(app)/events/create/create-event-client.tsx`
+- `src/app/(app)/events/[id]/edit/edit-event-client.tsx`
+- `src/components/billing/PaywallModal.tsx` (v4)
+- `src/components/billing/CreditConfirmationModal.tsx` (integrated)
 
 ### Testing
 

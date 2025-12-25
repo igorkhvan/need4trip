@@ -1,8 +1,8 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.0  
-**Last Updated:** 25 December 2024  
+**Version:** 2.1  
+**Last Updated:** 26 December 2024  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
@@ -216,6 +216,10 @@ need4trip/
 | **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ✅ UNIFIED (STAGE 6) |
 | **Error Handling** | `lib/errors.ts` | None (base classes) | Untyped errors | Custom error classes |
 | **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | Standard format |
+| **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceClubAction()`, `enforcePublish()` |
+| **Billing Products** | `lib/db/billingProductsRepo.ts` | `lib/db/client` | Hardcoded prices | **SSOT from billing_products table** |
+| **Credit Confirmation** | `components/billing/CreditConfirmationModal.tsx` | `lib/types/billing` | Manual 409 handling | Modal + `useCreditConfirmation` hook |
+| **Publish Endpoint** | `app/api/events/[id]/publish/route.ts` | `lib/services/accessControl` | Direct publish in create/edit | **Called after create/update** |
 
 ### Critical Dependencies Graph
 
