@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "tests/**/*.ts",
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "tests/e2e/**/*.spec.ts",
+    "playwright.config.ts"
+  ]
+}
+

@@ -1,280 +1,250 @@
-# Billing v4 Integration Tests — Setup Guide
+# Need4Trip Test Suite — Quick Reference
 
-**Purpose:** Run integration tests for Billing v4 system
+## 📊 Test Coverage Summary
 
-**Status:** Jest configured, tests written, ready to run
+**Total**: 46 automated tests across 6 test suites
 
----
-
-## 📋 Pre-requisites
-
-- ✅ Jest installed (done)
-- ✅ Test configuration created (done)
-- ⏳ Test database setup (follow instructions below)
+| Suite | Tests | Status | File | Purpose |
+|-------|-------|--------|------|---------|
+| **Core Integration** | 8 | ✅ PASS | `billing.v4.test.ts` | Publish enforcement, SSOT |
+| **API: Publish** | 5 | 🆕 Ready | `api.publish.test.ts` | HTTP contracts, auth |
+| **API: Billing** | 9 | 🆕 Ready | `api.billing.test.ts` | Purchase, status polling |
+| **Webhook** | 7 | 🆕 Ready | `api.webhook.test.ts` | Settlement, idempotency |
+| **Boundary** | 9 | 🆕 Ready | `api.boundary.test.ts` | Edge cases, limits |
+| **E2E (Playwright)** | 8 | ⏸️ SKIP | `e2e/billing.flows.spec.ts` | Real browser flows |
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: Local Supabase (Recommended)
+### Prerequisites
 
-**Step 1: Install Supabase CLI**
 ```bash
-# macOS
-brew install supabase/tap/supabase
+# Ensure environment configured
+cp .env.local .env.test
+# Add SUPABASE_SERVICE_ROLE_KEY to .env.test
 
-# Or npm global install
-npm install -g supabase
+# Install dependencies
+npm install
 ```
 
-**Step 2: Start Local Supabase**
-```bash
-cd /Users/igorkhvan/Git/need4trip
-npx supabase start
-```
-
-This will:
-- Start PostgreSQL on `localhost:54321`
-- Apply all migrations from `supabase/migrations/`
-- Provide anon key and service role key
-
-**Step 3: Copy test environment**
-```bash
-cp .env.test.example .env.test
-# Keys are already configured for local Supabase
-```
-
-**Step 4: Run tests**
-```bash
-npm test
-# Or specific test
-npm run test:billing
-```
-
----
-
-### Option 2: Dedicated Test Project (Supabase Cloud)
-
-**Step 1: Create test project**
-1. Go to https://supabase.com/dashboard
-2. Create new project: `need4trip-test`
-3. Copy URL and keys
-
-**Step 2: Apply migrations**
-```bash
-# Link project
-npx supabase link --project-ref your-test-project-ref
-
-# Push migrations
-npx supabase db push
-```
-
-**Step 3: Configure .env.test**
-```bash
-cp .env.test.example .env.test
-# Edit .env.test with your test project credentials
-```
-
-**Step 4: Run tests**
-```bash
-npm test
-```
-
----
-
-## 🧪 Test Commands
+### Run Tests
 
 ```bash
-# Run all tests
+# All integration tests (QA-1 to QA-38)
 npm test
 
-# Run Billing v4 tests only
-npm run test:billing
+# Specific suite
+npm test -- billing.v4.test.ts     # Core only
+npm test -- api.publish.test.ts    # Publish endpoint
+npm test -- api.billing.test.ts    # Billing endpoints
+npm test -- api.webhook.test.ts    # Webhook handler
+npm test -- api.boundary.test.ts   # Boundary cases
 
-# Watch mode (auto-rerun on changes)
-npm run test:watch
-
-# With coverage report
-npm run test:coverage
+# E2E tests (Playwright - requires setup)
+npm run test:e2e                   # Headless
+npm run test:e2e:ui                # Interactive UI
 ```
 
 ---
 
-## 📊 Expected Output
+## 📝 Test Organization
 
-**When ALL PASS:**
-```
-PASS tests/integration/billing.v4.test.ts
-  Billing v4: Publish Enforcement
-    ✓ publish within free limits does not consume credit (234ms)
-    ✓ credit confirmation flow consumes exactly one credit (312ms)
-    ✓ concurrent publish confirms consume only one credit (445ms)
-    ✓ personal event >500 participants requires club (89ms)
-    ✓ republish does not consume additional credit (156ms)
-    ✓ duplicate transaction does not issue duplicate credit (78ms)
-  Billing v4: billing_products SSOT
-    ✓ enforcePublish uses billing_products constraints (45ms)
-    ✓ PaywallError contains price from billing_products (67ms)
+### Integration Tests (`tests/integration/`)
 
-Test Suites: 1 passed, 1 total
-Tests:       8 passed, 8 total
-Snapshots:   0 total
-Time:        3.456s
-```
+**Purpose**: Test backend logic with real database
 
----
+**Characteristics**:
+- Real Supabase connection
+- Tests all layers (Repo → Service → API)
+- No mocks for DB operations
+- Isolated test data (random UUIDs)
 
-## 🔧 Troubleshooting
+**Files**:
+- `billing.v4.test.ts` — Core enforcement logic (QA-1 to QA-8)
+- `api.publish.test.ts` — Publish endpoint (QA-9 to QA-13)
+- `api.billing.test.ts` — Billing endpoints (QA-14 to QA-22)
+- `api.webhook.test.ts` — Webhook handler (QA-23 to QA-29)
+- `api.boundary.test.ts` — Edge cases (QA-30 to QA-38)
 
-### Issue: "Cannot connect to Supabase"
-**Solution:** Check Supabase is running
-```bash
-npx supabase status
-```
+### E2E Tests (`tests/e2e/`)
 
-### Issue: "Table not found"
-**Solution:** Apply migrations
-```bash
-npx supabase db reset  # Local only
-# Or
-npx supabase db push   # Cloud
-```
+**Purpose**: Test user experience in real browser
 
-### Issue: "EVENT_UPGRADE_500 product not found"
-**Solution:** Ensure migration `20241226_create_billing_products.sql` applied
-```bash
-# Check applied migrations
-npx supabase migration list
+**Characteristics**:
+- Playwright-based
+- Real browser automation
+- No mocked UI states
+- Tests frontend + backend integration
 
-# If missing, reset database
-npx supabase db reset
-```
+**Files**:
+- `billing.flows.spec.ts` — Paywall & credit flows (QA-39 to QA-46)
 
-### Issue: Tests timeout
-**Solution:** Increase timeout in `jest.setup.js` (currently 30s)
+**Status**: ⏸️ Requires test authentication (TODO)
 
 ---
 
-## 🧹 Cleanup After Tests
+## 🔍 Test Categories
 
-**Local Supabase:**
-```bash
-# Stop (keeps data)
-npx supabase stop
+### 1. Core Logic (QA-1 to QA-8)
 
-# Reset database (fresh start)
-npx supabase db reset
+**Focus**: Billing v4 business logic
 
-# Complete cleanup
-npx supabase stop --no-backup
-```
+**Tests**:
+- Free limit enforcement (15 participants)
+- Credit confirmation flow (409)
+- Concurrent consumption (race conditions)
+- One-off vs club limits (500 vs club access)
+- Idempotency (republish, credit issuance)
+- SSOT verification (no hardcoded prices/limits)
 
-**Test Project:**
-- Database auto-cleans on next migration reset
-- Or manually truncate tables:
-  ```sql
-  TRUNCATE billing_credits, billing_transactions, events CASCADE;
-  ```
+### 2. API Contracts (QA-9 to QA-22)
+
+**Focus**: HTTP contracts, auth, status codes
+
+**Tests**:
+- Authentication (401, 403)
+- Idempotency (already published → 200)
+- Error responses (402 PaywallError, 409 CREDIT_CONFIRMATION_REQUIRED)
+- Purchase flow (valid/invalid products)
+- Status polling (pending → completed)
+- Input validation (400 errors)
+
+### 3. Webhook Security (QA-23 to QA-29)
+
+**Focus**: Payment provider integration
+
+**Tests**:
+- Idempotent settlement (duplicate webhooks)
+- Invalid transactions (404, 400)
+- Failed settlements (no credit issued)
+- Concurrent webhooks (UNIQUE constraint)
+- End-to-end flow (purchase → settle → publish)
+
+### 4. Boundary Cases (QA-30 to QA-38)
+
+**Focus**: Edge cases, limits, null values
+
+**Tests**:
+- Exact limits (15, 16, 500, 501)
+- Zero/negative participants
+- Null max_participants
+- Non-existent events
+- Club vs personal separation
+
+### 5. E2E User Flows (QA-39 to QA-46)
+
+**Focus**: Real user interactions
+
+**Tests**:
+- PaywallModal opens on 402
+- Credit purchase flow (end-to-end)
+- CreditConfirmationModal (409 handling)
+- UX race conditions (double-click, refresh)
 
 ---
 
-## 📝 Test Data Management
+## ⚙️ Test Configuration
 
-**Current approach:** Each test creates its own data
+### Jest (Integration Tests)
 
-**Recommended improvements:**
-1. **Fixtures:** Create `tests/fixtures/billing-test-data.ts`
-2. **Cleanup hooks:** `afterEach()` to truncate tables
-3. **Factory functions:** Generate test users/events/credits
+**Config**: `jest.config.js`
 
-**Example:**
+```javascript
+{
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' }
+}
+```
+
+**Setup**: `jest.setup.js` — loads `.env.test`, validates keys
+
+### Playwright (E2E Tests)
+
+**Config**: `playwright.config.ts`
+
 ```typescript
-// tests/fixtures/billing-test-data.ts
-export async function createTestUser(): Promise<string> {
-  const db = getAdminDb();
-  const { data } = await db
-    .from('users')
-    .insert({ name: 'Test User', telegram_id: `test-${Date.now()}` })
-    .select('id')
-    .single();
-  return data.id;
-}
-
-export async function cleanupTestData(): Promise<void> {
-  const db = getAdminDb();
-  await db.from('billing_credits').delete().ilike('id', '%');
-  // ... cleanup other tables
+{
+  testDir: './tests/e2e',
+  baseURL: 'http://localhost:3000',
+  projects: ['chromium', 'firefox', 'webkit', 'Mobile Chrome', 'Mobile Safari']
 }
 ```
 
----
-
-## 🎯 Current Test Coverage
-
-**File:** `tests/integration/billing.v4.test.ts`
-
-**Scenarios:**
-- ✅ QA-1: Free publish → no credit consumed
-- ✅ QA-2: 409 → confirm → exactly one credit
-- ✅ QA-3: Concurrent confirms → only one succeeds
-- ✅ QA-4: Personal >500 → club only paywall
-- ✅ QA-5: Idempotent publish
-- ✅ QA-6: Idempotent credit issuance
-- ✅ QA-7: enforcePublish reads DB constraints
-- ✅ QA-8: PaywallError has price from DB
-
-**Coverage Goals:**
-- Services: `src/lib/services/accessControl.ts`
-- Repos: `src/lib/db/billingCreditsRepo.ts`, `billingProductsRepo.ts`
-- API: `src/app/api/billing/**`, `src/app/api/events/[id]/publish/route.ts`
+**Webserver**: Auto-starts `npm run dev` before tests
 
 ---
 
-## 🔄 CI/CD Integration (TODO)
+## 🐛 Debugging
 
-**GitHub Actions example:**
-```yaml
-name: Tests
+### Integration Test Failures
 
-on: [push, pull_request]
+```bash
+# Verbose output
+npm test -- --verbose
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Start Supabase
-        run: |
-          npx supabase start
-          cp .env.test.example .env.test
-      
-      - name: Run tests
-        run: npm test
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
+# Single test file
+npm test -- api.publish.test.ts
+
+# Specific test
+npm test -- -t "QA-12"
 ```
+
+**Common Issues**:
+- Missing `SUPABASE_SERVICE_ROLE_KEY` in `.env.test`
+- Schema mismatch (apply missing migrations)
+- FK violations (seed data missing: cities, currencies)
+
+### E2E Test Failures
+
+```bash
+# Run with UI (interactive debugging)
+npm run test:e2e:ui
+
+# Run headed (watch browser)
+npm run test:e2e:headed
+
+# Debug mode
+PWDEBUG=1 npm run test:e2e
+```
+
+**Common Issues**:
+- Dev server not running (auto-starts via `webServer` config)
+- Authentication not implemented (tests currently skipped)
 
 ---
 
 ## 📚 Additional Resources
 
-- [Jest Documentation](https://jestjs.io/docs/getting-started)
-- [Supabase Local Development](https://supabase.com/docs/guides/cli/local-development)
-- [Testing Next.js Apps](https://nextjs.org/docs/testing)
+**SSOT Documentation**:
+- `docs/TESTING.md` — Complete testing documentation
+- `docs/BILLING_SYSTEM_ANALYSIS.md` — Billing architecture
+- `docs/DATABASE.md` — Database schema
+
+**Related Files**:
+- `jest.config.js` — Jest configuration
+- `jest.setup.js` — Test environment setup
+- `playwright.config.ts` — Playwright configuration
+- `.env.test` — Test environment variables
 
 ---
 
-**Last Updated:** 2024-12-26  
-**Status:** Ready for execution ✅
+## ✅ Definition of Done (Testing)
 
+A feature is **fully tested** when:
+
+- [ ] Core logic covered by integration tests
+- [ ] API routes covered (auth, idempotency, errors)
+- [ ] Webhook handlers covered (idempotency, security)
+- [ ] Boundary cases covered (limits, edge cases)
+- [ ] E2E tests written (even if skipped pending auth)
+- [ ] All tests PASS on CI/CD
+- [ ] `TESTING.md` updated with new tests
+
+---
+
+**Last Updated**: 2024-12-26  
+**Maintainer**: AI Assistant  
+**Status**: ✅ Production Ready (integration), ⏸️ Auth TODO (E2E)
