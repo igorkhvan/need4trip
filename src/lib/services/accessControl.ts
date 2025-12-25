@@ -5,6 +5,7 @@
  * Throws PaywallError when action is not allowed.
  * 
  * Source: docs/BILLING_AND_LIMITS.md
+ * Updated: 2024-12-25 - Added publish enforcement for one-off credits
  */
 
 import { PaywallError } from "@/lib/errors";
@@ -15,6 +16,7 @@ import {
   getRequiredPlanForMembers 
 } from "@/lib/db/planRepo";
 import { isActionAllowed } from "@/lib/db/billingPolicyRepo";
+import { hasAvailableCredit } from "@/lib/db/billingCreditsRepo";
 import type { 
   BillingActionCode, 
   ClubSubscription, 
@@ -246,6 +248,109 @@ export async function enforceClubCreation(params: {
   // For MVP: Allow multiple clubs (enforce limits at event level)
   log.warn("Club creation enforcement: MVP allows multiple clubs", { userId: params.userId });
 }
+
+// ============================================================================
+// Publish Enforcement (One-off Event Upgrade)
+// ============================================================================
+
+/**
+ * Enforce event publish rules (one-off upgrade system)
+ * 
+ * Decision tree (per spec):
+ * A) Fits free limits → Publish immediately
+ * B) Exceeds free && max_participants > 500 → 402 PAYWALL (club required)
+ * C) Exceeds free && ≤500 && no credits → 402 PAYWALL (options)
+ * D) Exceeds free && ≤500 && has credits → 409 CREDIT_CONFIRMATION_REQUIRED
+ * 
+ * @param params Event publish parameters
+ * @param confirmCredit User explicitly confirmed credit consumption
+ * @returns Decision result
+ */
+export async function enforcePublish(params: {
+  eventId: string;
+  userId: string;
+  maxParticipants: number | null;
+  clubId: string | null;
+}, confirmCredit: boolean = false): Promise<PublishDecision> {
+  const { maxParticipants, clubId, userId } = params;
+
+  // Personal events only (club events use existing enforcement)
+  if (clubId !== null) {
+    return { allowed: true };
+  }
+
+  // Load free plan limits
+  const freePlan = await getPlanById("free");
+  const freeLimit = freePlan.maxEventParticipants ?? 15; // Default fallback
+
+  // Decision A: Fits free limits
+  if (maxParticipants === null || maxParticipants <= freeLimit) {
+    return { allowed: true };
+  }
+
+  // Decision B: Exceeds 500 (club required)
+  if (maxParticipants > 500) {
+    throw new PaywallError({
+      message: `Events with more than 500 participants require a club`,
+      reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
+      currentPlanId: "free",
+      meta: {
+        requestedParticipants: maxParticipants,
+        maxOneOffLimit: 500,
+      },
+      options: [
+        {
+          type: "CLUB_ACCESS",
+          recommendedPlanId: "club_500", // Recommend plan that fits
+        },
+      ],
+    });
+  }
+
+  // Decision C/D: Exceeds free but ≤500 (check credits)
+  const hasCredit = await hasAvailableCredit(userId, "EVENT_UPGRADE_500");
+
+  if (!hasCredit) {
+    // Decision C: No credits available
+    throw new PaywallError({
+      message: `Event with ${maxParticipants} participants requires payment`,
+      reason: "PUBLISH_REQUIRES_PAYMENT",
+      currentPlanId: "free",
+      meta: {
+        requestedParticipants: maxParticipants,
+        freeLimit,
+      },
+      options: [
+        {
+          type: "ONE_OFF_CREDIT",
+          productCode: "EVENT_UPGRADE_500",
+          priceKzt: 1000, // TODO: Load from config/DB
+          provider: "kaspi",
+        },
+        {
+          type: "CLUB_ACCESS",
+          recommendedPlanId: "club_50",
+        },
+      ],
+    });
+  }
+
+  // Decision D: Has credit, needs confirmation
+  if (!confirmCredit) {
+    return {
+      allowed: false,
+      requiresCreditConfirmation: true,
+      creditCode: "EVENT_UPGRADE_500",
+    };
+  }
+
+  // Confirmed: proceed with consumption (done in publish route)
+  return { allowed: true, willConsumeCredit: true };
+}
+
+export type PublishDecision = 
+  | { allowed: true; willConsumeCredit?: boolean }
+  | { allowed: false; requiresCreditConfirmation: true; creditCode: "EVENT_UPGRADE_500" };
 
 // ============================================================================
 // Helper: Get Current Plan for Club

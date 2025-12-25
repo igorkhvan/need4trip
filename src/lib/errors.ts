@@ -68,13 +68,18 @@ export class InternalError extends AppError {
  * Frontend должен показать PaywallModal с призывом к апгрейду.
  * 
  * Spec: docs/BILLING_AND_LIMITS.md
+ * Updated: 2024-12-25 - Added support for multiple payment options
  */
 export class PaywallError extends AppError {
   reason: string;
   currentPlanId?: string;
   requiredPlanId?: string;
   meta?: Record<string, unknown>;
-  cta: {
+  options?: Array<{
+    type: "ONE_OFF_CREDIT" | "CLUB_ACCESS";
+    [key: string]: unknown;
+  }>;
+  cta?: {
     type: "OPEN_PRICING";
     href: "/pricing";
   };
@@ -85,6 +90,10 @@ export class PaywallError extends AppError {
     currentPlanId?: string;
     requiredPlanId?: string;
     meta?: Record<string, unknown>;
+    options?: Array<{
+      type: "ONE_OFF_CREDIT" | "CLUB_ACCESS";
+      [key: string]: unknown;
+    }>;
   }) {
     super(params.message, { 
       statusCode: 402, 
@@ -94,6 +103,7 @@ export class PaywallError extends AppError {
         currentPlanId: params.currentPlanId,
         requiredPlanId: params.requiredPlanId,
         meta: params.meta,
+        options: params.options,
       }
     });
     this.name = "PaywallError";
@@ -101,10 +111,15 @@ export class PaywallError extends AppError {
     this.currentPlanId = params.currentPlanId;
     this.requiredPlanId = params.requiredPlanId;
     this.meta = params.meta;
-    this.cta = {
-      type: "OPEN_PRICING",
-      href: "/pricing",
-    };
+    this.options = params.options;
+    
+    // Fallback CTA if no options provided
+    if (!this.options) {
+      this.cta = {
+        type: "OPEN_PRICING",
+        href: "/pricing",
+      };
+    }
   }
 
   /**
@@ -118,6 +133,7 @@ export class PaywallError extends AppError {
       currentPlanId: this.currentPlanId,
       requiredPlanId: this.requiredPlanId,
       meta: this.meta,
+      options: this.options,
       cta: this.cta,
     };
   }

@@ -142,10 +142,21 @@ export const BillingPolicyActionSchema = z.object({
 export const TRANSACTION_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export type TransactionStatus = typeof TRANSACTION_STATUSES[number];
 
+// Product codes for billing transactions
+export const PRODUCT_CODES = [
+  "EVENT_UPGRADE_500",  // One-off credit for events ≤500 participants
+  "CLUB_50",            // Club 50 subscription
+  "CLUB_500",           // Club 500 subscription
+  "CLUB_UNLIMITED",     // Club Unlimited subscription
+] as const;
+export type ProductCode = typeof PRODUCT_CODES[number];
+
 export interface BillingTransaction {
   id: string;
-  clubId: string;
-  planId: PlanId;
+  clubId: string | null;  // Nullable for one-off credits
+  planId: PlanId | null;  // Nullable for one-off credits
+  userId: string | null;  // NEW: Required for one-off credits, NULL for club subscriptions
+  productCode: ProductCode;  // NEW: Distinguishes one-off vs club
   provider: string;  // kaspi | epay | manual
   providerPaymentId: string | null;
   amountKzt: number;
@@ -159,8 +170,10 @@ export interface BillingTransaction {
 
 export const BillingTransactionSchema = z.object({
   id: z.string().uuid(),
-  clubId: z.string().uuid(),
-  planId: z.enum(PLAN_IDS),
+  clubId: z.string().uuid().nullable(),
+  planId: z.enum(PLAN_IDS).nullable(),
+  userId: z.string().uuid().nullable(),
+  productCode: z.enum(PRODUCT_CODES),
   provider: z.string(),
   providerPaymentId: z.string().nullable(),
   amountKzt: z.number(),
@@ -168,6 +181,40 @@ export const BillingTransactionSchema = z.object({
   status: z.enum(TRANSACTION_STATUSES),
   periodStart: z.string().nullable(),
   periodEnd: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// ============================================================================
+// Billing Credits (One-off event upgrades)
+// ============================================================================
+
+export const CREDIT_CODES = ["EVENT_UPGRADE_500"] as const;
+export type CreditCode = typeof CREDIT_CODES[number];
+
+export const CREDIT_STATUSES = ["available", "consumed"] as const;
+export type CreditStatus = typeof CREDIT_STATUSES[number];
+
+export interface BillingCredit {
+  id: string;
+  userId: string;
+  creditCode: CreditCode;
+  status: CreditStatus;
+  consumedEventId: string | null;
+  consumedAt: string | null;
+  sourceTransactionId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const BillingCreditSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  creditCode: z.enum(CREDIT_CODES),
+  status: z.enum(CREDIT_STATUSES),
+  consumedEventId: z.string().uuid().nullable(),
+  consumedAt: z.string().nullable(),
+  sourceTransactionId: z.string().uuid(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -184,9 +231,29 @@ export const PAYWALL_REASONS = [
   "CSV_EXPORT_NOT_ALLOWED",
   "MAX_EVENT_PARTICIPANTS_EXCEEDED",
   "MAX_CLUB_MEMBERS_EXCEEDED",
+  "PUBLISH_REQUIRES_PAYMENT",           // NEW: Event publish requires payment
+  "CLUB_REQUIRED_FOR_LARGE_EVENT",      // NEW: Event >500 requires club
 ] as const;
 
 export type PaywallReason = typeof PAYWALL_REASONS[number];
+
+// Paywall option types
+export const PAYWALL_OPTION_TYPES = ["ONE_OFF_CREDIT", "CLUB_ACCESS"] as const;
+export type PaywallOptionType = typeof PAYWALL_OPTION_TYPES[number];
+
+export interface PaywallOptionOneOff {
+  type: "ONE_OFF_CREDIT";
+  productCode: CreditCode;
+  priceKzt: number;
+  provider: string; // kaspi
+}
+
+export interface PaywallOptionClub {
+  type: "CLUB_ACCESS";
+  recommendedPlanId: PlanId;
+}
+
+export type PaywallOption = PaywallOptionOneOff | PaywallOptionClub;
 
 export interface PaywallError {
   code: "PAYWALL";
@@ -194,7 +261,8 @@ export interface PaywallError {
   currentPlanId?: PlanId | "free";
   requiredPlanId?: PlanId;
   meta?: Record<string, unknown>;
-  cta: {
+  options?: PaywallOption[];  // NEW: Multiple payment options
+  cta?: {  // DEPRECATED: Use options[] instead
     type: "OPEN_PRICING";
     href: "/pricing";
   };
@@ -206,9 +274,58 @@ export const PaywallErrorSchema = z.object({
   currentPlanId: z.enum([...PLAN_IDS, "free"]).optional(),
   requiredPlanId: z.enum(PLAN_IDS).optional(),
   meta: z.record(z.unknown()).optional(),
+  options: z.array(z.union([
+    z.object({
+      type: z.literal("ONE_OFF_CREDIT"),
+      productCode: z.enum(CREDIT_CODES),
+      priceKzt: z.number(),
+      provider: z.string(),
+    }),
+    z.object({
+      type: z.literal("CLUB_ACCESS"),
+      recommendedPlanId: z.enum(PLAN_IDS),
+    }),
+  ])).optional(),
   cta: z.object({
     type: z.literal("OPEN_PRICING"),
     href: z.literal("/pricing"),
+  }).optional(),
+});
+
+// ============================================================================
+// Credit Confirmation Types
+// ============================================================================
+
+export const CREDIT_CONFIRMATION_REASONS = [
+  "EVENT_UPGRADE_WILL_BE_CONSUMED",  // Credit will be consumed on publish
+] as const;
+export type CreditConfirmationReason = typeof CREDIT_CONFIRMATION_REASONS[number];
+
+export interface CreditConfirmationError {
+  code: "CREDIT_CONFIRMATION_REQUIRED";
+  reason: CreditConfirmationReason;
+  meta: {
+    creditCode: CreditCode;
+    eventId: string;
+    requestedParticipants: number;
+  };
+  cta: {
+    type: "CONFIRM_CONSUME_CREDIT";
+    href: string;  // /api/events/:id/publish?confirm_credit=1
+  };
+}
+
+export const CreditConfirmationErrorSchema = z.object({
+  code: z.literal("CREDIT_CONFIRMATION_REQUIRED"),
+  reason: z.enum(CREDIT_CONFIRMATION_REASONS),
+  meta: z.object({
+    creditCode: z.enum(CREDIT_CODES),
+    eventId: z.string().uuid(),
+    requestedParticipants: z.number(),
+  }),
+  cta: z.object({
+    type: z.literal("CONFIRM_CONSUME_CREDIT"),
+    href: z.string(),
   }),
 });
 

@@ -131,6 +131,7 @@ export interface Event {
   ownerHandle?: string | null;
   allowAnonymousRegistration: boolean; // NEW: Allow guests to register
   registrationManuallyClosed: boolean; // NEW: Owner manually closed registration
+  publishedAt?: string | null; // NEW: Publication timestamp (NULL = draft)
 }
 
 export type DomainEvent = Event;
