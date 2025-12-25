@@ -1,4 +1,4 @@
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import type { ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
 import { log } from "@/lib/utils/logger";
@@ -41,13 +41,12 @@ export async function listClubs(page = 1, limit = 12): Promise<{
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDb();
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
@@ -69,10 +68,9 @@ export async function listClubs(page = 1, limit = 12): Promise<{
  * List clubs with owner info
  */
 export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
 
-  const { data, error} = await supabaseAdmin
+  const { data, error} = await db
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .order("created_at", { ascending: false });
@@ -89,15 +87,14 @@ export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
  * Get club by ID
  */
 export async function getClubById(id: string): Promise<DbClub | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
+  const db = getAdminDb();
 
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
     log.warn("Invalid club id provided", { id });
     return null;
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("id", id)
@@ -115,15 +112,14 @@ export async function getClubById(id: string): Promise<DbClub | null> {
  * Get club with owner info
  */
 export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
+  const db = getAdminDb();
 
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
     log.warn("Invalid club id provided", { id });
     return null;
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
     .eq("id", id)
@@ -141,10 +137,7 @@ export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | nu
  * Create new club
  */
 export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
   const now = new Date().toISOString();
 
@@ -159,7 +152,7 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
     updated_at: now,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -187,10 +180,7 @@ export async function updateClub(
   id: string,
   payload: ClubUpdateInput
 ): Promise<DbClub | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
   const patch = {
     ...(payload.name !== undefined ? { name: payload.name } : {}),
@@ -201,7 +191,7 @@ export async function updateClub(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -225,12 +215,9 @@ export async function updateClub(
  * Delete club
  */
 export async function deleteClub(id: string): Promise<boolean> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
-  const { error, count } = await supabaseAdmin
+  const { error, count } = await db
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
@@ -251,10 +238,9 @@ export async function deleteClub(id: string): Promise<boolean> {
  * List clubs created by user
  */
 export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("created_by", userId)
@@ -276,14 +262,13 @@ export async function searchClubs(query: string, page = 1, limit = 12): Promise<
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDb();
 
   const searchPattern = `%${query}%`;
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*", { count: "exact" })
     .ilike("name", searchPattern)
@@ -306,10 +291,9 @@ export async function searchClubs(query: string, page = 1, limit = 12): Promise<
  * Count clubs created by user
  */
 export async function countClubsByUserId(userId: string): Promise<number> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return 0;
+  const db = getAdminDb();
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("created_by", userId);
@@ -330,10 +314,9 @@ export async function countClubsByUserId(userId: string): Promise<number> {
  * Get city IDs for a club
  */
 export async function getClubCityIds(clubId: string): Promise<string[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("club_cities")
     .select("city_id")
     .eq("club_id", clubId)
@@ -351,10 +334,11 @@ export async function getClubCityIds(clubId: string): Promise<string[]> {
  * Get city IDs for multiple clubs (batch)
  */
 export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, string[]>> {
-  ensureAdminClient();
-  if (!supabaseAdmin || clubIds.length === 0) return new Map();
+  const db = getAdminDb();
+  
+  if (clubIds.length === 0) return new Map();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("club_cities")
     .select("club_id, city_id")
     .in("club_id", clubIds)
@@ -383,13 +367,10 @@ export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, st
  * Update club cities (replace all)
  */
 export async function updateClubCities(clubId: string, cityIds: string[]): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
   // Delete existing associations
-  const { error: deleteError } = await supabaseAdmin
+  const { error: deleteError } = await db
     .from("club_cities")
     .delete()
     .eq("club_id", clubId);
@@ -407,7 +388,7 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
       created_at: new Date().toISOString(),
     }));
 
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await db
       .from("club_cities")
       .insert(insertPayload);
 
@@ -426,11 +407,10 @@ export async function listClubsByCity(cityId: string, page = 1, limit = 12): Pro
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDb();
 
   // Get club IDs that have this city
-  const { data: clubCitiesData, error: clubCitiesError } = await supabaseAdmin
+  const { data: clubCitiesData, error: clubCitiesError } = await db
     .from("club_cities")
     .select("club_id")
     .eq("city_id", cityId);
@@ -449,7 +429,7 @@ export async function listClubsByCity(cityId: string, page = 1, limit = 12): Pro
   const to = from + limit - 1;
 
   // Get clubs by IDs with pagination
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*", { count: "exact" })
     .in("id", clubIds)

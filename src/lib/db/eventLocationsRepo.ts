@@ -3,7 +3,7 @@
  * CRUD operations for event_locations table
  */
 
-import { ensureAdminClient } from "./client";
+import { getAdminDb } from "./client";
 import { log } from "@/lib/utils/logger";
 import { InternalError } from "@/lib/errors";
 import {
@@ -20,14 +20,9 @@ const table = "event_locations";
  * Get all locations for an event (sorted by sort_order)
  */
 export async function getLocationsByEventId(eventId: string): Promise<EventLocation[]> {
-  ensureAdminClient();
-  const { supabaseAdmin } = await import("./client");
-  
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("event_id", eventId)
@@ -62,12 +57,7 @@ export async function saveLocations(
   eventId: string,
   locations: EventLocationInput[]
 ): Promise<EventLocation[]> {
-  ensureAdminClient();
-  const { supabaseAdmin } = await import("./client");
-  
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase admin client is not configured");
-  }
+  const db = getAdminDb();
 
   // Validate: First location must exist
   const hasFirstLocation = locations.some((loc) => loc.sortOrder === 1);
@@ -76,7 +66,7 @@ export async function saveLocations(
   }
 
   // Step 1: Get existing locations
-  const { data: existingLocations, error: fetchError } = await supabaseAdmin
+  const { data: existingLocations, error: fetchError } = await db
     .from(table)
     .select("*")
     .eq("event_id", eventId);
@@ -93,7 +83,7 @@ export async function saveLocations(
     .map(loc => loc.id);
 
   if (toDelete.length > 0) {
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await db
       .from(table)
       .delete()
       .in("id", toDelete);
@@ -111,7 +101,7 @@ export async function saveLocations(
     mapDomainEventLocationToDb({ ...loc, eventId })
   );
 
-  const { data, error: upsertError } = await supabaseAdmin
+  const { data, error: upsertError } = await db
     .from(table)
     .upsert(dbLocations, {
       onConflict: "event_id,sort_order", // Use unique constraint
@@ -138,14 +128,9 @@ export async function saveLocations(
  * Database trigger will prevent deletion of first location
  */
 export async function deleteLocation(locationId: string): Promise<void> {
-  ensureAdminClient();
-  const { supabaseAdmin } = await import("./client");
-  
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase admin client is not configured");
-  }
+  const db = getAdminDb();
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from(table)
     .delete()
     .eq("id", locationId);
@@ -170,12 +155,7 @@ export async function updateLocation(
   locationId: string,
   updates: Partial<EventLocationInput>
 ): Promise<EventLocation> {
-  ensureAdminClient();
-  const { supabaseAdmin } = await import("./client");
-  
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase admin client is not configured");
-  }
+  const db = getAdminDb();
 
   const dbUpdates: any = {};
   if (updates.title !== undefined) dbUpdates.title = updates.title;
@@ -184,7 +164,7 @@ export async function updateLocation(
   if (updates.rawInput !== undefined) dbUpdates.raw_input = updates.rawInput;
   if (updates.sortOrder !== undefined) dbUpdates.sort_order = updates.sortOrder;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .update(dbUpdates)
     .eq("id", locationId)
@@ -212,12 +192,7 @@ export async function createDefaultLocation(
   eventId: string,
   title: string = "Точка сбора"
 ): Promise<EventLocation> {
-  ensureAdminClient();
-  const { supabaseAdmin } = await import("./client");
-  
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase admin client is not configured");
-  }
+  const db = getAdminDb();
 
   const defaultLocation: Omit<DbEventLocation, "id" | "created_at" | "updated_at"> = {
     event_id: eventId,
@@ -228,7 +203,7 @@ export async function createDefaultLocation(
     raw_input: null,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .insert(defaultLocation)
     .select()
@@ -252,14 +227,9 @@ export async function createDefaultLocation(
  * Get count of locations for an event
  */
 export async function getLocationsCount(eventId: string): Promise<number> {
-  ensureAdminClient();
-  const { supabaseAdmin } = await import("./client");
-  
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);
