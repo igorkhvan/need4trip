@@ -10,15 +10,57 @@ import { getAdminDb } from '@/lib/db/client';
 import { enforcePublish } from '@/lib/services/accessControl';
 import { createBillingCredit } from '@/lib/db/billingCreditsRepo';
 import { getProductByCode } from '@/lib/db/billingProductsRepo';
+import { randomUUID } from 'crypto';
+
+/**
+ * Helper: Create test transaction + credit
+ */
+async function createTestCredit(userId: string) {
+  const db = getAdminDb();
+  const transactionId = randomUUID();
+  
+  const { error: txError } = await db.from('billing_transactions').insert({
+    id: transactionId,
+    user_id: userId,
+    product_code: 'EVENT_UPGRADE_500',
+    amount: 1000,
+    currency_code: 'KZT',
+    status: 'completed',
+  });
+  
+  if (txError) {
+    throw new Error(`Failed to create test transaction: ${txError.message}`);
+  }
+  
+  return await createBillingCredit({
+    userId,
+    creditCode: 'EVENT_UPGRADE_500',
+    sourceTransactionId: transactionId,
+  });
+}
 
 describe('Billing v4: Publish Enforcement', () => {
   let testUserId: string;
   let testEventId: string;
 
   beforeEach(async () => {
-    // Setup: create test user, event (mocked or in test DB)
-    testUserId = 'test-user-id';
-    testEventId = 'test-event-id';
+    const db = getAdminDb();
+    
+    // Create test user (required for FK constraints)
+    testUserId = randomUUID();
+    const { error: userError } = await db
+      .from('users')
+      .insert({
+        id: testUserId,
+        name: 'Test User',
+        telegram_id: `test-${testUserId}`, // Unique telegram_id
+      });
+    
+    if (userError) {
+      throw new Error(`Failed to create test user: ${userError.message}`);
+    }
+    
+    testEventId = randomUUID(); // Valid UUID for event_id
   });
 
   /**
@@ -26,11 +68,7 @@ describe('Billing v4: Publish Enforcement', () => {
    */
   test('publish within free limits does not consume credit', async () => {
     // Given: user has available credit
-    const credit = await createBillingCredit({
-      userId: testUserId,
-      creditCode: 'EVENT_UPGRADE_500',
-      sourceTransactionId: 'tx-test-1',
-    });
+    const credit = await createTestCredit(testUserId);
 
     // When: publish event within free limits (≤15 participants)
     const decision = await enforcePublish({
@@ -60,11 +98,7 @@ describe('Billing v4: Publish Enforcement', () => {
    */
   test('credit confirmation flow consumes exactly one credit', async () => {
     // Given: user has credit, event exceeds free (but ≤500)
-    await createBillingCredit({
-      userId: testUserId,
-      creditCode: 'EVENT_UPGRADE_500',
-      sourceTransactionId: 'tx-test-2',
-    });
+    await createTestCredit(testUserId);
 
     // When: first publish attempt (no confirm)
     const decision1 = await enforcePublish({
@@ -106,11 +140,7 @@ describe('Billing v4: Publish Enforcement', () => {
    */
   test('concurrent publish confirms consume only one credit', async () => {
     // Given: user has one credit
-    await createBillingCredit({
-      userId: testUserId,
-      creditCode: 'EVENT_UPGRADE_500',
-      sourceTransactionId: 'tx-test-3',
-    });
+    await createTestCredit(testUserId);
 
     // When: two concurrent confirm requests
     const promises = [
@@ -173,11 +203,7 @@ describe('Billing v4: Publish Enforcement', () => {
    */
   test('republish does not consume additional credit', async () => {
     // Given: event already published with credit consumed
-    await createBillingCredit({
-      userId: testUserId,
-      creditCode: 'EVENT_UPGRADE_500',
-      sourceTransactionId: 'tx-test-5',
-    });
+    await createTestCredit(testUserId);
 
     // Publish once
     await enforcePublish({
@@ -218,7 +244,18 @@ describe('Billing v4: Publish Enforcement', () => {
    * QA 6: Idempotent credit issuance
    */
   test('duplicate transaction does not issue duplicate credit', async () => {
-    const txId = 'tx-idempotency-test';
+    const db = getAdminDb();
+    const txId = randomUUID(); // Valid UUID
+    
+    // Create transaction first
+    await db.from('billing_transactions').insert({
+      id: txId,
+      user_id: testUserId,
+      product_code: 'EVENT_UPGRADE_500',
+      amount: 1000,
+      currency_code: 'KZT',
+      status: 'completed',
+    });
 
     // When: issue credit twice with same transaction_id
     await createBillingCredit({
@@ -238,7 +275,6 @@ describe('Billing v4: Publish Enforcement', () => {
     await expect(secondAttempt).rejects.toThrow();
 
     // Verify: only one credit issued
-    const db = getAdminDb();
     const { data: credits } = await db
       .from('billing_credits')
       .select('id')
