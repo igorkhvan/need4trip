@@ -237,7 +237,7 @@ export async function registerParticipant(
   
   // Queue notification to event organizer (non-blocking)
   queueNewParticipantNotificationAsync(event, participant, payload.displayName).catch((err) => {
-    console.error("[registerParticipant] Failed to queue organizer notification", err);
+    log.error("[registerParticipant] Failed to queue organizer notification", { error: err });
   });
   
   return participant;
@@ -253,7 +253,7 @@ async function queueNewParticipantNotificationAsync(
 ): Promise<void> {
   try {
     if (!event.createdByUserId) {
-      console.warn(`[queueNewParticipantNotification] Event has no createdByUserId: ${event.id}`);
+      log.warn("[queueNewParticipantNotification] Event has no createdByUserId", { eventId: event.id });
       return;
     }
     
@@ -284,7 +284,7 @@ async function queueNewParticipantNotificationAsync(
       maxParticipants: event.maxParticipants,
     });
   } catch (err) {
-    console.error("[queueNewParticipantNotificationAsync] Unexpected error", err);
+    log.error("[queueNewParticipantNotificationAsync] Unexpected error", { error: err });
     throw err;
   }
 }

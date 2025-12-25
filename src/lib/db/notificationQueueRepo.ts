@@ -6,6 +6,7 @@
 import { getAdminDb } from "@/lib/db/client";
 import type { NotificationQueueItem, NotificationTrigger, NotificationPayload } from "@/lib/types/notification";
 import { buildDedupeKey } from "@/lib/types/notification";
+import { log } from "@/lib/utils/logger";
 
 export interface AddToQueueParams {
   eventId: string;
@@ -70,16 +71,16 @@ export async function addToQueue(params: AddToQueueParams): Promise<boolean> {
     if (error) {
       // Check if it's a unique constraint violation (duplicate)
       if (error.code === '23505') {
-        console.log(`[NotificationQueue] Duplicate notification ignored: ${dedupeKey}`);
+        log.debug('[NotificationQueue] Duplicate notification ignored', { dedupeKey });
         return false;
       }
       throw error;
     }
 
-    console.log(`[NotificationQueue] Added notification: ${dedupeKey}`);
+    log.debug('[NotificationQueue] Added notification', { dedupeKey });
     return true;
   } catch (error) {
-    console.error('[NotificationQueue] Failed to add notification:', error);
+    log.error('[NotificationQueue] Failed to add notification', { error });
     throw error;
   }
 }
@@ -101,13 +102,13 @@ export async function claimPendingNotifications(
     });
 
     if (error) {
-      console.error('[NotificationQueue] Failed to claim notifications:', error);
+      log.error('[NotificationQueue] Failed to claim notifications', { error });
       throw error;
     }
 
     return (data || []).map(mapDbToQueueItem);
   } catch (error) {
-    console.error('[NotificationQueue] Error in claimPendingNotifications:', error);
+    log.error('[NotificationQueue] Error in claimPendingNotifications', { error });
     return [];
   }
 }
@@ -126,7 +127,7 @@ export async function markAsSent(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) {
-    console.error(`[NotificationQueue] Failed to mark as sent: ${id}`, error);
+    log.error('[NotificationQueue] Failed to mark as sent', { id, error });
     throw error;
   }
 }
