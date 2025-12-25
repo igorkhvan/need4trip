@@ -16,6 +16,7 @@ import { upsertEventAccess } from "@/lib/db/eventAccessRepo";
 import { AuthError, ConflictError, NotFoundError, ValidationError, isUniqueViolationError } from "@/lib/errors";
 import { mapDbEventToDomain, mapDbParticipantToDomain } from "@/lib/mappers";
 import { Event, EventCustomFieldValues } from "@/lib/types/event";
+import { log } from "@/lib/utils/logger";
 import {
   RegisterParticipantPayload,
   participantInputSchema,
@@ -150,17 +151,19 @@ export async function registerParticipant(
     });
   }
 
-  // For 'restricted' visibility, grant access automatically when user registers
-  // Note: This is handled by canViewEvent in eventVisibility.ts, but we also
-  // ensure it here for participants registration flow
-  if (event.visibility === "restricted") {
-    if (!currentUser) {
-      throw new AuthError("Регистрация доступна только авторизованным пользователям", undefined, 401);
-    }
+  // ✅ For 'restricted' visibility, grant access automatically when user registers
+  // Uses centralized upsertEventAccess from eventAccessRepo
+  if (event.visibility === "restricted" && currentUser) {
     try {
-      await upsertEventAccess(event.id, currentUser.id, "link");
+      await upsertEventAccess(event.id, currentUser.id, "participant");
+      log.info("Auto-granted access for restricted event on registration", { 
+        eventId: event.id, 
+        userId: currentUser.id 
+      });
     } catch (err) {
-      console.error("[registerParticipant] Failed to upsert access for restricted event", err);
+      log.errorWithStack("Failed to grant access for restricted event on registration", err, { 
+        eventId: event.id 
+      });
     }
   }
 
