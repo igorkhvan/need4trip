@@ -11,7 +11,7 @@ import * as React from "react";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { generateTimeSlots } from "@/lib/utils/date-time";
+import { generateTimeSlots } from "@/lib/utils/dates";
 
 export interface TimePickerProps {
   /** Выбранное время в формате HH:mm */
