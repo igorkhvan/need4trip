@@ -3,15 +3,18 @@
  * 
  * Purpose: Test HTTP contracts, auth, idempotency of publish endpoint
  * Scope: QA-9 to QA-13
+ * 
+ * Uses REAL authentication via x-user-id header (simulates middleware)
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
 import { createBillingCredit } from '@/lib/db/billingCreditsRepo';
+import { createTestUser, createAuthenticatedRequest, getTestCityId } from '../helpers/auth';
 import { randomUUID } from 'crypto';
 
 /**
- * Helper: Create test transaction + credit
+ * Helper: Create test credit
  */
 async function createTestCredit(userId: string) {
   const db = getAdminDb();
@@ -38,57 +41,26 @@ async function createTestCredit(userId: string) {
   });
 }
 
-/**
- * Helper: Create mock NextRequest for API testing
- * 
- * Note: This is a simplified mock. Real NextRequest requires Next.js server context.
- * For proper testing, consider using Next.js test utilities or mocking framework.
- */
-function createMockRequest(url: string, userId?: string): any {
-  const req = new Request(url, { method: 'POST' });
-  
-  // Mock getCurrentUser by setting session (simplified - actual implementation may vary)
-  // In real tests, you'd use test authentication tokens
-  if (userId) {
-    // Store userId in request context for getCurrentUser to retrieve
-    (req as any).__TEST_USER_ID = userId;
-  }
-  
-  return req as any; // Type assertion for test purposes
-}
-
 describe('API: POST /api/events/:id/publish', () => {
   let testUserId: string;
+  let testToken: string;
   let testEventId: string;
   let cityId: string;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
-    const db = getAdminDb();
+    // Create real test user with JWT token
+    const testUser = await createTestUser();
+    testUserId = testUser.user.id;
+    testToken = testUser.token;
+    cleanup = testUser.cleanup;
     
-    // Create test user
-    testUserId = randomUUID();
-    const { error: userError } = await db
-      .from('users')
-      .insert({
-        id: testUserId,
-        name: 'Test User',
-        telegram_id: `test-${testUserId}`,
-      });
-    
-    if (userError) {
-      throw new Error(`Failed to create test user: ${userError.message}`);
-    }
-    
-    // Get a valid city_id
-    const { data: cities } = await db.from('cities').select('id').limit(1);
-    cityId = cities?.[0]?.id ?? '';
-    
-    if (!cityId) {
-      throw new Error('No cities found in database - seed data missing');
-    }
+    // Get valid city
+    cityId = await getTestCityId();
     
     // Create test event
     testEventId = randomUUID();
+    const db = getAdminDb();
     const { error: eventError } = await db
       .from('events')
       .insert({
@@ -106,6 +78,11 @@ describe('API: POST /api/events/:id/publish', () => {
       throw new Error(`Failed to create test event: ${eventError.message}`);
     }
   });
+  
+  afterEach(async () => {
+    // Cleanup test data
+    await cleanup();
+  });
 
   /**
    * QA-9: Auth enforcement
@@ -113,8 +90,10 @@ describe('API: POST /api/events/:id/publish', () => {
   test('QA-9: unauthenticated request returns 401', async () => {
     const { POST } = await import('@/app/api/events/[id]/publish/route');
     
-    const req = createMockRequest(
-      `http://localhost:3000/api/events/${testEventId}/publish`
+    // Create request WITHOUT auth token
+    const req = new Request(
+      `http://localhost:3000/api/events/${testEventId}/publish`,
+      { method: 'POST' }
     );
     
     const res = await POST(req, { params: Promise.resolve({ id: testEventId }) });
@@ -141,16 +120,11 @@ describe('API: POST /api/events/:id/publish', () => {
     const { POST } = await import('@/app/api/events/[id]/publish/route');
     
     // Create another user (not owner)
-    const otherUserId = randomUUID();
-    await getAdminDb().from('users').insert({
-      id: otherUserId,
-      name: 'Other User',
-      telegram_id: `test-${otherUserId}`,
-    });
+    const otherUser = await createTestUser();
     
-    const req = createMockRequest(
+    const req = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish`,
-      otherUserId // Different user
+      otherUser.user.id // Different user
     );
     
     const res = await POST(req, { params: Promise.resolve({ id: testEventId }) });
@@ -158,6 +132,9 @@ describe('API: POST /api/events/:id/publish', () => {
     
     expect(res.status).toBe(403);
     expect(data.error.code).toBe('FORBIDDEN');
+    
+    // Cleanup other user
+    await otherUser.cleanup();
   });
 
   /**
@@ -176,7 +153,7 @@ describe('API: POST /api/events/:id/publish', () => {
     await createTestCredit(testUserId);
     
     const { POST } = await import('@/app/api/events/[id]/publish/route');
-    const req = createMockRequest(
+    const req = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish`,
       testUserId
     );
@@ -205,7 +182,7 @@ describe('API: POST /api/events/:id/publish', () => {
     const { POST } = await import('@/app/api/events/[id]/publish/route');
     
     // Given: user has NO credit
-    const req = createMockRequest(
+    const req = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish`,
       testUserId
     );
@@ -213,20 +190,25 @@ describe('API: POST /api/events/:id/publish', () => {
     const res = await POST(req, { params: Promise.resolve({ id: testEventId }) });
     const data = await res.json();
     
+    // Debug: log response if test fails
+    if (res.status !== 402) {
+      console.error('Unexpected response:', { status: res.status, data });
+    }
+    
     // Then: 402 with PaywallError
     expect(res.status).toBe(402);
-    expect(data.error.code).toBe('PAYWALL');
-    expect(data.error.reason).toBe('PUBLISH_REQUIRES_PAYMENT');
+    expect(data.code).toBe('PAYWALL'); // PaywallError.toJSON() returns flat structure
+    expect(data.reason).toBe('PUBLISH_REQUIRES_PAYMENT');
     
     // Verify: options contain ONE_OFF_CREDIT with price from DB (no hardcode)
-    const oneOffOption = data.error.options?.find((o: any) => o.type === 'ONE_OFF_CREDIT');
+    const oneOffOption = data.options?.find((o: any) => o.type === 'ONE_OFF_CREDIT');
     expect(oneOffOption).toBeDefined();
     expect(oneOffOption.price).toBe(1000); // From billing_products
     expect(oneOffOption.currencyCode).toBe('KZT');
     expect(oneOffOption.productCode).toBe('EVENT_UPGRADE_500');
     
     // Verify: options contain CLUB_ACCESS
-    const clubOption = data.error.options?.find((o: any) => o.type === 'CLUB_ACCESS');
+    const clubOption = data.options?.find((o: any) => o.type === 'CLUB_ACCESS');
     expect(clubOption).toBeDefined();
   });
 
@@ -242,7 +224,7 @@ describe('API: POST /api/events/:id/publish', () => {
     const { POST } = await import('@/app/api/events/[id]/publish/route');
     
     // Step 1: First request without confirmation
-    const req1 = createMockRequest(
+    const req1 = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish`,
       testUserId
     );
@@ -259,7 +241,7 @@ describe('API: POST /api/events/:id/publish', () => {
     expect(data1.error.cta.href).toContain('confirm_credit=1');
     
     // Step 2: Second request with confirm_credit=1
-    const req2 = createMockRequest(
+    const req2 = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish?confirm_credit=1`,
       testUserId
     );

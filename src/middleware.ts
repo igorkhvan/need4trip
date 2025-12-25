@@ -65,6 +65,7 @@ const PROTECTED_ROUTES = [
   // Events (write operations only, GET is public)
   { path: '/api/events', methods: ['POST'] },
   { path: '/api/events/', methods: ['PUT', 'PATCH', 'DELETE'] }, // /api/events/[id] - All write operations
+  '/api/events/[id]/publish', // Publish endpoint (POST)
   
   // NOTE: Participants routes (/api/events/[id]/participants) are NOT protected
   // They allow guest registrations and guest management

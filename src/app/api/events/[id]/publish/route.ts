@@ -9,10 +9,12 @@
  * - Personal events may require credit or payment
  * - Club events use existing access control
  * - Credit consumption requires explicit confirmation
+ * 
+ * Protected by middleware - requires valid JWT
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondSuccess, respondError } from "@/lib/api/respond";
 import { getAdminDb } from "@/lib/db/client";
 import { enforcePublish } from "@/lib/services/accessControl";
@@ -25,8 +27,8 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // 1. Authentication required
-    const currentUser = await getCurrentUser();
+    // 1. Authentication required (via middleware)
+    const currentUser = await getCurrentUserFromMiddleware(req);
     if (!currentUser) {
       return respondError(401, { code: "UNAUTHORIZED", message: "Authentication required" });
     }
