@@ -1,4 +1,4 @@
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { log } from "@/lib/utils/logger";
 
@@ -9,10 +9,7 @@ export async function upsertEventAccess(
   userId: string, 
   source: "owner" | "participant" | "link"
 ): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
   const insertData = {
     event_id: eventId,
@@ -20,7 +17,7 @@ export async function upsertEventAccess(
     source,
   };
   
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from(table)
     .upsert(insertData, { onConflict: "event_id,user_id" });
     
@@ -31,10 +28,9 @@ export async function upsertEventAccess(
 }
 
 export async function listAccessibleEventIds(userId: string): Promise<string[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
   
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("event_id")
     .eq("user_id", userId);
