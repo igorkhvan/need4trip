@@ -232,6 +232,12 @@ describe('API: POST /api/events/:id/publish', () => {
     const res1 = await POST(req1, { params: Promise.resolve({ id: testEventId }) });
     const data1 = await res1.json();
     
+    // Debug: показываем полный ответ сервера
+    console.log('✅ Server 409 Response:', JSON.stringify({
+      status: res1.status,
+      error: data1.error
+    }, null, 2));
+    
     // Then: 409 CREDIT_CONFIRMATION_REQUIRED
     expect(res1.status).toBe(409);
     expect(data1.error.code).toBe('CREDIT_CONFIRMATION_REQUIRED');

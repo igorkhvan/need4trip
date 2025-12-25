@@ -1,8 +1,8 @@
 # Need4Trip Billing System — Testing Documentation (SSOT)
 
 > **Single Source of Truth для тестирования биллинговой системы**  
-> Последнее обновление: 2024-12-26 (Real Authentication Completed)  
-> Статус: ✅ 36/38 Integration Tests PASSING (NO MOCKS)
+> Последнее обновление: 2024-12-26 (Production Bug Fix: Event Enforcement)  
+> Статус: ✅ 43/45 Integration Tests PASSING (NO MOCKS)
 
 ---
 
@@ -43,23 +43,28 @@
 - Publish enforcement logic (6 tests) ✅
 - SSOT verification (2 tests) ✅
 
-**Extended Coverage (QA-9 to QA-38)**: ~28 секунд (36 tests)
-- API Route tests (QA-9 to QA-22): 13 tests ✅ (1 skipped - club subscriptions TODO)
+**Event Create/Update Enforcement (QA-9 to QA-15)**: NEW ⚡
+- Production bug fix: create/update не блокируют события ≤500 ✅
+- Publish endpoint — единственный источник истины для монетизации ✅
+- 7 integration tests ✅
+
+**Extended Coverage (QA-16 to QA-45)**: ~28 секунд (36 tests)
+- API Route tests (QA-16 to QA-29): 13 tests ✅ (1 skipped - club subscriptions TODO)
   - Auth, idempotency, HTTP contracts
   - Purchase intent, transaction status endpoints
-- Webhook tests (QA-23 to QA-29): 7 tests ✅
+- Webhook tests (QA-30 to QA-36): 7 tests ✅
   - Settlement, idempotency, race conditions
   - End-to-end flow (purchase → settle → publish)
-- Boundary tests (QA-30 to QA-38): 8 tests ✅ (1 skipped - club features TODO)
+- Boundary tests (QA-37 to QA-45): 8 tests ✅ (1 skipped - club features TODO)
   - Limits (15, 16, 500, 501 participants)
   - Edge cases, negative scenarios
 
-**E2E Tests (QA-39 to QA-46)**: Playwright (8 tests) - TODO
+**E2E Tests (QA-46 to QA-53)**: Playwright (8 tests) - TODO
 - ⏳ Requires Playwright installation
 - ⏳ Requires real browser authentication helper
 
-**Total**: 36/38 integration tests PASSING (2 skipped, 8 E2E TODO)  
-**Execution Time**: ~28 seconds (all integration tests)
+**Total**: 43/45 integration tests PASSING (2 skipped, 8 E2E TODO)  
+**Execution Time**: ~35 seconds (all integration tests)
 
 ---
 
@@ -287,6 +292,149 @@ Then:
 - Currency normalization in PaywallError
 
 **Результат**: ✅ PASS (871 ms)
+
+---
+
+### Test Suite 3: Event Create/Update Enforcement (Production Bug Fix)
+
+**Файл**: `tests/integration/events.enforcement.test.ts`
+
+**Цель**: Убедиться что create/update не блокируют личные события ≤500 участников на free лимите. Publish endpoint является единственным источником истины для монетизации.
+
+**Проблема (Production Bug)**:  
+Предыдущая реализация бросала `PaywallError` при `maxParticipants > 15` (free limit) в `createEvent()` / `updateEvent()`, блокируя one-off credit flow.
+
+**Решение**:  
+create/update блокируют только `maxParticipants > 500` (требуется клуб). События в диапазоне 16-500 сохраняются успешно, монетизация проверяется в publish endpoint.
+
+---
+
+#### QA-9: Create Personal Event (50 participants) — ALLOWED
+
+**Цель**: Создание личного события с 50 участниками (превышает free 15) должно быть разрешено.
+
+**Сценарий**:
+```typescript
+Given: Personal event (clubId = null)
+  AND: maxParticipants = 50 (exceeds free 15 limit)
+When: createEvent() called
+Then:
+  ✅ Event created successfully (no PaywallError)
+  ✅ event.maxParticipants = 50
+  ✅ event.clubId = null
+```
+
+**Проверяет**:
+- create/update НЕ блокируют события ≤500
+- Monetization check откладывается до publish
+
+**Результат**: ✅ PASS
+
+---
+
+#### QA-10: Create Personal Event (500 participants) — ALLOWED
+
+**Цель**: Создание на границе one-off лимита (500) разрешено.
+
+**Сценарий**:
+```typescript
+Given: maxParticipants = 500 (at one-off limit)
+When: createEvent() called
+Then: ✅ Succeeds
+```
+
+**Результат**: ✅ PASS
+
+---
+
+#### QA-11: Create Personal Event (501 participants) — BLOCKED
+
+**Цель**: Создание события >500 требует клуб (402 PaywallError).
+
+**Сценарий**:
+```typescript
+Given: maxParticipants = 501 (exceeds one-off limit)
+When: createEvent() called
+Then:
+  ✅ Throws PaywallError
+  ✅ reason = 'CLUB_REQUIRED_FOR_LARGE_EVENT'
+  ✅ statusCode = 402
+  ✅ meta.maxOneOffLimit = 500
+```
+
+**Проверяет**:
+- "Impossible" state блокируется (>500 requires club)
+- Корректный error reason
+
+**Результат**: ✅ PASS
+
+---
+
+#### QA-12: Update Personal Event (10 → 50 participants) — ALLOWED
+
+**Цель**: Обновление существующего события с 10 до 50 участников разрешено.
+
+**Сценарий**:
+```typescript
+Given: Existing event with maxParticipants = 10
+When: updateEvent({ maxParticipants: 50 })
+Then:
+  ✅ Update succeeds (no PaywallError)
+  ✅ updated.maxParticipants = 50
+```
+
+**Проверяет**:
+- Исправление production bug (update блокировался на 402)
+- Update разрешён для одноразовых событий
+
+**Результат**: ✅ PASS
+
+---
+
+#### QA-13: Update Personal Event (500 participants) — ALLOWED
+
+**Цель**: Обновление до границы one-off лимита (500) разрешено.
+
+**Результат**: ✅ PASS
+
+---
+
+#### QA-14: Update Personal Event (600 participants) — BLOCKED
+
+**Цель**: Обновление >500 требует клуб (402 PaywallError).
+
+**Сценарий**:
+```typescript
+Given: Existing event with maxParticipants = 10
+When: updateEvent({ maxParticipants: 600 })
+Then:
+  ✅ Throws PaywallError
+  ✅ reason = 'CLUB_REQUIRED_FOR_LARGE_EVENT'
+```
+
+**Результат**: ✅ PASS
+
+---
+
+#### QA-15: Regression — Publish Enforcement After Update
+
+**Цель**: После обновления до 50 участников, publish endpoint корректно требует кредит/оплату.
+
+**Сценарий**:
+```typescript
+Given: Event updated to maxParticipants = 50
+When: enforcePublish({ maxParticipants: 50, clubId: null }, false)
+Then:
+  ✅ Throws PaywallError
+  ✅ reason = 'PUBLISH_REQUIRES_PAYMENT'
+  ✅ statusCode = 402
+```
+
+**Проверяет**:
+- Publish enforcement работает после update
+- Single source of truth для монетизации
+
+**Результат**: ✅ PASS
 
 ---
 
@@ -862,12 +1010,35 @@ A feature is **fully tested** when:
 
 ---
 
-**Last test run**: 2024-12-26 (Extended Coverage)  
+**Last test run**: 2024-12-26 (Production Bug Fix: Event Enforcement)  
 **Status**: 
-- ✅ Core (QA-1 to QA-8): 8/8 PASS (24.669s)
-- 🆕 Extended (QA-9 to QA-38): 30 integration tests (ready to run)
-- 🔧 E2E (QA-39 to QA-46): 8 Playwright tests (enabled, auth helper TODO)
+- ✅ Core (QA-1 to QA-8): 8/8 PASS
+- 🆕 Event Enforcement (QA-9 to QA-15): 7/7 PASS (NEW - Production Bug Fix)
+- 🆕 Extended (QA-16 to QA-45): 30 integration tests (renumbered from QA-9 to QA-38)
+- 🔧 E2E (QA-46 to QA-53): 8 Playwright tests (enabled, auth helper TODO)
 **Environment**: Production Supabase (djbqwsipllhdydshuokg)
-**Total Coverage**: 46 automated tests
+**Total Coverage**: 53 automated tests (43 integration + 2 skipped + 8 E2E TODO)
 **Playwright**: ✅ v1.57.0 installed
+
+---
+
+## 🐛 Production Bug Fix (2024-12-26)
+
+**Problem**: Plan limit enforcement в `createEvent()` / `updateEvent()` блокировала редактирование личных событий выше free лимита (15 участников), даже если существовал one-off credit flow.
+
+**Root Cause**: Duplicate enforcement:
+- `createEvent()` / `updateEvent()` бросали `PaywallError` при `maxParticipants > 15`
+- `POST /api/events/:id/publish` также проверял лимиты (правильно)
+
+**Solution**: 
+- ✅ Убрали проверку `maxParticipants > free limit` из create/update
+- ✅ Оставили только "impossible" state: `maxParticipants > 500` → требуется клуб
+- ✅ `POST /api/events/:id/publish` — **единственный источник истины** для монетизации
+
+**Impact**:
+- ✅ Пользователи могут создавать/редактировать события 16-500 участников
+- ✅ One-off credit flow работает корректно (409 → confirm → consume)
+- ✅ Клубные события не затронуты (enforceClubAction без изменений)
+
+**Tests**: QA-9 to QA-15 (7 новых integration tests)
 

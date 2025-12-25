@@ -439,13 +439,23 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
       },
     });
   } else {
-    // Personal events (no club) - enforce FREE plan limits from DB
+    // Personal events (no club) - only block "impossible" states
+    // Monetization decisions (free vs one-off vs club) are handled by publish endpoint
     const { getPlanById } = await import("@/lib/db/planRepo");
+    const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
     const { PaywallError } = await import("@/lib/errors");
     
     const freePlan = await getPlanById("free");
+    const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
     
-    // Check paid events limit
+    if (!oneOffProduct) {
+      log.error("EVENT_UPGRADE_500 product not found in billing_products");
+      throw new Error("One-off product configuration missing");
+    }
+    
+    const oneOffMaxParticipants = oneOffProduct.constraints.max_participants ?? 500;
+    
+    // Check paid events limit (still not allowed for personal events)
     if (validated.isPaid && !freePlan.allowPaidEvents) {
       throw new PaywallError({
         message: "Платные события доступны только на платных тарифах",
@@ -458,17 +468,18 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
       });
     }
     
-    // Check participants limit
-    if (validated.maxParticipants && freePlan.maxEventParticipants !== null && 
-        validated.maxParticipants > freePlan.maxEventParticipants) {
+    // Only block participants > one-off limit (requires club)
+    // Events within free or one-off range are allowed to be created
+    // Publish endpoint will handle monetization (free vs one-off vs club)
+    if (validated.maxParticipants && validated.maxParticipants > oneOffMaxParticipants) {
       throw new PaywallError({
-        message: `Превышен лимит участников (${validated.maxParticipants} > ${freePlan.maxEventParticipants})`,
-        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
+        message: `События более ${oneOffMaxParticipants} участников требуют клубной подписки`,
+        reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
         currentPlanId: "free",
-        requiredPlanId: "club_50",
+        requiredPlanId: "club_500",
         meta: {
           requested: validated.maxParticipants,
-          limit: freePlan.maxEventParticipants,
+          maxOneOffLimit: oneOffMaxParticipants,
         },
       });
     }
@@ -741,12 +752,23 @@ export async function updateEvent(
       },
     });
   } else {
-    // Personal event - enforce FREE plan limits from DB
+    // Personal event - only block "impossible" states
+    // Monetization decisions (free vs one-off vs club) are handled by publish endpoint
     const { getPlanById } = await import("@/lib/db/planRepo");
+    const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
     const { PaywallError } = await import("@/lib/errors");
     
     const freePlan = await getPlanById("free");
+    const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
     
+    if (!oneOffProduct) {
+      log.error("EVENT_UPGRADE_500 product not found in billing_products");
+      throw new Error("One-off product configuration missing");
+    }
+    
+    const oneOffMaxParticipants = oneOffProduct.constraints.max_participants ?? 500;
+    
+    // Check paid events limit (still not allowed for personal events)
     if (finalIsPaid && !freePlan.allowPaidEvents) {
       throw new PaywallError({
         message: "Платные события доступны только на платных тарифах",
@@ -759,20 +781,23 @@ export async function updateEvent(
       });
     }
     
-    if (finalMaxParticipants && freePlan.maxEventParticipants !== null &&
-        finalMaxParticipants > freePlan.maxEventParticipants) {
+    // Only block participants > one-off limit (requires club)
+    // Events within free or one-off range are allowed to be updated
+    // Publish endpoint will handle monetization (free vs one-off vs club)
+    if (finalMaxParticipants && finalMaxParticipants > oneOffMaxParticipants) {
       throw new PaywallError({
-        message: `Превышен лимит участников (${finalMaxParticipants} > ${freePlan.maxEventParticipants})`,
-        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
+        message: `События более ${oneOffMaxParticipants} участников требуют клубной подписки`,
+        reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
         currentPlanId: "free",
-        requiredPlanId: "club_50",
+        requiredPlanId: "club_500",
         meta: {
           requested: finalMaxParticipants,
-          limit: freePlan.maxEventParticipants,
+          maxOneOffLimit: oneOffMaxParticipants,
         },
       });
     }
   }
+
 
   // Prepare patch for database update
   const patch: EventUpdateInput = {
