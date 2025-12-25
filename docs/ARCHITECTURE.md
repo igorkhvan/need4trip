@@ -199,7 +199,7 @@ need4trip/
 | **Hydration (Cities)** | `lib/utils/hydration.ts` | `lib/db/cityRepo` | Manual city hydration | Batch loading pattern |
 | **Hydration (Currencies)** | `lib/utils/hydration.ts` | `lib/db/currencyRepo` | Manual currency hydration | Batch loading pattern |
 | **Hydration (Categories)** | `lib/utils/hydration.ts` | `lib/db/eventCategoryRepo` | Manual category hydration | ✅ CONSOLIDATED (STAGE 3) |
-| **Price Formatting** | ❌ MISSING | N/A | Inline price formatting | ⚠️ NEEDS CREATION (see STAGE 5) |
+| **Event Formatters** | `lib/utils/eventFormatters.ts` | `lib/types/event` | Inline price formatting | ✅ EXTRACTED (STAGE 5) |
 | **Event Repository** | `lib/db/eventRepo.ts` | `lib/db/client` | Service-level DB access | Data access only |
 | **Event Service** | `lib/services/events.ts` | `lib/db/eventRepo`, `lib/utils/*` | Direct DB access | Business logic only |
 | **Event API** | `app/api/events/**/route.ts` | `lib/services/events` | Direct repo access | HTTP layer only |

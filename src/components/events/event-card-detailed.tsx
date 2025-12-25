@@ -20,6 +20,7 @@ import { EventStatusBadge } from "@/components/events/event-status-badge";
 import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort } from "@/lib/utils/dates";
+import { formatEventPrice } from "@/lib/utils/eventFormatters";
 
 export interface EventCardDetailedProps {
   event: Event;
@@ -37,12 +38,7 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
   const CategoryIcon = event.category ? getCategoryIcon(event.category) : Users;
   const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
   
-  const priceLabel =
-    event.isPaid && event.price
-      ? `${event.price} ${event.currency?.symbol ?? event.currencyCode ?? ""}`.trim()
-      : event.isPaid
-        ? "Платное"
-        : "Бесплатно";
+  const priceLabel = formatEventPrice(event);
 
   const handleClick = () => {
     if (onClick) {

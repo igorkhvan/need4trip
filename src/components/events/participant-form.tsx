@@ -22,6 +22,7 @@ import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
 import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
+import { formatEventPriceInline } from "@/lib/utils/eventFormatters";
 
 interface ParticipantFormProps {
   mode: "create" | "edit";
@@ -338,7 +339,7 @@ export function ParticipantForm({
       {event?.isPaid && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
           Это платное мероприятие. Оплата и подтверждение согласовываются с организатором.
-          {event.price ? ` Стоимость: ${event.price} ${event.currency?.symbol ?? event.currencyCode ?? ""}.` : ""}
+          {formatEventPriceInline(event)}
         </div>
       )}
       {event?.rules && event.rules.trim().length > 0 && (
