@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 import { respondSuccess, respondError } from "@/lib/api/respond";
 import { getAdminDb } from "@/lib/db/client";
 import { enforcePublish } from "@/lib/services/accessControl";
@@ -99,7 +99,7 @@ export async function POST(
     // 7. Publish event (atomic transaction)
     const now = new Date().toISOString();
 
-    if (decision.willConsumeCredit) {
+    if (decision.allowed && decision.willConsumeCredit) {
       // Consume credit + publish in single transaction
       try {
         await consumeCredit(currentUser.id, "EVENT_UPGRADE_500", eventId);
@@ -177,7 +177,8 @@ export async function POST(
   } catch (err: any) {
     // Handle PaywallError (402)
     if (err instanceof PaywallError) {
-      return respondError(402, err.toJSON().error);
+      const json = err.toJSON();
+      return NextResponse.json(json, { status: 402 });
     }
 
     logger.error("Unexpected error in publish endpoint", { error: err });

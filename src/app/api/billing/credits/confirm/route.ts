@@ -102,8 +102,8 @@ export async function POST(req: NextRequest) {
 
     // 6. Create billing_credit (available)
     const credit = await createBillingCredit({
-      userId: transaction.user_id,
-      creditCode: transaction.product_code,
+      userId: transaction.user_id!,  // Non-null asserted (checked by validation)
+      creditCode: transaction.product_code as "EVENT_UPGRADE_500",
       sourceTransactionId: transactionId,
     });
 

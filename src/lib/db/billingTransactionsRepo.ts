@@ -16,8 +16,10 @@ import { log } from "@/lib/utils/logger";
 
 interface DbBillingTransaction {
   id: string;
-  club_id: string;
-  plan_id: string;
+  club_id: string | null;  // Nullable for one-off credits
+  plan_id: string | null;  // Nullable for one-off credits
+  user_id: string | null;  // For one-off credits
+  product_code: string;    // NEW
   provider: string;
   provider_payment_id: string | null;
   amount_kzt: number;
@@ -37,7 +39,9 @@ function mapDbTransactionToDomain(db: DbBillingTransaction): BillingTransaction 
   return {
     id: db.id,
     clubId: db.club_id,
-    planId: db.plan_id as PlanId,
+    planId: db.plan_id as PlanId | null,
+    userId: db.user_id,
+    productCode: db.product_code as any,  // Type assertion for ProductCode
     provider: db.provider,
     providerPaymentId: db.provider_payment_id,
     amountKzt: Number(db.amount_kzt),
@@ -74,6 +78,8 @@ export async function createPendingTransaction(params: {
   const dbData = {
     club_id: params.clubId,
     plan_id: params.planId,
+    user_id: null,  // Legacy: club transactions don't have user_id
+    product_code: `CLUB_${params.planId.toUpperCase()}` as any,  // Infer from plan_id
     provider: params.provider,
     provider_payment_id: params.providerPaymentId ?? null,
     amount_kzt: params.amountKzt,
