@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       billing_credits: {
@@ -184,10 +209,12 @@ export type Database = {
       }
       billing_transactions: {
         Row: {
+          amount: number
           amount_kzt: number
           club_id: string | null
           created_at: string
           currency: string
+          currency_code: string
           id: string
           period_end: string | null
           period_start: string | null
@@ -200,10 +227,12 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          amount: number
           amount_kzt: number
           club_id?: string | null
           created_at?: string
           currency?: string
+          currency_code: string
           id?: string
           period_end?: string | null
           period_start?: string | null
@@ -216,10 +245,12 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          amount?: number
           amount_kzt?: number
           club_id?: string | null
           created_at?: string
           currency?: string
+          currency_code?: string
           id?: string
           period_end?: string | null
           period_start?: string | null
@@ -259,6 +290,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_billing_transactions_currency"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -1616,6 +1654,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       notification_status: [

@@ -23,10 +23,10 @@ async function createTestCredit(userId: string) {
     id: transactionId,
     user_id: userId,
     product_code: 'EVENT_UPGRADE_500',
-    amount_kzt: 1000, // ⚡ Fixed: use amount_kzt not amount
-    currency: 'KZT',   // ⚡ Fixed: use currency not currency_code
-    status: 'paid',    // ⚡ Fixed: use 'paid' not 'completed'
-    provider: 'test',  // ⚡ Required field
+    amount: 1000,           // ⚡ Normalized
+    currency_code: 'KZT',   // ⚡ Normalized with FK
+    status: 'paid',
+    provider: 'test',
   });
   
   if (txError) {
@@ -310,10 +310,10 @@ describe('Billing v4: Publish Enforcement', () => {
       id: txId,
       user_id: testUserId,
       product_code: 'EVENT_UPGRADE_500',
-      amount_kzt: 1000, // ⚡ Fixed: use amount_kzt
-      currency: 'KZT',   // ⚡ Fixed: use currency
-      status: 'paid',    // ⚡ Fixed: use 'paid'
-      provider: 'test',  // ⚡ Required field
+      amount: 1000,           // ⚡ Normalized
+      currency_code: 'KZT',   // ⚡ Normalized with FK
+      status: 'paid',
+      provider: 'test',
     });
 
     // When: issue credit twice with same transaction_id

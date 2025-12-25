@@ -22,8 +22,8 @@ interface DbBillingTransaction {
   product_code: string;    // NEW
   provider: string;
   provider_payment_id: string | null;
-  amount_kzt: number;
-  currency: string;
+  amount: number;          // ⚡ Normalized (was amount_kzt)
+  currency_code: string;   // ⚡ Normalized with FK (was currency)
   status: string;
   period_start: string | null;
   period_end: string | null;
@@ -44,8 +44,8 @@ function mapDbTransactionToDomain(db: DbBillingTransaction): BillingTransaction 
     productCode: db.product_code as any,  // Type assertion for ProductCode
     provider: db.provider,
     providerPaymentId: db.provider_payment_id,
-    amountKzt: Number(db.amount_kzt),
-    currency: db.currency,
+    amount: Number(db.amount),           // ⚡ Normalized
+    currencyCode: db.currency_code,      // ⚡ Normalized
     status: db.status as TransactionStatus,
     periodStart: db.period_start,
     periodEnd: db.period_end,
@@ -66,7 +66,8 @@ export async function createPendingTransaction(params: {
   planId: PlanId;
   provider: string;
   providerPaymentId?: string;
-  amountKzt: number;
+  amount: number;          // ⚡ Normalized parameter name
+  currencyCode?: string;   // ⚡ Normalized (optional, defaults to KZT)
   periodStart?: string;
   periodEnd?: string;
 }): Promise<BillingTransaction> {
@@ -79,8 +80,8 @@ export async function createPendingTransaction(params: {
     product_code: `CLUB_${params.planId.toUpperCase()}` as any,  // Infer from plan_id
     provider: params.provider,
     provider_payment_id: params.providerPaymentId ?? null,
-    amount_kzt: params.amountKzt,
-    currency: 'KZT',
+    amount: params.amount,                        // ⚡ Normalized
+    currency_code: params.currencyCode ?? 'KZT', // ⚡ Normalized with FK
     status: 'pending',
     period_start: params.periodStart ?? null,
     period_end: params.periodEnd ?? null,

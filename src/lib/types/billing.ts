@@ -185,8 +185,8 @@ export interface BillingTransaction {
   productCode: ProductCode;  // NEW: Distinguishes one-off vs club
   provider: string;  // kaspi | epay | manual
   providerPaymentId: string | null;
-  amountKzt: number;
-  currency: string;
+  amount: number;          // ⚡ Normalized (was amountKzt)
+  currencyCode: string;    // ⚡ Normalized with FK (was currency)
   status: TransactionStatus;
   periodStart: string | null;
   periodEnd: string | null;

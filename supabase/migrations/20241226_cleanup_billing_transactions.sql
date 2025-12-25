@@ -6,6 +6,30 @@
 --                Table cleaned, new columns (amount, currency_code) in use
 -- ============================================================================
 
+-- Step 0: Update billing_transaction_summaries view to use new columns
+DROP VIEW IF EXISTS public.billing_transaction_summaries;
+
+CREATE OR REPLACE VIEW public.billing_transaction_summaries AS
+SELECT 
+  bt.club_id,
+  c.name AS club_name,
+  bt.plan_id,
+  COUNT(*) AS transaction_count,
+  SUM(bt.amount) AS total_amount,           -- ⚡ Updated: was amount_kzt
+  bt.currency_code,                         -- ⚡ Updated: was currency
+  MIN(bt.created_at) AS first_transaction,
+  MAX(bt.created_at) AS last_transaction
+FROM public.billing_transactions bt
+LEFT JOIN public.clubs c ON bt.club_id = c.id
+WHERE bt.status = 'paid'
+GROUP BY bt.club_id, c.name, bt.plan_id, bt.currency_code;
+
+COMMENT ON VIEW public.billing_transaction_summaries IS 
+  'Summary statistics of billing transactions per club (normalized schema)';
+
+GRANT SELECT ON public.billing_transaction_summaries TO authenticated;
+ALTER VIEW public.billing_transaction_summaries SET (security_barrier = true);
+
 -- Step 1: Drop deprecated columns
 ALTER TABLE public.billing_transactions 
   DROP COLUMN IF EXISTS amount_kzt;
