@@ -3,7 +3,7 @@
  * Manages user preferences for notifications
  */
 
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
 import type { NotificationSettings, NotificationSettingsUpdate } from "@/lib/types/notification";
 import { NotificationTypeDefaults } from "@/lib/constants/notificationTypes";
 
@@ -13,8 +13,8 @@ import { NotificationTypeDefaults } from "@/lib/constants/notificationTypes";
  */
 export async function getUserNotificationSettings(userId: string): Promise<NotificationSettings | null> {
   try {
-    ensureAdminClient();
-    const { data, error } = await supabaseAdmin!
+    const db = getAdminDb();
+    const { data, error } = await db!
       .from('user_notification_settings')
       .select('*')
       .eq('user_id', userId)
@@ -40,6 +40,8 @@ export async function getUserNotificationSettings(userId: string): Promise<Notif
  * Create default notification settings for a user
  */
 export async function createDefaultSettings(userId: string): Promise<NotificationSettings> {
+  const db = getAdminDb();
+  
   const defaults = {
     user_id: userId,
     is_telegram_enabled: true,
@@ -51,7 +53,7 @@ export async function createDefaultSettings(userId: string): Promise<Notificatio
     notify_organizer_message: NotificationTypeDefaults.organizer_message,
   };
 
-  const { data, error } = await supabaseAdmin!
+  const { data, error } = await db
     .from('user_notification_settings')
     .insert(defaults)
     .select()
@@ -72,6 +74,8 @@ export async function updateUserNotificationSettings(
   userId: string,
   updates: NotificationSettingsUpdate
 ): Promise<NotificationSettings> {
+  const db = getAdminDb();
+  
   const dbUpdates: Record<string, any> = {};
 
   if (updates.isTelegramEnabled !== undefined) {
@@ -96,7 +100,7 @@ export async function updateUserNotificationSettings(
     dbUpdates.notify_organizer_message = updates.notifyOrganizerMessage;
   }
 
-  const { data, error } = await supabaseAdmin!
+  const { data, error } = await db
     .from('user_notification_settings')
     .update(dbUpdates)
     .eq('user_id', userId)
@@ -120,8 +124,8 @@ export async function getUsersForNewEventNotification(
   creatorId: string
 ): Promise<Array<{ userId: string; telegramChatId: string }>> {
   try {
-    ensureAdminClient();
-    const { data, error } = await supabaseAdmin!
+    const db = getAdminDb();
+    const { data, error } = await db!
       .from('users')
       .select(`
         id,

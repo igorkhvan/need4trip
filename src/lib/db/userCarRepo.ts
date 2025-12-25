@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin, ensureClient, ensureAdminClient } from "./client";
+import { getAdminDb } from "./client";
 import type { UserCar, UserCarCreateInput } from "../types/userCar";
 import type { Database } from "./types";
 import { log } from "@/lib/utils/logger";
@@ -28,10 +28,9 @@ function mapUserCar(row: DbUserCar): UserCar {
  * Получить все автомобили пользователя
  */
 export async function getUserCars(userId: string): Promise<UserCar[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("user_cars")
     .select("*")
     .eq("user_id", userId)
@@ -53,8 +52,7 @@ export async function createUserCar(
   userId: string,
   input: UserCarCreateInput
 ): Promise<UserCar> {
-  ensureAdminClient();
-  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+  const db = getAdminDb();
 
   // Проверяем, есть ли у пользователя другие автомобили
   const existingCars = await getUserCars(userId);
@@ -69,7 +67,7 @@ export async function createUserCar(
     is_primary: isFirstCar,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("user_cars")
     .insert(insertData)
     .select()
@@ -89,11 +87,10 @@ export async function createUserCar(
  * Удалить автомобиль
  */
 export async function deleteUserCar(userId: string, carId: string): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+  const db = getAdminDb();
 
   // Check if this is the primary car
-  const { data: carToDelete } = await supabaseAdmin
+  const { data: carToDelete } = await db
     .from("user_cars")
     .select("is_primary")
     .eq("id", carId)
@@ -103,7 +100,7 @@ export async function deleteUserCar(userId: string, carId: string): Promise<void
   const wasPrimary = carToDelete?.is_primary || false;
 
   // Delete the car
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from("user_cars")
     .delete()
     .eq("id", carId)
@@ -131,8 +128,7 @@ export async function updateUserCar(
   carId: string,
   input: UserCarCreateInput
 ): Promise<UserCar> {
-  ensureAdminClient();
-  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+  const db = getAdminDb();
 
   const updateData: DbUserCarUpdate = {
     car_brand_id: input.carBrandId,
@@ -141,7 +137,7 @@ export async function updateUserCar(
     color: input.color || null,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("user_cars")
     .update(updateData)
     .eq("id", carId)
@@ -166,12 +162,11 @@ export async function updateUserCar(
  * Установить основной автомобиль
  */
 export async function setPrimaryUserCar(userId: string, carId: string): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) throw new Error("Supabase admin client not initialized");
+  const db = getAdminDb();
 
   // 1. Снять флаг is_primary со всех автомобилей пользователя
   const resetUpdate: DbUserCarUpdate = { is_primary: false };
-  const { error: resetError } = await supabaseAdmin
+  const { error: resetError } = await db
     .from("user_cars")
     .update(resetUpdate)
     .eq("user_id", userId);
@@ -183,7 +178,7 @@ export async function setPrimaryUserCar(userId: string, carId: string): Promise<
 
   // 2. Установить is_primary для выбранного автомобиля
   const setUpdate: DbUserCarUpdate = { is_primary: true };
-  const { error: setError } = await supabaseAdmin
+  const { error: setError } = await db
     .from("user_cars")
     .update(setUpdate)
     .eq("id", carId)
@@ -199,10 +194,9 @@ export async function setPrimaryUserCar(userId: string, carId: string): Promise<
  * Получить основной автомобиль пользователя
  */
 export async function getPrimaryUserCar(userId: string): Promise<UserCar | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
+  const db = getAdminDb();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("user_cars")
     .select("*")
     .eq("user_id", userId)

@@ -5,7 +5,7 @@
  * Source: docs/BILLING_AND_LIMITS.md
  */
 
-import { supabaseAdmin, ensureAdminClient } from "./client";
+import { getAdminDb } from "./client";
 import type { BillingTransaction, TransactionStatus, PlanId } from "@/lib/types/billing";
 import { InternalError } from "@/lib/errors";
 import { log } from "@/lib/utils/logger";
@@ -70,10 +70,7 @@ export async function createPendingTransaction(params: {
   periodStart?: string;
   periodEnd?: string;
 }): Promise<BillingTransaction> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
   const dbData = {
     club_id: params.clubId,
@@ -89,7 +86,7 @@ export async function createPendingTransaction(params: {
     period_end: params.periodEnd ?? null,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('billing_transactions')
     .insert(dbData)
     .select()
@@ -110,10 +107,7 @@ export async function markTransactionPaid(
   transactionId: string,
   providerPaymentId?: string
 ): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
   const updates: Record<string, unknown> = {
     status: 'paid',
@@ -124,7 +118,7 @@ export async function markTransactionPaid(
     updates.provider_payment_id = providerPaymentId;
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('billing_transactions')
     .update(updates)
     .eq('id', transactionId);
@@ -139,12 +133,9 @@ export async function markTransactionPaid(
  * Mark transaction as failed
  */
 export async function markTransactionFailed(transactionId: string): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('billing_transactions')
     .update({
       status: 'failed',
@@ -165,10 +156,9 @@ export async function getClubTransactions(
   clubId: string,
   limit: number = 50
 ): Promise<BillingTransaction[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('billing_transactions')
     .select('*')
     .eq('club_id', clubId)
