@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-25  
+> Последнее обновление: 2024-12-25 (One-off Billing Update)  
 > PostgreSQL + Supabase
 
 ---
@@ -36,10 +36,10 @@
 
 - **Core Tables**: 6 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands)
 - **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans)
-- **Club & Billing**: 4 (clubs, club_members, club_subscriptions, billing_transactions)
+- **Club & Billing**: 5 (clubs, club_members, club_subscriptions, billing_transactions, billing_credits) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
 - **User Extensions**: 1 (user_cars)
-- **Итого**: 20 таблиц
+- **Итого**: 21 таблиц ⚡
 
 ---
 
@@ -113,6 +113,7 @@ CREATE TABLE public.events (
   price NUMERIC(10,2),
   currency_code TEXT REFERENCES public.currencies(code) ON DELETE SET NULL,
   club_id UUID REFERENCES public.clubs(id) ON DELETE SET NULL,
+  published_at TIMESTAMPTZ, -- ⚡ NEW: Publication timestamp (NULL = draft)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
@@ -130,6 +131,13 @@ CREATE TABLE public.events (
 - `idx_events_category_id` (on category_id)
 - `idx_events_visibility_datetime` (on visibility, date_time DESC WHERE visibility = 'public')
 - `idx_events_creator_datetime` (on created_by_user_id, date_time DESC WHERE created_by_user_id IS NOT NULL)
+- `idx_events_published_at` (on published_at WHERE published_at IS NOT NULL) ⚡
+- `idx_events_drafts_by_creator` (on created_by_user_id, created_at DESC WHERE published_at IS NULL) ⚡
+
+**Notes**:
+- ⚡ `published_at`: NULL = draft (not visible), NOT NULL = published (live)
+- Published events are set via POST /api/events/:id/publish only
+- Draft/published distinction added for one-off billing system
 
 **RLS**: 7 policies
 - `anon_read_public_events`
@@ -617,13 +625,15 @@ CREATE TABLE public.club_subscriptions (
 
 ### 4. `billing_transactions`
 
-**Назначение**: Аудит биллинговых транзакций (НЕ используется для проверок доступа!)
+**Назначение**: Аудит биллинговых транзакций (поддерживает клубы + one-off credits)
 
 ```sql
 CREATE TABLE public.billing_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
-  plan_id TEXT NOT NULL REFERENCES public.club_plans(id) ON DELETE RESTRICT,
+  club_id UUID REFERENCES public.clubs(id) ON DELETE CASCADE,  -- ⚡ NULL для one-off credits
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL, -- ⚡ NEW: Для one-off credits
+  product_code TEXT NOT NULL,  -- ⚡ NEW: EVENT_UPGRADE_500, CLUB_50, CLUB_500, CLUB_UNLIMITED
+  plan_id TEXT REFERENCES public.club_plans(id) ON DELETE RESTRICT,  -- NULL для one-off
   amount NUMERIC(10,2) NOT NULL,
   currency_code TEXT NOT NULL DEFAULT 'KZT',
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
@@ -637,15 +647,65 @@ CREATE TABLE public.billing_transactions (
 **Indexes**:
 - `billing_transactions_pkey` (PRIMARY KEY on id)
 - `idx_billing_transactions_club_id` (on club_id)
+- `idx_billing_transactions_user_id` (on user_id) ⚡
+- `idx_billing_transactions_product_code` (on product_code) ⚡
 - `idx_billing_transactions_status` (on status)
 - `idx_billing_transactions_created_at` (on created_at DESC)
+
+**Notes**:
+- ⚡ Поддерживает два типа транзакций:
+  1. **Club subscriptions**: `club_id NOT NULL`, `product_code = 'CLUB_*'`
+  2. **One-off credits**: `user_id NOT NULL`, `club_id NULL`, `product_code = 'EVENT_UPGRADE_500'`
+- Транзакции НЕ используются для проверок доступа (только аудит!)
+- Access state хранится в `club_subscriptions` (клубы) и `billing_credits` (кредиты)
 
 **RLS**: 1 policy
 - `club_owner_read_own_transactions`
 
 **Связи**:
-- → `clubs` (club_id)
-- → `club_plans` (plan_id)
+- → `clubs` (club_id) [optional]
+- → `users` (user_id) [optional]
+- → `club_plans` (plan_id) [optional]
+- ← `billing_credits` (source_transaction_id)
+
+---
+
+### 5. `billing_credits` ⚡
+
+**Назначение**: Purchased one-off credits для event upgrades (perpetual, consumed once)
+
+```sql
+CREATE TABLE public.billing_credits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  credit_code TEXT NOT NULL CHECK (credit_code IN ('EVENT_UPGRADE_500')),
+  status TEXT NOT NULL CHECK (status IN ('available', 'consumed')),
+  consumed_event_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
+  consumed_at TIMESTAMPTZ,
+  source_transaction_id UUID NOT NULL REFERENCES public.billing_transactions(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+**Indexes**:
+- `billing_credits_pkey` (PRIMARY KEY on id)
+- `idx_billing_credits_user_status` (on user_id, status) -- ⚡ Find available credits
+- `idx_billing_credits_consumed_event_id` (on consumed_event_id)
+- `uix_billing_credits_source_transaction_id` (UNIQUE on source_transaction_id) -- ⚡ Idempotency
+
+**Notes**:
+- ⚡ **Perpetual credits**: не привязаны к событию при покупке
+- ⚡ **Consumed once**: после `publish?confirm_credit=1` → `status='consumed'`
+- ⚡ **Idempotency**: `source_transaction_id` гарантирует одну credit per transaction
+- Поддерживаемые коды: `EVENT_UPGRADE_500` (max_participants <= 500)
+
+**RLS**: TBD (предполагается `authenticated_read_own_credits`)
+
+**Связи**:
+- → `users` (user_id)
+- → `events` (consumed_event_id) [optional]
+- → `billing_transactions` (source_transaction_id)
 
 ---
 
@@ -811,6 +871,7 @@ CREATE INDEX idx_event_participants_user_event
 | `club_members` | ✅ | 6 | Full access |
 | `club_subscriptions` | ✅ | 2 | Full access |
 | `billing_transactions` | ✅ | 1 | Full access |
+| `billing_credits` | ✅ | TBD | Full access | ⚡
 | `user_cars` | ✅ | 5 | Full access |
 | `user_notification_settings` | ✅ | 3 | Full access |
 | `notification_queue` | ✅ | 0 | Service only |
@@ -889,8 +950,12 @@ CREATE INDEX idx_event_participants_user_event
 | 2024-12-22 | `enable_rls_*` | Включение RLS на всех таблицах (9 миграций) |
 | 2024-12-22 | `grant_select_reference_tables` | GRANT SELECT для справочников |
 | 2024-12-24 | `performance_indexes` | Performance optimization indexes |
+| 2024-12-25 | `add_published_at_to_events` | ⚡ Добавлено `published_at` в events (draft/published state) |
+| 2024-12-25 | `extend_billing_transactions` | ⚡ Добавлено `product_code` в billing_transactions |
+| 2024-12-25 | `add_user_id_to_billing_transactions` | ⚡ Добавлено `user_id` в billing_transactions |
+| 2024-12-25 | `create_billing_credits` | ⚡ Создана таблица `billing_credits` (one-off credits) |
 
-**Всего миграций**: 70+ timestamped файлов
+**Всего миграций**: 74 timestamped файлов ⚡
 
 **Расположение**: `/supabase/migrations/`
 
@@ -965,6 +1030,15 @@ clubs ─┬─→ club_members ──→ users
        ├─→ club_subscriptions ──→ club_plans
        ├─→ billing_transactions ──→ club_plans
        └─→ events
+
+billing_transactions ─┬─→ clubs (optional)
+                      ├─→ users (optional)
+                      ├─→ club_plans (optional)
+                      └─→ billing_credits ⚡
+
+billing_credits ─┬─→ users
+                 ├─→ events (consumed_event_id, optional)
+                 └─→ billing_transactions (source) ⚡
 
 user_cars ──→ car_brands
 ```
