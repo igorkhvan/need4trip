@@ -3,7 +3,7 @@
  * Hardened with deduplication, parallel-safe claiming, and DLQ
  */
 
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
 import type { NotificationQueueItem, NotificationTrigger, NotificationPayload } from "@/lib/types/notification";
 import { buildDedupeKey } from "@/lib/types/notification";
 
@@ -46,12 +46,12 @@ export async function addToQueue(params: AddToQueueParams): Promise<boolean> {
   const message = JSON.stringify(payload); // Temporary, formatter will replace
 
   try {
-    ensureAdminClient();
+    const db = getAdminDb();
     
     // Cast payload to Json type for Supabase compatibility
     const jsonPayload = JSON.parse(JSON.stringify(payload));
     
-    const { error } = await supabaseAdmin!
+    const { error } = await db
       .from('notification_queue')
       .insert({
         event_id: eventId,
@@ -93,9 +93,9 @@ export async function claimPendingNotifications(
   workerId: string
 ): Promise<NotificationQueueItem[]> {
   try {
-    ensureAdminClient();
+    const db = getAdminDb();
     // Use the claim function from migration
-    const { data, error } = await supabaseAdmin!.rpc('claim_pending_notifications', {
+    const { data, error } = await db.rpc('claim_pending_notifications', {
       p_batch_size: batchSize,
       p_worker_id: workerId,
     });
@@ -116,8 +116,8 @@ export async function claimPendingNotifications(
  * Mark notification as sent
  */
 export async function markAsSent(id: string): Promise<void> {
-  ensureAdminClient();
-  const { error } = await supabaseAdmin!
+  const db = getAdminDb();
+  const { error } = await db
     .from('notification_queue')
     .update({
       status: 'sent',
@@ -141,8 +141,8 @@ export async function markAsFailed(
   maxAttempts: number = 3
 ): Promise<void> {
   // Get current attempts
-  ensureAdminClient();
-  const { data: notification, error: fetchError } = await supabaseAdmin!
+  const db = getAdminDb();
+  const { data: notification, error: fetchError } = await db
     .from('notification_queue')
     .select('attempts')
     .eq('id', id)
@@ -165,7 +165,7 @@ export async function markAsFailed(
   const backoffMinutes = Math.pow(2, newAttempts) * 5; // 5, 10, 20 minutes
   const scheduledFor = new Date(Date.now() + backoffMinutes * 60 * 1000);
 
-  const { error } = await supabaseAdmin!
+  const { error } = await db
     .from('notification_queue')
     .update({
       status: 'pending',
@@ -190,8 +190,8 @@ export async function markAsFailed(
  */
 export async function moveToDLQ(id: string, errorMessage: string): Promise<void> {
   try {
-    ensureAdminClient();
-    await supabaseAdmin!.rpc('move_to_dead_letter_queue', {
+    const db = getAdminDb();
+    await db.rpc('move_to_dead_letter_queue', {
       p_notification_id: id,
       p_error_message: errorMessage,
     });
@@ -209,8 +209,8 @@ export async function moveToDLQ(id: string, errorMessage: string): Promise<void>
  */
 export async function resetStuckNotifications(timeoutMinutes: number = 30): Promise<number> {
   try {
-    ensureAdminClient();
-    const { data: count, error } = await supabaseAdmin!.rpc('reset_stuck_notifications', {
+    const db = getAdminDb();
+    const { data: count, error } = await db.rpc('reset_stuck_notifications', {
       p_timeout_minutes: timeoutMinutes,
     });
 
@@ -239,8 +239,8 @@ export async function getQueueStats(): Promise<{
   sent: number;
   failed: number;
 }> {
-  ensureAdminClient();
-  const { data, error } = await supabaseAdmin!
+  const db = getAdminDb();
+  const { data, error } = await db
     .from('notification_queue')
     .select('status')
     .in('status', ['pending', 'processing', 'sent', 'failed']);

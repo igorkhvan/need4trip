@@ -1,4 +1,4 @@
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { DbParticipant } from "@/lib/mappers";
 import { ParticipantRole, RegisterParticipantPayload } from "@/lib/types/participant";
@@ -10,9 +10,8 @@ const table = "event_participants";
 export async function listParticipants(
   eventId: string
 ): Promise<DbParticipant[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("event_id", eventId)
@@ -29,10 +28,7 @@ export async function listParticipants(
 export async function createParticipant(
   payload: RegisterParticipantPayload
 ): Promise<DbParticipant> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   const now = new Date().toISOString();
   const insertPayload = {
     event_id: payload.eventId,
@@ -44,7 +40,7 @@ export async function createParticipant(
     created_at: now,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -62,11 +58,8 @@ export async function updateParticipantRole(
   id: string,
   role: ParticipantRole
 ): Promise<DbParticipant | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .update({ role })
     .eq("id", id)
@@ -85,9 +78,8 @@ export async function updateParticipantRole(
 export const registerParticipant = createParticipant;
 
 export async function countParticipants(eventId: string): Promise<number> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return 0;
-  const { count, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { count, error } = await db
     .from(table)
     .select("id", { count: "exact", head: true })
     .eq("event_id", eventId);
@@ -104,9 +96,8 @@ export async function countParticipantsByRole(
   eventId: string,
   role: ParticipantRole
 ): Promise<number> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return 0;
-  const { count, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { count, error } = await db
     .from(table)
     .select("id", { count: "exact", head: true })
     .eq("event_id", eventId)
@@ -124,9 +115,8 @@ export async function findParticipantByUser(
   eventId: string,
   userId: string
 ): Promise<DbParticipant | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("event_id", eventId)
@@ -145,9 +135,8 @@ export async function findParticipantByGuestSession(
   eventId: string,
   guestSessionId: string
 ): Promise<DbParticipant | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("event_id", eventId)
@@ -166,9 +155,8 @@ export async function findParticipantByDisplayName(
   eventId: string,
   displayName: string
 ): Promise<DbParticipant | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("event_id", eventId)
@@ -184,9 +172,8 @@ export async function findParticipantByDisplayName(
 }
 
 export async function findParticipantById(id: string): Promise<DbParticipant | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("id", id)
@@ -201,9 +188,8 @@ export async function findParticipantById(id: string): Promise<DbParticipant | n
 }
 
 export async function listEventIdsForUser(userId: string): Promise<string[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("event_id")
     .eq("user_id", userId);
@@ -215,10 +201,9 @@ export async function listEventIdsForUser(userId: string): Promise<string[]> {
 }
 
 export async function listParticipantEventIds(eventIds: string[]): Promise<string[]> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDb();
   if (!eventIds.length) return [];
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("event_id")
     .in("event_id", eventIds);
@@ -233,10 +218,7 @@ export async function updateParticipant(
   id: string,
   patch: Partial<Pick<RegisterParticipantPayload, "displayName" | "role" | "customFieldValues">>
 ): Promise<DbParticipant | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   const updatePayload = {
     ...(patch.displayName !== undefined ? { display_name: patch.displayName } : {}),
     ...(patch.role !== undefined ? { role: patch.role } : {}),
@@ -245,7 +227,7 @@ export async function updateParticipant(
       : {}),
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .update(updatePayload)
     .eq("id", id)
@@ -261,11 +243,8 @@ export async function updateParticipant(
 }
 
 export async function deleteParticipant(id: string): Promise<boolean> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
-  const { error, count } = await supabaseAdmin
+  const db = getAdminDb();
+  const { error, count } = await db
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
