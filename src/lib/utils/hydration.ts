@@ -6,8 +6,10 @@
 
 import { getCitiesByIds } from "@/lib/db/cityRepo";
 import { getCurrenciesByCodes } from "@/lib/db/currencyRepo";
+import { getEventCategoriesByIds } from "@/lib/db/eventCategoryRepo";
 import { CityHydrated } from "@/lib/types/city";
 import { CurrencyHydrated } from "@/lib/types/currency";
+import { EventCategoryDto } from "@/lib/types/eventCategory";
 
 // ============================================================================
 // City Hydration
@@ -179,5 +181,56 @@ export async function hydrateCitiesAndCurrencies<
       currency: currency ? { code: currency.code, symbol: currency.symbol, nameRu: currency.nameRu } : null,
     };
   });
+}
+
+// ============================================================================
+// Event Category Hydration
+// ============================================================================
+
+/**
+ * Hydrate event categories for items with categoryId
+ * Efficiently loads all categories in one batch query
+ * 
+ * @example
+ * const events = await getEvents();
+ * const hydratedEvents = await hydrateEventCategories(events);
+ * // Now events[0].category = { id, code, nameRu, ... }
+ */
+export async function hydrateEventCategories<T extends { categoryId: string | null }>(
+  items: T[]
+): Promise<(T & { category?: EventCategoryDto | null })[]> {
+  // Collect all unique category IDs
+  const categoryIds = items
+    .map((item) => item.categoryId)
+    .filter((id): id is string => id !== null);
+  
+  const uniqueCategoryIds = Array.from(new Set(categoryIds));
+
+  // Batch load categories
+  let categoriesMap = new Map<string, EventCategoryDto>();
+  if (uniqueCategoryIds.length > 0) {
+    try {
+      const categoriesFullMap = await getEventCategoriesByIds(uniqueCategoryIds);
+      // Convert to DTO format
+      categoriesFullMap.forEach((cat, id) => {
+        categoriesMap.set(id, {
+          id: cat.id,
+          code: cat.code,
+          nameRu: cat.nameRu,
+          nameEn: cat.nameEn,
+          icon: cat.icon,
+          isDefault: cat.isDefault,
+        });
+      });
+    } catch (err) {
+      console.error("[hydrateEventCategories] Failed to load categories", err);
+    }
+  }
+
+  // Attach categories to items
+  return items.map((item) => ({
+    ...item,
+    category: item.categoryId ? categoriesMap.get(item.categoryId) || null : null,
+  }));
 }
 

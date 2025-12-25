@@ -23,8 +23,7 @@ import {
   createDefaultLocation,
 } from "@/lib/db/eventLocationsRepo";
 import type { EventLocationInput } from "@/lib/types/eventLocation";
-import { hydrateCitiesAndCurrencies } from "@/lib/utils/hydration";
-import { hydrateEventCategories } from "@/lib/utils/eventCategoryHydration";
+import { hydrateCitiesAndCurrencies, hydrateEventCategories } from "@/lib/utils/hydration";
 import {
   mapDbEventToDomain,
   mapDbEventWithOwnerToDomain,

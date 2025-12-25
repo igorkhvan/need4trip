@@ -192,14 +192,13 @@ need4trip/
 
 | Topic | Canonical Module | Allowed Imports | Forbidden Patterns | Notes |
 |-------|-----------------|-----------------|-------------------|-------|
-| **Date/Time Formatting** | `lib/utils/dates.ts` | None (pure) | Multiple date utils | ⚠️ NEEDS CONSOLIDATION (see STAGE 1) |
-| **Date/Time Parsing** | `lib/utils/date-time.ts` | None (pure) | Duplicate formatters | ⚠️ NEEDS CONSOLIDATION (see STAGE 1) |
-| **Supabase Admin Client** | `lib/db/client.ts` | `@supabase/supabase-js` | Direct supabase imports in repos | **SSOT for DB access** |
+| **Date/Time Utilities** | `lib/utils/dates.ts` | None (pure) | Multiple date utils | ✅ CONSOLIDATED (STAGE 1) |
+| **Supabase Admin Client** | `lib/db/client.ts` | `@supabase/supabase-js` | Direct supabase imports in repos | ✅ CENTRALIZED (STAGE 2) |
 | **Event Visibility** | `lib/utils/eventVisibility.ts` | `lib/types/event`, `lib/auth/currentUser` | Inline visibility checks | **SSOT for visibility rules** |
 | **Event Permissions** | `lib/utils/eventPermissions.ts` | `lib/types/event`, `lib/types/user` | Duplicate permission logic | Extends visibility rules |
 | **Hydration (Cities)** | `lib/utils/hydration.ts` | `lib/db/cityRepo` | Manual city hydration | Batch loading pattern |
 | **Hydration (Currencies)** | `lib/utils/hydration.ts` | `lib/db/currencyRepo` | Manual currency hydration | Batch loading pattern |
-| **Hydration (Categories)** | `lib/utils/eventCategoryHydration.ts` | `lib/db/eventCategoryRepo` | Manual category hydration | ⚠️ NEEDS MERGE (see STAGE 3) |
+| **Hydration (Categories)** | `lib/utils/hydration.ts` | `lib/db/eventCategoryRepo` | Manual category hydration | ✅ CONSOLIDATED (STAGE 3) |
 | **Price Formatting** | ❌ MISSING | N/A | Inline price formatting | ⚠️ NEEDS CREATION (see STAGE 5) |
 | **Event Repository** | `lib/db/eventRepo.ts` | `lib/db/client` | Service-level DB access | Data access only |
 | **Event Service** | `lib/services/events.ts` | `lib/db/eventRepo`, `lib/utils/*` | Direct DB access | Business logic only |
@@ -809,7 +808,7 @@ const events = await listEvents();
 const hydrated = await hydrateCitiesAndCurrencies(events); // 2 queries total
 ```
 
-**Hydration utilities: `lib/utils/hydration.ts`**
+**Hydration utilities: `lib/utils/hydration.ts` (CONSOLIDATED ✅)**
 
 ```typescript
 // Hydrate cities
@@ -818,12 +817,22 @@ const eventsWithCities = await hydrateCities(events);
 // Hydrate currencies
 const eventsWithCurrencies = await hydrateCurrencies(events);
 
-// Hydrate both at once
+// Hydrate both at once (parallel)
 const eventsWithBoth = await hydrateCitiesAndCurrencies(events);
 
-// Full hydration (everything)
-const fullyHydrated = await hydrateEventsComplete(events);
+// Hydrate categories (events only)
+const eventsWithCategories = await hydrateEventCategories(events);
+
+// Manual batch loading (if needed)
+const citiesMap = await hydrateCitiesByIds(['id1', 'id2', 'id3']);
 ```
+
+**Rule: ALL hydration MUST use batch loading utilities from `hydration.ts`**
+
+**⚠️ NEVER:**
+- Load related data in loops
+- Make separate queries per item
+- Use other hydration utilities (all merged into one)
 
 ### Custom Fields Validation
 
