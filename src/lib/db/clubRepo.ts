@@ -5,6 +5,9 @@ import { log } from "@/lib/utils/logger";
 
 const table = "clubs";
 
+// Explicit column list for select queries (performance optimization)
+const CLUB_COLUMNS = "id, name, description, logo_url, telegram_url, website_url, created_by, created_at, updated_at" as const;
+
 // ============================================================================
 // Database Types (snake_case)
 // ============================================================================
@@ -48,7 +51,7 @@ export async function listClubs(page = 1, limit = 12): Promise<{
 
   const { data, error, count } = await db
     .from(table)
-    .select("*", { count: "exact" })
+    .select(CLUB_COLUMNS, { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -96,7 +99,7 @@ export async function getClubById(id: string): Promise<DbClub | null> {
 
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(CLUB_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
@@ -155,7 +158,7 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
   const { data, error } = await db
     .from(table)
     .insert(insertPayload)
-    .select("*")
+    .select(CLUB_COLUMNS)
     .single();
 
   if (error) {
@@ -195,7 +198,7 @@ export async function updateClub(
     .from(table)
     .update(patch)
     .eq("id", id)
-    .select("*")
+    .select(CLUB_COLUMNS)
     .maybeSingle();
 
   if (error) {
@@ -242,7 +245,7 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
 
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(CLUB_COLUMNS)
     .eq("created_by", userId)
     .order("created_at", { ascending: false });
 
@@ -270,7 +273,7 @@ export async function searchClubs(query: string, page = 1, limit = 12): Promise<
 
   const { data, error, count } = await db
     .from(table)
-    .select("*", { count: "exact" })
+    .select(CLUB_COLUMNS, { count: "exact" })
     .ilike("name", searchPattern)
     .order("name", { ascending: true })
     .range(from, to);
@@ -295,7 +298,7 @@ export async function countClubsByUserId(userId: string): Promise<number> {
 
   const { count, error } = await db
     .from(table)
-    .select("*", { count: "exact", head: true })
+    .select(CLUB_COLUMNS, { count: "exact", head: true })
     .eq("created_by", userId);
 
   if (error) {
@@ -431,7 +434,7 @@ export async function listClubsByCity(cityId: string, page = 1, limit = 12): Pro
   // Get clubs by IDs with pagination
   const { data, error, count } = await db
     .from(table)
-    .select("*", { count: "exact" })
+    .select(CLUB_COLUMNS, { count: "exact" })
     .in("id", clubIds)
     .order("created_at", { ascending: false })
     .range(from, to);

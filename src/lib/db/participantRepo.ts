@@ -6,6 +6,10 @@ import { log } from "@/lib/utils/logger";
 
 const table = "event_participants";
 
+// Explicit column list for select queries (performance optimization)
+// Based on DbParticipant interface: id, event_id, user_id, guest_session_id, display_name, role, custom_field_values, created_at
+const PARTICIPANT_COLUMNS = "id, event_id, user_id, guest_session_id, display_name, role, custom_field_values, created_at" as const;
+
 
 export async function listParticipants(
   eventId: string
@@ -13,7 +17,7 @@ export async function listParticipants(
   const db = getAdminDb();
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
 
@@ -43,7 +47,7 @@ export async function createParticipant(
   const { data, error } = await db
     .from(table)
     .insert(insertPayload)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .single();
 
   if (error) {
@@ -63,7 +67,7 @@ export async function updateParticipantRole(
     .from(table)
     .update({ role })
     .eq("id", id)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .maybeSingle();
 
   if (error) {
@@ -118,7 +122,7 @@ export async function findParticipantByUser(
   const db = getAdminDb();
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .eq("event_id", eventId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -138,7 +142,7 @@ export async function findParticipantByGuestSession(
   const db = getAdminDb();
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .eq("event_id", eventId)
     .eq("guest_session_id", guestSessionId)
     .maybeSingle();
@@ -158,7 +162,7 @@ export async function findParticipantByDisplayName(
   const db = getAdminDb();
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .eq("event_id", eventId)
     .ilike("display_name", displayName)
     .maybeSingle();
@@ -175,7 +179,7 @@ export async function findParticipantById(id: string): Promise<DbParticipant | n
   const db = getAdminDb();
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
@@ -231,7 +235,7 @@ export async function updateParticipant(
     .from(table)
     .update(updatePayload)
     .eq("id", id)
-    .select("*")
+    .select(PARTICIPANT_COLUMNS)
     .maybeSingle();
 
   if (error) {
