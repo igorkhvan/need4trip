@@ -1101,3 +1101,32 @@ See [REFACTORING_GUIDE.md](../REFACTORING_GUIDE.md) for implementation details.
 
 *This is the Single Source of Truth for Need4Trip architecture. All other documents defer to this one.*
 
+
+### 4.1 Type System Organization
+
+**Critical Rule:** Domain types and Database types are SEPARATE concerns. See [TYPE_SYSTEM_RULES.md](./TYPE_SYSTEM_RULES.md) for full details.
+
+#### Quick Reference
+
+**Domain Types (`lib/types/`)** - Business logic (camelCase, manually maintained):
+```typescript
+// Used in: Services, API routes, components
+import type { Event } from "@/lib/types/event";
+```
+
+**Database Types (`lib/db/types.ts`)** - Infrastructure (snake_case, auto-generated):
+```typescript
+// Used ONLY in: lib/db/*Repo.ts
+import type { Database } from "@/lib/db/types";
+```
+
+**Regeneration after migrations:**
+```bash
+npx supabase gen types typescript --project-id YOUR_ID > src/lib/db/types.ts
+```
+
+**Rules:**
+- ✅ Repositories map DB types → Domain types
+- ❌ NEVER import `lib/db/types` outside `lib/db/` folder
+- ❌ NEVER manually edit `lib/db/types.ts`
+
