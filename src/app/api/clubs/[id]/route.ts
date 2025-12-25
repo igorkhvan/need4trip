@@ -6,10 +6,10 @@
  * DELETE - Удалить клуб
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getClubWithDetails, updateClub, deleteClub } from "@/lib/services/clubs";
-import { respondError } from "@/lib/api/response";
+import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const user = await getCurrentUser();
     const club = await getClubWithDetails(id, user);
 
-    return NextResponse.json({ club });
+    return respondSuccess({ club });
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to get club details", error, { clubId: id });
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     const club = await updateClub(id, body, user);
 
-    return NextResponse.json({ club });
+    return respondSuccess({ club });
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to update club", error, { clubId: id });
@@ -71,7 +71,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const user = await getCurrentUserFromMiddleware(req);
     await deleteClub(id, user);
 
-    return NextResponse.json({ success: true });
+    return respondSuccess({ success: true });
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to delete club", error, { clubId: id });

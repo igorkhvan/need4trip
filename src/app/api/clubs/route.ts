@@ -5,10 +5,10 @@
  * POST - Создать новый клуб
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { listClubs, listClubsByCity, searchClubs, createClub } from "@/lib/services/clubs";
-import { respondError } from "@/lib/api/response";
+import { respondSuccess, respondError } from "@/lib/api/response";
 import { UnauthorizedError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       result = await listClubs(page, limit);
     }
 
-    return NextResponse.json({
+    return respondSuccess({
       clubs: result.clubs,
       total: result.total,
       hasMore: result.hasMore,
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const club = await createClub(body, user);
 
-    return NextResponse.json({ club }, { status: 201 });
+    return respondSuccess({ club }, undefined, 201);
   } catch (error) {
     return respondError(error);
   }

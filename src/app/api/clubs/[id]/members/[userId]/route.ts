@@ -5,11 +5,12 @@
  * DELETE - Удалить участника
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { updateClubMemberRole, removeClubMember } from "@/lib/services/clubs";
-import { respondError } from "@/lib/api/response";
+import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
+import { ValidationError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -35,15 +36,12 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     const { role } = body;
 
     if (!role) {
-      return NextResponse.json(
-        { error: "Missing required field: role" },
-        { status: 400 }
-      );
+      throw new ValidationError("Missing required field: role");
     }
 
     const member = await updateClubMemberRole(id, userId, role as ClubRole, user);
 
-    return NextResponse.json({ member });
+    return respondSuccess({ member });
   } catch (error) {
     const { id, userId } = await params;
     log.errorWithStack("Failed to update club member role", error, { clubId: id, memberId: userId });
@@ -64,7 +62,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     
     await removeClubMember(id, userId, user);
 
-    return NextResponse.json({ success: true });
+    return respondSuccess({ success: true });
   } catch (error) {
     const { id, userId } = await params;
     log.errorWithStack("Failed to remove club member", error, { clubId: id, memberId: userId });

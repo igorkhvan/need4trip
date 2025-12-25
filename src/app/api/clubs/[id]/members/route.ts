@@ -5,11 +5,12 @@
  * POST - Добавить участника
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getClubMembers, addClubMember } from "@/lib/services/clubs";
-import { respondError } from "@/lib/api/response";
+import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
+import { ValidationError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // GET is public - anyone can see club members
     const members = await getClubMembers(id);
 
-    return NextResponse.json({ members });
+    return respondSuccess({ members });
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to get club members", error, { clubId: id });
@@ -53,15 +54,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const { userId, role } = body;
 
     if (!userId || !role) {
-      return NextResponse.json(
-        { error: "Missing required fields: userId, role" },
-        { status: 400 }
-      );
+      throw new ValidationError("Missing required fields: userId, role");
     }
 
     const member = await addClubMember(id, userId, role as ClubRole, user);
 
-    return NextResponse.json({ member }, { status: 201 });
+    return respondSuccess({ member }, undefined, 201);
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to add club member", error, { clubId: id });
