@@ -1,7 +1,7 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.1  
+**Version:** 2.2  
 **Last Updated:** 26 December 2024  
 **This document is the ONLY authoritative source for architectural decisions.**
 
@@ -20,6 +20,10 @@
 9. [Events Domain Policies](#events-domain-policies)
 10. [Type Safety Contracts](#type-safety-contracts)
 11. [Change Process & Definition of Done](#change-process--definition-of-done)
+12. [Naming & Project Structure](#naming--project-structure) ⚡
+13. [Client-Side Data Fetching](#client-side-data-fetching) ⚡
+14. [Performance Optimizations](#performance-optimizations) ⚡
+15. [Error Handling & Validation](#error-handling--validation) ⚡
 
 ---
 
@@ -1084,6 +1088,7 @@ module.exports = {
 |------|---------|--------|
 | 2024-12-25 | 2.0 | Initial creation as SSOT |
 | 2024-12-26 | 2.1 | Added billing enforcement to Ownership Map |
+| 2024-12-26 | 2.2 | Added sections 12-15 (naming, client fetching, performance, errors) |
 
 ---
 
