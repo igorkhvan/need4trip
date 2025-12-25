@@ -2,13 +2,15 @@
  * Integration Tests: Webhook Handler (/api/dev/billing/settle)
  * 
  * Purpose: Test idempotency, security, and settlement logic
- * Scope: QA-23 to QA-27
+ * Scope: QA-23 to QA-29
  * 
  * Note: Tests DEV endpoint as proxy for webhook behavior
+ * Uses REAL authentication for end-to-end flow (QA-29)
  */
 
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
+import { createTestUser, createAuthenticatedRequest, getTestCityId } from '../helpers/auth';
 import { randomUUID } from 'crypto';
 
 /**
@@ -274,23 +276,22 @@ describe('Webhook: POST /api/dev/billing/settle', () => {
  */
 describe('Webhook → Credit → Publish flow (end-to-end)', () => {
   let testUserId: string;
+  let testToken: string;
   let testEventId: string;
   let transactionId: string;
+  let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     const db = getAdminDb();
     
-    // Create user
-    testUserId = randomUUID();
-    await db.from('users').insert({
-      id: testUserId,
-      name: 'Test User',
-      telegram_id: `test-${testUserId}`,
-    });
+    // Create real test user with JWT token
+    const testUser = await createTestUser();
+    testUserId = testUser.user.id;
+    testToken = testUser.token;
+    cleanup = testUser.cleanup;
     
     // Get valid city_id
-    const { data: cities } = await db.from('cities').select('id').limit(1);
-    const cityId = cities?.[0]?.id;
+    const cityId = await getTestCityId();
     
     // Create event
     testEventId = randomUUID();
@@ -302,7 +303,7 @@ describe('Webhook → Credit → Publish flow (end-to-end)', () => {
       visibility: 'public',
       max_participants: 100,
       date_time: new Date().toISOString(),
-      city_id: cityId!,
+      city_id: cityId,
     });
     
     // Create transaction
@@ -316,6 +317,10 @@ describe('Webhook → Credit → Publish flow (end-to-end)', () => {
       status: 'pending',
       provider: 'kaspi',
     });
+  });
+  
+  afterEach(async () => {
+    await cleanup();
   });
 
   /**
@@ -357,12 +362,11 @@ describe('Webhook → Credit → Publish flow (end-to-end)', () => {
     // Step 3: User publishes event with credit
     const { POST: publish } = await import('@/app/api/events/[id]/publish/route');
     
-    // First attempt (no confirm)
-    let publishReq = new Request(
+    // First attempt (no confirm) - use real authentication
+    let publishReq = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish`,
-      { method: 'POST' }
-    ) as any; // Type assertion
-    (publishReq as any).__TEST_USER_ID = testUserId;
+      testUserId
+    );
     
     let publishRes = await publish(publishReq, { params: Promise.resolve({ id: testEventId }) });
     let publishData = await publishRes.json();
@@ -371,12 +375,11 @@ describe('Webhook → Credit → Publish flow (end-to-end)', () => {
     expect(publishRes.status).toBe(409);
     expect(publishData.error.code).toBe('CREDIT_CONFIRMATION_REQUIRED');
     
-    // Confirm
-    publishReq = new Request(
+    // Confirm - use real authentication
+    publishReq = createAuthenticatedRequest(
       `http://localhost:3000/api/events/${testEventId}/publish?confirm_credit=1`,
-      { method: 'POST' }
-    ) as any; // Type assertion
-    (publishReq as any).__TEST_USER_ID = testUserId;
+      testUserId
+    );
     
     publishRes = await publish(publishReq, { params: Promise.resolve({ id: testEventId }) });
     publishData = await publishRes.json();
