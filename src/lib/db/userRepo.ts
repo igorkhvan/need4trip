@@ -1,4 +1,4 @@
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { User, ExperienceLevel } from "@/lib/types/user";
 import { Database } from "@/lib/db/types";
@@ -29,13 +29,10 @@ function mapRowToUser(data: DbUserRow): User {
 }
 
 export async function ensureUserExists(id: string, name?: string): Promise<DbUserRow> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
   // 1. Проверяем существует ли пользователь
-  const { data: existing, error: findError } = await supabaseAdmin
+  const { data: existing, error: findError } = await db
     .from(table)
     .select("*")
     .eq("id", id)
@@ -64,7 +61,7 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
     experience_level: null,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .insert(payload)
     .select("*")
@@ -80,9 +77,8 @@ export async function ensureUserExists(id: string, name?: string): Promise<DbUse
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin.from(table).select("*").eq("id", id).maybeSingle();
+  const db = getAdminDb();
+  const { data, error } = await db.from(table).select("*").eq("id", id).maybeSingle();
   if (error) {
     log.error("Failed to fetch user", { userId: id, error });
     throw new InternalError("Failed to fetch user", error);
@@ -92,9 +88,8 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function findUserByTelegramId(telegramId: string): Promise<User | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
-  const { data, error } = await supabaseAdmin
+  const db = getAdminDb();
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("telegram_id", telegramId)
@@ -115,10 +110,7 @@ export async function upsertTelegramUser(payload: {
   telegramHandle?: string | null;
   avatarUrl?: string | null;
 }): Promise<User> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   const insertPayload = {
     name: payload.name,
     telegram_id: payload.telegramId,
@@ -126,7 +118,7 @@ export async function upsertTelegramUser(payload: {
     avatar_url: payload.avatarUrl ?? null,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .upsert(insertPayload, { onConflict: "telegram_id" })
     .select("*")
@@ -155,10 +147,7 @@ export async function updateUser(
     carModelText?: string | null;
   }
 ): Promise<User> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
   const patch: any = {};
   
@@ -170,7 +159,7 @@ export async function updateUser(
   if (updates.carBrandId !== undefined) patch.car_brand_id = updates.carBrandId;
   if (updates.carModelText !== undefined) patch.car_model_text = updates.carModelText;
   
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .update(patch)
     .eq("id", id)
