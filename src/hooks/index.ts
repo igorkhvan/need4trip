@@ -12,3 +12,4 @@ export { useLoadingTransition } from "./use-loading-transition";
 export { useProfileData, useProfileDataOnly, useCarsData } from './use-profile-data';
 export { useEventsData } from './use-events-data';
 export { useClubsData } from './use-clubs-data';
+export { useClubData } from './use-club-data';

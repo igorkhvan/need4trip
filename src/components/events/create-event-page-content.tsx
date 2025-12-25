@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
-import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
+import { useClubData } from "@/hooks/use-club-data";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamic(
@@ -25,8 +25,11 @@ export function CreateEventPageContent({
   const router = useRouter();
   const clubId = searchParams?.get("clubId");
   
-  const [club, setClub] = useState<Club | null>(null);
-  const [loading, setLoading] = useState(!!clubId);
+  // Load club data if clubId is provided
+  const { club, loading, error: clubError } = useClubData({ 
+    clubId, 
+    skip: !isAuthenticated 
+  });
   
   // ⚡ Billing v2.0: Paywall hook
   const { showPaywall, PaywallModalComponent } = usePaywall();
@@ -45,27 +48,6 @@ export function CreateEventPageContent({
       }
     );
   }, [isAuthenticated, execute, clubId]);
-
-  // Load club data if clubId is provided
-  useEffect(() => {
-    if (!clubId || !isAuthenticated) return;
-    
-    const loadClub = async () => {
-      try {
-        const res = await fetch(`/api/clubs/${clubId}`);
-        if (!res.ok) throw new Error("Failed to load club");
-        const response = await res.json();
-        const data = response.data || response;
-        setClub(data.club);
-      } catch (error) {
-        console.error("Failed to load club:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadClub();
-  }, [clubId, isAuthenticated]);
 
   const handleSubmit = async (payload: Record<string, unknown>) => {
     const res = await fetch("/api/events", {
