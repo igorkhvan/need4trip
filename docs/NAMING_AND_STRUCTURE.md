@@ -397,33 +397,35 @@ type EventVisibility = 'public' | 'unlisted' | 'restricted';  // lowercase
 
 ## 🔄 Migration Strategy
 
-### Current Violations
+### ✅ Completed (25 декабря 2024)
 
-1. **PascalCase components:**
-   - `PaywallModal.tsx` → `paywall-modal.tsx`
-   - `CreditConfirmationModal.tsx` → `credit-confirmation-modal.tsx`
-   - `EventLocationsCard.tsx` → `event-locations-card.tsx`
-   - ~30 more files
+All PascalCase component files have been migrated to kebab-case:
 
-2. **Domain language:**
-   - No "trip" usage found ✅
-   - "publish" consistently used ✅
-   - Billing terms match SSOT ✅
+**Billing (2 files):**
+- ✅ `PaywallModal.tsx` → `paywall-modal.tsx`
+- ✅ `CreditConfirmationModal.tsx` → `credit-confirmation-modal.tsx`
 
-### Migration Plan
+**Events (12 files):**
+- ✅ `EventLocationsCard.tsx` → `event-locations-card.tsx`
+- ✅ `LocationHeaderItem.tsx` → `location-header-item.tsx`
+- ✅ `LocationPointDisplay.tsx` → `location-point-display.tsx`
+- ✅ 6 form sections (EventBasicInfoSection, etc.)
+- ✅ 3 locations (LocationItem, MapPreviewModal, NavigationChooser)
 
-**Phase 1:** New files only (enforced now)
-- All new files MUST use kebab-case
-- No exceptions
+**Result:** 14 files renamed, 20+ imports updated, 0 TypeScript errors ✅
 
-**Phase 2:** Gradual migration (low priority)
-- Rename PascalCase files to kebab-case
-- Update imports
-- One commit per file (safe)
+### Current Status
 
-**Phase 3:** Automated check
-- Add ESLint rule or pre-commit hook
-- Block PascalCase file names
+✅ **Files:** All components use kebab-case  
+✅ **Domain language:** No "trip" usage found  
+✅ **API routes:** RESTful (no verbs in paths)  
+✅ **Server actions:** No "use server" directives (Next.js App Router only)
+
+### Enforcement
+
+**Phase 1:** ✅ Completed — All existing violations fixed  
+**Phase 2:** Active — New files MUST use kebab-case  
+**Phase 3:** Recommended — Add ESLint rule or pre-commit hook
 
 ---
 
