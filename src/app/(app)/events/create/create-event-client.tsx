@@ -15,8 +15,8 @@ import { useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
-import { usePaywall } from "@/components/billing/PaywallModal";
-import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
+import { usePaywall } from "@/components/billing/paywall-modal";
+import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 
 // Динамический импорт формы события для code splitting

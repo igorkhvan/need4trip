@@ -37,7 +37,7 @@ import type { Club } from "@/lib/types/club";
 import { getCategoryIcon } from "@/lib/utils/eventCategories";
 import { getErrorMessage } from "@/lib/utils/errors";
 import { useClubPlan } from "@/hooks/use-club-plan";
-import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
+import { PaywallModal, usePaywall } from "@/components/billing/paywall-modal";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 // Section components
 import { EventBasicInfoSection } from "./event-form/sections/EventBasicInfoSection";

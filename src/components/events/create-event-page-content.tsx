@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
-import { usePaywall } from "@/components/billing/PaywallModal";
+import { usePaywall } from "@/components/billing/paywall-modal";
 
 // Динамический импорт формы события для code splitting
 const EventForm = dynamic(

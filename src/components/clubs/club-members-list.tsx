@@ -13,7 +13,7 @@ import { getClubRoleLabel } from "@/lib/types/club";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PaywallModal, usePaywall } from "@/components/billing/PaywallModal";
+import { PaywallModal, usePaywall } from "@/components/billing/paywall-modal";
 import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface ClubMembersListProps {

@@ -12,8 +12,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
-import { usePaywall } from "@/components/billing/PaywallModal";
-import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
+import { usePaywall } from "@/components/billing/paywall-modal";
+import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
 import { handleApiError } from "@/lib/utils/errors";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 import type { Event } from "@/lib/types/event";
