@@ -200,20 +200,20 @@ need4trip/
 
 | Topic | Canonical Module | Allowed Imports | Forbidden Patterns | Notes |
 |-------|-----------------|-----------------|-------------------|-------|
-| **Date/Time Utilities** | `lib/utils/dates.ts` | None (pure) | Multiple date utils | ✅ CONSOLIDATED (STAGE 1) |
-| **Supabase Admin Client** | `lib/db/client.ts` | `@supabase/supabase-js` | Direct supabase imports in repos | ✅ CENTRALIZED (STAGE 2) |
-| **Event Visibility** | `lib/utils/eventVisibility.ts` | `lib/types/event`, `lib/auth/currentUser` | Inline visibility checks | ✅ CENTRALIZED (STAGE 4) |
-| **Event Permissions** | `lib/utils/eventPermissions.ts` | `lib/types/event`, `lib/types/user` | Duplicate permission logic | ✅ CENTRALIZED (STAGE 4) |
+| **Date/Time Utilities** | `lib/utils/dates.ts` | None (pure) | Multiple date utils | ✅ CONSOLIDATED |
+| **Supabase Admin Client** | `lib/db/client.ts` | `@supabase/supabase-js` | Direct supabase imports in repos | ✅ CENTRALIZED |
+| **Event Visibility** | `lib/utils/eventVisibility.ts` | `lib/types/event`, `lib/auth/currentUser` | Inline visibility checks | ✅ CENTRALIZED |
+| **Event Permissions** | `lib/utils/eventPermissions.ts` | `lib/types/event`, `lib/types/user` | Duplicate permission logic | ✅ CENTRALIZED |
 | **Hydration (Cities)** | `lib/utils/hydration.ts` | `lib/db/cityRepo` | Manual city hydration | Batch loading pattern |
 | **Hydration (Currencies)** | `lib/utils/hydration.ts` | `lib/db/currencyRepo` | Manual currency hydration | Batch loading pattern |
-| **Hydration (Categories)** | `lib/utils/hydration.ts` | `lib/db/eventCategoryRepo` | Manual category hydration | ✅ CONSOLIDATED (STAGE 3) |
-| **Event Formatters** | `lib/utils/eventFormatters.ts` | `lib/types/event` | Inline price formatting | ✅ EXTRACTED (STAGE 5) |
+| **Hydration (Categories)** | `lib/utils/hydration.ts` | `lib/db/eventCategoryRepo` | Manual category hydration | ✅ CONSOLIDATED |
+| **Event Formatters** | `lib/utils/eventFormatters.ts` | `lib/types/event` | Inline price formatting | ✅ EXTRACTED |
 | **Event Repository** | `lib/db/eventRepo.ts` | `lib/db/client` | Service-level DB access | Data access only |
 | **Event Service** | `lib/services/events.ts` | `lib/db/eventRepo`, `lib/utils/*` | Direct DB access | Business logic only |
 | **Event API** | `app/api/events/**/route.ts` | `lib/services/events` | Direct repo access | HTTP layer only |
 | **Current User (Server)** | `lib/auth/currentUser.ts` | `lib/auth/jwt`, `lib/db/userRepo` | Multiple auth approaches | **SSOT for server auth** |
 | **Current User (Client)** | `components/auth/auth-provider.tsx` | React Context | Server-only functions | Client context only |
-| **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ✅ UNIFIED (STAGE 6) |
+| **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ✅ UNIFIED |
 | **Error Handling** | `lib/errors.ts` | None (base classes) | Untyped errors | Custom error classes |
 | **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | Standard format |
 | **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceClubAction()`, `enforcePublish()` |
@@ -260,7 +260,7 @@ PostgreSQL Database
 - Transaction management
 
 **Rules:**
-- ✅ MUST use `ensureAdminClient()` at start of every function ⚠️ (STAGE 2: consolidate)
+- ✅ MUST use `ensureAdminClient()` at start of every function
 - ✅ MUST return domain types (NOT database types)
 - ✅ MUST handle database errors (throw `InternalError`)
 - ❌ MUST NOT contain business logic
@@ -1070,34 +1070,12 @@ module.exports = {
 
 ---
 
-## Appendix: Refactoring Roadmap
-
-### Current Technical Debt
-
-Based on [ARCHITECTURE_ANALYSIS_2024-12.md](../ARCHITECTURE_ANALYSIS_2024-12.md):
-
-**Priority 1 (Critical):**
-1. ⚠️ **STAGE 1:** Consolidate date/time utilities (`dates.ts` + `date-time.ts` → single module)
-2. ⚠️ **STAGE 2:** Centralize DB client access (`ensureAdminClient()` duplication)
-3. ⚠️ **STAGE 5:** Create price formatting utility (duplicated in 3 places)
-
-**Priority 2 (High):**
-4. ⚠️ **STAGE 3:** Merge hydration utilities (`hydration.ts` + `eventCategoryHydration.ts`)
-5. ⚠️ **STAGE 4:** Remove visibility check duplication
-6. ⚠️ **STAGE 6:** Unify caching strategy
-
-**Expected outcome:** Code quality 7.5/10 → 8.5/10
-
-See [REFACTORING_GUIDE.md](../REFACTORING_GUIDE.md) for implementation details.
-
----
-
 ## Document History
 
-| Date | Change | Author |
-|------|--------|--------|
-| 2024-12-25 | Initial creation as SSOT | AI Assistant |
-| 2024-12-25 | Added ownership map and refactoring roadmap | AI Assistant |
+| Date | Version | Change |
+|------|---------|--------|
+| 2024-12-25 | 2.0 | Initial creation as SSOT |
+| 2024-12-26 | 2.1 | Added billing enforcement to Ownership Map |
 
 ---
 
