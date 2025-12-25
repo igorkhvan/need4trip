@@ -205,7 +205,7 @@ need4trip/
 | **Event API** | `app/api/events/**/route.ts` | `lib/services/events` | Direct repo access | HTTP layer only |
 | **Current User (Server)** | `lib/auth/currentUser.ts` | `lib/auth/jwt`, `lib/db/userRepo` | Multiple auth approaches | **SSOT for server auth** |
 | **Current User (Client)** | `components/auth/auth-provider.tsx` | React Context | Server-only functions | Client context only |
-| **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ⚠️ NEEDS EXPANSION (see STAGE 6) |
+| **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ✅ UNIFIED (STAGE 6) |
 | **Error Handling** | `lib/errors.ts` | None (base classes) | Untyped errors | Custom error classes |
 | **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | Standard format |
 
@@ -507,41 +507,85 @@ export default function ServerParent() {
 
 ## 7. Caching Strategy
 
-### Reference Data Caching
+### Reference Data Caching ✅
 
-**RULE: Reference data (cities, currencies, categories, brands) MUST be cached in-memory.**
+**RULE: Reference data (cities, currencies, categories, brands, plans) MUST be cached using StaticCache.**
 
 **Implementation: StaticCache class (`lib/cache/staticCache.ts`)**
 
 ```typescript
 import { StaticCache } from '@/lib/cache/staticCache';
 
-const citiesCache = new StaticCache<City>(60_000); // 1 minute TTL
-
-export async function getCities(): Promise<City[]> {
-  return citiesCache.getOrLoad('all', async () => {
-    const { data } = await supabaseAdmin.from('cities').select('*');
+// Define cache with TTL, name, loader, and key extractor
+const currenciesCache = new StaticCache<Currency>(
+  {
+    ttl: 24 * 60 * 60 * 1000, // 24 hours
+    name: 'currencies',
+  },
+  async () => {
+    // Loader function - called when cache expired
+    const { data } = await supabase.from('currencies').select('*').eq('is_active', true);
     return data || [];
-  });
+  },
+  (currency) => currency.code // Key extractor for O(1) lookups
+);
+
+// Usage
+export async function getActiveCurrencies(): Promise<Currency[]> {
+  return currenciesCache.getAll(); // Auto-reloads if expired
+}
+
+export async function getCurrencyByCode(code: string): Promise<Currency | null> {
+  return currenciesCache.getByKey(code); // O(1) lookup
 }
 ```
 
-**Cached Reference Data:**
+**Cached Reference Data (UNIFIED ✅):**
 
-| Data Type | TTL | Why Cache | Invalidation |
-|-----------|-----|-----------|--------------|
-| **Cities** | 60 min | ~200 records, rarely change | On admin update |
-| **Currencies** | 24 hours | ~10 records, never change | Manual (years) |
-| **Event Categories** | 60 min | ~10 records, rarely change | On admin update |
-| **Car Brands** | 60 min | ~50 records, rarely change | On admin update |
-| **Vehicle Types** | 60 min | ~5 records, never change | Manual |
-| **Plans (incl. FREE)** | 24 hours | 4 records, rarely change | On plan update |
+| Data Type | TTL | Repository | Cache Name | Reason |
+|-----------|-----|------------|------------|--------|
+| **Currencies** | 24h | `currencyRepo.ts` | `currencies` | ~10 records, almost never change |
+| **Car Brands** | 24h | `carBrandRepo.ts` | `car_brands` | ~50 records, rarely change |
+| **Event Categories** | 1h | `eventCategoryRepo.ts` | `event_categories` | ~10 records, may change |
+| **Cities (popular)** | 1h | `cityRepo.ts` | `popular_cities` | Top 30, may change |
+| **Club Plans** | 5min | `planRepo.ts` | `club_plans` | 4 records, pricing may update |
+| **Vehicle Types** | 1h | `vehicleTypeRepo.ts` | `vehicle_types` | ~5 records, rarely change |
+
+**TTL Strategy:**
+- **24 hours**: Static data that almost never changes (currencies, brands)
+- **1 hour**: Reference data that may change occasionally (categories, cities)
+- **5 minutes**: Dynamic reference data (pricing, plans)
 
 **NOT cached:**
 - ❌ Events (change frequently, user-specific visibility)
 - ❌ Participants (real-time registration data)
 - ❌ Users (privacy, authentication state)
 - ❌ Club subscriptions (billing state)
+
+### StaticCache Features
+
+**Production-ready features:**
+- ✅ Automatic TTL-based expiration
+- ✅ O(1) key lookups via Map
+- ✅ Concurrent load prevention (race condition safe)
+- ✅ Graceful error handling (keeps old data on reload failure)
+- ✅ Built-in structured logging
+- ✅ Global cache registry (`clearAllCaches()`)
+- ✅ Cache statistics API (`getAllCacheStats()`)
+
+**API:**
+```typescript
+cache.getAll()              // Get all items (auto-reload if expired)
+cache.getByKey(key)         // O(1) lookup by key
+cache.getByKeys([keys])     // Batch O(1) lookups
+cache.reload()              // Force reload (safe for concurrent calls)
+cache.clear()               // Manual invalidation
+cache.isValid()             // Check if loaded and not expired
+cache.getStats()            // Get cache statistics
+
+clearAllCaches()            // Clear all registered caches
+getAllCacheStats()          // Get stats for all caches
+```
 
 ### Next.js Caching
 
