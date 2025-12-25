@@ -1,10 +1,9 @@
-import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-
 import { clearAuthCookie } from "@/lib/auth/cookies";
+import { respondSuccess } from "@/lib/api/response";
 
 function handleLogout() {
-  const res = NextResponse.json({ ok: true });
+  const res = respondSuccess({ ok: true });
   clearAuthCookie(res);
   
   // Revalidate all pages to clear currentUser

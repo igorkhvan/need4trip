@@ -4,11 +4,11 @@
  * GET - Получить профиль текущего пользователя (с клубами)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getUserClubs } from "@/lib/services/clubs";
 import { getCityById } from "@/lib/db/cityRepo";
-import { respondError } from "@/lib/api/response";
+import { respondSuccess, respondError } from "@/lib/api/response";
 import { updateUser } from "@/lib/db/userRepo";
 import { profileUpdateSchema } from "@/lib/types/user";
 import { AuthError, ValidationError } from "@/lib/errors";
@@ -26,10 +26,7 @@ export async function GET(req: NextRequest) {
     const user = await getCurrentUser();
     
     if (!user) {
-      return NextResponse.json(
-        { error: "Необходима авторизация" },
-        { status: 401 }
-      );
+      throw new AuthError("Необходима авторизация");
     }
 
     // Получить клубы пользователя
@@ -51,7 +48,7 @@ export async function GET(req: NextRequest) {
     // Получить статистику событий
     const eventStats = await getUserEventStats(user.id);
 
-    return NextResponse.json({
+    return respondSuccess({
       user: {
         ...user,
         // NOTE: Personal plans removed in billing v2.0
@@ -114,7 +111,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
     
-    return NextResponse.json({
+    return respondSuccess({
       user: {
         ...updatedUser,
         city: city ? { id: city.id, name: city.name, region: city.region } : null,

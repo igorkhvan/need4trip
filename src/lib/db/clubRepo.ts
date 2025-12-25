@@ -335,7 +335,7 @@ export async function getClubCityIds(clubId: string): Promise<string[]> {
  */
 export async function getClubsCityIds(clubIds: string[]): Promise<Map<string, string[]>> {
   const db = getAdminDb();
-  
+
   if (clubIds.length === 0) return new Map();
 
   const { data, error } = await db

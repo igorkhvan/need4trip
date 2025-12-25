@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getActiveEventCategories } from "@/lib/db/eventCategoryRepo";
 import { log } from "@/lib/utils/logger";
+import { respondSuccess, respondError } from "@/lib/api/response";
 
 /**
  * GET /api/event-categories
@@ -25,21 +26,12 @@ export async function GET(req: NextRequest) {
       isDefault: cat.isDefault,
     }));
 
-    const response = NextResponse.json({ categories: dtoCategories });
-    
-    // ⚡ HTTP Cache Headers for CDN and Browser
-    response.headers.set(
-      'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400'
-    );
-    
-    return response;
+    return respondSuccess({ categories: dtoCategories }, undefined, 200, {
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400'
+    });
   } catch (error) {
     log.errorWithStack("Failed to fetch event categories", error);
-    return NextResponse.json(
-      { error: "Failed to fetch event categories" },
-      { status: 500 }
-    );
+    return respondError(error);
   }
 }
 

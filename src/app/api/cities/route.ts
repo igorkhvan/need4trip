@@ -7,10 +7,10 @@
  * GET /api/cities?ids=id1,id2,id3 - Get cities by IDs
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { searchCities, getPopularCities, getAllCities, getCitiesByIds } from "@/lib/db/cityRepo";
-
 import { log } from "@/lib/utils/logger";
+import { respondSuccess, respondError } from "@/lib/api/response";
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       // Get cities by IDs
       const ids = idsParam.split(",").filter(Boolean);
       if (ids.length === 0) {
-        return NextResponse.json({ cities: [] });
+        return respondSuccess({ cities: [] });
       }
       const citiesMap = await getCitiesByIds(ids);
       cities = Array.from(citiesMap.values());
@@ -40,12 +40,9 @@ export async function GET(req: NextRequest) {
       cities = await getAllCities();
     }
 
-    return NextResponse.json({ cities });
+    return respondSuccess({ cities });
   } catch (error) {
     log.errorWithStack("Failed to fetch cities", error, { query, popularOnly, idsParam });
-    return NextResponse.json(
-      { error: "Failed to fetch cities" },
-      { status: 500 }
-    );
+    return respondError(error);
   }
 }

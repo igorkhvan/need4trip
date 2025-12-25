@@ -9,9 +9,11 @@
  * - Stale-while-revalidate: 7 days
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCityById } from "@/lib/db/cityRepo";
 import { log } from "@/lib/utils/logger";
+import { respondSuccess, respondError } from "@/lib/api/response";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 
 export async function GET(
   req: NextRequest,
@@ -20,38 +22,22 @@ export async function GET(
   const { id } = await params;
 
   if (!id) {
-    return NextResponse.json(
-      { error: "City ID is required" },
-      { status: 400 }
-    );
+    throw new ValidationError("City ID is required");
   }
 
   try {
     const city = await getCityById(id);
 
     if (!city) {
-      return NextResponse.json(
-        { error: "City not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("City not found");
     }
 
-    const response = NextResponse.json({ city });
-    
-    // ⚡ HTTP Cache Headers for CDN and Browser
-    // Cities rarely change, cache aggressively
-    response.headers.set(
-      'Cache-Control',
-      'public, s-maxage=86400, stale-while-revalidate=604800'
-    );
-    
-    return response;
+    return respondSuccess({ city }, undefined, 200, {
+      'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800'
+    });
   } catch (error) {
     log.errorWithStack("Failed to fetch city by ID", error, { cityId: id });
-    return NextResponse.json(
-      { error: "Failed to fetch city" },
-      { status: 500 }
-    );
+    return respondError(error);
   }
 }
 

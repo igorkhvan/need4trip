@@ -10,8 +10,9 @@
  * Header: x-admin-secret: YOUR_SECRET
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { log } from "@/lib/utils/logger";
+import { respondSuccess, respondError } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
 
@@ -34,24 +35,13 @@ export async function POST(request: NextRequest) {
       caches: statsBefore.map(s => s.name),
     });
     
-    return NextResponse.json({
-      success: true,
-      data: {
-        message: "All static caches cleared successfully",
-        timestamp: new Date().toISOString(),
-        clearedCaches: statsBefore.map(s => s.name),
-      },
+    return respondSuccess({
+      message: "All static caches cleared successfully",
+      timestamp: new Date().toISOString(),
+      clearedCaches: statsBefore.map(s => s.name),
     });
   } catch (error) {
     log.errorWithStack("Admin: Error clearing caches", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : "Failed to clear cache",
-        },
-      },
-      { status: 500 }
-    );
+    return respondError(error);
   }
 }

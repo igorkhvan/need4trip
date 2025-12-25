@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { respondSuccess, respondError } from "@/lib/api/response";
+import { AuthError } from "@/lib/errors";
 
 // ❌ Edge Runtime не совместим с Supabase
 // Используем Node.js runtime с оптимизированными запросами
@@ -23,11 +23,11 @@ export async function GET(request: Request) {
     
     if (!user) {
       // Middleware should have blocked this, but handle gracefully
-      return NextResponse.json({ user: null }, { status: 401 });
+      throw new AuthError("Unauthorized");
     }
     
-    return NextResponse.json({ user });
+    return respondSuccess({ user });
   } catch (error) {
-    return NextResponse.json({ user: null }, { status: 401 });
+    return respondError(error);
   }
 }

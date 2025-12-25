@@ -5,9 +5,9 @@
  * Public endpoint (no auth required)
  */
 
-import { NextResponse } from "next/server";
 import { getActiveCurrencies } from "@/lib/db/currencyRepo";
 import { log } from "@/lib/utils/logger";
+import { respondSuccess, respondError } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +15,9 @@ export async function GET() {
   try {
     const currencies = await getActiveCurrencies();
     log.debug("Loaded currencies", { count: currencies.length });
-    return NextResponse.json(currencies);
+    return respondSuccess(currencies);
   } catch (error) {
     log.errorWithStack("Failed to fetch currencies", error);
-    return NextResponse.json(
-      { error: "Failed to fetch currencies" },
-      { status: 500 }
-    );
+    return respondError(error);
   }
 }

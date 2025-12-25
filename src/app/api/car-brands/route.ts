@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { listCarBrands } from "@/lib/db/carBrandRepo";
 import { log } from "@/lib/utils/logger";
+import { respondSuccess, respondError } from "@/lib/api/response";
 
 /**
  * GET /api/car-brands
@@ -17,20 +16,12 @@ export async function GET() {
   try {
     const brands = await listCarBrands();
     
-    const response = NextResponse.json({ brands });
-    
-    // ⚡ HTTP Cache Headers for CDN and Browser
-    // s-maxage: CDN/Vercel Edge cache for 1 hour
-    // stale-while-revalidate: Serve stale for 24h while revalidating
-    response.headers.set(
-      'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400'
-    );
-    
-    return response;
+    return respondSuccess({ brands }, undefined, 200, {
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400'
+    });
   } catch (err) {
     log.warn("Failed to list car brands, returning empty array", { error: err });
-    return NextResponse.json({ brands: [] }, { status: 200 });
+    return respondSuccess({ brands: [] }, undefined, 200);
   }
 }
 

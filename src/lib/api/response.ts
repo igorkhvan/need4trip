@@ -34,9 +34,9 @@ export function respondSuccess<T>(
   headers?: Record<string, string>
 ): NextResponse<ApiSuccessResponse<T>> {
   const payload: ApiSuccessResponse<T> = {
-    success: true,
-    data,
-    message,
+      success: true,
+      data,
+      message,
   };
   
   const response = NextResponse.json(payload, { status });
