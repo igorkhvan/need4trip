@@ -4,11 +4,21 @@
 
 ---
 
+## ⭐ SINGLE SOURCE OF TRUTH
+
+### → [**ARCHITECTURE.md**](./ARCHITECTURE.md) ←
+**THE ONLY authoritative source for architectural decisions.**
+
+All other documents defer to this one.
+
+---
+
 ## 🗂️ Структура документации
 
 ### 🏗️ [Architecture](./architecture/) - Архитектура системы
 Общая архитектура приложения, схема БД, дизайн API.
 
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - **SSOT** для архитектурных решений ⭐
 - **[System Overview](./architecture/system-overview.md)** - Обзор всей системы
 - **[Database Schema](./architecture/database-schema.md)** - Схема базы данных
 - **[Security](./architecture/security.md)** - Безопасность API и данных
