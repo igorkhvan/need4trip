@@ -21,20 +21,34 @@ export type ApiErrorResponse = {
 
 /**
  * Return standardized success response
+ * 
+ * @param data - Response data
+ * @param message - Optional message
+ * @param status - HTTP status code (default: 200)
+ * @param headers - Optional custom headers (e.g. Cache-Control)
  */
 export function respondSuccess<T>(
   data?: T,
   message?: string,
-  status: number = 200
+  status: number = 200,
+  headers?: Record<string, string>
 ): NextResponse<ApiSuccessResponse<T>> {
-  return NextResponse.json(
-    {
-      success: true,
-      data,
-      message,
-    },
-    { status }
-  );
+  const payload: ApiSuccessResponse<T> = {
+    success: true,
+    data,
+    message,
+  };
+  
+  const response = NextResponse.json(payload, { status });
+  
+  // Apply custom headers if provided
+  if (headers) {
+    Object.entries(headers).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+  }
+  
+  return response;
 }
 
 /**
