@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-25 (One-off Billing Update)  
+> Последнее обновление: 2024-12-26 (Billing v4 Complete)  
 > PostgreSQL + Supabase
 
 ---
@@ -36,10 +36,10 @@
 
 - **Core Tables**: 6 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands)
 - **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans)
-- **Club & Billing**: 5 (clubs, club_members, club_subscriptions, billing_transactions, billing_credits) ⚡
+- **Club & Billing**: 6 (clubs, club_members, club_subscriptions, billing_transactions, billing_credits, billing_products) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
 - **User Extensions**: 1 (user_cars)
-- **Итого**: 21 таблиц ⚡
+- **Итого**: 22 таблицы ⚡
 
 ---
 
