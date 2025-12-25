@@ -148,3 +148,48 @@ export async function getCurrentUserFromMiddleware(request: Request): Promise<Cu
     return null;
   }
 }
+
+/**
+ * Get CurrentUser with fallback strategy (recommended for API routes)
+ * 
+ * Tries middleware first (fast, edge-compatible), falls back to cookie check.
+ * Use this in protected routes where middleware headers might not propagate correctly
+ * (e.g., Safari, some proxy configurations).
+ * 
+ * Strategy:
+ * 1. Try getCurrentUserFromMiddleware() - fast, uses x-user-id header from middleware
+ * 2. Fallback to getCurrentUser() - reads cookie directly, works in all browsers
+ * 
+ * @param request - Request object from route handler
+ * @returns CurrentUser object or null
+ * 
+ * @example
+ * ```typescript
+ * export async function POST(request: Request) {
+ *   const user = await getCurrentUserWithFallback(request);
+ *   if (!user) {
+ *     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+ *   }
+ *   // Use user...
+ * }
+ * ```
+ */
+export async function getCurrentUserWithFallback(request: Request): Promise<CurrentUser | null> {
+  // Try middleware first (fast path)
+  let user = await getCurrentUserFromMiddleware(request);
+  
+  if (user) {
+    return user;
+  }
+  
+  // Fallback to direct cookie check
+  // This handles edge cases where middleware headers don't propagate
+  log.info("getCurrentUserWithFallback: middleware header missing, trying cookie fallback");
+  user = await getCurrentUser();
+  
+  if (!user) {
+    log.warn("getCurrentUserWithFallback: both middleware and cookie auth failed");
+  }
+  
+  return user;
+}
