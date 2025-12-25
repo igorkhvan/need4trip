@@ -163,9 +163,17 @@ need4trip/
 │   ├── lib/                   # Core Business Logic
 │   │   ├── auth/             # Authentication utilities
 │   │   ├── cache/            # Caching infrastructure
-│   │   ├── db/               # Database Repositories
+│   │   ├── db/               # Database Repositories & Infrastructure
+│   │   │   ├── types.ts      # Database Types (auto-generated from Supabase) ⚡
+│   │   │   ├── client.ts     # Supabase client initialization
+│   │   │   ├── eventRepo.ts  # Event repository
+│   │   │   └── ...           # Other repositories
 │   │   ├── services/         # Business Logic Services
-│   │   ├── types/            # TypeScript types
+│   │   ├── types/            # Domain Types (business logic) 📦
+│   │   │   ├── event.ts      # Event domain model
+│   │   │   ├── user.ts       # User domain model
+│   │   │   ├── billing.ts    # Billing domain model
+│   │   │   └── ...           # Other domain types
 │   │   ├── utils/            # Utility functions
 │   │   └── errors.ts         # Error classes
 │   │
