@@ -508,51 +508,189 @@ export const PAYWALL_REASONS = [
 
 ---
 
-## 🚧 Paywall Modal
+## 🚧 Paywall Modal (v4)
 
-### Единая реализация (PaywallModal.tsx)
+### PaywallModal.tsx (v4 - Purchase Intent + Polling)
 
-**Статус:** ✅ Консолидирован (23 декабря 2024)
-
-#### PaywallModal.tsx (типизированный, с хуком)
+**Статус:** ✅ Updated for v4 (26 Dec 2024)
 
 **Файл:** `src/components/billing/PaywallModal.tsx`
 
+**Features:**
+- ✅ Multiple payment options (ONE_OFF + CLUB)
+- ✅ Unified `/api/billing/purchase-intent` API
+- ✅ Transaction status polling
+- ✅ Visual feedback (loading states)
+- ✅ Error handling
+
+**Full Implementation:**
+
 ```typescript
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import type { PaywallError } from "@/lib/types/billing";
+
 interface PaywallModalProps {
   open: boolean;
   onClose: () => void;
-  error: PaywallError; // Полный объект ошибки
+  error: PaywallError; // 402 response payload
 }
 
 export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
-  const message = REASON_MESSAGES[error.reason] || defaultMessage;
+  const [loading, setLoading] = useState(false);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  
+  // Handle purchase intent
+  const handlePurchase = async (productCode: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/billing/purchase-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_code: productCode })
+      });
+      
+      if (!res.ok) throw new Error('Purchase failed');
+      
+      const data = await res.json();
+      setTransactionId(data.data.transaction_id);
+      setPaymentUrl(data.data.payment_details.invoice_url);
+      
+      // Start polling for status
+      startPolling(data.data.transaction_id);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
+  };
+  
+  // Poll transaction status
+  const startPolling = (txId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/billing/transactions/status?transaction_id=${txId}`);
+        const data = await res.json();
+        
+        if (data.data.status === 'completed') {
+          clearInterval(interval);
+          setLoading(false);
+          onClose();
+          window.location.reload(); // Refresh to show new credit
+        }
+        
+        if (data.data.status === 'failed') {
+          clearInterval(interval);
+          setLoading(false);
+          alert('Payment failed');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    // Cleanup after 5 minutes
+    setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+  };
   
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{message.title}</DialogTitle>
-          <DialogDescription>{message.description}</DialogDescription>
+          <DialogTitle>
+            {error.reason === 'PUBLISH_REQUIRES_PAYMENT' 
+              ? 'Превышен лимит бесплатного плана'
+              : 'Требуется обновление плана'}
+          </DialogTitle>
         </DialogHeader>
         
-        <div>
-          {error.currentPlanId && <p>Текущий план: {error.currentPlanId}</p>}
-          {error.requiredPlanId && <p>Требуется: {error.requiredPlanId}</p>}
-          {error.meta && <p>Лимит: {error.meta.limit} / Запрошено: {error.meta.requested}</p>}
+        <div className="space-y-4">
+          {/* Current situation */}
+          <div className="bg-amber-50 p-4 rounded-lg">
+            <p className="text-sm text-amber-900">
+              {error.message}
+            </p>
+            {error.meta && (
+              <p className="text-xs text-amber-700 mt-2">
+                Запрошено: {error.meta.requestedParticipants} участников
+                {error.meta.freeLimit && ` / Лимит: ${error.meta.freeLimit}`}
+              </p>
+            )}
+          </div>
+          
+          {/* Payment options */}
+          {error.options && error.options.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="font-medium">Варианты оплаты:</h3>
+              
+              {error.options.map((option, idx) => (
+                <div key={idx} className="border p-4 rounded-lg">
+                  {option.type === 'ONE_OFF_CREDIT' && (
+                    <>
+                      <h4 className="font-semibold">Разовый кредит</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Одноразовое событие до 500 участников
+                      </p>
+                      <p className="font-bold text-lg mb-3">
+                        {option.price_kzt} ₸
+                      </p>
+                      <Button
+                        onClick={() => handlePurchase(option.product_code)}
+                        disabled={loading}
+                        className="w-full"
+                      >
+                        {loading ? 'Обработка...' : 'Купить'}
+                      </Button>
+                    </>
+                  )}
+                  
+                  {option.type === 'CLUB_ACCESS' && (
+                    <>
+                      <h4 className="font-semibold">Клубный доступ</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Неограниченные события + организаторы
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() => window.location.href = '/pricing'}
+                        className="w-full"
+                      >
+                        Посмотреть тарифы
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Payment in progress */}
+          {paymentUrl && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-900 mb-2">
+                Платёж создан. Оплатите по ссылке:
+              </p>
+              <a 
+                href={paymentUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                Открыть Kaspi
+              </a>
+              <p className="text-xs text-blue-700 mt-2">
+                После оплаты страница обновится автоматически
+              </p>
+            </div>
+          )}
         </div>
-        
-        <DialogFooter>
-          <Button onClick={() => router.push(error.cta.href)}>
-            Посмотреть тарифы
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// Hook для использования
+// Hook for easy usage
 export function usePaywall() {
   const [paywallError, setPaywallError] = useState<PaywallError | null>(null);
   
@@ -567,13 +705,15 @@ export function usePaywall() {
 }
 ```
 
-**Использование:**
+**Usage:**
 
 ```typescript
+import { usePaywall } from "@/components/billing/PaywallModal";
+
 const { showPaywall, PaywallModalComponent } = usePaywall();
 
 try {
-  await createEvent(...);
+  await fetch('/api/events/:id/publish');
 } catch (err) {
   if (err.response?.status === 402) {
     showPaywall(err.response.data.error.details);
@@ -583,41 +723,165 @@ try {
 return <>{PaywallModalComponent}</>;
 ```
 
-**Используется в:**
-- ✅ `src/components/events/event-form.tsx`
-- ✅ `src/components/clubs/club-members-list.tsx`
-- ✅ `src/app/(app)/events/[id]/edit/page.tsx`
-- ✅ `src/components/events/create-event-page-content.tsx`
+### CreditConfirmationModal.tsx (v4)
 
-### Сообщения для пользователя
+**Файл:** `src/components/billing/CreditConfirmationModal.tsx`
+
+**Purpose:** Показывается при 409 CREDIT_CONFIRMATION_REQUIRED
+
+**Full Implementation:**
 
 ```typescript
-const REASON_MESSAGES: Record<string, { title: string; description: string }> = {
-  PAID_EVENTS_NOT_ALLOWED: {
-    title: "Платные события недоступны",
-    description: "Для создания платных событий требуется план Club 50 или выше.",
-  },
-  CSV_EXPORT_NOT_ALLOWED: {
-    title: "CSV экспорт недоступен",
-    description: "Экспорт участников в CSV требует план Club 50 или выше.",
-  },
-  MAX_EVENT_PARTICIPANTS_EXCEEDED: {
-    title: "Превышен лимит участников",
-    description: "Ваш текущий план не поддерживает такое количество участников.",
-  },
-  MAX_CLUB_MEMBERS_EXCEEDED: {
-    title: "Превышен лимит организаторов",
-    description: "Достигнут максимум организаторов для вашего плана.",
-  },
-  SUBSCRIPTION_EXPIRED: {
-    title: "Подписка истекла",
-    description: "Ваша подписка истекла. Пожалуйста, продлите её для продолжения.",
-  },
-  CLUB_CREATION_REQUIRES_PLAN: {
-    title: "Требуется тарифный план",
-    description: "Для создания клуба требуется выбрать тарифный план.",
-  },
-};
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, CreditCard } from "lucide-react";
+import type { CreditCode } from "@/lib/types/billing";
+
+interface CreditConfirmationModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  creditCode: CreditCode;
+  eventId: string;
+  requestedParticipants: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+export function CreditConfirmationModal({
+  open,
+  onOpenChange,
+  creditCode,
+  requestedParticipants,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}: CreditConfirmationModalProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-full">
+              <CreditCard className="w-5 h-5 text-orange-600" />
+            </div>
+            <DialogTitle>Подтвердите использование кредита</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Warning */}
+          <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-900">
+                Это действие нельзя отменить
+              </p>
+              <p className="text-amber-700 mt-1">
+                После подтверждения кредит будет привязан к этому событию
+                и станет недоступен для других событий.
+              </p>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Кредит:</span>
+              <span className="font-medium">{creditCode}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Участников:</span>
+              <span className="font-medium">{requestedParticipants}</span>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="flex-1"
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="flex-1 bg-orange-600 hover:bg-orange-700"
+          >
+            {isLoading ? 'Публикация...' : 'Подтвердить и опубликовать'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Hook for easy usage
+export function useCreditConfirmation() {
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    creditCode?: CreditCode;
+    eventId?: string;
+    requestedParticipants?: number;
+  }>({ open: false });
+
+  const showConfirmation = (data: {
+    creditCode: CreditCode;
+    eventId: string;
+    requestedParticipants: number;
+  }) => {
+    setModalState({ open: true, ...data });
+  };
+
+  const hideConfirmation = () => {
+    setModalState({ open: false });
+  };
+
+  return { modalState, showConfirmation, hideConfirmation };
+}
+```
+
+**Usage:**
+
+```typescript
+import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
+
+const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
+const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+
+// When 409 received
+if (publishRes.status === 409) {
+  const error409 = await publishRes.json();
+  setPendingEventId(eventId);
+  showConfirmation({
+    creditCode: error409.error.meta.creditCode,
+    eventId: error409.error.meta.eventId,
+    requestedParticipants: error409.error.meta.requestedParticipants
+  });
+}
+
+// Render modal
+return (
+  <>
+    {modalState.open && modalState.creditCode && (
+      <CreditConfirmationModal
+        open={modalState.open}
+        onOpenChange={hideConfirmation}
+        creditCode={modalState.creditCode}
+        eventId={modalState.eventId!}
+        requestedParticipants={modalState.requestedParticipants!}
+        onConfirm={async () => {
+          hideConfirmation();
+          await handlePublish(pendingEventId, true); // ?confirm_credit=1
+        }}
+        onCancel={hideConfirmation}
+      />
+    )}
+  </>
+);
 ```
 
 ---
@@ -1967,6 +2231,116 @@ onConfirm={async () => {
 }}
 ```
 
+**Full Frontend Implementation Example:**
+
+```typescript
+// src/app/(app)/events/create/create-event-client.tsx
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { usePaywall } from "@/components/billing/PaywallModal";
+import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
+import { handleApiError } from "@/lib/utils/errors";
+
+export function CreateEventPageClient({ ... }) {
+  const router = useRouter();
+  const { showPaywall, PaywallModalComponent } = usePaywall();
+  const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+
+  // Publish handler (called after create)
+  const handlePublish = async (eventId: string, confirmCredit = false) => {
+    const url = `/api/events/${eventId}/publish${confirmCredit ? '?confirm_credit=1' : ''}`;
+    const publishRes = await fetch(url, { method: "POST" });
+    
+    // Handle 409 CREDIT_CONFIRMATION_REQUIRED
+    if (publishRes.status === 409) {
+      const error409 = await publishRes.json();
+      setPendingEventId(eventId);
+      showConfirmation({
+        creditCode: error409.error.meta.creditCode,
+        eventId: error409.error.meta.eventId,
+        requestedParticipants: error409.error.meta.requestedParticipants,
+      });
+      return;
+    }
+    
+    // Handle 402 PAYWALL
+    if (publishRes.status === 402) {
+      const errorData = await publishRes.json();
+      showPaywall(errorData.error?.details || errorData.error);
+      return;
+    }
+    
+    // Handle other errors
+    if (!publishRes.ok) {
+      await handleApiError(publishRes);
+      return;
+    }
+    
+    // Success - redirect
+    router.push('/events');
+    router.refresh();
+  };
+
+  // Create handler
+  const handleSubmit = async (payload: Record<string, unknown>) => {
+    // 1. Create event (draft)
+    const res = await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) {
+      if (res.status === 402) {
+        const errorData = await res.json();
+        showPaywall(errorData.error?.details || errorData.error);
+        return;
+      }
+      await handleApiError(res);
+      return;
+    }
+    
+    // 2. Get event ID and call publish
+    const data = await res.json();
+    const eventId = data.event?.id;
+    
+    if (eventId) {
+      await handlePublish(eventId); // Enforcement happens here
+    }
+  };
+
+  return (
+    <>
+      <EventForm onSubmit={handleSubmit} ... />
+      
+      {/* Paywall Modal (402) */}
+      {PaywallModalComponent}
+      
+      {/* Credit Confirmation Modal (409) */}
+      {modalState.open && modalState.creditCode && (
+        <CreditConfirmationModal
+          open={modalState.open}
+          onOpenChange={hideConfirmation}
+          creditCode={modalState.creditCode}
+          eventId={modalState.eventId!}
+          requestedParticipants={modalState.requestedParticipants!}
+          onConfirm={async () => {
+            if (pendingEventId) {
+              hideConfirmation();
+              await handlePublish(pendingEventId, true); // confirm_credit=1
+            }
+          }}
+          onCancel={hideConfirmation}
+        />
+      )}
+    </>
+  );
+}
+```
+
+**Same pattern for edit flow** (`edit-event-client.tsx`) - call `handlePublish(event.id)` after successful `PUT /api/events/:id`.
+
 **CreditConfirmationModal:**
 - ⚠️ Warning: "Это действие нельзя отменить"
 - 📋 Details: credit type, participant count
@@ -1974,6 +2348,167 @@ onConfirm={async () => {
 - ❌ Cancel button: "Отмена"
 
 ### Algorithm (STRICT Decision Tree)
+
+**Backend Implementation** (`src/lib/services/accessControl.ts`):
+
+```typescript
+export async function enforcePublish(params: {
+  eventId: string;
+  userId: string;
+  confirmCredit?: boolean;
+}): Promise<{
+  allowed: boolean;
+  willConsumeCredit?: boolean;
+  requiresCreditConfirmation?: boolean;
+  creditCode?: CreditCode;
+}> {
+  const db = getAdminDb();
+  
+  // Step 0: Load event
+  const event = await db.from('events').select('*').eq('id', eventId).single();
+  if (!event.data) throw new NotFoundError('Event not found');
+  
+  // Step 0.1: Idempotency check
+  if (event.data.published_at) {
+    return { allowed: true }; // Already published
+  }
+  
+  // Step 1: Club events (existing enforcement)
+  if (event.data.club_id) {
+    await enforceClubAction({
+      clubId: event.data.club_id,
+      action: 'CREATE_EVENT_WITH_PARTICIPANTS',
+      context: { eventParticipantsCount: event.data.max_participants }
+    });
+    return { allowed: true };
+  }
+  
+  // Step 2: Personal events
+  const freePlan = await clubPlanRepo.getPlanById('free');
+  const oneOffProduct = await billingProductsRepo.getBillingProductByCode('EVENT_UPGRADE_500');
+  
+  if (!freePlan || !oneOffProduct) {
+    throw new InternalError('Billing configuration missing');
+  }
+  
+  // Step 2.1: Within free limits
+  if (event.data.max_participants <= freePlan.max_event_participants) {
+    return { allowed: true }; // Free-eligible, no credit needed
+  }
+  
+  // Step 2.2: Exceeds one-off limit → Club required
+  const maxOneOff = oneOffProduct.constraints.max_participants;
+  if (event.data.max_participants > maxOneOff) {
+    throw new PaywallError({
+      message: 'Event requires club access',
+      reason: 'CLUB_REQUIRED_FOR_LARGE_EVENT',
+      meta: { 
+        requestedParticipants: event.data.max_participants,
+        oneOffLimit: maxOneOff
+      },
+      options: [{
+        type: 'CLUB_ACCESS',
+        recommended_plan_id: 'club_50'
+      }]
+    });
+  }
+  
+  // Step 2.3: Within one-off range → Check credit
+  const credit = await billingCreditsRepo.findAvailableCredit(
+    params.userId,
+    'EVENT_UPGRADE_500'
+  );
+  
+  // Step 2.3.1: No credit available → Paywall
+  if (!credit) {
+    throw new PaywallError({
+      message: 'Publish requires payment',
+      reason: 'PUBLISH_REQUIRES_PAYMENT',
+      meta: {
+        requestedParticipants: event.data.max_participants,
+        freeLimit: freePlan.max_event_participants
+      },
+      options: [
+        {
+          type: 'ONE_OFF_CREDIT',
+          product_code: 'EVENT_UPGRADE_500',
+          price_kzt: oneOffProduct.price_kzt,
+          provider: 'kaspi'
+        },
+        {
+          type: 'CLUB_ACCESS',
+          recommended_plan_id: 'club_50'
+        }
+      ]
+    });
+  }
+  
+  // Step 2.3.2: Credit available, but not confirmed → 409
+  if (!params.confirmCredit) {
+    throw new ConflictError('Credit confirmation required', {
+      code: 'CREDIT_CONFIRMATION_REQUIRED',
+      reason: 'EVENT_UPGRADE_WILL_BE_CONSUMED',
+      meta: {
+        eventId: params.eventId,
+        creditCode: credit.credit_code,
+        requestedParticipants: event.data.max_participants
+      },
+      cta: {
+        type: 'CONFIRM_CONSUME_CREDIT',
+        href: `/api/events/${params.eventId}/publish?confirm_credit=1`
+      }
+    });
+  }
+  
+  // Step 2.3.3: Confirmed → Consume credit atomically
+  await billingCreditsRepo.consumeCredit(credit.id, params.eventId);
+  
+  return { 
+    allowed: true,
+    willConsumeCredit: true,
+    creditCode: credit.credit_code
+  };
+}
+```
+
+**API Route** (`src/app/api/events/[id]/publish/route.ts`):
+
+```typescript
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return respondError(new UnauthorizedError());
+  }
+  
+  const { searchParams } = new URL(request.url);
+  const confirmCredit = searchParams.get('confirm_credit') === '1';
+  
+  try {
+    const decision = await enforcePublish({
+      eventId: params.id,
+      userId: currentUser.id,
+      confirmCredit
+    });
+    
+    // Publish event
+    const db = getAdminDb();
+    await db
+      .from('events')
+      .update({ published_at: new Date().toISOString() })
+      .eq('id', params.id);
+    
+    return respondSuccess({ published: true });
+    
+  } catch (error) {
+    return respondError(error);
+  }
+}
+```
+
+### API Contract
 
 ```typescript
 POST /api/events/:id/publish?confirm_credit=0|1
