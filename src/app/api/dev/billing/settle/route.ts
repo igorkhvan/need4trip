@@ -17,7 +17,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { respondSuccess, respondError } from "@/lib/api/respond";
 import { getAdminDb } from "@/lib/db/client";
-import { createCredit } from "@/lib/db/billingCreditsRepo";
+import { createBillingCredit } from "@/lib/db/billingCreditsRepo"; // Fixed: correct export name
 import { logger } from "@/lib/utils/logger";
 
 // ============================================================================
@@ -93,9 +93,9 @@ export async function POST(req: NextRequest) {
       if (isOneOff && transaction.user_id) {
         // Create credit (idempotent via source_transaction_id UNIQUE constraint)
         try {
-          const credit = await createCredit({
+          const credit = await createBillingCredit({
             userId: transaction.user_id,
-            creditCode: transaction.product_code,
+            creditCode: transaction.product_code as "EVENT_UPGRADE_500", // Fixed: type cast
             sourceTransactionId: transaction_id,
           });
 

@@ -17,7 +17,7 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { respondSuccess, respondError } from "@/lib/api/respond";
 import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
-import { getPlanById } from "@/lib/db/clubPlanRepo";
+import { getPlanById } from "@/lib/db/planRepo"; // Fixed: correct filename
 import { logger } from "@/lib/utils/logger";
 import type { ProductCode } from "@/lib/types/billing";
 
@@ -136,11 +136,11 @@ export async function POST(req: NextRequest) {
         user_id: isOneOff ? currentUser.id : null,
         product_code: product_code as ProductCode,
         plan_id: isClub ? product_code.toLowerCase().replace("club_", "club_") : null,
-        amount: amountKzt,
-        currency_code: "KZT",
+        amount_kzt: amountKzt,
+        currency: "KZT",
         status: "pending",
-        payment_method: "kaspi",
-        transaction_reference: transactionReference,
+        provider: "kaspi", // Fixed: use provider (not payment_method)
+        provider_payment_id: transactionReference, // Fixed: use provider_payment_id (not transaction_reference)
       })
       .select()
       .single();

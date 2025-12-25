@@ -57,6 +57,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "billing_credits_credit_code_fkey"
+            columns: ["credit_code"]
+            isOneToOne: false
+            referencedRelation: "billing_products"
+            referencedColumns: ["code"]
+          },
+          {
             foreignKeyName: "billing_credits_source_transaction_id_fkey"
             columns: ["source_transaction_id"]
             isOneToOne: false
@@ -138,6 +145,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      billing_products: {
+        Row: {
+          code: string
+          constraints: Json
+          created_at: string
+          currency_code: string
+          is_active: boolean
+          price_kzt: number
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          constraints?: Json
+          created_at?: string
+          currency_code?: string
+          is_active?: boolean
+          price_kzt: number
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          constraints?: Json
+          created_at?: string
+          currency_code?: string
+          is_active?: boolean
+          price_kzt?: number
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       billing_transactions: {
         Row: {

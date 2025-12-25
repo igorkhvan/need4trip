@@ -28,14 +28,9 @@ export const billingProductSchema = z.object({
 export type BillingProduct = z.infer<typeof billingProductSchema>;
 
 // ============================================================================
-// Product Codes (v4)
+// Product Codes (v4) - REMOVED DUPLICATE
 // ============================================================================
-
-export type ProductCode = 
-  | "EVENT_UPGRADE_500"  // One-off credit
-  | "CLUB_50"            // Club subscription
-  | "CLUB_500"
-  | "CLUB_UNLIMITED";
+// Defined below with PRODUCT_CODES constant
 
 // ============================================================================
 // Plan Types
