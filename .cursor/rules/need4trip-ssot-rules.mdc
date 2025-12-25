@@ -4,17 +4,18 @@ alwaysApply: true
 
 # Need4Trip - SSOT Rules (Single Source of Truth)
 
-**Last Updated:** 25 декабря 2024  
+**Last Updated:** 26 декабря 2024  
 **Status:** Production Ready ✅
 
 ---
 
 ## 🎯 ГЛАВНЫЙ ПРИНЦИП
 
-> **ТРИ SSOT ДОКУМЕНТА — ЕДИНСТВЕННЫЕ источники истины:**
+> **ЧЕТЫРЕ SSOT ДОКУМЕНТА — ЕДИНСТВЕННЫЕ источники истины:**
 > 1. `docs/ARCHITECTURE.md` — архитектура, паттерны, ownership
 > 2. `docs/DATABASE.md` — структура БД, таблицы, индексы, RLS
 > 3. `docs/BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
+> 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты ⚡
 
 ---
 
@@ -37,6 +38,7 @@ alwaysApply: true
 - DATABASE.md SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DATABASE.md)
 - BILLING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция BILLING)
 - ARCHITECTURE SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
+- TESTING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING) ⚡
 
 **Причина:** Rules файлы видны пользователю, Memory — только AI. Синхронизация = консистентность.
 
@@ -50,6 +52,7 @@ alwaysApply: true
    - Архитектура/паттерны → читай `ARCHITECTURE.md`
    - База данных → читай `DATABASE.md`
    - Биллинг/лимиты → читай `BILLING_SYSTEM_ANALYSIS.md`
+   - Тестирование → читай `TESTING.md` ⚡
 
 2. **Изучи SSOT:**
    - Найди соответствующий раздел
@@ -67,6 +70,7 @@ alwaysApply: true
    - Если изменилась архитектура → обнови `ARCHITECTURE.md`
    - Если изменилась БД → обнови `DATABASE.md`
    - Если изменился биллинг → обнови `BILLING_SYSTEM_ANALYSIS.md`
+   - Если изменились тесты → обнови `TESTING.md` ⚡
 
 2. **Коммит:**
    - Код + обновленный SSOT в ОДНОМ коммите
@@ -215,6 +219,90 @@ return <>{PaywallModalComponent}</>;
 - ❌ Проверки лимитов на фронтенде
 - ❌ Использовать старый `paywall-modal.tsx` (удален)
 - ❌ Изменять логику enforcement без обновления SSOT
+
+---
+
+## 🧪 TESTING.md (SSOT)
+
+**Что содержит:**
+- 8 integration тестов (QA-1 до QA-8) с детальным описанием
+- Результаты выполнения (время, статус, покрытие)
+- Конфигурация тестирования (environment, Jest, helpers)
+- Способ проведения тестов (команды, CI/CD, debugging)
+- Continuous testing (maintenance, качество, future improvements)
+- Definition of Done для тестирования
+
+**Test Suite (8 тестов, ~24-25 секунд):**
+
+```
+✅ QA-1: Free Limits (3529ms)
+   - No credit consumption ≤15 participants
+   - File: billing.v4.test.ts:96-123
+
+✅ QA-2: Credit Confirmation (5375ms)
+   - 409 → confirm → consume flow
+   - File: billing.v4.test.ts:128-172
+
+✅ QA-3: Concurrent Consumption (4539ms)
+   - Race condition: only ONE consumed
+   - File: billing.v4.test.ts:179-228
+   - Known: Lacks FOR UPDATE (P1)
+
+✅ QA-4: >500 Requires Club (1676ms)
+   - Correct paywall options
+   - File: billing.v4.test.ts:233-257
+
+✅ QA-5: Republish Idempotency (4968ms)
+   - No double consumption
+   - File: billing.v4.test.ts:262-305
+
+✅ QA-6: Credit Issuance Idempotency (3078ms)
+   - UNIQUE constraint protection
+   - File: billing.v4.test.ts:310-349
+
+✅ QA-7: SSOT Constraints (484ms)
+   - billing_products usage
+   - File: billing.v4.test.ts:356-367
+
+✅ QA-8: SSOT Pricing (871ms)
+   - No hardcoded prices
+   - File: billing.v4.test.ts:372-391
+```
+
+**Команды:**
+
+```bash
+npm test                    # Все тесты
+npm test -- --verbose       # Детальный вывод
+npm test -- --watch         # Watch mode
+npm test -- billing.v4      # Specific file
+```
+
+**Конфигурация:**
+- Environment: `.env.test` с `SUPABASE_SERVICE_ROLE_KEY`
+- Jest: `jest.config.js` + `jest.setup.js`
+- Test helpers: `createTestCredit()`, `beforeEach` setup
+- Integration tests с real database (Production Supabase)
+
+**Workflow:**
+1. Читай `TESTING.md` перед изменением тестов
+2. Создай/обнови тесты
+3. Запусти `npm test` для проверки
+4. Обнови `TESTING.md` с новыми результатами
+5. Коммить тесты + `TESTING.md` вместе
+
+**ЗАПРЕЩЕНО:**
+- ❌ Мокировать database в integration тестах
+- ❌ Shared state между тестами
+- ❌ Hardcoded IDs (используй randomUUID())
+- ❌ Пропускать FK constraint checks
+- ❌ Изменять тесты без обновления TESTING.md
+
+**Status (2024-12-26):**
+✅ 8/8 tests PASS
+⏱️ Total: 24.669s
+🗄️ Production Supabase
+✅ Currency normalization verified
 
 ---
 
