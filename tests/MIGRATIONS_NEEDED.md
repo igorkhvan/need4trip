@@ -1,96 +1,97 @@
-# Billing v4 Migrations — Apply to Production
+# Billing v4 — PostgREST Schema Cache Issue
 
-⚠️ **Tests are failing because Billing v4 migrations are NOT applied in production Supabase**
+⚠️ **Tests are failing because Supabase PostgREST cached OLD schema**
 
----
+**Error:** `Could not find the 'amount' column of 'billing_transactions' in the schema cache (PGRST204)`
 
-## 📋 Required Migrations (in order):
-
-1. `20241225_add_published_at_to_events.sql`
-2. `20241225_extend_billing_transactions.sql`
-3. `20241225_add_user_id_to_billing_transactions.sql`
-4. `20241225_create_billing_credits.sql`
-5. `20241226_create_billing_products.sql`
-6. `20241226_add_billing_credits_fk.sql`
+**Root Cause:** Migrations applied ✅, but PostgREST API layer didn't reload schema cache.
 
 ---
 
-## 🚀 Apply Migrations
+## ✅ Verification Complete
 
-### Option 1: Supabase CLI (Recommended)
-
-```bash
-# Link to production (if not linked yet)
-supabase link --project-ref djbqwsipllhdydshuokg
-
-# Push all pending migrations
-supabase db push --linked
-```
-
-**Expected output:**
-```
-✓ Applied migration 20241225_add_published_at_to_events.sql
-✓ Applied migration 20241225_extend_billing_transactions.sql
-✓ Applied migration 20241225_add_user_id_to_billing_transactions.sql
-✓ Applied migration 20241225_create_billing_credits.sql
-✓ Applied migration 20241226_create_billing_products.sql
-✓ Applied migration 20241226_add_billing_credits_fk.sql
-```
+**Schema status (via `tests/verify-schema.js`):**
+- ✅ billing_transactions table exists
+- ✅ billing_credits table exists
+- ✅ billing_products table exists (EVENT_UPGRADE_500 seeded)
+- ✅ events.published_at column exists
+- ❌ PostgREST can't see new columns (cache issue)
 
 ---
 
-### Option 2: Supabase Dashboard (Manual)
+## 🔧 Solution: Reload Schema Cache
 
-1. Open https://supabase.com/dashboard
-2. Select project → **SQL Editor**
-3. Copy-paste each migration file content (in order!)
-4. Click **Run** for each
+### Option 1: SQL Command (Fastest! ⚡)
 
----
-
-## ✅ Verify Migrations Applied
+Open Supabase Dashboard → SQL Editor, run:
 
 ```sql
--- In Supabase SQL Editor, run:
-SELECT tablename FROM pg_tables 
-WHERE schemaname = 'public' 
-AND tablename IN ('billing_credits', 'billing_products');
+NOTIFY pgrst, 'reload schema';
+```
 
--- Should return 2 rows:
--- billing_credits
--- billing_products
+**Done!** Schema cache reloaded instantly.
+
+---
+
+### Option 2: Restart Project (Slower but guaranteed)
+
+**Via Dashboard:**
+1. https://supabase.com/dashboard
+2. Select project → **Settings** → **General**
+3. Scroll down → **Pause project**
+4. Wait 10 seconds
+5. **Resume project**
+
+**Via CLI:**
+```bash
+supabase projects pause --project-ref djbqwsipllhdydshuokg
+# Wait 30 seconds
+supabase projects resume --project-ref djbqwsipllhdydshuokg
 ```
 
 ---
 
-## 🧪 Run Tests After Migrations
+## 🧪 Test After Reload
 
 ```bash
+# Verify schema cache updated
+node tests/verify-schema.js
+
+# Should show:
+# ✅ Test insert transaction: Insert successful
+
+# Then run tests
 npm run test:billing
+
+# Expected: 8/8 PASS ✅
 ```
 
-**Expected: 8/8 PASS** ✅
+---
+
+## 📊 What Was Wrong
+
+**Timeline:**
+1. ✅ Migrations applied to PostgreSQL database
+2. ✅ Tables/columns created successfully
+3. ❌ PostgREST (Supabase API) still using old cached schema
+4. ❌ Tests fail with "column not found in schema cache"
+
+**Fix:** Force PostgREST to reload schema from database.
 
 ---
 
-## 🔍 Why Tests Failed
+## 🔍 Debug Script
 
-Error: `Could not find the 'amount' column of 'billing_transactions' in the schema cache`
+Created: `tests/verify-schema.js`
 
-**Root cause:** Production database schema is outdated. Billing v4 tables/columns don't exist yet.
+Tests actual database state vs PostgREST API:
+- Checks table existence
+- Checks column existence  
+- Attempts INSERT to trigger cache error
 
-**Solution:** Apply migrations above.
-
----
-
-## ⚠️ Important Notes
-
-- Migrations are **idempotent** (safe to re-run)
-- No data loss (only ADD columns/tables)
-- Seeds `EVENT_UPGRADE_500` product (1000 KZT)
-- RLS policies included
+Run: `node tests/verify-schema.js`
 
 ---
 
-After applying migrations, return here and run tests again! 🚀
+After reloading schema cache, return here and run tests! 🚀
 
