@@ -43,14 +43,14 @@ This document defines **THE ONLY** architectural rules for Need4Trip. Any other 
 - UI design guidelines (see `/docs/design/`)
 - Deployment procedures (see `/docs/guides/`)
 
-### Related Documents
+### Related SSOT Documents
 
-- **Design System:** `/docs/design/design-system.md` - UI components, styling
-- **Database Schema:** `/docs/architecture/database-schema.md` - DB structure
-- **Billing Specification:** `/docs/billing/billing-spec.md` - Payment system
-- **Security Policies:** `/docs/architecture/security.md` - Security rules
+- **Database Schema:** `/docs/DATABASE.md` - **SSOT** для структуры БД, таблиц, индексов, RLS
+- **Billing System:** `/docs/BILLING_SYSTEM_ANALYSIS.md` - **SSOT** для биллинга, тарифов, лимитов
+- **Design System:** `/docs/design/design-system.md` - UI компоненты, стили
+- **Development Guides:** `/docs/development/` - Нотификации, кэширование, AI фичи
 
-If any of these documents contradict THIS document on architectural matters, THIS document wins.
+**ПРАВИЛО:** Перед изменениями в БД или биллинге ВСЕГДА читай соответствующий SSOT. После изменений ВСЕГДА обновляй SSOT.
 
 ---
 

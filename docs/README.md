@@ -4,35 +4,31 @@
 
 ---
 
-## ⭐ SINGLE SOURCE OF TRUTH
+## ⭐ SINGLE SOURCE OF TRUTH (SSOT)
 
 ### → [**ARCHITECTURE.md**](./ARCHITECTURE.md) ←
 **THE ONLY authoritative source for architectural decisions.**
 
-All other documents defer to this one.
+### → [**DATABASE.md**](./DATABASE.md) ←
+**THE ONLY authoritative source for database schema, tables, indexes, RLS.**
+
+### → [**BILLING_SYSTEM_ANALYSIS.md**](./BILLING_SYSTEM_ANALYSIS.md) ←
+**THE ONLY authoritative source for billing system, plans, limits, enforcement.**
+
+**ПРАВИЛО:** Перед изменениями в БД/биллинге ВСЕГДА читай SSOT. После изменений ВСЕГДА обновляй SSOT.
 
 ---
 
 ## 🗂️ Структура документации
 
-### 🏗️ [Architecture](./architecture/) - Архитектура системы
-Общая архитектура приложения, схема БД, дизайн API.
+### 🏗️ Architecture - Архитектура системы
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - **SSOT** для архитектурных решений ⭐
-- **[System Overview](./architecture/system-overview.md)** - Обзор всей системы
-- **[Database Schema](./architecture/database-schema.md)** - Схема базы данных
-- **[Security](./architecture/security.md)** - Безопасность API и данных
+- **[DATABASE.md](./DATABASE.md)** - **SSOT** для структуры БД (таблицы, индексы, RLS) ⭐
+- **[BILLING_SYSTEM_ANALYSIS.md](./BILLING_SYSTEM_ANALYSIS.md)** - **SSOT** для биллинга ⭐
 
 ---
 
-### 💳 [Billing](./billing/) - Платежная система v2.0
-Полная документация по биллинг системе.
-
-- **[Billing Specification](./billing/billing-spec.md)** - Полная спецификация v2.0
-- **[Frontend Integration](./billing/frontend-integration.md)** - Интеграция с фронтендом
-- **[Implementation Details](./billing/implementation.md)** - Детали реализации
-
----
 
 ### 👨‍💻 [Development](./development/) - Правила разработки
 Код стайл, паттерны, оптимизация.
@@ -70,16 +66,15 @@ UI компоненты, стилизация, типография.
    - Ознакомься с [Code Style](./development/code-style.md)
 
 2. **Для работы с биллингом:**
-   - [Billing Specification](./billing/billing-spec.md) - полная спецификация
-   - [Frontend Integration](./billing/frontend-integration.md) - как использовать на фронтенде
+   - [BILLING_SYSTEM_ANALYSIS.md](./BILLING_SYSTEM_ANALYSIS.md) - **SSOT** для биллинга
 
 3. **Для работы с дизайном:**
    - [Design System](./design/design-system.md) - компоненты и стили
    - [Styling Rules](./design/styling-rules.md) - как стилизовать
 
 4. **Для работы с БД:**
-   - [Database Schema](./architecture/database-schema.md) - актуальная схема
-   - [Database Migrations](./guides/database-migrations.md) - как создавать миграции
+   - [DATABASE.md](./DATABASE.md) - **SSOT** для структуры БД
+   - [Migrations](./supabase/migrations/) - история миграций
 
 ---
 
@@ -108,6 +103,6 @@ UI компоненты, стилизация, типография.
 
 ---
 
-**Last Updated:** 16 декабря 2024  
-**Version:** 2.0  
+**Last Updated:** 25 декабря 2024  
+**Version:** 3.0 (SSOT cleanup complete)  
 **Status:** Production Ready ✅
