@@ -56,7 +56,7 @@ test.describe('E2E: Paywall Purchase Flow', () => {
   /**
    * QA-39: User exceeds free limit → sees PaywallModal
    */
-  test.skip('QA-39: publishing over-free event shows paywall', async ({ page }) => {
+  test('QA-39: publishing over-free event shows paywall', async ({ page }) => {
     // Given: User navigates to create event
     await page.goto('/events/create');
     
@@ -82,7 +82,7 @@ test.describe('E2E: Paywall Purchase Flow', () => {
   /**
    * QA-40: User purchases one-off credit → completes flow
    */
-  test.skip('QA-40: purchase one-off credit completes event creation', async ({ page }) => {
+  test('QA-40: purchase one-off credit completes event creation', async ({ page }) => {
     // Given: User triggers paywall (from previous test)
     await page.goto('/events/create');
     await page.fill('input[name="max_participants"]', '100');
@@ -109,7 +109,7 @@ test.describe('E2E: Paywall Purchase Flow', () => {
   /**
    * QA-41: User clicks "Посмотреть тарифы" → redirects to /pricing
    */
-  test.skip('QA-41: clicking view pricing redirects to /pricing', async ({ page }) => {
+  test('QA-41: clicking view pricing redirects to /pricing', async ({ page }) => {
     // Given: PaywallModal is open
     await page.goto('/events/create');
     await page.fill('input[name="max_participants"]', '100');
@@ -137,7 +137,7 @@ test.describe('E2E: Credit Confirmation Flow (409)', () => {
   /**
    * QA-42: User with credit sees confirmation modal (409)
    */
-  test.skip('QA-42: publishing with credit shows confirmation modal', async ({ page }) => {
+  test('QA-42: publishing with credit shows confirmation modal', async ({ page }) => {
     // Given: User has available credit
     // And: User creates event exceeding free limit
     await page.goto('/events/create');
@@ -157,7 +157,7 @@ test.describe('E2E: Credit Confirmation Flow (409)', () => {
   /**
    * QA-43: User confirms credit consumption → event published
    */
-  test.skip('QA-43: confirming credit publishes event', async ({ page }) => {
+  test('QA-43: confirming credit publishes event', async ({ page }) => {
     // Given: CreditConfirmationModal is open
     await page.goto('/events/create');
     await page.fill('input[name="max_participants"]', '100');
@@ -176,7 +176,7 @@ test.describe('E2E: Credit Confirmation Flow (409)', () => {
   /**
    * QA-44: User cancels confirmation → no credit consumed
    */
-  test.skip('QA-44: canceling confirmation preserves credit', async ({ page }) => {
+  test('QA-44: canceling confirmation preserves credit', async ({ page }) => {
     // Given: CreditConfirmationModal is open
     await page.goto('/events/create');
     await page.fill('input[name="max_participants"]', '100');
@@ -196,7 +196,7 @@ test.describe('E2E: Race Conditions & UX Edge Cases', () => {
   /**
    * QA-45: Double-click Publish button
    */
-  test.skip('QA-45: double-clicking publish does not consume credit twice', async ({ page }) => {
+  test('QA-45: double-clicking publish does not consume credit twice', async ({ page }) => {
     // Given: User has credit and creates event
     await page.goto('/events/create');
     await page.fill('input[name="max_participants"]', '100');
@@ -215,7 +215,7 @@ test.describe('E2E: Race Conditions & UX Edge Cases', () => {
   /**
    * QA-46: Refresh during confirmation flow
    */
-  test.skip('QA-46: refreshing after 409 does not break flow', async ({ page }) => {
+  test('QA-46: refreshing after 409 does not break flow', async ({ page }) => {
     // Given: CreditConfirmationModal is open
     await page.goto('/events/create');
     await page.fill('input[name="max_participants"]', '100');
@@ -250,22 +250,20 @@ async function verifyCreditStatus(page: Page, creditId: string, expectedStatus: 
 }
 
 /**
- * Installation & Setup Instructions (MANUAL STEP)
+ * Running E2E Tests
  * 
- * 1. Install Playwright:
- *    npm install -D @playwright/test
+ * 1. Ensure Playwright browsers installed:
  *    npx playwright install
  * 
  * 2. Run tests:
- *    npm run test:e2e
+ *    npm run test:e2e           # All tests (headless)
+ *    npm run test:e2e:ui        # Interactive UI mode
+ *    npm run test:e2e:headed    # Watch browser execution
  * 
- * 3. Run with UI:
- *    npm run test:e2e:ui
+ * 3. Debug specific test:
+ *    PWDEBUG=1 npm run test:e2e -- -g "QA-39"
  * 
- * 4. Debug mode:
- *    npm run test:e2e:headed
- * 
- * NOTE: Tests are marked as .skip() until proper auth is implemented.
- * Remove .skip() after implementing loginAsTestUser() helper.
+ * NOTE: Tests require loginAsTestUser() implementation for full coverage.
+ * Current status: Infrastructure ready, awaiting auth implementation.
  */
 

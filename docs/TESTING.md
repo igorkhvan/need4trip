@@ -424,29 +424,31 @@ Time:        24.669 s
 
 | Test ID | Name | Status | Coverage |
 |---------|------|--------|----------|
-| QA-39 | Over-free → PaywallModal | ⏸️ SKIP | Paywall UI shown |
-| QA-40 | Purchase one-off → success | ⏸️ SKIP | Full purchase flow |
-| QA-41 | View pricing redirect | ⏸️ SKIP | Navigation to /pricing |
-| QA-42 | Credit confirmation modal (409) | ⏸️ SKIP | Modal opens on 409 |
-| QA-43 | Confirm credit → published | ⏸️ SKIP | Credit consumed |
-| QA-44 | Cancel confirmation → preserved | ⏸️ SKIP | Credit not consumed |
-| QA-45 | Double-click publish | ⏸️ SKIP | No double consumption |
-| QA-46 | Refresh during confirmation | ⏸️ SKIP | Recovery behavior |
+| QA-39 | Over-free → PaywallModal | 🔧 Ready | Paywall UI shown |
+| QA-40 | Purchase one-off → success | 🔧 Ready | Full purchase flow |
+| QA-41 | View pricing redirect | 🔧 Ready | Navigation to /pricing |
+| QA-42 | Credit confirmation modal (409) | 🔧 Ready | Modal opens on 409 |
+| QA-43 | Confirm credit → published | 🔧 Ready | Credit consumed |
+| QA-44 | Cancel confirmation → preserved | 🔧 Ready | Credit not consumed |
+| QA-45 | Double-click publish | 🔧 Ready | No double consumption |
+| QA-46 | Refresh during confirmation | 🔧 Ready | Recovery behavior |
 
 **Purpose**: Validate real user experience, no mocks
 
-**Status**: ⏸️ Requires Playwright installation + test auth
+**Status**: 🔧 Infrastructure ready, tests enabled (auth helper TODO)
 
 **Setup Instructions**:
 ```bash
-# Install Playwright
-npm install -D @playwright/test
+# Install Playwright browsers (if not already)
 npx playwright install
 
 # Run E2E tests
 npm run test:e2e        # Headless
 npm run test:e2e:ui     # Interactive UI
 npm run test:e2e:headed # Watch browser
+
+# Debug specific test
+PWDEBUG=1 npm run test:e2e -- -g "QA-39"
 ```
 
 **Key Assertions**:
@@ -777,7 +779,8 @@ A feature is **fully tested** when:
 **Status**: 
 - ✅ Core (QA-1 to QA-8): 8/8 PASS (24.669s)
 - 🆕 Extended (QA-9 to QA-38): 30 integration tests (ready to run)
-- ⏸️ E2E (QA-39 to QA-46): 8 Playwright tests (auth TODO)
+- 🔧 E2E (QA-39 to QA-46): 8 Playwright tests (enabled, auth helper TODO)
 **Environment**: Production Supabase (djbqwsipllhdydshuokg)
 **Total Coverage**: 46 automated tests
+**Playwright**: ✅ v1.57.0 installed
 

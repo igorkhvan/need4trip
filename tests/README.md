@@ -11,7 +11,7 @@
 | **API: Billing** | 9 | 🆕 Ready | `api.billing.test.ts` | Purchase, status polling |
 | **Webhook** | 7 | 🆕 Ready | `api.webhook.test.ts` | Settlement, idempotency |
 | **Boundary** | 9 | 🆕 Ready | `api.boundary.test.ts` | Edge cases, limits |
-| **E2E (Playwright)** | 8 | ⏸️ SKIP | `e2e/billing.flows.spec.ts` | Real browser flows |
+| **E2E (Playwright)** | 8 | 🔧 Ready | `e2e/billing.flows.spec.ts` | Real browser flows |
 
 ---
 
@@ -80,7 +80,7 @@ npm run test:e2e:ui                # Interactive UI
 **Files**:
 - `billing.flows.spec.ts` — Paywall & credit flows (QA-39 to QA-46)
 
-**Status**: ⏸️ Requires test authentication (TODO)
+**Status**: 🔧 Infrastructure ready (Playwright v1.57.0), auth helper TODO
 
 ---
 
