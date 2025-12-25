@@ -52,6 +52,14 @@ This document defines **THE ONLY** architectural rules for Need4Trip. Any other 
 
 **ПРАВИЛО:** Перед изменениями в БД или биллинге ВСЕГДА читай соответствующий SSOT. После изменений ВСЕГДА обновляй SSOT.
 
+### Принципы SSOT (Single Source of Truth)
+
+1. **3 главных SSOT:** ARCHITECTURE.md, DATABASE.md, BILLING_SYSTEM_ANALYSIS.md
+2. **Обновление:** При изменении кода ВСЕГДА обновляй SSOT в том же коммите
+3. **Архивация:** Временные документы (sessions, analysis) → удалять/архивировать
+4. **Версионирование:** SSOT имеют версии и даты обновления
+5. **Синхронизация:** Memory правила (.cursor) синхронизированы с SSOT файлами
+
 ---
 
 ## 2. High-Level Architecture
@@ -1210,3 +1218,273 @@ function mapDbToEvent(db: DbEvent): Event {
 - Auto-generation prevents drift between code and schema
 - TypeScript catches schema mismatches at compile time
 
+
+---
+
+## 12. Naming & Project Structure
+
+### File Naming Conventions
+
+**Rule:** All files MUST use `kebab-case.ts` or `kebab-case.tsx`
+
+✅ **Good:**
+```
+src/lib/utils/date-formatter.ts
+src/components/events/event-card.tsx
+src/hooks/use-profile-data.ts
+```
+
+❌ **Bad:**
+```
+src/lib/utils/dateFormatter.ts       // camelCase
+src/components/events/EventCard.tsx  // PascalCase
+```
+
+**Folders:** `kebab-case` only  
+**React components:** `PascalCase` (export name)  
+**Hooks:** `useXxx` (camelCase with `use` prefix)  
+**Server actions:** `verbNounAction` (e.g. `publishEventAction`)  
+**API routes:** RESTful nouns (no verbs in path)
+
+### Domain Language (Single Vocabulary)
+
+**Rule:** One concept = One term across ALL files
+
+- ✅ **event** (NEVER "trip")
+- ✅ **publish** = billing check + visibility gate (single meaning)
+- ✅ **club**, **plan**, **subscription**, **credit**, **upgrade**
+- ✅ **free** = limits profile (NOT a subscription)
+
+### Code Style
+
+**Function naming:**
+- React Component: `PascalCase` (e.g. `EventCard()`)
+- Hook: `useXxx` (e.g. `useProfileData()`)
+- Server Action: `verbNounAction` (e.g. `publishEventAction()`)
+- Service: `verbNoun` (e.g. `getEventById()`)
+- Repository: `verbTableName` (e.g. `createEvent()`)
+- Utility: `verbNoun` (e.g. `formatDate()`)
+
+**Constants:** `SCREAMING_SNAKE_CASE` for true constants  
+**Enums:** PascalCase for type, SCREAMING_SNAKE_CASE for values
+
+### Status
+
+✅ **Compliance:** 100% (as of 25 декабря 2024)
+- All components migrated to kebab-case
+- Domain language consistent
+- API routes RESTful
+
+---
+
+## 13. Client-Side Data Fetching
+
+### Core Principles
+
+1. **Server Components First** - Fetch in Server Components whenever possible
+2. **Use Canonical Hooks** - All client fetches via `/hooks` (NO manual fetch in components)
+3. **No Fetch-on-Render** - NEVER fetch in render logic (causes infinite loops)
+4. **Stable Dependencies** - All `useEffect` deps must be primitives or memoized
+5. **Single Fetch Per Resource** - Don't fetch same data multiple times
+
+### Available Hooks
+
+| Hook | Purpose | Returns |
+|------|---------|---------|
+| `useProfileData()` | Profile + cars + brands (parallel) | `{ profileData, carsData, brandsData, loading, error, reload }` |
+| `useEventsData(options)` | Events with filters/pagination | `{ events, total, loading, error, reload }` |
+| `useClubsData(options)` | Clubs with search/city filter | `{ clubs, total, loading, error, reload }` |
+| `useClubData(clubId)` | Single club by ID | `{ club, loading, error, reload }` |
+
+### Standard Hook Pattern
+
+```typescript
+export function useXxxData(options?: XxxOptions): XxxReturn {
+  const [data, setData] = useState<Xxx | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch(url);
+        const data = await parseApiResponse<XxxResponse>(res);
+        
+        if (!mounted) return; // Cleanup
+        
+        setData(data.xxx);
+      } catch (err) {
+        if (!mounted) return;
+        
+        if (err instanceof ClientError) {
+          setError(getErrorMessage(err));
+          log.error('[useXxxData] Failed', { code: err.code });
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => { mounted = false; }; // Cleanup
+  }, [/* stable deps only */, reloadTrigger]);
+
+  const reload = () => setReloadTrigger(prev => prev + 1);
+
+  return { data, loading, error, reload };
+}
+```
+
+**Features:**
+- ✅ Type-safe via `parseApiResponse<T>()`
+- ✅ Cleanup on unmount (`mounted` flag)
+- ✅ Structured logging via `log.*`
+- ✅ `reload()` for manual refetch
+- ✅ Stable dependencies
+
+### Anti-Patterns to Avoid
+
+❌ **Fetch-on-render:**
+```typescript
+if (!data) fetch('/api/data').then(setData); // Infinite loop!
+```
+
+❌ **Manual res.ok checks:**
+```typescript
+if (!res.ok) throw new Error('Failed'); // Use parseApiResponse!
+```
+
+❌ **No cleanup:**
+```typescript
+useEffect(() => {
+  fetch(...).then(setState); // May set state after unmount!
+}, []);
+```
+
+✅ **Correct:**
+```typescript
+const { data, loading, error } = useProfileData();
+```
+
+---
+
+## 14. Performance Optimizations
+
+### Query Optimization (Repository Layer)
+
+**Rule:** NO `select *` in production code
+
+✅ **Good:**
+```typescript
+const CLUB_COLUMNS = "id, name, description, logo_url, created_at";
+const { data } = await db.from('clubs').select(CLUB_COLUMNS);
+```
+
+❌ **Bad:**
+```typescript
+const { data } = await db.from('clubs').select('*'); // Overfetching
+```
+
+### N+1 Query Prevention
+
+**Rule:** Use batch loading for related data
+
+❌ **Bad (N+1):**
+```typescript
+for (const membership of memberships) {
+  const club = await getClubById(membership.club_id);     // N queries
+  const sub = await getClubSubscriptionV2(club.id);       // N queries
+}
+```
+
+✅ **Good (Batch Loading):**
+```typescript
+const clubIds = memberships.map(m => m.club_id);
+const [clubs, subscriptions] = await Promise.all([
+  getClubsByIds(clubIds),              // 1 query
+  getClubSubscriptionsByClubIds(clubIds) // 1 query
+]);
+```
+
+**Performance gain:** 10 clubs: 30 queries → 3 queries (10x faster)
+
+### Completed Optimizations
+
+1. **getUserClubs:** 3*N → 3 queries (batch loading)
+2. **select * elimination:** clubRepo, participantRepo (explicit columns)
+3. **Batch functions:** 
+   - `getClubsByIds(ids)` 
+   - `getClubSubscriptionsByClubIds(ids)`
+   - `countMembersByClubIds(ids)`
+
+---
+
+## 15. Error Handling & Validation
+
+### Client-Side Errors
+
+**Use `ClientError` class for type-safe error handling:**
+
+```typescript
+import { parseApiResponse, ClientError, getErrorMessage } from "@/lib/types/errors";
+
+try {
+  const res = await fetch('/api/profile');
+  const data = await parseApiResponse<{ user: User }>(res);
+  setUser(data.user);
+} catch (err) {
+  if (err instanceof ClientError) {
+    if (err.isPaywallError()) {
+      showPaywall(err.details);
+    } else {
+      setError(getErrorMessage(err));
+    }
+  }
+}
+```
+
+**ClientError methods:**
+- `isAuthError()` - 401
+- `isForbiddenError()` - 403
+- `isPaywallError()` - 402
+- `isConflictError()` - 409
+- `isValidationError()` - 422
+
+### Validation Strategy
+
+**Client-side:** UX-only (early feedback)  
+**Server-side:** Authoritative (always enforced)
+
+❌ **NEVER trust client validation alone**
+
+✅ **Always validate on server:**
+```typescript
+// API route
+const parsed = eventCreateSchema.safeParse(body);
+if (!parsed.success) {
+  throw new ValidationError("Invalid input", parsed.error.errors);
+}
+```
+
+### Error Taxonomy
+
+| Code | Type | Meaning | Client Action |
+|------|------|---------|---------------|
+| 401 | Auth | Unauthenticated | Redirect to login |
+| 403 | Forbidden | No permission | Show error |
+| 402 | Paywall | Upgrade required | Show paywall modal |
+| 409 | Conflict | Resource conflict | Show confirmation dialog |
+| 422 | Validation | Invalid input | Show field errors |
+| 500 | Internal | Server error | Show generic error |
+
+---
+
+**Last Updated:** 26 December 2024  
+**Version:** 2.2
