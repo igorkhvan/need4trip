@@ -73,6 +73,33 @@ export async function getClubSubscription(
 }
 
 /**
+ * Get subscriptions for multiple clubs at once (batch query)
+ */
+export async function getClubSubscriptionsByClubIds(clubIds: string[]): Promise<Map<string, ClubSubscription>> {
+  if (clubIds.length === 0) return new Map();
+  
+  const db = getAdminDb();
+  
+  const { data, error } = await db
+    .from('club_subscriptions')
+    .select('*')
+    .in('club_id', clubIds);
+  
+  if (error) {
+    log.error("Failed to get club subscriptions by IDs", { clubIds, error });
+    return new Map(); // Return empty map on error
+  }
+  
+  const map = new Map<string, ClubSubscription>();
+  (data ?? []).forEach((row: any) => {
+    const subscription = mapDbSubscriptionToDomain(row as DbClubSubscription);
+    map.set(subscription.clubId, subscription);
+  });
+  
+  return map;
+}
+
+/**
  * Upsert club subscription
  */
 export async function upsertClubSubscription(

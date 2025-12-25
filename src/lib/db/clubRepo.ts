@@ -451,4 +451,24 @@ export async function listClubsByCity(cityId: string, page = 1, limit = 12): Pro
   };
 }
 
+/**
+ * Get multiple clubs by IDs (batch query to avoid N+1)
+ */
+export async function getClubsByIds(ids: string[]): Promise<DbClub[]> {
+  if (ids.length === 0) return [];
+  
+  const db = getAdminDb();
+  
+  const { data, error } = await db
+    .from(table)
+    .select(CLUB_COLUMNS)
+    .in("id", ids);
+  
+  if (error) {
+    log.error("Failed to get clubs by IDs", { ids, error });
+    throw new InternalError("Failed to get clubs by IDs", error);
+  }
+  
+  return (data ?? []) as DbClub[];
+}
 

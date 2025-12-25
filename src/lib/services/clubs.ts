@@ -319,19 +319,38 @@ export async function getClubWithDetails(
 export async function getUserClubs(userId: string): Promise<ClubWithMembership[]> {
   const memberships = await listUserClubsWithRole(userId);
   
+  if (memberships.length === 0) {
+    return [];
+  }
+  
+  // Extract club IDs for batch queries
+  const clubIds = memberships.map(m => m.club_id);
+  
+  // Batch load all data (3 queries instead of 3*N)
+  const { getClubsByIds } = await import("@/lib/db/clubRepo");
+  const { getClubSubscriptionsByClubIds } = await import("@/lib/db/clubSubscriptionRepo");
+  const { countMembersByClubIds } = await import("@/lib/db/clubMemberRepo");
+  
+  const [dbClubs, subscriptionsMap, memberCountsMap] = await Promise.all([
+    getClubsByIds(clubIds),
+    getClubSubscriptionsByClubIds(clubIds),
+    countMembersByClubIds(clubIds)
+  ]);
+  
+  // Create club map for O(1) lookup
+  const clubsMap = new Map(dbClubs.map(club => [club.id, club]));
+  
+  // Map memberships to clubs with data
   const clubs = await Promise.all(
     memberships.map(async (membership) => {
-      const dbClub = await getClubById(membership.club_id);
+      const dbClub = clubsMap.get(membership.club_id);
       if (!dbClub) return null;
 
       const club = mapDbClubToDomain(dbClub);
       const hydratedClub = await hydrateClubWithCities(club);
       
-      // Load subscription (NEW: billing v2.0)
-      // Free clubs don't have subscriptions
-      const subscription = await getClubSubscriptionV2(membership.club_id);
-
-      const memberCount = await countMembers(membership.club_id);
+      const subscription = subscriptionsMap.get(membership.club_id) ?? null;
+      const memberCount = memberCountsMap.get(membership.club_id) ?? 0;
 
       return {
         ...hydratedClub,

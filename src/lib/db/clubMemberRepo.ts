@@ -324,6 +324,38 @@ export async function countMembers(clubId: string): Promise<number> {
 }
 
 /**
+ * Count members (excluding pending) for multiple clubs at once (batch query)
+ */
+export async function countMembersByClubIds(clubIds: string[]): Promise<Map<string, number>> {
+  if (clubIds.length === 0) return new Map();
+  
+  const db = getAdminDb();
+  
+  // Use group by to count members per club
+  const { data, error } = await db
+    .from(table)
+    .select("club_id")
+    .in("club_id", clubIds)
+    .neq("role", "pending");
+  
+  if (error) {
+    log.error("Failed to count members for clubs", { clubIds, error });
+    return new Map();
+  }
+  
+  // Count manually (Supabase doesn't support GROUP BY in SDK)
+  const counts = new Map<string, number>();
+  clubIds.forEach(id => counts.set(id, 0)); // Initialize all to 0
+  
+  (data ?? []).forEach((row: any) => {
+    const clubId = row.club_id;
+    counts.set(clubId, (counts.get(clubId) ?? 0) + 1);
+  });
+  
+  return counts;
+}
+
+/**
  * Check if user is a club member (excluding pending)
  */
 export async function isClubMember(clubId: string, userId: string): Promise<boolean> {
