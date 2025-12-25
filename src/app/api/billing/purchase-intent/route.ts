@@ -9,11 +9,13 @@
  * - CLUB_50, CLUB_500, CLUB_UNLIMITED (club subscriptions)
  * 
  * Returns: transaction details + Kaspi payment info (stub)
+ * 
+ * Protected by middleware - requires valid JWT
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondSuccess, respondError } from "@/lib/api/respond";
 import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
@@ -42,8 +44,8 @@ type PurchaseIntentRequest = z.infer<typeof purchaseIntentSchema>;
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authentication required
-    const currentUser = await getCurrentUser();
+    // 1. Authentication required (via middleware)
+    const currentUser = await getCurrentUserFromMiddleware(req);
     if (!currentUser) {
       return respondError(401, { 
         code: "UNAUTHORIZED", 

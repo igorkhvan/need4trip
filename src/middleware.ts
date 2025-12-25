@@ -67,6 +67,10 @@ const PROTECTED_ROUTES = [
   { path: '/api/events/', methods: ['PUT', 'PATCH', 'DELETE'] }, // /api/events/[id] - All write operations
   '/api/events/[id]/publish', // Publish endpoint (POST)
   
+  // Billing endpoints (all require auth)
+  '/api/billing/purchase-intent',
+  '/api/billing/transactions/status',
+  
   // NOTE: Participants routes (/api/events/[id]/participants) are NOT protected
   // They allow guest registrations and guest management
   // Authorization is handled in the route handler via guest_session_id

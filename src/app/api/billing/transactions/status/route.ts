@@ -8,18 +8,20 @@
  * - transaction_id OR transaction_reference (at least one required)
  * 
  * Returns: { status: "pending" | "completed" | "failed" | "refunded" }
+ * 
+ * Protected by middleware - requires valid JWT
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondSuccess, respondError } from "@/lib/api/respond";
 import { getAdminDb } from "@/lib/db/client";
 import { logger } from "@/lib/utils/logger";
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Authentication required
-    const currentUser = await getCurrentUser();
+    // 1. Authentication required (via middleware)
+    const currentUser = await getCurrentUserFromMiddleware(req);
     if (!currentUser) {
       return respondError(401, { 
         code: "UNAUTHORIZED", 
