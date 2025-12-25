@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-26 (Billing v4 Complete)  
+> Последнее обновление: 2024-12-26 (Billing Normalization Complete) ⚡  
 > PostgreSQL + Supabase
 
 ---
@@ -631,16 +631,28 @@ CREATE TABLE public.club_subscriptions (
 CREATE TABLE public.billing_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   club_id UUID REFERENCES public.clubs(id) ON DELETE CASCADE,  -- ⚡ NULL для one-off credits
-  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL, -- ⚡ NEW: Для one-off credits
-  product_code TEXT NOT NULL,  -- ⚡ NEW: EVENT_UPGRADE_500, CLUB_50, CLUB_500, CLUB_UNLIMITED
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL, -- ⚡ Для one-off credits
+  product_code TEXT NOT NULL,  -- ⚡ EVENT_UPGRADE_500, CLUB_50, CLUB_500, CLUB_UNLIMITED
   plan_id TEXT REFERENCES public.club_plans(id) ON DELETE RESTRICT,  -- NULL для one-off
-  amount NUMERIC(10,2) NOT NULL,
-  currency_code TEXT NOT NULL DEFAULT 'KZT',
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
-  payment_method TEXT,
-  transaction_reference TEXT,
+  amount NUMERIC(10,2) NOT NULL,                               -- ⚡ Normalized (was amount_kzt)
+  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES public.currencies(code) ON DELETE RESTRICT, -- ⚡ FK
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')), -- ⚡ 'completed'
+  provider TEXT NOT NULL,                                      -- ⚡ kaspi, yookassa, stripe
+  provider_payment_id TEXT,                                    -- ⚡ External payment ID
+  period_start TIMESTAMPTZ,                                    -- ⚡ Для клубных подписок
+  period_end TIMESTAMPTZ,                                      -- ⚡ Для клубных подписок
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  -- ⚡ Business constraints (Billing v4)
+  CONSTRAINT billing_club_requires_club_id CHECK (
+    (product_code LIKE 'CLUB_%' AND club_id IS NOT NULL AND plan_id IS NOT NULL) OR
+    (product_code NOT LIKE 'CLUB_%')
+  ),
+  CONSTRAINT billing_oneoff_requires_user_id CHECK (
+    (product_code NOT LIKE 'CLUB_%' AND user_id IS NOT NULL) OR
+    (product_code LIKE 'CLUB_%')
+  )
 );
 ```
 
@@ -653,6 +665,10 @@ CREATE TABLE public.billing_transactions (
 - `idx_billing_transactions_created_at` (on created_at DESC)
 
 **Notes**:
+- ⚡ **Нормализация (2024-12-26)**:
+  - `amount_kzt` → `amount` (generic, currency-independent)
+  - `currency` → `currency_code` (with FK to currencies table)
+  - `status: 'paid'` → `status: 'completed'` (consistent enum)
 - ⚡ Поддерживает два типа транзакций:
   1. **Club subscriptions**: `club_id NOT NULL`, `product_code = 'CLUB_*'`
   2. **One-off credits**: `user_id NOT NULL`, `club_id NULL`, `product_code = 'EVENT_UPGRADE_500'`
@@ -666,6 +682,7 @@ CREATE TABLE public.billing_transactions (
 - → `clubs` (club_id) [optional]
 - → `users` (user_id) [optional]
 - → `club_plans` (plan_id) [optional]
+- → `currencies` (currency_code) ⚡ NEW
 - ← `billing_credits` (source_transaction_id)
 
 ---
@@ -954,8 +971,12 @@ CREATE INDEX idx_event_participants_user_event
 | 2024-12-25 | `extend_billing_transactions` | ⚡ Добавлено `product_code` в billing_transactions |
 | 2024-12-25 | `add_user_id_to_billing_transactions` | ⚡ Добавлено `user_id` в billing_transactions |
 | 2024-12-25 | `create_billing_credits` | ⚡ Создана таблица `billing_credits` (one-off credits) |
+| 2024-12-26 | `create_billing_products` | ⚡ Создана таблица `billing_products` (pricing SSOT) |
+| 2024-12-26 | `add_billing_credits_fk` | ⚡ FK от `billing_credits.credit_code` к `billing_products.code` |
+| 2024-12-26 | `normalize_billing_transactions` | ⚡ **Normalization**: amount_kzt→amount, currency→currency_code (FK), status: paid→completed |
+| 2024-12-26 | `cleanup_billing_transactions` | ⚡ Удалены deprecated columns (amount_kzt, currency) после миграции |
 
-**Всего миграций**: 74 timestamped файлов ⚡
+**Всего миграций**: 78 timestamped файлов ⚡
 
 **Расположение**: `/supabase/migrations/`
 
