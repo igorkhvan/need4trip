@@ -151,6 +151,23 @@ export async function registerParticipant(
     });
   }
 
+  // 🔒 BILLING ENFORCEMENT: Check club subscription limits for club events
+  // This prevents clubs from exceeding their plan's participant limit
+  // SSOT: docs/BILLING_SYSTEM_ANALYSIS.md - enforceClubAction checks eventParticipantsCount
+  if (event.clubId) {
+    const currentCount = await countParticipants(eventId);
+    const { enforceClubAction } = await import("@/lib/services/accessControl");
+    
+    await enforceClubAction({
+      clubId: event.clubId,
+      action: "CLUB_CREATE_EVENT", // Reuse existing action - checks eventParticipantsCount
+      context: {
+        eventParticipantsCount: currentCount + 1, // Check current + new participant
+        isPaidEvent: event.isPaid,
+      },
+    });
+  }
+
   // ✅ For 'restricted' visibility, grant access automatically when user registers
   // Uses centralized upsertEventAccess from eventAccessRepo
   if (event.visibility === "restricted" && currentUser) {
