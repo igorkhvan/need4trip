@@ -1,4 +1,4 @@
-import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
+import { getAdminDbSafe, getAdminDb } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import { DbEvent, DbEventWithOwner } from "@/lib/mappers";
 import { EventCreateInput, EventUpdateInput } from "@/lib/types/event";
@@ -11,13 +11,13 @@ export async function listEvents(page = 1, limit = 12): Promise<{
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDbSafe();
+  if (!db) return { data: [], total: 0, hasMore: false };
   
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count} = await db
     .from(table)
     .select("*", { count: "exact" })
     .order("date_time", { ascending: false })
@@ -46,13 +46,13 @@ export async function listEventsWithOwner(page = 1, limit = 12): Promise<{
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDbSafe();
+  if (!db) return { data: [], total: 0, hasMore: false };
   
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
     .order("date_time", { ascending: false })
@@ -77,15 +77,15 @@ export async function listEventsWithOwner(page = 1, limit = 12): Promise<{
 }
 
 export async function getEventById(id: string): Promise<DbEvent | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
+  const db = getAdminDbSafe();
+  if (!db) return null;
   
   if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
     log.warn("Invalid event id provided", { id });
     return null;
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .select("*")
     .eq("id", id)
@@ -106,10 +106,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
 }
 
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
   const now = new Date().toISOString();
 
@@ -137,7 +134,7 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     allow_anonymous_registration: payload.allowAnonymousRegistration,
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .insert(insertPayload)
     .select("*")
@@ -159,10 +156,7 @@ export async function updateEvent(
   id: string,
   payload: EventUpdateInput
 ): Promise<DbEvent | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
   const patch = {
     ...(payload.title !== undefined ? { title: payload.title } : {}),
@@ -204,7 +198,7 @@ export async function updateEvent(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(table)
     .update(patch)
     .eq("id", id)
@@ -226,20 +220,17 @@ export async function updateEvent(
 }
 
 export async function replaceAllowedBrands(eventId: string, brandIds: string[]): Promise<void> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
   // delete existing
-  const { error: delError } = await supabaseAdmin.from("event_allowed_brands").delete().eq("event_id", eventId);
+  const { error: delError } = await db.from("event_allowed_brands").delete().eq("event_id", eventId);
   if (delError) {
     log.error("Failed to clear allowed brands", { eventId, error: delError });
     throw new InternalError("Failed to clear allowed brands", delError);
   }
   if (!brandIds.length) return;
   const rows = brandIds.map((brandId) => ({ event_id: eventId, brand_id: brandId }));
-  const { error: insError } = await supabaseAdmin.from("event_allowed_brands").insert(rows);
+  const { error: insError } = await db.from("event_allowed_brands").insert(rows);
   if (insError) {
     log.error("Failed to insert allowed brands", { eventId, error: insError });
     throw new InternalError("Failed to insert allowed brands", insError);
@@ -247,10 +238,10 @@ export async function replaceAllowedBrands(eventId: string, brandIds: string[]):
 }
 
 export async function getAllowedBrands(eventId: string) {
-  ensureAdminClient();
-  if (!supabaseAdmin) return [];
+  const db = getAdminDbSafe();
+  if (!db) return [];
   
-  const { data: links, error: linkError } = await supabaseAdmin
+  const { data: links, error: linkError } = await db
     .from("event_allowed_brands")
     .select("brand_id")
     .eq("event_id", eventId);
@@ -260,7 +251,7 @@ export async function getAllowedBrands(eventId: string) {
   }
   const ids = (links ?? []).map((row) => row.brand_id);
   if (!ids.length) return [];
-  const { data: brands, error: brandError } = await supabaseAdmin
+  const { data: brands, error: brandError } = await db
     .from("car_brands")
     .select("id, name, slug")
     .in("id", ids);
@@ -282,11 +273,11 @@ export async function getAllowedBrandsByEventIds(
     return new Map();
   }
 
-  ensureAdminClient();
-  if (!supabaseAdmin) return new Map();
+  const db = getAdminDbSafe();
+  if (!db) return new Map();
 
   // Step 1: Get all event_allowed_brands links for these events
-  const { data: links, error: linkError } = await supabaseAdmin
+  const { data: links, error: linkError } = await db
     .from("event_allowed_brands")
     .select("event_id, brand_id")
     .in("event_id", eventIds);
@@ -304,7 +295,7 @@ export async function getAllowedBrandsByEventIds(
   const brandIds = Array.from(new Set(links.map(link => link.brand_id)));
 
   // Step 3: Load all brands at once
-  const { data: brands, error: brandError } = await supabaseAdmin
+  const { data: brands, error: brandError } = await db
     .from("car_brands")
     .select("id, name, slug")
     .in("id", brandIds);
@@ -344,12 +335,9 @@ export async function getAllowedBrandsByEventIds(
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
-  ensureAdminClient();
-  if (!supabaseAdmin) {
-    throw new InternalError("Supabase client is not configured");
-  }
+  const db = getAdminDb();
   
-  const { error, count } = await supabaseAdmin
+  const { error, count } = await db
     .from(table)
     .delete({ count: "exact" })
     .eq("id", id);
@@ -370,10 +358,10 @@ export async function deleteEvent(id: string): Promise<boolean> {
  * Count events for a specific club
  */
 export async function countClubEvents(clubId: string): Promise<number> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return 0;
+  const db = getAdminDbSafe();
+  if (!db) return 0;
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId);
@@ -390,12 +378,12 @@ export async function countClubEvents(clubId: string): Promise<number> {
  * Count active (future) events for a specific club
  */
 export async function countActiveClubEvents(clubId: string): Promise<number> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return 0;
+  const db = getAdminDbSafe();
+  if (!db) return 0;
 
   const now = new Date().toISOString();
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
@@ -413,12 +401,12 @@ export async function countActiveClubEvents(clubId: string): Promise<number> {
  * Count past events for a specific club
  */
 export async function countPastClubEvents(clubId: string): Promise<number> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return 0;
+  const db = getAdminDbSafe();
+  if (!db) return 0;
 
   const now = new Date().toISOString();
 
-  const { count, error } = await supabaseAdmin
+  const { count, error } = await db
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
@@ -444,13 +432,13 @@ export async function listClubEvents(
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDbSafe();
+  if (!db) return { data: [], total: 0, hasMore: false };
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*", { count: "exact" })
     .eq("club_id", clubId)
@@ -482,13 +470,13 @@ export async function listPublicEvents(page = 1, limit = 100): Promise<{
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDbSafe();
+  if (!db) return { data: [], total: 0, hasMore: false };
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
     .eq("visibility", "public")
@@ -524,13 +512,13 @@ export async function listEventsByCreator(
   total: number;
   hasMore: boolean;
 }> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return { data: [], total: 0, hasMore: false };
+  const db = getAdminDbSafe();
+  if (!db) return { data: [], total: 0, hasMore: false };
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabaseAdmin
+  const { data, error, count } = await db
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
     .eq("created_by_user_id", userId)

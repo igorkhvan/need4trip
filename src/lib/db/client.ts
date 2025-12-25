@@ -66,6 +66,79 @@ export function ensureAdminClient(): void {
   }
 }
 
+/**
+ * Get Supabase admin client with automatic validation
+ * 
+ * **USE THIS in all repository functions instead of manual checks.**
+ * 
+ * Replaces pattern:
+ * ```typescript
+ * ensureAdminClient();
+ * if (!supabaseAdmin) return ...;
+ * ```
+ * 
+ * With:
+ * ```typescript
+ * const db = getAdminDb();
+ * ```
+ * 
+ * @throws Error if admin client not initialized
+ * @returns Supabase admin client (guaranteed non-null)
+ * 
+ * @example
+ * // ✅ CORRECT (new pattern)
+ * export async function getEventById(id: string) {
+ *   const db = getAdminDb();
+ *   const { data } = await db.from('events').select('*').eq('id', id).single();
+ *   return data;
+ * }
+ * 
+ * @example
+ * // ❌ OLD (being phased out)
+ * export async function getEventById(id: string) {
+ *   ensureAdminClient();
+ *   if (!supabaseAdmin) return null;
+ *   const { data } = await supabaseAdmin.from('events')...
+ * }
+ */
+export function getAdminDb() {
+  ensureAdminClient();
+  
+  // TypeScript knows supabaseAdmin is non-null after ensureAdminClient()
+  // but we add explicit check for runtime safety
+  if (!supabaseAdmin) {
+    throw new Error("Supabase admin client is not initialized");
+  }
+  
+  return supabaseAdmin;
+}
+
+/**
+ * Get Supabase admin client (safe version for optional operations)
+ * 
+ * Returns null if client not available (for graceful degradation).
+ * Use this only when the operation is truly optional.
+ * 
+ * @returns Supabase admin client or null
+ * 
+ * @example
+ * export async function listEvents() {
+ *   const db = getAdminDbSafe();
+ *   if (!db) return { data: [], total: 0 };
+ *   
+ *   const { data } = await db.from('events').select('*');
+ *   return { data: data || [], total: data?.length || 0 };
+ * }
+ */
+export function getAdminDbSafe() {
+  try {
+    ensureAdminClient();
+    return supabaseAdmin;
+  } catch {
+    return null;
+  }
+}
+
 if (supabase) {
   log.info("Supabase client created successfully");
 } else {
