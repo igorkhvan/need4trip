@@ -2,57 +2,70 @@
 
 **Цель:** Запустить integration tests для проверки Billing v4
 
+**Текущая конфигурация:** Использует PRODUCTION Supabase ⚠️
+
 ---
 
-## ⚡ Шаги (5 минут)
+## ⚡ Шаги (2 минуты)
 
-### 1. Запустить локальный Supabase
-
-```bash
-cd /Users/igorkhvan/Git/need4trip
-supabase start
-```
-
-**Что происходит:**
-- Запускается PostgreSQL в Docker
-- Применяются все миграции из `supabase/migrations/`
-- Создаётся база с тестовыми данными (EVENT_UPGRADE_500)
-
-**Вывод будет содержать:**
-```
-API URL: http://localhost:54321
-anon key: eyJhbGci...
-service_role key: eyJhbGci...
-```
-
-### 2. Создать .env.test (если нет)
+### 1. Создать .env.test с продовыми ключами
 
 ```bash
-# Скопировать пример
-cp .env.test.example .env.test
+# Скопировать из .env.local
+cp .env.local .env.test
 
-# Или создать вручную:
+# Добавить NODE_ENV
+echo "NODE_ENV=test" >> .env.test
+echo "DISABLE_RATE_LIMIT=true" >> .env.test
+```
+
+**Или создать вручную:**
+```bash
 cat > .env.test << 'EOF'
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+NEXT_PUBLIC_SUPABASE_URL=ваш-url-из-.env.local
+NEXT_PUBLIC_SUPABASE_ANON_KEY=ваш-anon-key
+SUPABASE_SERVICE_ROLE_KEY=ваш-service-role-key
 NODE_ENV=test
 DISABLE_RATE_LIMIT=true
 EOF
 ```
 
-### 3. Запустить тесты
+### 2. Запустить тесты
 
 ```bash
-# Все тесты
-npm test
-
-# Только Billing v4
+# Только Billing v4 (рекомендуется для начала)
 npm run test:billing
+
+# Или все тесты
+npm test
 
 # Watch mode (авто-перезапуск)
 npm run test:watch
 ```
+
+---
+
+## ⚠️ ВАЖНО: Тесты на продовой базе
+
+**Что делают тесты:**
+- ✅ Создают тестовые users, events, transactions
+- ✅ Создают и потребляют credits
+- ✅ НЕ удаляют существующие данные
+- ⚠️ Оставляют тестовые данные в БД после выполнения
+
+**Рекомендации:**
+1. Запускайте в нерабочее время (меньше конфликтов)
+2. После тестов можно вручную очистить:
+   ```sql
+   -- Удалить тестовые данные
+   DELETE FROM billing_credits WHERE user_id LIKE 'test-%';
+   DELETE FROM billing_transactions WHERE id IN (
+     SELECT id FROM billing_transactions 
+     WHERE created_at > NOW() - INTERVAL '1 hour'
+     AND product_code = 'EVENT_UPGRADE_500'
+   );
+   ```
+3. Или оставить как есть (не мешают продакшену)
 
 ---
 
@@ -82,46 +95,53 @@ Time:        3.456s
 
 ### Ошибка: "Cannot connect to Supabase"
 
-**Решение:**
+**Решение:** Проверь .env.test
 ```bash
-# Проверить статус
-supabase status
+# Убедись что URL и ключи правильные
+cat .env.test | grep SUPABASE
 
-# Если не запущен
-supabase start
-
-# Если порт занят
-supabase stop
-supabase start
+# Должно быть:
+# NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+# SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
 ### Ошибка: "EVENT_UPGRADE_500 not found"
 
 **Решение:** Миграция не применилась
 ```bash
-# Сбросить БД и применить все миграции
-supabase db reset
+# Проверь что миграция есть в продовой базе
+# Supabase Dashboard → Database → Migrations
+# Должна быть: 20241226_create_billing_products.sql
 ```
 
-### Ошибка: "Table events not found"
+### Ошибка: "Insufficient permissions"
 
-**Решение:** База не инициализирована
+**Решение:** Неправильный service role key
 ```bash
-# Полный reset
-supabase stop
-supabase start
+# Убедись что используешь SERVICE ROLE key, а не ANON key
+# Найди в Supabase Dashboard → Settings → API
 ```
 
 ---
 
 ## 🧹 После тестов
 
-```bash
-# Остановить Supabase (данные сохраняются)
-supabase stop
+**Тесты оставляют тестовые данные.** Можно:
 
-# Или полная очистка
-supabase stop --no-backup
+**Вариант 1: Оставить как есть** (не мешают продакшену)
+
+**Вариант 2: Очистить вручную**
+```sql
+-- В Supabase SQL Editor
+DELETE FROM billing_credits 
+WHERE user_id IN (
+  SELECT id FROM users WHERE telegram_id LIKE 'test-%'
+);
+
+DELETE FROM billing_transactions 
+WHERE created_at > NOW() - INTERVAL '1 hour'
+AND product_code = 'EVENT_UPGRADE_500';
 ```
 
 ---
