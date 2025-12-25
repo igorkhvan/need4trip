@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-26 (Billing Normalization Complete) ⚡  
+> Последнее обновление: 2024-12-26 (Currency Normalization Complete) ⚡  
 > PostgreSQL + Supabase
 
 ---
@@ -35,7 +35,7 @@
 ### Статистика:
 
 - **Core Tables**: 6 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands)
-- **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans)
+- **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans) ⚡
 - **Club & Billing**: 6 (clubs, club_members, club_subscriptions, billing_transactions, billing_credits, billing_products) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
 - **User Extensions**: 1 (user_cars)
@@ -687,7 +687,91 @@ CREATE TABLE public.billing_transactions (
 
 ---
 
-### 5. `billing_credits` ⚡
+### 5. `billing_products` ⚡
+
+**Назначение**: SSOT для purchasable products (one-off credits pricing and constraints)
+
+```sql
+CREATE TABLE public.billing_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT NOT NULL UNIQUE CHECK (char_length(code) >= 1),
+  title TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('credit')),
+  price NUMERIC(10,2) NOT NULL,                    -- ⚡ Normalized (generic amount)
+  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES public.currencies(code) ON DELETE RESTRICT, -- ⚡ FK
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  constraints JSONB NOT NULL DEFAULT '{}',         -- Product-specific rules (e.g., max_participants)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+**Indexes**:
+- `billing_products_pkey` (PRIMARY KEY on id)
+- `billing_products_code_key` (UNIQUE on code)
+- `idx_billing_products_is_active` (on is_active) ⚡
+- `idx_billing_products_type` (on type) ⚡
+- `idx_billing_products_currency_code` (on currency_code) ⚡
+
+**Notes**:
+- ⚡ **SSOT for pricing**: No hardcoded prices in code
+- ⚡ **Currency normalization (2024-12-26)**: `price_kzt` → `price` + `currency_code` FK
+- Example: `EVENT_UPGRADE_500` → price: 1000, currency_code: 'KZT', constraints: {max_participants: 500}
+- `constraints` JSONB allows flexible product rules without schema changes
+
+**RLS**: 2 policies
+- `authenticated_read_active_products`
+- `service_role_full_access`
+
+**Связи**:
+- → `currencies` (currency_code) ⚡ NEW
+- ← `billing_credits` (credit_code)
+
+---
+
+### 6. `club_plans` ⚡
+
+**Назначение**: Тарифные планы для клубов (including FREE plan)
+
+```sql
+CREATE TABLE public.club_plans (
+  id TEXT PRIMARY KEY CHECK (id IN ('free', 'club_50', 'club_500', 'club_unlimited')),
+  title TEXT NOT NULL,
+  price_monthly NUMERIC(10,2) NOT NULL,            -- ⚡ Normalized (generic amount)
+  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES public.currencies(code) ON DELETE RESTRICT, -- ⚡ FK
+  max_members INTEGER,                             -- NULL = unlimited
+  max_event_participants INTEGER,                  -- NULL = unlimited
+  allow_paid_events BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_csv_export BOOLEAN NOT NULL DEFAULT FALSE,
+  is_public BOOLEAN NOT NULL DEFAULT TRUE,         -- Show on pricing page
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+**Indexes**:
+- `club_plans_pkey` (PRIMARY KEY on id)
+- `idx_club_plans_price_monthly` (on price_monthly) -- For sorting
+- `idx_club_plans_currency_code` (on currency_code) ⚡
+
+**Notes**:
+- ⚡ **Currency normalization (2024-12-26)**: `price_monthly_kzt` → `price_monthly` + `currency_code` FK
+- ⚡ **Includes FREE plan**: `id='free'`, `price_monthly=0`, visible on pricing page
+- Dynamic limits: No hardcoding, all limits from DB
+- Cached via `StaticCache` (TTL: 5 minutes)
+
+**RLS**: 2 policies
+- `authenticated_read_all_plans`
+- `service_role_full_access`
+
+**Связи**:
+- → `currencies` (currency_code) ⚡ NEW
+- ← `club_subscriptions` (plan_id)
+- ← `billing_transactions` (plan_id)
+
+---
+
+### 7. `billing_credits` ⚡
 
 **Назначение**: Purchased one-off credits для event upgrades (perpetual, consumed once)
 
@@ -975,8 +1059,11 @@ CREATE INDEX idx_event_participants_user_event
 | 2024-12-26 | `add_billing_credits_fk` | ⚡ FK от `billing_credits.credit_code` к `billing_products.code` |
 | 2024-12-26 | `normalize_billing_transactions` | ⚡ **Normalization**: amount_kzt→amount, currency→currency_code (FK), status: paid→completed |
 | 2024-12-26 | `cleanup_billing_transactions` | ⚡ Удалены deprecated columns (amount_kzt, currency) после миграции |
+| 2024-12-26 | `normalize_billing_products` | ⚡ **Normalization**: price_kzt→price + currency_code FK |
+| 2024-12-26 | `normalize_club_plans` | ⚡ **Normalization**: price_monthly_kzt→price_monthly + currency_code FK |
+| 2024-12-26 | `cleanup_currency_columns` | ⚡ Удалены deprecated columns (price_kzt, price_monthly_kzt) |
 
-**Всего миграций**: 78 timestamped файлов ⚡
+**Всего миграций**: 81 timestamped файлов ⚡
 
 **Расположение**: `/supabase/migrations/`
 
