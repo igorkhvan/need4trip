@@ -1,6 +1,6 @@
 import { supabase, supabaseAdmin, ensureClient, ensureAdminClient } from "./client";
 import type { UserCar, UserCarCreateInput } from "../types/userCar";
-import type { Database } from "../types/supabase";
+import type { Database } from "./types";
 import { log } from "@/lib/utils/logger";
 
 type DbUserCar = Database["public"]["Tables"]["user_cars"]["Row"];

@@ -1,7 +1,7 @@
 import { supabaseAdmin, ensureAdminClient } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
 import { User, ExperienceLevel } from "@/lib/types/user";
-import { Database } from "@/lib/types/supabase";
+import { Database } from "@/lib/db/types";
 import { log } from "@/lib/utils/logger";
 
 const table = "users" satisfies keyof Database["public"]["Tables"];
