@@ -27,8 +27,17 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // 1. Authentication required (via middleware)
-    const currentUser = await getCurrentUserFromMiddleware(req);
+    // 1. Authentication required
+    // Try middleware first (x-user-id header), fallback to direct cookie check
+    let currentUser = await getCurrentUserFromMiddleware(req);
+    
+    if (!currentUser) {
+      // Fallback: Try to get user directly from cookie
+      // This handles cases where middleware headers don't propagate correctly
+      const { getCurrentUser } = await import("@/lib/auth/currentUser");
+      currentUser = await getCurrentUser();
+    }
+    
     if (!currentUser) {
       return respondError(401, { code: "UNAUTHORIZED", message: "Authentication required" });
     }
