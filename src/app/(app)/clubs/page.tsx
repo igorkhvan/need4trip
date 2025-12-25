@@ -20,6 +20,8 @@ import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { City } from "@/lib/types/city";
 import type { Club } from "@/lib/types/club";
+import { parseApiResponse, ClientError } from "@/lib/types/errors";
+import { log } from "@/lib/utils/logger";
 
 export default function ClubsPage() {
   // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
@@ -70,14 +72,13 @@ export default function ClubsPage() {
       url += `?${params.toString()}`;
 
       const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to load clubs");
-      
-      const response = await res.json();
-      const data = response.data || response;
+      const data = await parseApiResponse<{ clubs: Club[]; total: number }>(res);
       setClubs(data.clubs ?? []);
       setTotalClubs(data.total ?? 0);
     } catch (err) {
-      console.error("[loadClubs] Failed", err);
+      if (err instanceof ClientError) {
+        log.error("[loadClubs] Failed to load clubs", { code: err.code });
+      }
       setClubs([]);
       setTotalClubs(0);
     } finally {

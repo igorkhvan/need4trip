@@ -48,6 +48,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { UserCar, CarType } from "@/lib/types/userCar";
 import { formatJoinedDate } from "@/lib/utils/dates";
+import { parseApiResponse, ClientError } from "@/lib/types/errors";
+import { log } from "@/lib/utils/logger";
 
 interface CarBrand {
   id: string;
@@ -140,12 +142,7 @@ export function ProfilePageClient() {
   const loadProfileData = async () => {
     try {
       const res = await fetch('/api/profile');
-      
-      if (!res.ok) {
-        throw new Error('Failed to load profile');
-      }
-
-      const data = await res.json();
+      const data = await parseApiResponse<{ user: any; stats: any }>(res);
       
       // Map user data
       const user = data.user;
@@ -174,7 +171,13 @@ export function ProfilePageClient() {
 
       setInitialLoad(false);
     } catch (error) {
-      console.error('[loadProfileData] Error:', error);
+      if (error instanceof ClientError) {
+        log.error('[loadProfileData] Failed to load profile', { 
+          code: error.code, 
+          statusCode: error.statusCode 
+        });
+        // TODO: Show error to user via toast/alert
+      }
       setInitialLoad(false);
     }
   };
@@ -182,14 +185,12 @@ export function ProfilePageClient() {
   const loadCars = async () => {
     try {
       const res = await fetch('/api/profile/cars');
-      const data = await res.json();
-      
-      // API returns: { success: true, data: { cars: [...] } }
-      if (data.success && data.data?.cars) {
-        setCars(data.data.cars);
-      }
+      const data = await parseApiResponse<{ cars: UserCar[] }>(res);
+      setCars(data.cars || []);
     } catch (error) {
-      console.error('[loadCars] Error:', error);
+      if (error instanceof ClientError) {
+        log.error('[loadCars] Failed to load cars', { code: error.code });
+      }
     }
   };
 
@@ -200,24 +201,18 @@ export function ProfilePageClient() {
         fetch('/api/vehicle-types'),
       ]);
       
-      if (brandsRes.ok) {
-        const brandsData = await brandsRes.json();
-        if (brandsData.brands) {
-          setBrands(brandsData.brands.map((brand: CarBrand) => ({
-            id: brand.id,
-            name: brand.name
-          })));
-        }
-      }
+      const brandsData = await parseApiResponse<{ brands: CarBrand[] }>(brandsRes);
+      setBrands(brandsData.brands.map((brand: CarBrand) => ({
+        id: brand.id,
+        name: brand.name
+      })));
       
-      if (typesRes.ok) {
-        const typesData = await typesRes.json();
-        // API returns: {success: true, data: {vehicleTypes: [...]}}
-        const types = typesData.data?.vehicleTypes || typesData.vehicleTypes || [];
-        setVehicleTypes(types);
-      }
+      const typesData = await parseApiResponse<{ vehicleTypes: Array<{ value: string; label: string }> }>(typesRes);
+      setVehicleTypes(typesData.vehicleTypes || []);
     } catch (error) {
-      console.error('[loadBrands] Error:', error);
+      if (error instanceof ClientError) {
+        log.error('[loadBrands] Failed to load brands/types', { code: error.code });
+      }
     }
   };
 

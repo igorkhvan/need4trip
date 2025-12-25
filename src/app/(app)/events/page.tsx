@@ -5,6 +5,8 @@ import { EventsGrid } from "@/components/events/events-grid";
 import { Event } from "@/lib/types/event";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { useAuth } from "@/components/auth/auth-provider";
+import { parseApiResponse, ClientError } from "@/lib/types/errors";
+import { log } from "@/lib/utils/logger";
 
 interface EventsPageProps {
   searchParams?: { 
@@ -25,17 +27,13 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        // Only fetch events (auth already in context)
         const eventsRes = await fetch("/api/events", { cache: 'no-store' });
-
-        if (eventsRes.ok) {
-          const response = await eventsRes.json();
-          // API returns: {success: true, data: {events: [...], total: ...}}
-          const data = response.data || response;
-          setEvents(data.events || []);
-        }
+        const data = await parseApiResponse<{ events: Event[]; total: number }>(eventsRes);
+        setEvents(data.events || []);
       } catch (error) {
-        console.error("Failed to load events:", error);
+        if (error instanceof ClientError) {
+          log.error("Failed to load events", { code: error.code });
+        }
       } finally {
         setLoading(false);
       }
