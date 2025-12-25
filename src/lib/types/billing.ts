@@ -17,7 +17,7 @@ export const billingProductSchema = z.object({
   code: z.string(),
   title: z.string(),
   type: productTypeSchema,
-  priceKzt: z.number().positive(),
+  price: z.number().positive(),              // ⚡ Normalized (was priceKzt)
   currencyCode: z.string().default("KZT"),
   isActive: z.boolean(),
   constraints: z.record(z.any()), // JSONB
@@ -45,8 +45,8 @@ export type PlanIdWithFree = PlanId;
 export interface ClubPlan {
   id: PlanId | "free";  // All plans including FREE are now in DB
   title: string;
-  priceMonthlyKzt: number;
-  currency: string;
+  priceMonthly: number;                      // ⚡ Normalized (was priceMonthlyKzt)
+  currencyCode: string;                      // ⚡ Normalized (was currency)
   maxMembers: number | null;  // null = unlimited
   maxEventParticipants: number | null;  // null = unlimited
   allowPaidEvents: boolean;
@@ -60,8 +60,8 @@ export interface ClubPlan {
 export interface PricingPlan {
   id: PlanIdWithFree;
   title: string;
-  priceMonthlyKzt: number;
-  currency: string;
+  priceMonthly: number;                      // ⚡ Normalized (was priceMonthlyKzt)
+  currencyCode: string;                      // ⚡ Normalized (was currency)
   maxMembers: number | null;
   maxEventParticipants: number | null;
   allowPaidEvents: boolean;
@@ -71,8 +71,8 @@ export interface PricingPlan {
 export const ClubPlanSchema = z.object({
   id: z.enum(PLAN_IDS), // Includes 'free' now
   title: z.string(),
-  priceMonthlyKzt: z.number(),
-  currency: z.string(),
+  priceMonthly: z.number(),                  // ⚡ Normalized (was priceMonthlyKzt)
+  currencyCode: z.string(),                  // ⚡ Normalized (was currency)
   maxMembers: z.number().nullable(),
   maxEventParticipants: z.number().nullable(),
   allowPaidEvents: z.boolean(),
@@ -270,7 +270,8 @@ export type PaywallOptionType = typeof PAYWALL_OPTION_TYPES[number];
 export interface PaywallOptionOneOff {
   type: "ONE_OFF_CREDIT";
   productCode: CreditCode;
-  priceKzt: number;
+  price: number;                             // ⚡ Normalized (was priceKzt)
+  currencyCode: string;                      // ⚡ Added for consistency
   provider: string; // kaspi
 }
 
@@ -304,7 +305,8 @@ export const PaywallErrorSchema = z.object({
     z.object({
       type: z.literal("ONE_OFF_CREDIT"),
       productCode: z.enum(CREDIT_CODES),
-      priceKzt: z.number(),
+      price: z.number(),                     // ⚡ Normalized (was priceKzt)
+      currencyCode: z.string(),              // ⚡ Added
       provider: z.string(),
     }),
     z.object({

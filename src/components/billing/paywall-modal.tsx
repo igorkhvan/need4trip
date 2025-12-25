@@ -210,7 +210,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">Разовая покупка</p>
                           <p className="text-sm text-gray-600 mt-1">
-                            {option.priceKzt} ₸ — Кредит для 1 события (до 500 участников)
+                            {option.price} {option.currencyCode === 'KZT' ? '₸' : option.currencyCode} — Кредит для 1 события (до 500 участников)
                           </p>
                         </div>
                       </>

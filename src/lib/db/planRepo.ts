@@ -19,8 +19,8 @@ import { StaticCache } from "@/lib/cache/staticCache";
 interface DbClubPlan {
   id: string;
   title: string;
-  price_monthly_kzt: number;
-  currency: string;
+  price_monthly: number;                     // ⚡ Normalized (was price_monthly_kzt)
+  currency_code: string;                     // ⚡ Normalized (was currency)
   max_members: number | null;
   max_event_participants: number | null;
   allow_paid_events: boolean;
@@ -38,8 +38,8 @@ function mapDbPlanToDomain(db: DbClubPlan): ClubPlan {
   return {
     id: db.id as PlanId, // PlanId now includes 'free'
     title: db.title,
-    priceMonthlyKzt: Number(db.price_monthly_kzt),
-    currency: db.currency,
+    priceMonthly: Number(db.price_monthly), // ⚡ Normalized (was price_monthly_kzt)
+    currencyCode: db.currency_code,         // ⚡ Normalized (was currency)
     maxMembers: db.max_members,
     maxEventParticipants: db.max_event_participants,
     allowPaidEvents: db.allow_paid_events,
@@ -69,7 +69,7 @@ const plansCache = new StaticCache<ClubPlan>(
     const { data, error } = await supabase
       .from('club_plans')
       .select('*')
-      .order('price_monthly_kzt', { ascending: true });
+      .order('price_monthly', { ascending: true }); // ⚡ Normalized (was price_monthly_kzt)
 
     if (error) {
       log.error("Failed to load club plans for cache", { error });

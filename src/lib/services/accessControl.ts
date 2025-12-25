@@ -296,7 +296,8 @@ export async function enforcePublish(params: {
   }
 
   const oneOffMax = oneOffProduct.constraints.max_participants ?? 500;
-  const oneOffPrice = oneOffProduct.priceKzt;
+  const oneOffPrice = oneOffProduct.price;         // ⚡ Normalized (was priceKzt)
+  const oneOffCurrency = oneOffProduct.currencyCode;
 
   // Decision A: Fits free limits (CRITICAL: no credit consumption!)
   if (maxParticipants === null || maxParticipants <= freeLimit) {
@@ -339,7 +340,8 @@ export async function enforcePublish(params: {
         {
           type: "ONE_OFF_CREDIT",
           productCode: "EVENT_UPGRADE_500",
-          priceKzt: oneOffPrice, // From billing_products (no hardcode!)
+          price: oneOffPrice,                // ⚡ Normalized (was priceKzt)
+          currencyCode: oneOffCurrency,      // ⚡ Added
           provider: "kaspi",
         },
         {

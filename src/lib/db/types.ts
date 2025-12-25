@@ -171,7 +171,7 @@ export type Database = {
           created_at: string
           currency_code: string
           is_active: boolean
-          price_kzt: number
+          price: number
           title: string
           type: string
           updated_at: string
@@ -182,7 +182,7 @@ export type Database = {
           created_at?: string
           currency_code?: string
           is_active?: boolean
-          price_kzt: number
+          price: number
           title: string
           type: string
           updated_at?: string
@@ -193,12 +193,20 @@ export type Database = {
           created_at?: string
           currency_code?: string
           is_active?: boolean
-          price_kzt?: number
+          price?: number
           title?: string
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "billing_products_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       billing_transactions: {
         Row: {
@@ -449,11 +457,12 @@ export type Database = {
           allow_paid_events: boolean
           created_at: string
           currency: string
+          currency_code: string
           id: string
           is_public: boolean
           max_event_participants: number | null
           max_members: number | null
-          price_monthly_kzt: number
+          price_monthly: number
           title: string
           updated_at: string
         }
@@ -462,11 +471,12 @@ export type Database = {
           allow_paid_events: boolean
           created_at?: string
           currency?: string
+          currency_code?: string
           id: string
           is_public?: boolean
           max_event_participants?: number | null
           max_members?: number | null
-          price_monthly_kzt: number
+          price_monthly: number
           title: string
           updated_at?: string
         }
@@ -475,15 +485,24 @@ export type Database = {
           allow_paid_events?: boolean
           created_at?: string
           currency?: string
+          currency_code?: string
           id?: string
           is_public?: boolean
           max_event_participants?: number | null
           max_members?: number | null
-          price_monthly_kzt?: number
+          price_monthly?: number
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "club_plans_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       club_subscriptions: {
         Row: {

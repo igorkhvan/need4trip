@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      amount = product.priceKzt * quantity;
+      amount = product.price * quantity;       // ⚡ Normalized (was priceKzt)
       title = product.title;
 
     } else {
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      amount = plan.priceMonthlyKzt;
+      amount = plan.priceMonthly;              // ⚡ Normalized (was priceMonthlyKzt)
       title = plan.title;
 
       // For clubs, quantity must be 1 (one month)

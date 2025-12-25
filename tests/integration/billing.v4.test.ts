@@ -358,7 +358,8 @@ describe('Billing v4: billing_products SSOT', () => {
     const product = await getProductByCode('EVENT_UPGRADE_500');
     
     expect(product).toBeDefined();
-    expect(product?.priceKzt).toBe(1000);
+    expect(product?.price).toBe(1000);             // ⚡ Normalized (was priceKzt)
+    expect(product?.currencyCode).toBe('KZT');     // ⚡ Verify currency
     expect(product?.constraints.max_participants).toBe(500);
 
     // When: enforcePublish is called
@@ -382,7 +383,8 @@ describe('Billing v4: billing_products SSOT', () => {
       options: expect.arrayContaining([
         expect.objectContaining({
           type: 'ONE_OFF_CREDIT',
-          priceKzt: 1000 // From billing_products, NOT hardcoded
+          price: 1000,                       // ⚡ Normalized (was priceKzt)
+          currencyCode: 'KZT'                // ⚡ Added
         })
       ])
     });

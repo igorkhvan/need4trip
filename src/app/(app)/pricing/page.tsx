@@ -70,9 +70,9 @@ export default function PricingPage() {
             
             <div className="mb-4">
               <span className="text-3xl font-bold text-[#1F2937]">
-                {plan.priceMonthlyKzt === 0 ? "Free" : `${plan.priceMonthlyKzt.toLocaleString()} ₸`}
+                {plan.priceMonthly === 0 ? "Free" : `${plan.priceMonthly.toLocaleString()} ${plan.currencyCode === 'KZT' ? '₸' : plan.currencyCode}`}
               </span>
-              {plan.priceMonthlyKzt > 0 && (
+              {plan.priceMonthly > 0 && (
                 <span className="text-muted-foreground">/месяц</span>
               )}
             </div>

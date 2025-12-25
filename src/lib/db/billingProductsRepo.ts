@@ -21,7 +21,7 @@ function mapDbToProduct(db: DbBillingProduct): BillingProduct {
     code: db.code,
     title: db.title,
     type: db.type as "credit",
-    priceKzt: Number(db.price_kzt),
+    price: Number(db.price),                 // ⚡ Normalized (was price_kzt)
     currencyCode: db.currency_code,
     isActive: db.is_active,
     constraints: db.constraints as Record<string, any>,
@@ -99,7 +99,7 @@ export async function upsertProduct(product: Omit<BillingProduct, "createdAt" | 
       code: product.code,
       title: product.title,
       type: product.type,
-      price_kzt: product.priceKzt,
+      price: product.price,                  // ⚡ Normalized (was price_kzt)
       currency_code: product.currencyCode,
       is_active: product.isActive,
       constraints: product.constraints,

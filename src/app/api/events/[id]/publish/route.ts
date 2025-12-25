@@ -139,7 +139,8 @@ export async function POST(
               {
                 type: "ONE_OFF_CREDIT",
                 productCode: "EVENT_UPGRADE_500",
-                priceKzt: 1000,
+                price: 1000,                   // ⚡ Normalized (was priceKzt)
+                currencyCode: "KZT",           // ⚡ Added
                 provider: "kaspi",
               },
               {
