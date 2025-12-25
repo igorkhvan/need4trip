@@ -12,6 +12,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatDateShort } from "@/lib/utils/dates";
 
 export interface DatePickerProps {
   /** Выбранная дата */
@@ -47,13 +48,7 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
-  const displayValue = value
-    ? value.toLocaleDateString("ru-RU", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : null;
+  const displayValue = value ? formatDateShort(value) : null;
 
   const handleSelect = (date: Date) => {
     onChange?.(date);

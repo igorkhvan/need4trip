@@ -29,7 +29,7 @@ import {
 import { EventAccessBadge } from "@/components/events/event-access-badge";
 import { Event } from "@/lib/types/event";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
-import { formatDateTimeShort } from "@/lib/utils/dates";
+import { formatDateTimeShort, formatDateShort } from "@/lib/utils/dates";
 
 export interface EventCardCompactProps {
   event: Event;
@@ -75,7 +75,7 @@ export function EventCardCompact({ event }: EventCardCompactProps) {
           </Badge>
         ) : (
           <div className="text-xs text-muted-foreground">
-            Обновлено {new Date(event.updatedAt).toLocaleDateString("ru-RU")}
+            Обновлено {formatDateShort(event.updatedAt)}
           </div>
         )}
         <Button asChild variant="secondary" size="sm">

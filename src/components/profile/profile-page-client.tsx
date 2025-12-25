@@ -47,6 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { UserCar, CarType } from "@/lib/types/userCar";
+import { formatJoinedDate } from "@/lib/utils/dates";
 
 interface CarBrand {
   id: string;
@@ -151,10 +152,7 @@ export function ProfilePageClient() {
       const cityName = user.city ? `${user.city.name}, ${user.city.region}` : '';
       
       // Format joined date
-      const joinedDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('ru-RU', {
-        year: 'numeric',
-        month: 'long'
-      }) : '';
+      const joinedDate = user.createdAt ? formatJoinedDate(user.createdAt) : '';
       
       setUserData({
         name: user.name || 'Пользователь',

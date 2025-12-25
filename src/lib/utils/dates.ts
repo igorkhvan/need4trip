@@ -130,6 +130,20 @@ export function formatDateShort(input: Date | string): string {
 }
 
 /**
+ * Format joined date (month + year only)
+ * @param input Date object or ISO string
+ * @returns String like "декабрь 2025"
+ * @example formatJoinedDate("2025-12-24") // "декабрь 2025"
+ */
+export function formatJoinedDate(input: Date | string): string {
+  const d = toDate(input);
+  return d.toLocaleDateString("ru-RU", {
+    year: "numeric",
+    month: "long",
+  });
+}
+
+/**
  * Format time only
  * @param input Date object or ISO string
  * @returns String like "14:30"

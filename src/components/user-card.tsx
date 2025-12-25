@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Car, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { formatDateShort } from "@/lib/utils/dates";
 
 // ============================================================================
 // TYPES
@@ -147,11 +148,7 @@ export function UserCard({
             <div className="flex items-center gap-1 text-sm text-gray-500">
               <Calendar className="h-3.5 w-3.5" />
               <span>
-                {new Date(user.joinedAt).toLocaleDateString("ru-RU", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {formatDateShort(user.joinedAt)}
               </span>
             </div>
           )}
