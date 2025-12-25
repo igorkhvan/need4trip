@@ -10,8 +10,8 @@ export { EventForm } from "../event-form";
 export type { EventFormProps, EventFormValues } from "../event-form";
 
 // Section components (for testing or standalone use)
-export { EventBasicInfoSection } from "./sections/EventBasicInfoSection";
-export { EventPricingSection } from "./sections/EventPricingSection";
-export { EventVehicleSection } from "./sections/EventVehicleSection";
-export { EventRulesSection } from "./sections/EventRulesSection";
-export { EventCustomFieldsSection } from "./sections/EventCustomFieldsSection";
+export { EventBasicInfoSection } from "./sections/event-basic-info-section";
+export { EventPricingSection } from "./sections/event-pricing-section";
+export { EventVehicleSection } from "./sections/event-vehicle-section";
+export { EventRulesSection } from "./sections/event-rules-section";
+export { EventCustomFieldsSection } from "./sections/event-custom-fields-section";

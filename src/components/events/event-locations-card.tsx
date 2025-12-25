@@ -5,7 +5,7 @@
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LocationPointDisplay } from "./LocationPointDisplay";
+import { LocationPointDisplay } from "./location-point-display";
 import type { EventLocation } from "@/lib/types/eventLocation";
 
 interface EventLocationsCardProps {

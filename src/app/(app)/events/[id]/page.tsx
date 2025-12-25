@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { ParticipantModal } from "@/components/events/participant-modal";
-import { EventLocationsCard } from "@/components/events/EventLocationsCard";
-import { LocationHeaderItem } from "@/components/events/LocationHeaderItem";
+import { EventLocationsCard } from "@/components/events/event-locations-card";
+import { LocationHeaderItem } from "@/components/events/location-header-item";
 import { MobileSectionProgress } from "@/components/ui/mobile-section-progress";
 import { EventRegistrationControl } from "@/components/events/event-registration-control";
 import { EventDangerZone } from "@/components/events/event-danger-zone";

@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { NavigationChooser } from "./NavigationChooser";
+import { NavigationChooser } from "./navigation-chooser";
 import {
   normalizeCoordinates,
   copyCoordinatesToClipboard,

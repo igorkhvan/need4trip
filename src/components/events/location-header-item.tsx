@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { NavigationChooser } from "./locations/NavigationChooser";
+import { NavigationChooser } from "./locations/navigation-chooser";
 import { copyCoordinatesToClipboard } from "@/lib/utils/coordinates";
 import type { EventLocation } from "@/lib/types/eventLocation";
 

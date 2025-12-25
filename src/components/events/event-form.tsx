@@ -40,11 +40,11 @@ import { useClubPlan } from "@/hooks/use-club-plan";
 import { PaywallModal, usePaywall } from "@/components/billing/paywall-modal";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 // Section components
-import { EventBasicInfoSection } from "./event-form/sections/EventBasicInfoSection";
-import { EventLocationsSection } from "./event-form/sections/EventLocationsSection";
-import { EventVehicleSection } from "./event-form/sections/EventVehicleSection";
-import { EventRulesSection } from "./event-form/sections/EventRulesSection";
-import { EventCustomFieldsSection } from "./event-form/sections/EventCustomFieldsSection";
+import { EventBasicInfoSection } from "./event-form/sections/event-basic-info-section";
+import { EventLocationsSection } from "./event-form/sections/event-locations-section";
+import { EventVehicleSection } from "./event-form/sections/event-vehicle-section";
+import { EventRulesSection } from "./event-form/sections/event-rules-section";
+import { EventCustomFieldsSection } from "./event-form/sections/event-custom-fields-section";
 
 
 const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [

@@ -17,8 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { NavigationChooser } from "./NavigationChooser";
-import { MapPreviewModal } from "./MapPreviewModal";
+import { NavigationChooser } from "./navigation-chooser";
+import { MapPreviewModal } from "./map-preview-modal";
 import { parseCoordinates, normalizeCoordinates, isShortGoogleMapsLink } from "@/lib/utils/coordinates";
 import type { EventLocationInput } from "@/lib/types/eventLocation";
 

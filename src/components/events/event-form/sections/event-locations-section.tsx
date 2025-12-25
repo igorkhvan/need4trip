@@ -8,7 +8,7 @@
 
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LocationItem } from "@/components/events/locations/LocationItem";
+import { LocationItem } from "@/components/events/locations/location-item";
 import type { EventLocationInput } from "@/lib/types/eventLocation";
 
 interface EventLocationsSectionProps {
