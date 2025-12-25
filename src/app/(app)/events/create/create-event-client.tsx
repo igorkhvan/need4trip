@@ -16,6 +16,7 @@ import { handleApiError } from "@/lib/utils/errors";
 import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/PaywallModal";
+import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 
 // Динамический импорт формы события для code splitting
@@ -41,7 +42,9 @@ export function CreateEventPageClient({
 }: CreateEventPageClientProps) {
   const router = useRouter();
   const { showPaywall, PaywallModalComponent } = usePaywall();
+  const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
   const { execute } = useProtectedAction(isAuthenticated);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
   
   // Protect page access
   useEffect(() => {
@@ -56,6 +59,50 @@ export function CreateEventPageClient({
     );
   }, [isAuthenticated, execute, clubId]);
   
+  const handlePublish = async (eventId: string, confirmCredit = false) => {
+    const url = `/api/events/${eventId}/publish${confirmCredit ? '?confirm_credit=1' : ''}`;
+    const publishRes = await fetch(url, {
+      method: "POST",
+    });
+    
+    // Handle 409 CREDIT_CONFIRMATION_REQUIRED
+    if (publishRes.status === 409) {
+      const error409 = await publishRes.json();
+      const meta = error409.error?.meta;
+      
+      if (meta) {
+        setPendingEventId(eventId);
+        showConfirmation({
+          creditCode: meta.creditCode,
+          eventId: meta.eventId,
+          requestedParticipants: meta.requestedParticipants,
+        });
+        return;
+      }
+    }
+    
+    // Handle 402 PAYWALL
+    if (publishRes.status === 402) {
+      const errorData = await publishRes.json();
+      const paywallError = errorData.error?.details || errorData.error;
+      
+      if (paywallError) {
+        showPaywall(paywallError);
+        return;
+      }
+    }
+    
+    // Handle other errors
+    if (!publishRes.ok) {
+      await handleApiError(publishRes);
+      return;
+    }
+    
+    // Success - redirect to events list
+    router.push('/events');
+    router.refresh();
+  };
+
   const handleSubmit = async (payload: Record<string, unknown>) => {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -64,7 +111,7 @@ export function CreateEventPageClient({
     });
     
     if (!res.ok) {
-      // Handle paywall error (402)
+      // Handle paywall error (402) from create endpoint
       if (res.status === 402) {
         const errorData = await res.json();
         const paywallError = errorData.error?.details || errorData.error;
@@ -80,9 +127,19 @@ export function CreateEventPageClient({
       return;
     }
     
-    // Success - redirect to events list
-    router.push('/events');
-    router.refresh();
+    // Success - get event ID and call publish
+    const data = await res.json();
+    const eventId = data.event?.id;
+    
+    if (!eventId) {
+      console.error('No event ID returned from create');
+      router.push('/events');
+      router.refresh();
+      return;
+    }
+    
+    // Call publish endpoint (will handle 402/409 there)
+    await handlePublish(eventId);
   };
   
   // Show nothing while auth check happens
@@ -112,6 +169,24 @@ export function CreateEventPageClient({
       
       {/* Paywall Modal */}
       {PaywallModalComponent}
+      
+      {/* Credit Confirmation Modal */}
+      {modalState.open && modalState.creditCode && (
+        <CreditConfirmationModal
+          open={modalState.open}
+          onOpenChange={hideConfirmation}
+          creditCode={modalState.creditCode}
+          eventId={modalState.eventId!}
+          requestedParticipants={modalState.requestedParticipants!}
+          onConfirm={async () => {
+            if (pendingEventId) {
+              hideConfirmation();
+              await handlePublish(pendingEventId, true);
+            }
+          }}
+          onCancel={hideConfirmation}
+        />
+      )}
     </>
   );
 }

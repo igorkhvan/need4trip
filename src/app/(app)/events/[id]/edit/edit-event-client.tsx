@@ -9,9 +9,11 @@
 
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
 import { usePaywall } from "@/components/billing/PaywallModal";
+import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
 import { handleApiError } from "@/lib/utils/errors";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 import type { Event } from "@/lib/types/event";
@@ -29,10 +31,56 @@ export function EditEventPageClient({
 }: EditEventPageClientProps) {
   const router = useRouter();
   const { showPaywall, PaywallModalComponent } = usePaywall();
+  const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
   
   const isOwner = currentUserId === event.createdByUserId;
   const hasParticipants = (event.participantsCount ?? 0) > 0;
   
+  const handlePublish = async (eventId: string, confirmCredit = false) => {
+    const url = `/api/events/${eventId}/publish${confirmCredit ? '?confirm_credit=1' : ''}`;
+    const publishRes = await fetch(url, {
+      method: "POST",
+    });
+    
+    // Handle 409 CREDIT_CONFIRMATION_REQUIRED
+    if (publishRes.status === 409) {
+      const error409 = await publishRes.json();
+      const meta = error409.error?.meta;
+      
+      if (meta) {
+        setPendingEventId(eventId);
+        showConfirmation({
+          creditCode: meta.creditCode,
+          eventId: meta.eventId,
+          requestedParticipants: meta.requestedParticipants,
+        });
+        return;
+      }
+    }
+    
+    // Handle 402 PAYWALL
+    if (publishRes.status === 402) {
+      const errorData = await publishRes.json();
+      const paywallError = errorData.error?.details || errorData.error;
+      
+      if (paywallError) {
+        showPaywall(paywallError);
+        return;
+      }
+    }
+    
+    // Handle other errors
+    if (!publishRes.ok) {
+      await handleApiError(publishRes);
+      return;
+    }
+    
+    // Success - redirect to event detail
+    router.push(`/events/${eventId}`);
+    router.refresh();
+  };
+
   const handleSubmit = async (payload: Record<string, unknown>) => {
     const res = await fetch(`/api/events/${event.id}`, {
       method: "PUT",
@@ -41,7 +89,7 @@ export function EditEventPageClient({
     });
     
     if (!res.ok) {
-      // Handle paywall error (402)
+      // Handle paywall error (402) from update endpoint
       if (res.status === 402) {
         const errorData = await res.json();
         const paywallError = errorData.error?.details || errorData.error;
@@ -56,9 +104,9 @@ export function EditEventPageClient({
       return;
     }
     
-    // Success - redirect to event detail page
-    router.push(`/events/${event.id}`);
-    router.refresh();
+    // Success - now call publish endpoint (will handle 402/409 there)
+    // This ensures enforcement logic runs even after update
+    await handlePublish(event.id);
   };
   
   return (
@@ -107,6 +155,24 @@ export function EditEventPageClient({
       
       {/* Paywall Modal */}
       {PaywallModalComponent}
+      
+      {/* Credit Confirmation Modal */}
+      {modalState.open && modalState.creditCode && (
+        <CreditConfirmationModal
+          open={modalState.open}
+          onOpenChange={hideConfirmation}
+          creditCode={modalState.creditCode}
+          eventId={modalState.eventId!}
+          requestedParticipants={modalState.requestedParticipants!}
+          onConfirm={async () => {
+            if (pendingEventId) {
+              hideConfirmation();
+              await handlePublish(pendingEventId, true);
+            }
+          }}
+          onCancel={hideConfirmation}
+        />
+      )}
     </div>
   );
 }
