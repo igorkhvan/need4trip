@@ -1,10 +1,41 @@
 /**
- * Billing Types v2.0
+ * Billing Types v4.0
  * 
- * Source: docs/BILLING_AND_LIMITS.md
+ * Source: Billing v4 spec
  */
 
 import { z } from "zod";
+
+// ============================================================================
+// Billing Products (v4) - NEW
+// ============================================================================
+
+export const productTypeSchema = z.enum(["credit"]);
+export type ProductType = z.infer<typeof productTypeSchema>;
+
+export const billingProductSchema = z.object({
+  code: z.string(),
+  title: z.string(),
+  type: productTypeSchema,
+  priceKzt: z.number().positive(),
+  currencyCode: z.string().default("KZT"),
+  isActive: z.boolean(),
+  constraints: z.record(z.any()), // JSONB
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type BillingProduct = z.infer<typeof billingProductSchema>;
+
+// ============================================================================
+// Product Codes (v4)
+// ============================================================================
+
+export type ProductCode = 
+  | "EVENT_UPGRADE_500"  // One-off credit
+  | "CLUB_50"            // Club subscription
+  | "CLUB_500"
+  | "CLUB_UNLIMITED";
 
 // ============================================================================
 // Plan Types

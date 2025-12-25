@@ -250,17 +250,17 @@ export async function enforceClubCreation(params: {
 }
 
 // ============================================================================
-// Publish Enforcement (One-off Event Upgrade)
+// Publish Enforcement (One-off Event Upgrade) - v4
 // ============================================================================
 
 /**
- * Enforce event publish rules (one-off upgrade system)
+ * Enforce event publish rules (one-off upgrade system v4)
  * 
- * Decision tree (per spec):
- * A) Fits free limits → Publish immediately
- * B) Exceeds free && max_participants > 500 → 402 PAYWALL (club required)
- * C) Exceeds free && ≤500 && no credits → 402 PAYWALL (options)
- * D) Exceeds free && ≤500 && has credits → 409 CREDIT_CONFIRMATION_REQUIRED
+ * Decision tree (per v4 spec):
+ * A) Fits free limits → Publish immediately (NO credit consumption!)
+ * B) Exceeds free && max_participants > oneoff_max → 402 PAYWALL (club required)
+ * C) Exceeds free && ≤oneoff_max && no credits → 402 PAYWALL (options)
+ * D) Exceeds free && ≤oneoff_max && has credits → 409 CREDIT_CONFIRMATION_REQUIRED
  * 
  * @param params Event publish parameters
  * @param confirmCredit User explicitly confirmed credit consumption
@@ -274,29 +274,44 @@ export async function enforcePublish(params: {
 }, confirmCredit: boolean = false): Promise<PublishDecision> {
   const { maxParticipants, clubId, userId } = params;
 
-  // Personal events only (club events use existing enforcement)
+  // Step 1: Club events branch (use existing enforcement)
   if (clubId !== null) {
+    // Club events never use one-off credits
+    // Existing club access control applies
     return { allowed: true };
   }
 
+  // Step 2: Personal events branch
   // Load free plan limits
   const freePlan = await getPlanById("free");
   const freeLimit = freePlan.maxEventParticipants ?? 15; // Default fallback
 
-  // Decision A: Fits free limits
+  // Load one-off constraints from billing_products
+  const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
+  const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
+  
+  if (!oneOffProduct) {
+    log.error("EVENT_UPGRADE_500 product not found in billing_products");
+    throw new Error("One-off product configuration missing");
+  }
+
+  const oneOffMax = oneOffProduct.constraints.max_participants ?? 500;
+  const oneOffPrice = oneOffProduct.priceKzt;
+
+  // Decision A: Fits free limits (CRITICAL: no credit consumption!)
   if (maxParticipants === null || maxParticipants <= freeLimit) {
     return { allowed: true };
   }
 
-  // Decision B: Exceeds 500 (club required)
-  if (maxParticipants > 500) {
+  // Decision B: Exceeds oneoff_max (club required)
+  if (maxParticipants > oneOffMax) {
     throw new PaywallError({
-      message: `Events with more than 500 participants require a club`,
+      message: `Events with more than ${oneOffMax} participants require a club`,
       reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
       currentPlanId: "free",
       meta: {
         requestedParticipants: maxParticipants,
-        maxOneOffLimit: 500,
+        maxOneOffLimit: oneOffMax,
       },
       options: [
         {
@@ -307,7 +322,7 @@ export async function enforcePublish(params: {
     });
   }
 
-  // Decision C/D: Exceeds free but ≤500 (check credits)
+  // Decision C/D: Exceeds free but ≤oneoff_max (check credits)
   const hasCredit = await hasAvailableCredit(userId, "EVENT_UPGRADE_500");
 
   if (!hasCredit) {
@@ -324,7 +339,7 @@ export async function enforcePublish(params: {
         {
           type: "ONE_OFF_CREDIT",
           productCode: "EVENT_UPGRADE_500",
-          priceKzt: 1000, // TODO: Load from config/DB
+          priceKzt: oneOffPrice, // From billing_products (no hardcode!)
           provider: "kaspi",
         },
         {
