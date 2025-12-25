@@ -7,7 +7,7 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
-import { enforcePublish } from '@/lib/services/accessControl';
+import { enforcePublish, PublishDecision } from '@/lib/services/accessControl';
 import { createBillingCredit, consumeCredit } from '@/lib/db/billingCreditsRepo';
 import { getProductByCode } from '@/lib/db/billingProductsRepo';
 import { randomUUID } from 'crypto';
@@ -25,7 +25,7 @@ async function createTestCredit(userId: string) {
     product_code: 'EVENT_UPGRADE_500',
     amount: 1000,           // ⚡ Normalized
     currency_code: 'KZT',   // ⚡ Normalized with FK
-    status: 'paid',
+    status: 'completed',    // ⚡ Fixed enum (was 'paid')
     provider: 'test',
   });
   
@@ -107,7 +107,9 @@ describe('Billing v4: Publish Enforcement', () => {
 
     // Then: allowed immediately, no credit check
     expect(decision.allowed).toBe(true);
-    expect(decision.willConsumeCredit).toBeUndefined();
+    if (decision.allowed) {
+      expect(decision.willConsumeCredit).toBeUndefined();
+    }
 
     // Verify: credit still available
     const db = getAdminDb();
@@ -137,7 +139,9 @@ describe('Billing v4: Publish Enforcement', () => {
 
     // Then: requires confirmation (409)
     expect(decision1.allowed).toBe(false);
-    expect(decision1.requiresCreditConfirmation).toBe(true);
+    if (!decision1.allowed) {
+      expect(decision1.requiresCreditConfirmation).toBe(true);
+    }
 
     // When: confirm publish
     const decision2 = await enforcePublish({
@@ -149,7 +153,9 @@ describe('Billing v4: Publish Enforcement', () => {
 
     // Then: allowed with credit consumption
     expect(decision2.allowed).toBe(true);
-    expect(decision2.willConsumeCredit).toBe(true);
+    if (decision2.allowed) {
+      expect(decision2.willConsumeCredit).toBe(true);
+    }
 
     // **Actually consume the credit** (emulate API route behavior)
     await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
@@ -184,7 +190,7 @@ describe('Billing v4: Publish Enforcement', () => {
           clubId: null,
         }, true);
         // Consume if allowed
-        if (decision.willConsumeCredit) {
+        if (decision.allowed && decision.willConsumeCredit) {
           await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
         }
         return decision;
@@ -197,7 +203,7 @@ describe('Billing v4: Publish Enforcement', () => {
           clubId: null,
         }, true);
         // Consume if allowed
-        if (decision.willConsumeCredit) {
+        if (decision.allowed && decision.willConsumeCredit) {
           await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
         }
         return decision;
@@ -268,7 +274,7 @@ describe('Billing v4: Publish Enforcement', () => {
     }, true);
     
     // Consume credit for first publish
-    if (decision1.willConsumeCredit) {
+    if (decision1.allowed && decision1.willConsumeCredit) {
       await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
     }
 
@@ -312,7 +318,7 @@ describe('Billing v4: Publish Enforcement', () => {
       product_code: 'EVENT_UPGRADE_500',
       amount: 1000,           // ⚡ Normalized
       currency_code: 'KZT',   // ⚡ Normalized with FK
-      status: 'paid',
+      status: 'completed',    // ⚡ Fixed enum
       provider: 'test',
     });
 

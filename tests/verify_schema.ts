@@ -74,9 +74,10 @@ async function verifySchema() {
       id: testTxId,
       user_id: '00000000-0000-0000-0000-000000000002',
       product_code: 'EVENT_UPGRADE_500',
-      amount: 1000,
-      currency_code: 'KZT',
-      status: 'completed',
+      amount: 1000,               // ⚡ Normalized
+      currency_code: 'KZT',       // ⚡ Normalized with FK
+      status: 'completed',        // ⚡ Fixed enum
+      provider: 'test',
     });
   
   if (insertError) {

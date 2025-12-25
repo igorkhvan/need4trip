@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Load product details and calculate amount
-    let amountKzt: number;
+    let amount: number;           // ⚡ Normalized
     let title: string;
 
     if (isOneOff) {
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      amountKzt = product.priceKzt * quantity;
+      amount = product.priceKzt * quantity;
       title = product.title;
 
     } else {
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      amountKzt = plan.priceMonthlyKzt;
+      amount = plan.priceMonthlyKzt;
       title = plan.title;
 
       // For clubs, quantity must be 1 (one month)
@@ -136,8 +136,8 @@ export async function POST(req: NextRequest) {
         user_id: isOneOff ? currentUser.id : null,
         product_code: product_code as ProductCode,
         plan_id: isClub ? product_code.toLowerCase().replace("club_", "club_") : null,
-        amount_kzt: amountKzt,
-        currency: "KZT",
+        amount: amount,               // ⚡ Normalized
+        currency_code: "KZT",         // ⚡ Normalized with FK
         status: "pending",
         provider: "kaspi", // Fixed: use provider (not payment_method)
         provider_payment_id: transactionReference, // Fixed: use provider_payment_id (not transaction_reference)
@@ -157,14 +157,14 @@ export async function POST(req: NextRequest) {
     const kaspiPayment = generateKaspiPaymentStub({
       transactionId: transaction.id,
       transactionReference,
-      amountKzt,
+      amount,                         // ⚡ Normalized
       title,
     });
 
     logger.info("Purchase intent created", {
       transactionId: transaction.id,
       productCode: product_code,
-      amountKzt,
+      amount,                         // ⚡ Normalized
       userId: currentUser.id,
     });
 
@@ -203,10 +203,10 @@ interface KaspiPaymentStub {
 function generateKaspiPaymentStub(params: {
   transactionId: string;
   transactionReference: string;
-  amountKzt: number;
+  amount: number;                     // ⚡ Normalized
   title: string;
 }): KaspiPaymentStub {
-  const { transactionId, transactionReference, amountKzt, title } = params;
+  const { transactionId, transactionReference, amount, title } = params;
 
   return {
     provider: "kaspi",
@@ -216,7 +216,7 @@ function generateKaspiPaymentStub(params: {
       `1. Откройте приложение Kaspi.kz`,
       `2. Перейдите в раздел "Платежи"`,
       `3. Найдите платёж: ${title}`,
-      `4. Оплатите ${amountKzt} ₸`,
+      `4. Оплатите ${amount} ₸`,          // ⚡ Normalized
       ``,
       `Или используйте QR-код для быстрой оплаты.`,
     ].join("\n"),

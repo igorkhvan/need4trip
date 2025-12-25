@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     const db = getAdminDb();
     let query = db
       .from("billing_transactions")
-      .select("id, status, product_code, amount_kzt, created_at, updated_at"); // Fixed: amount_kzt (snake_case)
+      .select("id, status, product_code, amount, currency_code, created_at, updated_at"); // ⚡ Normalized
 
     if (transactionId) {
       query = query.eq("id", transactionId);
@@ -84,7 +84,8 @@ export async function GET(req: NextRequest) {
       transaction_id: transaction.id,
       status: transaction.status,
       product_code: transaction.product_code,
-      amount_kzt: Number(transaction.amount_kzt), // Fixed: amount_kzt
+      amount: Number(transaction.amount),           // ⚡ Normalized
+      currency_code: transaction.currency_code,     // ⚡ Normalized
       created_at: transaction.created_at,
       updated_at: transaction.updated_at,
     });

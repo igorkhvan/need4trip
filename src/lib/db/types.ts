@@ -92,13 +92,6 @@ export type Database = {
             foreignKeyName: "billing_credits_source_transaction_id_fkey"
             columns: ["source_transaction_id"]
             isOneToOne: false
-            referencedRelation: "billing_transaction_summaries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_credits_source_transaction_id_fkey"
-            columns: ["source_transaction_id"]
-            isOneToOne: false
             referencedRelation: "billing_transactions"
             referencedColumns: ["id"]
           },
@@ -210,10 +203,8 @@ export type Database = {
       billing_transactions: {
         Row: {
           amount: number
-          amount_kzt: number
           club_id: string | null
           created_at: string
-          currency: string
           currency_code: string
           id: string
           period_end: string | null
@@ -228,10 +219,8 @@ export type Database = {
         }
         Insert: {
           amount: number
-          amount_kzt: number
           club_id?: string | null
           created_at?: string
-          currency?: string
           currency_code: string
           id?: string
           period_end?: string | null
@@ -246,10 +235,8 @@ export type Database = {
         }
         Update: {
           amount?: number
-          amount_kzt?: number
           club_id?: string | null
           created_at?: string
-          currency?: string
           currency_code?: string
           id?: string
           period_end?: string | null
@@ -1332,43 +1319,14 @@ export type Database = {
     Views: {
       billing_transaction_summaries: {
         Row: {
-          amount_kzt: number | null
           club_id: string | null
-          created_at: string | null
-          currency: string | null
-          id: string | null
-          period_end: string | null
-          period_start: string | null
+          club_name: string | null
+          currency_code: string | null
+          first_transaction: string | null
+          last_transaction: string | null
           plan_id: string | null
-          provider: string | null
-          provider_payment_id: string | null
-          status: string | null
-        }
-        Insert: {
-          amount_kzt?: number | null
-          club_id?: string | null
-          created_at?: string | null
-          currency?: string | null
-          id?: string | null
-          period_end?: never
-          period_start?: never
-          plan_id?: string | null
-          provider?: never
-          provider_payment_id?: never
-          status?: string | null
-        }
-        Update: {
-          amount_kzt?: number | null
-          club_id?: string | null
-          created_at?: string | null
-          currency?: string | null
-          id?: string | null
-          period_end?: never
-          period_start?: never
-          plan_id?: string | null
-          provider?: never
-          provider_payment_id?: never
-          status?: string | null
+          total_amount: number | null
+          transaction_count: number | null
         }
         Relationships: [
           {
@@ -1384,6 +1342,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "club_plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_billing_transactions_currency"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
           },
         ]
       }
