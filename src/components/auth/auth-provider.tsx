@@ -105,7 +105,6 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
    */
   useEffect(() => {
     const unsubscribe = onAuthChanged(() => {
-      console.log("[AuthProvider] Auth state changed, refreshing...");
       refresh();
     });
 

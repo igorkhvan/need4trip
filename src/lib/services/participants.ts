@@ -247,7 +247,9 @@ async function queueNewParticipantNotificationAsync(
     // Get organizer info
     const organizer = await getUserById(event.createdByUserId);
     if (!organizer || !organizer.telegramId) {
-      console.log(`[queueNewParticipantNotification] Organizer has no telegramId: ${event.createdByUserId}`);
+      log.warn("[queueNewParticipantNotification] Organizer has no telegramId", {
+        organizerId: event.createdByUserId
+      });
       return;
     }
     
