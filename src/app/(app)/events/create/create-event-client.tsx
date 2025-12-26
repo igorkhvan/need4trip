@@ -120,7 +120,7 @@ export function CreateEventPageClient({
   const showCreditBanner = !!(user?.availableCreditsCount && user.availableCreditsCount > 0);
   
   return (
-    <div className="space-y-6">
+    <div className={showCreditBanner ? "space-y-6" : ""}>
       {/* Credit Info Banner */}
       {showCreditBanner && user && (
         <div className="rounded-lg border border-[var(--color-primary)] bg-[var(--color-primary-bg)] p-4">
