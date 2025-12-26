@@ -40,7 +40,6 @@ import { DomainParticipant } from "@/lib/types/participant";
 import { AuthError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { CurrentUser } from "@/lib/auth/currentUser";
 import { upsertEventAccess, listAccessibleEventIds } from "@/lib/db/eventAccessRepo";
-import { enforceClubAction } from "@/lib/services/accessControl";
 import { log } from "@/lib/utils/logger";
 import { enforceEventVisibility as enforceVisibility, canViewInList } from "@/lib/utils/eventVisibility";
 
@@ -393,96 +392,23 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
     allowAnonymousRegistration: parsed.allowAnonymousRegistration ?? true,
   };
   
-  // ⚡ Check if club event requires active subscription
-  if (validated.isClubEvent) {
-    const { PaywallError } = await import("@/lib/errors");
-    
-    if (!validated.clubId) {
-      // No club = personal event, cannot be club event
-      throw new PaywallError({
-        message: "Клубные события доступны только при наличии клуба с активной подпиской",
-        reason: "CLUB_CREATION_REQUIRES_PLAN",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-        meta: {
-          feature: "Клубные события",
-        },
-      });
-    }
-    
-    // Check if club has active subscription
-    const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
-    const subscription = await getClubSubscription(validated.clubId);
-    
-    if (!subscription || subscription.status !== "active") {
-      throw new PaywallError({
-        message: "Клубные события доступны только при активной подписке клуба",
-        reason: "SUBSCRIPTION_NOT_ACTIVE",
-        currentPlanId: subscription?.planId ?? "free",
-        requiredPlanId: "club_50",
-        meta: {
-          feature: "Клубные события",
-        },
-      });
-    }
-  }
+  // ⚡ Billing v5 Enforcement - unified for create/update
+  // Throws PaywallError (402) or CreditConfirmationRequiredError (409)
+  // NOTE: confirmCredit is passed from API layer via context (not available here)
+  // For now, we pass false - API layer will handle 409 and retry with confirm=true
+  const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
-  // ⚡ Billing v2.0 Enforcement
-  // Check if club can create event with given parameters
-  if (validated.clubId) {
-    await enforceClubAction({
-      clubId: validated.clubId,
-      action: validated.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
-      context: {
-        eventParticipantsCount: validated.maxParticipants ?? undefined,
-        isPaidEvent: validated.isPaid,
-      },
-    });
-  } else {
-    // Personal events (no club) - only block "impossible" states
-    // Monetization decisions (free vs one-off vs club) are handled by publish endpoint
-    const { getPlanById } = await import("@/lib/db/planRepo");
-    const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
-    const { PaywallError } = await import("@/lib/errors");
-    
-    const freePlan = await getPlanById("free");
-    const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
-    
-    if (!oneOffProduct) {
-      log.error("EVENT_UPGRADE_500 product not found in billing_products");
-      throw new Error("One-off product configuration missing");
-    }
-    
-    const oneOffMaxParticipants = oneOffProduct.constraints.max_participants ?? 500;
-    
-    // Check paid events limit (still not allowed for personal events)
-    if (validated.isPaid && !freePlan.allowPaidEvents) {
-      throw new PaywallError({
-        message: "Платные события доступны только на платных тарифах",
-        reason: "PAID_EVENTS_NOT_ALLOWED",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-        meta: {
-          feature: "Платные события",
-        },
-      });
-    }
-    
-    // Only block participants > one-off limit (requires club)
-    // Events within free or one-off range are allowed to be created
-    // Publish endpoint will handle monetization (free vs one-off vs club)
-    if (validated.maxParticipants && validated.maxParticipants > oneOffMaxParticipants) {
-      throw new PaywallError({
-        message: `События более ${oneOffMaxParticipants} участников требуют клубной подписки`,
-        reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
-        currentPlanId: "free",
-        requiredPlanId: "club_500",
-        meta: {
-          requested: validated.maxParticipants,
-          maxOneOffLimit: oneOffMaxParticipants,
-        },
-      });
-    }
+  try {
+    await enforceEventPublish({
+      userId: currentUser.id,
+      clubId: validated.clubId ?? null,
+      maxParticipants: validated.maxParticipants,
+      isPaid: validated.isPaid,
+      eventId: undefined, // No eventId yet (will be set after creation)
+    }, false); // confirmCredit handled by API layer
+  } catch (err: any) {
+    // Re-throw for API layer to handle (402/409)
+    throw err;
   }
   
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
@@ -695,45 +621,9 @@ export async function updateEvent(
   }
 
   // ⚡ Check if club event requires active subscription
-  const finalIsClubEvent = parsed.isClubEvent !== undefined 
-    ? parsed.isClubEvent 
-    : existing.is_club_event;
   
-  if (finalIsClubEvent) {
-    const { PaywallError } = await import("@/lib/errors");
-    
-    if (!existing.club_id) {
-      // Cannot make personal event into club event
-      throw new PaywallError({
-        message: "Клубные события доступны только при наличии клуба с активной подпиской",
-        reason: "CLUB_CREATION_REQUIRES_PLAN",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-        meta: {
-          feature: "Клубные события",
-        },
-      });
-    }
-    
-    // Check if club has active subscription
-    const { getClubSubscription } = await import("@/lib/db/clubSubscriptionRepo");
-    const subscription = await getClubSubscription(existing.club_id);
-    
-    if (!subscription || subscription.status !== "active") {
-      throw new PaywallError({
-        message: "Клубные события доступны только при активной подписке клуба",
-        reason: "SUBSCRIPTION_NOT_ACTIVE",
-        currentPlanId: subscription?.planId ?? "free",
-        requiredPlanId: "club_50",
-        meta: {
-          feature: "Клубные события",
-        },
-      });
-    }
-  }
-  
-  // ⚡ Billing v2.0 Enforcement for updates
-  // Check if changes violate plan limits
+  // ⚡ Billing v5 Enforcement for updates
+  // Calculate final values (merge with existing if not provided)
   const finalMaxParticipants = validated.maxParticipants !== undefined 
     ? validated.maxParticipants 
     : existing.max_participants;
@@ -741,62 +631,22 @@ export async function updateEvent(
     ? validated.isPaid 
     : existing.is_paid;
   
-  if (existing.club_id) {
-    // Club event - use enforceClubAction
-    await enforceClubAction({
+  // Use unified enforcement (same as create)
+  const { enforceEventPublish } = await import("@/lib/services/accessControl");
+  
+  try {
+    await enforceEventPublish({
+      userId: currentUser.id,
       clubId: existing.club_id,
-      action: finalIsPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
-      context: {
-        eventParticipantsCount: finalMaxParticipants ?? undefined,
-        isPaidEvent: finalIsPaid,
-      },
-    });
-  } else {
-    // Personal event - only block "impossible" states
-    // Monetization decisions (free vs one-off vs club) are handled by publish endpoint
-    const { getPlanById } = await import("@/lib/db/planRepo");
-    const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
-    const { PaywallError } = await import("@/lib/errors");
-    
-    const freePlan = await getPlanById("free");
-    const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
-    
-    if (!oneOffProduct) {
-      log.error("EVENT_UPGRADE_500 product not found in billing_products");
-      throw new Error("One-off product configuration missing");
-    }
-    
-    const oneOffMaxParticipants = oneOffProduct.constraints.max_participants ?? 500;
-    
-    // Check paid events limit (still not allowed for personal events)
-    if (finalIsPaid && !freePlan.allowPaidEvents) {
-      throw new PaywallError({
-        message: "Платные события доступны только на платных тарифах",
-        reason: "PAID_EVENTS_NOT_ALLOWED",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-        meta: {
-          feature: "Платные события",
-        },
-      });
-    }
-    
-    // Only block participants > one-off limit (requires club)
-    // Events within free or one-off range are allowed to be updated
-    // Publish endpoint will handle monetization (free vs one-off vs club)
-    if (finalMaxParticipants && finalMaxParticipants > oneOffMaxParticipants) {
-      throw new PaywallError({
-        message: `События более ${oneOffMaxParticipants} участников требуют клубной подписки`,
-        reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
-        currentPlanId: "free",
-        requiredPlanId: "club_500",
-        meta: {
-          requested: finalMaxParticipants,
-          maxOneOffLimit: oneOffMaxParticipants,
-        },
-      });
-    }
+      maxParticipants: finalMaxParticipants,
+      isPaid: finalIsPaid,
+      eventId: id, // Existing event ID for credit tracking
+    }, false); // confirmCredit handled by API layer
+  } catch (err: any) {
+    // Re-throw for API layer to handle (402/409)
+    throw err;
   }
+
 
 
   // Prepare patch for database update

@@ -16,7 +16,7 @@ import {
   getRequiredPlanForMembers 
 } from "@/lib/db/planRepo";
 import { isActionAllowed } from "@/lib/db/billingPolicyRepo";
-import { hasAvailableCredit } from "@/lib/db/billingCreditsRepo";
+import { hasAvailableCredit, consumeCredit } from "@/lib/db/billingCreditsRepo";
 import type { 
   BillingActionCode, 
   ClubSubscription, 
@@ -250,43 +250,123 @@ export async function enforceClubCreation(params: {
 }
 
 // ============================================================================
-// Publish Enforcement (One-off Event Upgrade) - v4
+// Event Publish Enforcement (CREATE/UPDATE with Monetization) - v5
 // ============================================================================
 
 /**
- * Enforce event publish rules (one-off upgrade system v4)
+ * Enforce event publish rules for CREATE and UPDATE operations
  * 
- * Decision tree (per v4 spec):
- * A) Fits free limits → Publish immediately (NO credit consumption!)
- * B) Exceeds free && max_participants > oneoff_max → 402 PAYWALL (club required)
- * C) Exceeds free && ≤oneoff_max && no credits → 402 PAYWALL (options)
- * D) Exceeds free && ≤oneoff_max && has credits → 409 CREDIT_CONFIRMATION_REQUIRED
+ * Unified enforcement for both create and update - checks limits and handles:
+ * - Club events: subscription status + plan limits
+ * - Personal events: free limits, one-off credits, paywall
  * 
- * @param params Event publish parameters
+ * Rules (per spec):
+ * 
+ * CLUB EVENTS (clubId != null):
+ * - If subscription expired/policy blocks → 402 PAYWALL (CLUB_ACCESS only)
+ * - If limits exceeded → 402 PAYWALL (CLUB_ACCESS only)
+ * - Never show one-off credit option
+ * 
+ * PERSONAL EVENTS (clubId == null):
+ * - ≤ free_limit → Allow (no credit, no paywall)
+ * - > oneoff_limit → 402 PAYWALL (CLUB_ACCESS only)
+ * - free < count ≤ oneoff && no credit → 402 PAYWALL (ONE_OFF + CLUB_ACCESS)
+ * - free < count ≤ oneoff && credit && !confirm → 409 CREDIT_CONFIRMATION
+ * - free < count ≤ oneoff && credit && confirm → consume credit + allow
+ * 
+ * @param params Event parameters
  * @param confirmCredit User explicitly confirmed credit consumption
- * @returns Decision result
+ * @throws PaywallError (402) if payment required
+ * @throws CreditConfirmationError (409) if credit confirmation required
  */
-export async function enforcePublish(params: {
-  eventId: string;
+export async function enforceEventPublish(params: {
   userId: string;
-  maxParticipants: number | null;
   clubId: string | null;
-}, confirmCredit: boolean = false): Promise<PublishDecision> {
-  const { maxParticipants, clubId, userId } = params;
+  maxParticipants: number | null;
+  isPaid: boolean;
+  eventId?: string; // For credit consumption tracking (optional for create)
+}, confirmCredit: boolean = false): Promise<void> {
+  const { userId, clubId, maxParticipants, isPaid, eventId } = params;
 
-  // Step 1: Club events branch (use existing enforcement)
+  // ============================================================================
+  // CLUB EVENTS BRANCH
+  // ============================================================================
   if (clubId !== null) {
-    // Club events never use one-off credits
-    // Existing club access control applies
-    return { allowed: true };
+    // Get subscription status
+    const subscription = await getClubSubscription(clubId);
+    const plan = subscription ? await getPlanById(subscription.planId) : await getPlanById("free");
+
+    // Check 1: Subscription status and policy
+    if (subscription && subscription.status !== "active") {
+      const isAllowed = await isActionAllowed(subscription.status, "CLUB_CREATE_EVENT");
+      
+      if (!isAllowed) {
+        throw new PaywallError({
+          message: `Действие недоступно при статусе подписки "${subscription.status}"`,
+          reason: "SUBSCRIPTION_NOT_ACTIVE",
+          currentPlanId: subscription.planId,
+          meta: { status: subscription.status },
+          options: [
+            {
+              type: "CLUB_ACCESS",
+              recommendedPlanId: subscription.planId, // Renew current plan
+            },
+          ],
+        });
+      }
+    }
+
+    // Check 2: Plan limits for club events
+    // Check paid events feature
+    if (isPaid && !plan.allowPaidEvents) {
+      throw new PaywallError({
+        message: "Платные события недоступны на вашем тарифе",
+        reason: "PAID_EVENTS_NOT_ALLOWED",
+        currentPlanId: plan.id,
+        requiredPlanId: "club_50",
+        options: [
+          {
+            type: "CLUB_ACCESS",
+            recommendedPlanId: "club_50",
+          },
+        ],
+      });
+    }
+
+    // Check participants limit
+    if (maxParticipants !== null && plan.maxEventParticipants !== null && maxParticipants > plan.maxEventParticipants) {
+      const requiredPlan = await getRequiredPlanForParticipants(maxParticipants);
+      
+      throw new PaywallError({
+        message: `Событие на ${maxParticipants} участников превышает лимит вашего плана (${plan.maxEventParticipants})`,
+        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
+        currentPlanId: plan.id,
+        requiredPlanId: requiredPlan === "free" ? undefined : requiredPlan as PlanId,
+        meta: {
+          requested: maxParticipants,
+          limit: plan.maxEventParticipants,
+        },
+        options: [
+          {
+            type: "CLUB_ACCESS",
+            recommendedPlanId: requiredPlan as PlanId,
+          },
+        ],
+      });
+    }
+
+    // All checks passed for club event
+    return;
   }
 
-  // Step 2: Personal events branch
-  // Load free plan limits
+  // ============================================================================
+  // PERSONAL EVENTS BRANCH
+  // ============================================================================
+  
+  // Load limits from database
   const freePlan = await getPlanById("free");
-  const freeLimit = freePlan.maxEventParticipants ?? 15; // Default fallback
-
-  // Load one-off constraints from billing_products
+  const freeLimit = freePlan.maxEventParticipants ?? 15;
+  
   const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
   const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
   
@@ -294,42 +374,59 @@ export async function enforcePublish(params: {
     log.error("EVENT_UPGRADE_500 product not found in billing_products");
     throw new Error("One-off product configuration missing");
   }
-
-  const oneOffMax = oneOffProduct.constraints.max_participants ?? 500;
-  const oneOffPrice = oneOffProduct.price;         // ⚡ Normalized (was priceKzt)
+  
+  const oneOffLimit = oneOffProduct.constraints.max_participants ?? 500;
+  const oneOffPrice = oneOffProduct.price;
   const oneOffCurrency = oneOffProduct.currencyCode;
 
-  // Decision A: Fits free limits (CRITICAL: no credit consumption!)
-  if (maxParticipants === null || maxParticipants <= freeLimit) {
-    return { allowed: true };
-  }
-
-  // Decision B: Exceeds oneoff_max (club required)
-  if (maxParticipants > oneOffMax) {
+  // Check paid events (personal events cannot be paid)
+  if (isPaid && !freePlan.allowPaidEvents) {
     throw new PaywallError({
-      message: `Events with more than ${oneOffMax} participants require a club`,
-      reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
+      message: "Платные события доступны только на платных тарифах",
+      reason: "PAID_EVENTS_NOT_ALLOWED",
       currentPlanId: "free",
-      meta: {
-        requestedParticipants: maxParticipants,
-        maxOneOffLimit: oneOffMax,
-      },
+      requiredPlanId: "club_50",
       options: [
         {
           type: "CLUB_ACCESS",
-          recommendedPlanId: "club_500", // Recommend plan that fits
+          recommendedPlanId: "club_50",
         },
       ],
     });
   }
 
-  // Decision C/D: Exceeds free but ≤oneoff_max (check credits)
-  const hasCredit = await hasAvailableCredit(userId, "EVENT_UPGRADE_500");
+  // Decision 1: Within free limits
+  if (maxParticipants === null || maxParticipants <= freeLimit) {
+    // Allow without credit consumption
+    return;
+  }
 
-  if (!hasCredit) {
-    // Decision C: No credits available
+  // Decision 2: Exceeds one-off limit (> 500)
+  if (maxParticipants > oneOffLimit) {
     throw new PaywallError({
-      message: `Event with ${maxParticipants} participants requires payment`,
+      message: `События более ${oneOffLimit} участников требуют клубной подписки`,
+      reason: "CLUB_REQUIRED_FOR_LARGE_EVENT",
+      currentPlanId: "free",
+      meta: {
+        requestedParticipants: maxParticipants,
+        maxOneOffLimit: oneOffLimit,
+      },
+      options: [
+        {
+          type: "CLUB_ACCESS",
+          recommendedPlanId: "club_500",
+        },
+      ],
+    });
+  }
+
+  // Decision 3-5: Between free and one-off limit (16-500)
+  const creditAvailable = await hasAvailableCredit(userId, "EVENT_UPGRADE_500");
+
+  if (!creditAvailable) {
+    // Decision 3: No credit available
+    throw new PaywallError({
+      message: `Событие на ${maxParticipants} участников требует оплаты`,
       reason: "PUBLISH_REQUIRES_PAYMENT",
       currentPlanId: "free",
       meta: {
@@ -340,8 +437,8 @@ export async function enforcePublish(params: {
         {
           type: "ONE_OFF_CREDIT",
           productCode: "EVENT_UPGRADE_500",
-          price: oneOffPrice,                // ⚡ Normalized (was priceKzt)
-          currencyCode: oneOffCurrency,      // ⚡ Added
+          price: oneOffPrice,
+          currencyCode: oneOffCurrency,
           provider: "kaspi",
         },
         {
@@ -352,22 +449,57 @@ export async function enforcePublish(params: {
     });
   }
 
-  // Decision D: Has credit, needs confirmation
+  // Decision 4: Has credit, but not confirmed
   if (!confirmCredit) {
-    return {
-      allowed: false,
-      requiresCreditConfirmation: true,
-      creditCode: "EVENT_UPGRADE_500",
+    // Return 409 - need confirmation
+    const error = {
+      success: false,
+      error: {
+        code: "CREDIT_CONFIRMATION_REQUIRED",
+        reason: "EVENT_UPGRADE_WILL_BE_CONSUMED",
+        meta: {
+          creditCode: "EVENT_UPGRADE_500",
+          eventId: eventId ?? null,
+          requestedParticipants: maxParticipants,
+        },
+        cta: {
+          type: "CONFIRM_CONSUME_CREDIT",
+          // CTA href will be set by API endpoint (different for create vs update)
+        },
+      },
     };
+    
+    // Throw special error that API layer will convert to 409
+    throw new CreditConfirmationRequiredError(error);
   }
 
-  // Confirmed: proceed with consumption (done in publish route)
-  return { allowed: true, willConsumeCredit: true };
+  // Decision 5: Confirmed - consume credit
+  // Use transaction-safe consumption (will rollback if event save fails)
+  await consumeCredit(userId, "EVENT_UPGRADE_500", eventId ?? "pending");
+  
+  log.info("Credit consumed for event publish", {
+    userId,
+    creditCode: "EVENT_UPGRADE_500",
+    eventId: eventId ?? "new",
+    maxParticipants,
+  });
 }
 
-export type PublishDecision = 
-  | { allowed: true; willConsumeCredit?: boolean }
-  | { allowed: false; requiresCreditConfirmation: true; creditCode: "EVENT_UPGRADE_500" };
+/**
+ * Special error for credit confirmation required (409)
+ * 
+ * This is NOT a PaywallError (402) - it's a warning that requires user confirmation
+ * before proceeding with credit consumption.
+ */
+export class CreditConfirmationRequiredError extends Error {
+  public readonly payload: any;
+  
+  constructor(payload: any) {
+    super("CREDIT_CONFIRMATION_REQUIRED");
+    this.name = "CreditConfirmationRequiredError";
+    this.payload = payload;
+  }
+}
 
 // ============================================================================
 // Helper: Get Current Plan for Club
