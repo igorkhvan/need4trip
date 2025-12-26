@@ -16,7 +16,7 @@ import {
   getRequiredPlanForMembers 
 } from "@/lib/db/planRepo";
 import { isActionAllowed } from "@/lib/db/billingPolicyRepo";
-import { hasAvailableCredit, consumeCredit } from "@/lib/db/billingCreditsRepo";
+import { hasAvailableCredit } from "@/lib/db/billingCreditsRepo";
 import type { 
   BillingActionCode, 
   ClubSubscription, 
@@ -473,16 +473,22 @@ export async function enforceEventPublish(params: {
     throw new CreditConfirmationRequiredError(error);
   }
 
-  // Decision 5: Confirmed - consume credit
-  // Use transaction-safe consumption (will rollback if event save fails)
-  await consumeCredit(userId, "EVENT_UPGRADE_500", eventId ?? "pending");
+  // Decision 5: Confirmed - consume credit atomically
+  // Note: Credit consumption happens here, but event save happens later in service layer
+  // If event save fails, credit will be rolled back via compensating transaction
+  // See: src/lib/services/creditTransaction.ts
   
-  log.info("Credit consumed for event publish", {
+  // Mark credit as about to be consumed (actual consumption + rollback handled by transaction wrapper)
+  log.info("Credit will be consumed for event publish (wrapped in transaction)", {
     userId,
     creditCode: "EVENT_UPGRADE_500",
     eventId: eventId ?? "new",
     maxParticipants,
   });
+  
+  // NOTE: Do NOT consume credit here!
+  // Credit consumption is handled by executeWithCreditTransaction() wrapper
+  // in createEvent()/updateEvent() to ensure atomicity
 }
 
 /**

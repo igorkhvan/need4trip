@@ -400,50 +400,101 @@ export async function createEvent(
   // Throws PaywallError (402) or CreditConfirmationRequiredError (409)
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
-  try {
-    await enforceEventPublish({
-      userId: currentUser.id,
-      clubId: validated.clubId ?? null,
-      maxParticipants: validated.maxParticipants,
-      isPaid: validated.isPaid,
-      eventId: undefined, // No eventId yet (will be set after creation)
-    }, confirmCredit);
-  } catch (err: any) {
-    // Re-throw for API layer to handle (402/409)
-    throw err;
-  }
+  await enforceEventPublish({
+    userId: currentUser.id,
+    clubId: validated.clubId ?? null,
+    maxParticipants: validated.maxParticipants,
+    isPaid: validated.isPaid,
+    eventId: undefined, // No eventId yet (will be set after creation)
+  }, confirmCredit);
   
-  await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
-  const db = await createEventRecord({
-    ...validated,
-    createdByUserId: currentUser.id,
-  });
-  if (validated.allowedBrandIds?.length) {
-    await replaceAllowedBrands(db.id, validated.allowedBrandIds);
-  }
+  // If confirmCredit=true and enforcement passed, wrap in credit transaction
+  const shouldUseCredit = confirmCredit && validated.clubId === null && 
+    validated.maxParticipants && validated.maxParticipants > 15 && validated.maxParticipants <= 500;
   
-  // Create locations (default first location or from input)
-  if (validated.locations && validated.locations.length > 0) {
-    await saveLocations(db.id, validated.locations);
+  let event: Event;
+  
+  if (shouldUseCredit) {
+    // Wrap in compensating transaction (consume credit + save event, rollback on failure)
+    const { executeWithCreditTransaction } = await import("@/lib/services/creditTransaction");
+    
+    event = await executeWithCreditTransaction(
+      currentUser.id,
+      "EVENT_UPGRADE_500",
+      undefined, // No eventId yet
+      async () => {
+        // This operation is wrapped in transaction - credit will rollback if it fails
+        await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
+        const db = await createEventRecord({
+          ...validated,
+          createdByUserId: currentUser.id,
+        });
+        
+        // Process related data (brands, locations, access)
+        if (validated.allowedBrandIds?.length) {
+          await replaceAllowedBrands(db.id, validated.allowedBrandIds);
+        }
+        
+        if (validated.locations && validated.locations.length > 0) {
+          await saveLocations(db.id, validated.locations);
+        } else {
+          await createDefaultLocation(db.id, "Точка сбора");
+        }
+        
+        await upsertEventAccess(db.id, currentUser.id, "owner");
+        
+        // Map to domain and load relations
+        const mappedEvent = mapDbEventToDomain(db);
+        
+        try {
+          mappedEvent.allowedBrands = await getAllowedBrands(db.id);
+        } catch (err) {
+          log.warn("Failed to load allowed brands for new event, using empty array", { eventId: db.id, error: err });
+        }
+        
+        try {
+          mappedEvent.locations = await getLocationsByEventId(db.id);
+        } catch (err) {
+          log.warn("Failed to load locations for new event, using empty array", { eventId: db.id, error: err });
+          mappedEvent.locations = [];
+        }
+        
+        return mappedEvent;
+      }
+    );
   } else {
-    // Create default first location if not provided
-    await createDefaultLocation(db.id, "Точка сбора");
-  }
-  
-  await upsertEventAccess(db.id, currentUser.id, "owner");
-  const event = mapDbEventToDomain(db);
-  try {
-    event.allowedBrands = await getAllowedBrands(db.id);
-  } catch (err) {
-    log.warn("Failed to load allowed brands for new event, using empty array", { eventId: db.id, error: err });
-  }
-  
-  // Load locations
-  try {
-    event.locations = await getLocationsByEventId(db.id);
-  } catch (err) {
-    log.warn("Failed to load locations for new event, using empty array", { eventId: db.id, error: err });
-    event.locations = [];
+    // No credit needed - direct save
+    await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
+    const db = await createEventRecord({
+      ...validated,
+      createdByUserId: currentUser.id,
+    });
+    
+    if (validated.allowedBrandIds?.length) {
+      await replaceAllowedBrands(db.id, validated.allowedBrandIds);
+    }
+    
+    if (validated.locations && validated.locations.length > 0) {
+      await saveLocations(db.id, validated.locations);
+    } else {
+      await createDefaultLocation(db.id, "Точка сбора");
+    }
+    
+    await upsertEventAccess(db.id, currentUser.id, "owner");
+    
+    event = mapDbEventToDomain(db);
+    try {
+      event.allowedBrands = await getAllowedBrands(db.id);
+    } catch (err) {
+      log.warn("Failed to load allowed brands for new event, using empty array", { eventId: db.id, error: err });
+    }
+    
+    try {
+      event.locations = await getLocationsByEventId(db.id);
+    } catch (err) {
+      log.warn("Failed to load locations for new event, using empty array", { eventId: db.id, error: err });
+      event.locations = [];
+    }
   }
   
   // Queue notifications for new event (non-blocking)
@@ -637,20 +688,17 @@ export async function updateEvent(
   // Use unified enforcement (same as create)
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
-  try {
-    await enforceEventPublish({
-      userId: currentUser.id,
-      clubId: existing.club_id,
-      maxParticipants: finalMaxParticipants,
-      isPaid: finalIsPaid,
-      eventId: id, // Existing event ID for credit tracking
-    }, confirmCredit);
-  } catch (err: any) {
-    // Re-throw for API layer to handle (402/409)
-    throw err;
-  }
+  await enforceEventPublish({
+    userId: currentUser.id,
+    clubId: existing.club_id,
+    maxParticipants: finalMaxParticipants,
+    isPaid: finalIsPaid,
+    eventId: id, // Existing event ID for credit tracking
+  }, confirmCredit);
 
-
+  // If confirmCredit=true and enforcement passed, wrap update in credit transaction
+  const shouldUseCredit = confirmCredit && existing.club_id === null && 
+    finalMaxParticipants && finalMaxParticipants > 15 && finalMaxParticipants <= 500;
 
   // Prepare patch for database update
   const patch: EventUpdateInput = {
@@ -663,43 +711,91 @@ export async function updateEvent(
       : undefined,
   };
 
-  const updated = await updateEventRecord(id, patch);
-  if (!updated) {
-    throw new NotFoundError("Event not found");
-  }
-  if (parsed.allowedBrandIds) {
-    await replaceAllowedBrands(id, parsed.allowedBrandIds);
-  }
-  
-  // Update locations if provided
-  if (parsed.locations) {
-    await saveLocations(id, parsed.locations);
-  }
-  
-  const event = mapDbEventToDomain(updated);
-  try {
-    event.allowedBrands = await getAllowedBrands(id);
-  } catch (err) {
-    log.warn("Failed to load allowed brands for updated event, using empty array", { eventId: id, error: err });
-  }
-  
-  // Load locations
-  try {
-    event.locations = await getLocationsByEventId(id);
-  } catch (err) {
-    log.warn("Failed to load locations for updated event, using empty array", { eventId: id, error: err });
-    event.locations = [];
+  let event: Event;
+
+  if (shouldUseCredit) {
+    // Wrap in compensating transaction
+    const { executeWithCreditTransaction } = await import("@/lib/services/creditTransaction");
+    
+    event = await executeWithCreditTransaction(
+      currentUser.id,
+      "EVENT_UPGRADE_500",
+      id,
+      async () => {
+        // This operation is wrapped in transaction - credit will rollback if it fails
+        const updated = await updateEventRecord(id, patch);
+        if (!updated) {
+          throw new NotFoundError("Event not found");
+        }
+        
+        if (parsed.allowedBrandIds) {
+          await replaceAllowedBrands(id, parsed.allowedBrandIds);
+        }
+        
+        if (parsed.locations) {
+          await saveLocations(id, parsed.locations);
+        }
+        
+        const mappedEvent = mapDbEventToDomain(updated);
+        try {
+          mappedEvent.allowedBrands = await getAllowedBrands(id);
+        } catch (err) {
+          log.warn("Failed to load allowed brands for updated event, using empty array", { eventId: id, error: err });
+        }
+        
+        try {
+          mappedEvent.locations = await getLocationsByEventId(id);
+        } catch (err) {
+          log.warn("Failed to load locations for updated event, using empty array", { eventId: id, error: err });
+          mappedEvent.locations = [];
+        }
+        
+        return mappedEvent;
+      }
+    );
+  } else {
+    // No credit needed - direct update
+    const updated = await updateEventRecord(id, patch);
+    if (!updated) {
+      throw new NotFoundError("Event not found");
+    }
+    
+    if (parsed.allowedBrandIds) {
+      await replaceAllowedBrands(id, parsed.allowedBrandIds);
+    }
+    
+    if (parsed.locations) {
+      await saveLocations(id, parsed.locations);
+    }
+    
+    event = mapDbEventToDomain(updated);
+    try {
+      event.allowedBrands = await getAllowedBrands(id);
+    } catch (err) {
+      log.warn("Failed to load allowed brands for updated event, using empty array", { eventId: id, error: err });
+    }
+    
+    try {
+      event.locations = await getLocationsByEventId(id);
+    } catch (err) {
+      log.warn("Failed to load locations for updated event, using empty array", { eventId: id, error: err });
+      event.locations = [];
+    }
   }
   
   // Queue event update notifications to participants (non-blocking)
   if (participantsCount > 0) {
-    queueEventUpdatedNotificationsAsync(
-      existing,
-      updated,
-      parsed
-    ).catch((err) => {
-      log.errorWithStack("Failed to queue event update notifications", err, { eventId: id });
-    });
+    // Need to get updated DB record for notifications
+    const updatedDb = await getEventById(id);
+    if (updatedDb) {
+      queueEventUpdatedNotificationsAsync(
+        existing,
+        updatedDb,
+        parsed
+      ).catch((err) => {
+        log.errorWithStack("Failed to queue event update notifications", err, { eventId: id });
+      });
+    }
   }
   
   return event;
