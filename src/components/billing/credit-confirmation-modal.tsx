@@ -58,12 +58,12 @@ export function CreditConfirmationModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
+          <DialogTitle className="heading-h3 flex items-center gap-3">
             <div className="p-2 bg-[var(--color-primary-bg)] rounded-full">
               <CreditCard className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
-            <DialogTitle className="heading-h3">Подтверждение публикации события</DialogTitle>
-          </div>
+            Подтверждение публикации события
+          </DialogTitle>
           <DialogDescription className="text-body-small">
             Для публикации этого события будет использована разовая опция <strong>{creditLabel}</strong>.
           </DialogDescription>
