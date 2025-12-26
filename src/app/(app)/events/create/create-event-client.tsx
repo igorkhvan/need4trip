@@ -120,10 +120,10 @@ export function CreateEventPageClient({
   const showCreditBanner = !!(user?.availableCreditsCount && user.availableCreditsCount > 0);
   
   return (
-    <>
+    <div className="space-y-6">
       {/* Credit Info Banner */}
       {showCreditBanner && user && (
-        <div className="mb-6 rounded-lg border border-[var(--color-primary)] bg-[var(--color-primary-bg)] p-4">
+        <div className="rounded-lg border border-[var(--color-primary)] bg-[var(--color-primary-bg)] p-4">
           <div className="flex items-start gap-3">
             <div className="rounded-lg bg-white p-2">
               <svg
@@ -188,7 +188,7 @@ export function CreateEventPageClient({
           onCancel={hideConfirmation}
         />
       )}
-    </>
+    </div>
   );
 }
 
