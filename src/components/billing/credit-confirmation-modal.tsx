@@ -69,7 +69,7 @@ export function CreditConfirmationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-3 sm:py-4">
+        <div className="space-y-4">
           {/* Warning Box */}
           <div className="flex gap-3 p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
             <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
@@ -82,19 +82,15 @@ export function CreditConfirmationModal({
           </div>
 
           {/* Details */}
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Опция:</span>
-              <span className="font-medium">{creditLabel}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Описание:</span>
-              <span className="text-[var(--color-text)]">{creditDescription}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Участников:</span>
-              <span className="font-medium">{requestedParticipants}</span>
-            </div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+            <span className="text-muted-foreground">Опция:</span>
+            <span className="font-medium text-[var(--color-text)]">{creditLabel}</span>
+            
+            <span className="text-muted-foreground">Описание:</span>
+            <span className="text-[var(--color-text)]">{creditDescription}</span>
+            
+            <span className="text-muted-foreground">Участников:</span>
+            <span className="font-medium text-[var(--color-text)]">{requestedParticipants}</span>
           </div>
         </div>
 

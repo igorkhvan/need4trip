@@ -32,18 +32,23 @@
   --color-success: #22C55E;
   --color-success-bg: #F0FDF4;
   --color-success-text: #166534;
+  --color-success-border: #DCFCE7;
   
   --color-warning: #F59E0B;
   --color-warning-bg: #FFFBEB;
   --color-warning-text: #92400E;
+  --color-warning-border: #FDE68A;
   
   --color-danger: #EF4444;
   --color-danger-bg: #FEF2F2;
   --color-danger-text: #991B1B;
+  --color-danger-border: #FECACA;
+  --color-danger-hover: #DC2626;
   
   --color-info: #3B82F6;
   --color-info-bg: #EFF6FF;
   --color-info-text: #1E40AF;
+  --color-info-border: #DBEAFE;
   
   --color-text: #1F2937;
   --color-text-muted: #6B7280;
