@@ -169,7 +169,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
           <DialogDescription className="text-body-small">{message.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-3 sm:py-4 space-y-2 text-sm">
+        <div className="space-y-3 text-sm">
           {error.currentPlanId && (
             <p>
               <strong>Текущий план:</strong>{" "}
@@ -193,7 +193,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
 
         {hasOptions ? (
           // NEW: Multiple payment options with status
-          <div className="space-y-3 py-2">
+          <div className="space-y-3">
             {paymentStatus === 'idle' && (
               <>
                 <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
@@ -202,7 +202,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
                     key={idx}
                     onClick={() => handleOptionClick(option)}
                     disabled={isLoading}
-                    className="w-full flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors text-left disabled:opacity-50"
+                    className="w-full flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors text-left disabled:opacity-50"
                   >
                     {option.type === "ONE_OFF_CREDIT" ? (
                       <>
@@ -267,7 +267,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
         )}
 
         {hasOptions && (
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             <Button variant="ghost" onClick={onClose} className="w-full">
               Отмена
             </Button>
