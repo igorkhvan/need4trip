@@ -117,7 +117,7 @@ export function CreateEventPageClient({
   const initialCityId = userCityId ?? club?.cities?.[0]?.id ?? null;
   
   // Show credit banner if user has available credits
-  const showCreditBanner = user?.availableCreditsCount && user.availableCreditsCount > 0;
+  const showCreditBanner = !!(user?.availableCreditsCount && user.availableCreditsCount > 0);
   
   return (
     <>
