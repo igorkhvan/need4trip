@@ -872,7 +872,6 @@ export type Database = {
           is_paid: boolean
           max_participants: number | null
           price: number | null
-          published_at: string | null
           registration_manually_closed: boolean
           rules: string | null
           title: string
@@ -899,7 +898,6 @@ export type Database = {
           is_paid?: boolean
           max_participants?: number | null
           price?: number | null
-          published_at?: string | null
           registration_manually_closed?: boolean
           rules?: string | null
           title: string
@@ -926,7 +924,6 @@ export type Database = {
           is_paid?: boolean
           max_participants?: number | null
           price?: number | null
-          published_at?: string | null
           registration_manually_closed?: boolean
           rules?: string | null
           title?: string
