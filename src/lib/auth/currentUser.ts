@@ -25,6 +25,7 @@ export interface CurrentUser {
   carModelText?: string | null; // Свободный текст модели
   experienceLevel?: ExperienceLevel | null;
   plan?: UserPlan; // Personal subscription plan (free | pro)
+  availableCreditsCount?: number; // Count of available billing credits (for UI badge)
   createdAt?: string;
   updatedAt?: string;
 }
@@ -64,6 +65,15 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   if (!user) return null;
 
+  // Get available credits count (non-blocking, fallback to 0 on error)
+  let availableCreditsCount = 0;
+  try {
+    const { getAvailableCreditsCount } = await import("@/lib/db/userRepo");
+    availableCreditsCount = await getAvailableCreditsCount(user.id);
+  } catch (err) {
+    log.warn("Failed to fetch available credits count for currentUser", { userId: user.id, error: err });
+  }
+
   return {
     id: user.id,
     name: user.name,
@@ -77,6 +87,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     carModelText: user.carModelText ?? null, // Свободный текст модели
     experienceLevel: user.experienceLevel ?? null,
     plan: user.plan ?? "free", // Personal subscription plan
+    availableCreditsCount, // ⚡ Credits count for UI badge
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -126,6 +137,15 @@ export async function getCurrentUserFromMiddleware(request: Request): Promise<Cu
       return null;
     }
     
+    // Get available credits count (non-blocking, fallback to 0 on error)
+    let availableCreditsCount = 0;
+    try {
+      const { getAvailableCreditsCount } = await import("@/lib/db/userRepo");
+      availableCreditsCount = await getAvailableCreditsCount(user.id);
+    } catch (err) {
+      log.warn("Failed to fetch available credits count for currentUser", { userId: user.id, error: err });
+    }
+    
     // Convert User to CurrentUser format
     return {
       id: user.id,
@@ -140,6 +160,7 @@ export async function getCurrentUserFromMiddleware(request: Request): Promise<Cu
       carModelText: user.carModelText,
       experienceLevel: user.experienceLevel,
       plan: user.plan,
+      availableCreditsCount, // ⚡ Credits count for UI badge
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

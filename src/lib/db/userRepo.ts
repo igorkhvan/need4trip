@@ -87,6 +87,27 @@ export async function getUserById(id: string): Promise<User | null> {
   return mapRowToUser(data as DbUserRow);
 }
 
+/**
+ * Get available credits count for a user
+ * Used by getCurrentUser() to populate CurrentUser.availableCreditsCount
+ */
+export async function getAvailableCreditsCount(userId: string): Promise<number> {
+  const db = getAdminDb();
+  const { count, error } = await db
+    .from("billing_credits")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "available");
+
+  if (error) {
+    log.error("Failed to fetch available credits count", { userId, error });
+    // Don't throw - return 0 as fallback (non-critical data)
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 export async function findUserByTelegramId(telegramId: string): Promise<User | null> {
   const db = getAdminDb();
   const { data, error } = await db
