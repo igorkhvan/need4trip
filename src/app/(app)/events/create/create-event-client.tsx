@@ -44,7 +44,7 @@ export function CreateEventPageClient({
   const { showPaywall, PaywallModalComponent } = usePaywall();
   const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
   const { execute } = useProtectedAction(isAuthenticated);
-  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
   
   // Protect page access
   useEffect(() => {
@@ -59,19 +59,22 @@ export function CreateEventPageClient({
     );
   }, [isAuthenticated, execute, clubId]);
   
-  const handlePublish = async (eventId: string, confirmCredit = false) => {
-    const url = `/api/events/${eventId}/publish${confirmCredit ? '?confirm_credit=1' : ''}`;
-    const publishRes = await fetch(url, {
+  const handleSubmit = async (payload: Record<string, unknown>, retryWithCredit = false) => {
+    const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
+    
+    const res = await fetch(url, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
     
     // Handle 409 CREDIT_CONFIRMATION_REQUIRED
-    if (publishRes.status === 409) {
-      const error409 = await publishRes.json();
+    if (res.status === 409) {
+      const error409 = await res.json();
       const meta = error409.error?.meta;
       
       if (meta) {
-        setPendingEventId(eventId);
+        setPendingPayload(payload); // Save payload for retry
         showConfirmation({
           creditCode: meta.creditCode,
           eventId: meta.eventId,
@@ -82,8 +85,8 @@ export function CreateEventPageClient({
     }
     
     // Handle 402 PAYWALL
-    if (publishRes.status === 402) {
-      const errorData = await publishRes.json();
+    if (res.status === 402) {
+      const errorData = await res.json();
       const paywallError = errorData.error?.details || errorData.error;
       
       if (paywallError) {
@@ -93,53 +96,14 @@ export function CreateEventPageClient({
     }
     
     // Handle other errors
-    if (!publishRes.ok) {
-      await handleApiError(publishRes);
+    if (!res.ok) {
+      await handleApiError(res);
       return;
     }
     
     // Success - redirect to events list
     router.push('/events');
     router.refresh();
-  };
-
-  const handleSubmit = async (payload: Record<string, unknown>) => {
-    const res = await fetch("/api/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    
-    if (!res.ok) {
-      // Handle paywall error (402) from create endpoint
-      if (res.status === 402) {
-        const errorData = await res.json();
-        const paywallError = errorData.error?.details || errorData.error;
-        
-        if (paywallError) {
-          showPaywall(paywallError);
-          return;
-        }
-      }
-      
-      // Handle other errors
-      await handleApiError(res);
-      return;
-    }
-    
-    // Success - get event ID and call publish
-    const data = await res.json();
-    const eventId = data.event?.id;
-    
-    if (!eventId) {
-      console.error('No event ID returned from create');
-      router.push('/events');
-      router.refresh();
-      return;
-    }
-    
-    // Call publish endpoint (will handle 402/409 there)
-    await handlePublish(eventId);
   };
   
   // Show nothing while auth check happens
@@ -179,9 +143,9 @@ export function CreateEventPageClient({
           eventId={modalState.eventId!}
           requestedParticipants={modalState.requestedParticipants!}
           onConfirm={async () => {
-            if (pendingEventId) {
+            if (pendingPayload) {
               hideConfirmation();
-              await handlePublish(pendingEventId, true);
+              await handleSubmit(pendingPayload, true); // Retry with confirm_credit=1
             }
           }}
           onCancel={hideConfirmation}
