@@ -1,11 +1,20 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 4.1 ⚡  
+> **Версия:** 5.0 ⚡  
 > **Дата:** 26 декабря 2024  
-> **Статус:** Production (v4.1 - Publish Endpoint Integrated)
+> **Статус:** Production (v5.0 - Direct Enforcement in Create/Update)
 
 ---
+
+## 🆕 Что нового в v5.0
+
+**26 December 2024:**
+- ✅ **Unified enforcement** - `enforceEventPublish()` в create/update
+- ✅ **No separate publish step** - события публикуются сразу при сохранении
+- ✅ **Removed publish endpoint** - `/api/events/:id/publish` удалён
+- ✅ **Removed published_at** - события сразу live (no drafts)
+- ✅ **Credit flow integrated** - 409/402 обрабатываются в POST/PUT
 
 ## 🆕 Что нового в v4.1
 
@@ -39,7 +48,7 @@
 4. [Тарифные планы](#тарифные-планы)
 5. [One-off Credits (NEW)](#one-off-credits-new) ⚡⚡
 6. [Unified Purchase Flow (NEW)](#unified-purchase-flow-new) ⚡⚡
-7. [Publish Enforcement](#publish-enforcement) ⚡
+7. [Event Save Enforcement](#event-save-enforcement) ⚡
 8. [Paywall Modal](#paywall-modal)
 9. [API Endpoints v4](#api-endpoints-v4) ⚡
 10. [Ключевые файлы](#ключевые-файлы)
@@ -2179,95 +2188,150 @@ User pays Kaspi  → Webhook / DEV: POST /api/dev/billing/settle
 
 ---
 
-## ⚡ Publish Enforcement (v4)
+## ⚡ Event Save Enforcement (v5)
 
-### Frontend Integration ✅ (26 Dec 2024)
+### Architecture
 
-**Files:**
-- `src/app/(app)/events/create/create-event-client.tsx`
-- `src/app/(app)/events/[id]/edit/edit-event-client.tsx`
+**Unified enforcement** - `enforceEventPublish()` в `src/lib/services/accessControl.ts`
 
-**Flow:**
-```typescript
-// CREATE FLOW
-1. User submits form → POST /api/events (create draft)
-2. Success → call handlePublish(eventId)
-3. POST /api/events/:id/publish
-   - 200 → redirect to /events ✅
-   - 402 → show PaywallModal ✅
-   - 409 → show CreditConfirmationModal ✅
-4. User confirms (409) → POST /api/events/:id/publish?confirm_credit=1
+**Integration points:**
+- `createEvent()` в `src/lib/services/events.ts` + `confirmCredit` param
+- `updateEvent()` в `src/lib/services/events.ts` + `confirmCredit` param
+- `POST /api/events` - extracts `?confirm_credit=1`, handles 409
+- `PUT /api/events/:id` - extracts `?confirm_credit=1`, handles 409
 
-// EDIT FLOW
-1. User submits form → PUT /api/events/:id (update event)
-2. Success → call handlePublish(eventId)
-3. POST /api/events/:id/publish (re-enforce)
-   - 200 → redirect to /events/:id ✅
-   - 402 → show PaywallModal ✅
-   - 409 → show CreditConfirmationModal ✅
+**Key difference from v4:**
+- ❌ NO separate publish step
+- ✅ Enforcement happens **BEFORE** save (atomic)
+- ✅ Events are live immediately upon creation
+- ✅ No `published_at` field (use `created_at`)
+
+### Decision Tree
+
+**Club Events (clubId != null):**
+```
+1. Check subscription status + policy
+   ├─> expired/blocked → 402 PAYWALL (CLUB_ACCESS only)
+   └─> active → check plan limits
+
+2. Check plan limits (maxParticipants, isPaid)
+   ├─> exceeded → 402 PAYWALL (CLUB_ACCESS + recommended plan)
+   └─> ok → ALLOW (save event)
 ```
 
-**Why publish after update:**
-- User may change `maxParticipants` (increase/decrease)
-- User may toggle `isClubEvent`
-- These parameters affect paywall logic
-- Publish enforcement guarantees up-to-date limits
+**Personal Events (clubId == null):**
+```
+1. Check maxParticipants
+   ├─> ≤ free (15) → ALLOW (no credit)
+   ├─> > oneoff (500) → 402 PAYWALL (CLUB_ACCESS only)
+   └─> 16-500 → check credit
 
-**409 Handling:**
-```typescript
-if (publishRes.status === 409) {
-  const error409 = await publishRes.json();
-  showConfirmation({
-    creditCode: error409.error.meta.creditCode,
-    eventId: error409.error.meta.eventId,
-    requestedParticipants: error409.error.meta.requestedParticipants
-  });
-}
+2. Has available credit?
+   ├─> NO → 402 PAYWALL (ONE_OFF + CLUB_ACCESS)
+   └─> YES → check confirmation
 
-// User confirms
-onConfirm={async () => {
-  hideConfirmation();
-  await handlePublish(eventId, true); // ?confirm_credit=1
-}}
+3. confirm_credit=1?
+   ├─> NO → 409 CREDIT_CONFIRMATION (show modal)
+   └─> YES → consume credit + ALLOW (save event)
 ```
 
-**Full Frontend Implementation Example:**
+### Frontend Flow (v5)
 
+**CREATE:**
 ```typescript
 // src/app/(app)/events/create/create-event-client.tsx
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { usePaywall } from "@/components/billing/PaywallModal";
-import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
-import { handleApiError } from "@/lib/utils/errors";
+const handleSubmit = async (payload, retryWithCredit = false) => {
+  const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
+  const res = await fetch(url, { method: "POST", body: JSON.stringify(payload) });
+  
+  if (res.status === 409) {
+    // Save payload for retry
+    setPendingPayload(payload);
+    showConfirmation({ ... });
+    return;
+  }
+  
+  if (res.status === 402) {
+    showPaywall({ ... });
+    return;
+  }
+  
+  // Success - redirect
+  router.push('/events');
+};
 
-export function CreateEventPageClient({ ... }) {
-  const router = useRouter();
-  const { showPaywall, PaywallModalComponent } = usePaywall();
-  const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
-  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+// On credit confirmation
+onConfirm={() => handleSubmit(pendingPayload, true)}
+```
 
-  // Publish handler (called after create)
-  const handlePublish = async (eventId: string, confirmCredit = false) => {
-    const url = `/api/events/${eventId}/publish${confirmCredit ? '?confirm_credit=1' : ''}`;
-    const publishRes = await fetch(url, { method: "POST" });
-    
-    // Handle 409 CREDIT_CONFIRMATION_REQUIRED
-    if (publishRes.status === 409) {
-      const error409 = await publishRes.json();
-      setPendingEventId(eventId);
-      showConfirmation({
-        creditCode: error409.error.meta.creditCode,
-        eventId: error409.error.meta.eventId,
-        requestedParticipants: error409.error.meta.requestedParticipants,
-      });
-      return;
-    }
-    
-    // Handle 402 PAYWALL
-    if (publishRes.status === 402) {
-      const errorData = await publishRes.json();
-      showPaywall(errorData.error?.details || errorData.error);
+**UPDATE:**
+```typescript
+// src/app/(app)/events/[id]/edit/edit-event-client.tsx
+const handleSubmit = async (payload, retryWithCredit = false) => {
+  const url = retryWithCredit 
+    ? `/api/events/${event.id}?confirm_credit=1`
+    : `/api/events/${event.id}`;
+  const res = await fetch(url, { method: "PUT", body: JSON.stringify(payload) });
+  
+  // Same 409/402 handling as create
+  // ...
+  
+  // Success - redirect to event detail
+  router.push(`/events/${event.id}`);
+};
+```
+
+### API Implementation (v5)
+
+**POST /api/events:**
+```typescript
+export async function POST(request: Request) {
+  const currentUser = await getCurrentUserFromMiddleware(request);
+  const url = new URL(request.url);
+  const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+  
+  const payload = await request.json();
+  const event = await createEvent(payload, currentUser, confirmCredit);
+  
+  return respondJSON({ event }, undefined, 201);
+}
+// createEvent() calls enforceEventPublish() which throws 402/409
+```
+
+**PUT /api/events/:id:**
+```typescript
+export async function PUT(request: Request, { params }: Params) {
+  const currentUser = await getCurrentUserFromMiddleware(request);
+  const url = new URL(request.url);
+  const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+  
+  const payload = await request.json();
+  const { id } = await params;
+  const updated = await updateEvent(id, payload, currentUser, confirmCredit);
+  
+  return respondJSON({ event: updated });
+}
+// updateEvent() calls enforceEventPublish() which throws 402/409
+```
+
+### Credit Consumption (v5)
+
+**Transaction safety:**
+```typescript
+// In enforceEventPublish()
+if (confirmCredit) {
+  await consumeCredit(userId, "EVENT_UPGRADE_500", eventId ?? "pending");
+  // If event save fails later, credit already consumed
+  // TODO: Consider wrapping in Supabase transaction
+}
+```
+
+**Idempotency:**
+- Credit consumed before save (not after)
+- If save fails, credit is lost (edge case)
+- Recommendation: wrap in transaction for atomicity
+
+---
       return;
     }
     

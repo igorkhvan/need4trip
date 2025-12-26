@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-26 (Currency Normalization Complete) ⚡  
+> Последнее обновление: 2024-12-26 (Events Published Immediately) ⚡  
 > PostgreSQL + Supabase
 
 ---
@@ -113,7 +113,6 @@ CREATE TABLE public.events (
   price NUMERIC(10,2),
   currency_code TEXT REFERENCES public.currencies(code) ON DELETE SET NULL,
   club_id UUID REFERENCES public.clubs(id) ON DELETE SET NULL,
-  published_at TIMESTAMPTZ, -- ⚡ NEW: Publication timestamp (NULL = draft)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
@@ -131,13 +130,8 @@ CREATE TABLE public.events (
 - `idx_events_category_id` (on category_id)
 - `idx_events_visibility_datetime` (on visibility, date_time DESC WHERE visibility = 'public')
 - `idx_events_creator_datetime` (on created_by_user_id, date_time DESC WHERE created_by_user_id IS NOT NULL)
-- `idx_events_published_at` (on published_at WHERE published_at IS NOT NULL) ⚡
-- `idx_events_drafts_by_creator` (on created_by_user_id, created_at DESC WHERE published_at IS NULL) ⚡
 
 **Notes**:
-- ⚡ `published_at`: NULL = draft (not visible), NOT NULL = published (live)
-- Published events are set via POST /api/events/:id/publish only
-- Draft/published distinction added for one-off billing system
 
 **RLS**: 7 policies
 - `anon_read_public_events`
@@ -1051,10 +1045,10 @@ CREATE INDEX idx_event_participants_user_event
 | 2024-12-22 | `enable_rls_*` | Включение RLS на всех таблицах (9 миграций) |
 | 2024-12-22 | `grant_select_reference_tables` | GRANT SELECT для справочников |
 | 2024-12-24 | `performance_indexes` | Performance optimization indexes |
-| 2024-12-25 | `add_published_at_to_events` | ⚡ Добавлено `published_at` в events (draft/published state) |
 | 2024-12-25 | `extend_billing_transactions` | ⚡ Добавлено `product_code` в billing_transactions |
 | 2024-12-25 | `add_user_id_to_billing_transactions` | ⚡ Добавлено `user_id` в billing_transactions |
 | 2024-12-25 | `create_billing_credits` | ⚡ Создана таблица `billing_credits` (one-off credits) |
+| 2024-12-26 | `remove_published_at` | 🔥 Удалено `published_at` (events published immediately) |
 | 2024-12-26 | `create_billing_products` | ⚡ Создана таблица `billing_products` (pricing SSOT) |
 | 2024-12-26 | `add_billing_credits_fk` | ⚡ FK от `billing_credits.credit_code` к `billing_products.code` |
 | 2024-12-26 | `normalize_billing_transactions` | ⚡ **Normalization**: amount_kzt→amount, currency→currency_code (FK), status: paid→completed |
