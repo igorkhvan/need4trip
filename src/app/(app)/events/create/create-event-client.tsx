@@ -17,6 +17,7 @@ import type { Club } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
 import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
+import { useAuth } from "@/components/auth/auth-provider";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 
 // Динамический импорт формы события для code splitting
@@ -41,6 +42,7 @@ export function CreateEventPageClient({
   clubId,
 }: CreateEventPageClientProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { showPaywall, PaywallModalComponent } = usePaywall();
   const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
   const { execute } = useProtectedAction(isAuthenticated);
@@ -114,8 +116,43 @@ export function CreateEventPageClient({
   // Pre-fill cityId: prioritize user's city, fallback to club's first city
   const initialCityId = userCityId ?? club?.cities?.[0]?.id ?? null;
   
+  // Show credit banner if user has available credits
+  const showCreditBanner = user?.availableCreditsCount && user.availableCreditsCount > 0;
+  
   return (
     <>
+      {/* Credit Info Banner */}
+      {showCreditBanner && user && (
+        <div className="mb-6 rounded-lg border border-[var(--color-primary)] bg-[var(--color-primary-bg)] p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-white p-2">
+              <svg
+                className="h-5 w-5 text-[var(--color-primary)]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-[var(--color-text)] mb-1">
+                У вас есть {user.availableCreditsCount || 0} апгрейд{(user.availableCreditsCount || 0) === 1 ? '' : (user.availableCreditsCount || 0) < 5 ? 'а' : 'ов'}!
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Используйте для создания события до 500 участников. Апгрейд будет применён автоматически при необходимости.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <EventForm
         mode="create"
         backHref="/events"
