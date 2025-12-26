@@ -30,40 +30,40 @@ interface PaywallModalProps {
 
 const REASON_MESSAGES: Record<string, { title: string; description: string }> = {
   PAID_EVENTS_NOT_ALLOWED: {
-    title: "Платные события недоступны",
-    description: "Для создания платных событий требуется план Club 50 или выше.",
+    title: "Для платных событий требуется тариф",
+    description: "Создание платных событий доступно на тарифе Club 50 и выше.",
   },
   CSV_EXPORT_NOT_ALLOWED: {
-    title: "CSV экспорт недоступен",
-    description: "Экспорт участников в CSV требует план Club 50 или выше.",
+    title: "Экспорт в CSV доступен на расширенном тарифе",
+    description: "Экспорт списка участников в CSV доступен на тарифе Club 50 и выше.",
   },
   MAX_EVENT_PARTICIPANTS_EXCEEDED: {
-    title: "Превышен лимит участников",
-    description: "Ваш текущий план не поддерживает такое количество участников.",
+    title: "Превышен лимит участников текущего тарифа",
+    description: "Текущий тариф не поддерживает выбранное количество участников.",
   },
   MAX_CLUB_MEMBERS_EXCEEDED: {
     title: "Превышен лимит организаторов",
-    description: "Достигнут максимум организаторов для вашего плана.",
+    description: "Для текущего тарифа достигнут лимит организаторов.",
   },
   SUBSCRIPTION_NOT_ACTIVE: {
-    title: "Подписка неактивна",
-    description: "Для выполнения этого действия требуется активная подписка.",
+    title: "Подписка не активна",
+    description: "Для этого действия требуется активная подписка.",
   },
   SUBSCRIPTION_EXPIRED: {
-    title: "Подписка истекла",
-    description: "Ваша подписка истекла. Пожалуйста, продлите её для продолжения.",
+    title: "Срок подписки истёк",
+    description: "Срок вашей подписки истёк. Продлите её, чтобы продолжить работу.",
   },
   CLUB_CREATION_REQUIRES_PLAN: {
     title: "Требуется тарифный план",
-    description: "Для создания клуба требуется выбрать тарифный план.",
+    description: "Для создания клуба необходимо выбрать тарифный план.",
   },
   PUBLISH_REQUIRES_PAYMENT: {
     title: "Требуется оплата",
-    description: "Для публикации этого события выберите один из вариантов оплаты.",
+    description: "Для публикации события выберите удобный вариант оплаты.",
   },
   CLUB_REQUIRED_FOR_LARGE_EVENT: {
     title: "Требуется клуб",
-    description: "События с более чем 500 участниками доступны только для клубов.",
+    description: "События с более чем 500 участниками доступны в рамках клуба.",
   },
 };
 
@@ -74,8 +74,8 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
   const [transactionId, setTransactionId] = React.useState<string | null>(null);
   
   const message = REASON_MESSAGES[error.reason] || {
-    title: "Ограничение тарифа",
-    description: "Эта функция недоступна на вашем текущем плане.",
+    title: "Ограничение текущего тарифа",
+    description: "Эта функция недоступна на текущем тарифе.",
   };
 
   // Poll transaction status
@@ -196,7 +196,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
           <div className="space-y-3 py-2">
             {paymentStatus === 'idle' && (
               <>
-                <p className="text-sm font-medium text-gray-700">Выберите вариант:</p>
+                <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
                 {error.options!.map((option, idx) => (
                   <button
                     key={idx}
@@ -208,9 +208,9 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
                       <>
                         <CreditCard className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">Разовая покупка</p>
+                          <p className="font-medium text-gray-900">Разовая оплата</p>
                           <p className="text-sm text-gray-600 mt-1">
-                            {option.price} {option.currencyCode === 'KZT' ? '₸' : option.currencyCode} — Кредит для 1 события (до 500 участников)
+                            {option.price} {option.currencyCode === 'KZT' ? '₸' : option.currencyCode} — Публикация одного события (до 500 участников)
                           </p>
                         </div>
                       </>
@@ -218,9 +218,9 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
                       <>
                         <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">Доступ через клуб</p>
+                          <p className="font-medium text-gray-900">Подписка клуба</p>
                           <p className="text-sm text-gray-600 mt-1">
-                            Неограниченные события с подпиской клуба
+                            Неограниченное количество событий в рамках подписки клуба
                           </p>
                         </div>
                       </>
@@ -233,24 +233,24 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
             {paymentStatus === 'pending' && (
               <div className="flex flex-col items-center justify-center p-6 bg-blue-50 rounded-lg">
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-                <p className="text-sm font-medium text-blue-900">Ожидание оплаты...</p>
-                <p className="text-xs text-blue-700 mt-1">Завершите оплату в Kaspi</p>
+                <p className="text-sm font-medium text-blue-900">Ожидаем подтверждение оплаты…</p>
+                <p className="text-xs text-blue-700 mt-1">Пожалуйста, завершите оплату в Kaspi.</p>
               </div>
             )}
 
             {paymentStatus === 'success' && (
               <div className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-lg">
                 <CheckCircle2 className="w-8 h-8 text-green-600 mb-3" />
-                <p className="text-sm font-medium text-green-900">Оплата успешна!</p>
-                <p className="text-xs text-green-700 mt-1">Обновляем страницу...</p>
+                <p className="text-sm font-medium text-green-900">Оплата прошла успешно.</p>
+                <p className="text-xs text-green-700 mt-1">Обновляем данные…</p>
               </div>
             )}
 
             {paymentStatus === 'failed' && (
               <div className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg">
                 <XCircle className="w-8 h-8 text-red-600 mb-3" />
-                <p className="text-sm font-medium text-red-900">Оплата не прошла</p>
-                <p className="text-xs text-red-700 mt-1">Попробуйте ещё раз</p>
+                <p className="text-sm font-medium text-red-900">Не удалось выполнить оплату.</p>
+                <p className="text-xs text-red-700 mt-1">Пожалуйста, попробуйте ещё раз.</p>
               </div>
             )}
           </div>
@@ -261,7 +261,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
               Отмена
             </Button>
             <Button onClick={handleLegacyUpgrade} className="w-full sm:w-auto">
-              Посмотреть тарифы
+              Посмотреть тарифы и варианты
             </Button>
           </DialogFooter>
         )}

@@ -38,7 +38,7 @@ const CREDIT_LABELS: Record<CreditCode, string> = {
 };
 
 const CREDIT_DESCRIPTIONS: Record<CreditCode, string> = {
-  EVENT_UPGRADE_500: 'Позволяет опубликовать событие с до 500 участников',
+  EVENT_UPGRADE_500: 'Возможность опубликовать событие с количеством участников до 500',
 };
 
 export function CreditConfirmationModal({
@@ -62,10 +62,10 @@ export function CreditConfirmationModal({
             <div className="p-2 bg-[var(--color-primary-bg)] rounded-full">
               <CreditCard className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
-            <DialogTitle className="heading-h3">Подтвердите использование кредита</DialogTitle>
+            <DialogTitle className="heading-h3">Подтверждение публикации события</DialogTitle>
           </div>
           <DialogDescription className="text-body-small">
-            Для публикации этого события будет использован один кредит <strong>{creditLabel}</strong>.
+            Для публикации этого события будет использована разовая опция <strong>{creditLabel}</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -74,9 +74,9 @@ export function CreditConfirmationModal({
           <div className="flex gap-3 p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
             <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
-              <p className="font-medium text-[var(--color-warning-text)]">Это действие нельзя отменить</p>
+              <p className="font-medium text-[var(--color-warning-text)]">Обратите внимание</p>
               <p className="text-[var(--color-warning-text)]">
-                После подтверждения кредит будет привязан к этому событию и станет недоступен для других событий.
+                После подтверждения опция будет применена к этому событию и не сможет быть использована повторно.
               </p>
             </div>
           </div>
@@ -84,7 +84,7 @@ export function CreditConfirmationModal({
           {/* Details */}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Кредит:</span>
+              <span className="text-muted-foreground">Опция:</span>
               <span className="font-medium">{creditLabel}</span>
             </div>
             <div className="flex justify-between">

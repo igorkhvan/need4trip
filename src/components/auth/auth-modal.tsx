@@ -61,21 +61,21 @@ function resolveAuthUrl(): string | null {
 function getReasonDescription(reason?: AuthModalReason): string {
   switch (reason) {
     case "PAYWALL":
-      return "Чтобы управлять подпиской и клубом, войдите через Telegram.";
+      return "Для управления подпиской и клубом требуется вход через Telegram.";
     case "REGISTER_ONLY":
-      return "Регистрация доступна только для пользователей Telegram.";
+      return "Регистрация в Need4Trip доступна через Telegram.";
     case "OWNER_ONLY":
-      return "Только владелец может выполнить действие. Войдите.";
+      return "Это действие доступно только владельцу. Пожалуйста, войдите.";
     case "REQUIRED":
     default:
-      return "Чтобы продолжить, войдите через Telegram.";
+      return "Чтобы продолжить работу, войдите через Telegram.";
   }
 }
 
 export function AuthModal({
   open,
   onOpenChange,
-  title = "Войти в Need4Trip",
+  title = "Вход в Need4Trip",
   description,
   afterLoginRedirectTo,
   onSuccess,
@@ -164,7 +164,7 @@ export function AuthModal({
         setError(
           err instanceof Error 
             ? err.message 
-            : "Не удалось войти через Telegram. Попробуйте еще раз."
+            : "Не удалось выполнить вход через Telegram. Пожалуйста, попробуйте ещё раз."
         );
       } finally {
         setIsSubmitting(false);
@@ -294,13 +294,13 @@ export function AuthModal({
             {isSubmitting ? (
               <div className="flex items-center gap-2 text-base text-muted-foreground">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent"></div>
-                <span>Авторизация...</span>
+                <span>Выполняем вход…</span>
               </div>
             ) : !username ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
-                <div className="mb-2 text-red-600 font-semibold">⚠️ Конфигурация не завершена</div>
+                <div className="mb-2 text-red-600 font-semibold">⚠️ Сервис временно недоступен из-за конфигурации</div>
                 <div className="text-sm text-red-700">
-                  <code>NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code> не установлен
+                  Не настроен Telegram-бот. Обратитесь к администратору сервиса.
                 </div>
               </div>
             ) : (
@@ -321,7 +321,7 @@ export function AuthModal({
           {/* Info */}
           {!error && !isSubmitting && username && (
             <div className="text-center text-sm text-muted-foreground">
-              Войдите через Telegram, чтобы получить доступ ко всем возможностям Need4Trip
+              Войдите через Telegram, чтобы пользоваться всеми возможностями Need4Trip.
             </div>
           )}
         </div>
