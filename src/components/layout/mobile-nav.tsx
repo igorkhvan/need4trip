@@ -35,6 +35,7 @@ import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useLogout } from "@/lib/hooks/use-logout";
 import { useAuth } from "@/components/auth/auth-provider";
+import { CreditBadge } from "@/components/billing/credit-badge";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -114,12 +115,19 @@ export function MobileNav({ navItems }: MobileNavProps) {
 
         {/* User Section */}
         {currentUser ? (
-          <UserMenuItems
-            currentUser={currentUser}
-            onLogout={logout}
-            onItemClick={() => setOpen(false)}
-            variant="sheet"
-          />
+          <>
+            {/* Credit Badge - mobile */}
+            <div className="mb-4">
+              <CreditBadge />
+            </div>
+            
+            <UserMenuItems
+              currentUser={currentUser}
+              onLogout={logout}
+              onItemClick={() => setOpen(false)}
+              variant="sheet"
+            />
+          </>
         ) : (
           <Button 
             onClick={handleLoginClick}

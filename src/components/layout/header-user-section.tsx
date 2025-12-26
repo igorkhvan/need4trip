@@ -13,6 +13,7 @@ import { UserMenuItems } from "@/components/layout/user-menu-items";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useLogout } from "@/lib/hooks/use-logout";
 import { useAuth } from "@/components/auth/auth-provider";
+import { CreditBadge } from "@/components/billing/credit-badge";
 
 export function HeaderUserSection() {
   // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
@@ -42,6 +43,9 @@ export function HeaderUserSection() {
 
   return (
     <div className="flex items-center gap-3">
+      {/* Credit Badge - only for authenticated users */}
+      {currentUser && <CreditBadge />}
+      
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           {currentUser ? (
