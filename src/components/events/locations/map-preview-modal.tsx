@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NavigationChooser } from "./navigation-chooser";
@@ -127,9 +128,8 @@ export function MapPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl sm:mx-auto p-0 gap-0">
-        {/* Header - DialogContent already has close button */}
-        <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4">
+      <DialogContent className="max-w-3xl sm:mx-auto">
+        <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl font-semibold leading-tight text-[#1F2937]">
             {location.title}
           </DialogTitle>
@@ -138,44 +138,44 @@ export function MapPreviewModal({
           </p>
         </DialogHeader>
 
-        {/* Map - Google Maps by default */}
-        <div className="px-4 py-4 sm:px-6">
+        <DialogBody className="space-y-4">
+          {/* Map - Google Maps by default */}
           <GoogleMapEmbed
             lat={location.lat}
             lng={location.lng}
             title={location.title}
           />
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6">
-          {/* Copy Button - Icon only on mobile, with text on desktop */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleCopyCoords}
-            className="gap-2"
-            title={copied ? "Скопировано" : "Скопировать координаты"}
-          >
-            <Copy className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              {copied ? "✓ Скопировано" : "Скопировать координаты"}
-            </span>
-          </Button>
+          {/* Actions */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Copy Button - Icon only on mobile, with text on desktop */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyCoords}
+              className="gap-2"
+              title={copied ? "Скопировано" : "Скопировать координаты"}
+            >
+              <Copy className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {copied ? "✓ Скопировано" : "Скопировать координаты"}
+              </span>
+            </Button>
 
-          {/* Navigation Button */}
-          <NavigationChooser
-            lat={location.lat}
-            lng={location.lng}
-            trigger={
-              <Button type="button" size="sm" className="gap-2">
-                <Navigation className="h-4 w-4" />
-                <span>Открыть в навигации</span>
-              </Button>
-            }
-          />
-        </div>
+            {/* Navigation Button */}
+            <NavigationChooser
+              lat={location.lat}
+              lng={location.lng}
+              trigger={
+                <Button type="button" size="sm" className="gap-2">
+                  <Navigation className="h-4 w-4" />
+                  <span>Открыть в навигации</span>
+                </Button>
+              }
+            />
+          </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

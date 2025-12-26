@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { dispatchAuthChanged } from "@/lib/events/auth-events";
 import { debugTelegramWidget } from "@/lib/utils/telegram-widget-debug";
@@ -264,7 +265,7 @@ export function AuthModal({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-col gap-3 py-3 sm:gap-4 sm:py-4">
+        <DialogBody className="space-y-3 sm:space-y-4">
           {/* Debug Info - только в development */}
           {process.env.NODE_ENV === 'development' && (
             <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs">
@@ -324,7 +325,7 @@ export function AuthModal({
               Войдите через Telegram, чтобы пользоваться всеми возможностями Need4Trip.
             </div>
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

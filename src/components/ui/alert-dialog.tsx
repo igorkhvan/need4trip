@@ -36,7 +36,19 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 bg-white p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-2xl",
+        // Fixed positioning: centered without translateY conflicts
+        "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-50",
+        // Layout: flex column for proper header/body/footer structure
+        "flex flex-col",
+        // Size: responsive width and max-height
+        "w-full max-w-lg max-h-[90vh]",
+        // Styling
+        "bg-white rounded-2xl shadow-lg",
+        // Animation: fade + zoom only (no translateY to avoid center shift)
+        "duration-200",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         className
       )}
       {...props}
@@ -51,7 +63,8 @@ const AlertDialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
+      // Fixed header with padding and border
+      "flex flex-col space-y-2 px-4 pt-6 pb-4 sm:px-6 border-b border-gray-100",
       className
     )}
     {...props}
@@ -59,13 +72,29 @@ const AlertDialogHeader = ({
 );
 AlertDialogHeader.displayName = "AlertDialogHeader";
 
+const AlertDialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      // Scrollable body: flex-1 to fill space, overflow-y-auto, padding
+      "flex-1 overflow-y-auto px-4 py-4 sm:px-6",
+      className
+    )}
+    {...props}
+  />
+);
+AlertDialogBody.displayName = "AlertDialogBody";
+
 const AlertDialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      // Fixed footer with padding and border-top
+      "flex flex-col-reverse gap-2 px-4 py-4 sm:px-6 sm:flex-row sm:justify-end sm:gap-3 border-t border-gray-100",
       className
     )}
     {...props}
@@ -133,6 +162,7 @@ export {
   AlertDialogTrigger,
   AlertDialogContent,
   AlertDialogHeader,
+  AlertDialogBody,
   AlertDialogFooter,
   AlertDialogTitle,
   AlertDialogDescription,

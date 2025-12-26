@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { ParticipantForm } from "@/components/events/participant-form";
 import { Event, EventCustomFieldSchema } from "@/lib/types/event";
@@ -73,13 +74,13 @@ export function ParticipantModal({
         </Button>
       )}
 
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="heading-h3">{title}</DialogTitle>
           <DialogDescription className="text-body-small">{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-3 sm:py-4">
+        <DialogBody>
           <ParticipantForm
             mode={mode}
             eventId={eventId}
@@ -89,7 +90,7 @@ export function ParticipantModal({
             initialValues={initialValues}
             onSuccess={handleSuccess}
           />
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

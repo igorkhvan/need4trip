@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -69,7 +70,7 @@ export function CreditConfirmationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4">
           {/* Warning Box */}
           <div className="flex gap-3 p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
             <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
@@ -92,9 +93,9 @@ export function CreditConfirmationModal({
             <span className="text-muted-foreground">Участников:</span>
             <span className="font-medium text-[var(--color-text)]">{requestedParticipants}</span>
           </div>
-        </div>
+        </DialogBody>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter>
           <Button
             variant="outline"
             onClick={onCancel}

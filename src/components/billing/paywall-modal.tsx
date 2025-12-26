@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -169,110 +170,117 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
           <DialogDescription className="text-body-small">{message.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 text-sm">
-          {error.currentPlanId && (
-            <p>
-              <strong>Текущий план:</strong>{" "}
-              <span>{getClubPlanLabel(error.currentPlanId)}</span>
-            </p>
+        <DialogBody className="space-y-4">
+          {/* Current plan info */}
+          {(error.currentPlanId || error.requiredPlanId || error.meta) && (
+            <div className="space-y-2 text-sm">
+              {error.currentPlanId && (
+                <p>
+                  <strong>Текущий план:</strong>{" "}
+                  <span>{getClubPlanLabel(error.currentPlanId)}</span>
+                </p>
+              )}
+              
+              {error.requiredPlanId && (
+                <p>
+                  <strong>Требуется:</strong>{" "}
+                  <span>{getClubPlanLabel(error.requiredPlanId)}</span> или выше
+                </p>
+              )}
+
+              {error.meta && "limit" in error.meta && "requested" in error.meta && (
+                <p className="text-muted-foreground">
+                  Запрошено: {error.meta.requested as number} / Лимит: {error.meta.limit as number}
+                </p>
+              )}
+            </div>
           )}
-          
-          {error.requiredPlanId && (
-            <p>
-              <strong>Требуется:</strong>{" "}
-              <span>{getClubPlanLabel(error.requiredPlanId)}</span> или выше
-            </p>
-          )}
 
-          {error.meta && "limit" in error.meta && "requested" in error.meta && (
-            <p className="text-muted-foreground">
-              Запрошено: {error.meta.requested as number} / Лимит: {error.meta.limit as number}
-            </p>
-          )}
-        </div>
+          {hasOptions ? (
+            // NEW: Multiple payment options with status
+            <>
+              {paymentStatus === 'idle' && (
+                <>
+                  <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
+                  <div className="space-y-3">
+                    {error.options!.map((option, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleOptionClick(option)}
+                        disabled={isLoading}
+                        className="w-full flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors text-left disabled:opacity-50"
+                      >
+                        {option.type === "ONE_OFF_CREDIT" ? (
+                          <>
+                            <CreditCard className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">Разовая оплата</p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {option.price} {option.currencyCode === 'KZT' ? '₸' : option.currencyCode} — Публикация одного события (до 500 участников)
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">Подписка клуба</p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Неограниченное количество событий в рамках подписки клуба
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
 
-        {hasOptions ? (
-          // NEW: Multiple payment options with status
-          <div className="space-y-3">
-            {paymentStatus === 'idle' && (
-              <>
-                <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
-                {error.options!.map((option, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleOptionClick(option)}
-                    disabled={isLoading}
-                    className="w-full flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors text-left disabled:opacity-50"
-                  >
-                    {option.type === "ONE_OFF_CREDIT" ? (
-                      <>
-                        <CreditCard className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">Разовая оплата</p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {option.price} {option.currencyCode === 'KZT' ? '₸' : option.currencyCode} — Публикация одного события (до 500 участников)
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">Подписка клуба</p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Неограниченное количество событий в рамках подписки клуба
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </button>
-                ))}
-              </>
-            )}
+              {paymentStatus === 'pending' && (
+                <div className="flex flex-col items-center justify-center p-6 bg-blue-50 rounded-lg">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+                  <p className="text-sm font-medium text-blue-900">Ожидаем подтверждение оплаты…</p>
+                  <p className="text-xs text-blue-700 mt-1">Пожалуйста, завершите оплату в Kaspi.</p>
+                </div>
+              )}
 
-            {paymentStatus === 'pending' && (
-              <div className="flex flex-col items-center justify-center p-6 bg-blue-50 rounded-lg">
-                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-                <p className="text-sm font-medium text-blue-900">Ожидаем подтверждение оплаты…</p>
-                <p className="text-xs text-blue-700 mt-1">Пожалуйста, завершите оплату в Kaspi.</p>
-              </div>
-            )}
+              {paymentStatus === 'success' && (
+                <div className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-lg">
+                  <CheckCircle2 className="w-8 h-8 text-green-600 mb-3" />
+                  <p className="text-sm font-medium text-green-900">Оплата прошла успешно.</p>
+                  <p className="text-xs text-green-700 mt-1">Обновляем данные…</p>
+                </div>
+              )}
 
-            {paymentStatus === 'success' && (
-              <div className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-lg">
-                <CheckCircle2 className="w-8 h-8 text-green-600 mb-3" />
-                <p className="text-sm font-medium text-green-900">Оплата прошла успешно.</p>
-                <p className="text-xs text-green-700 mt-1">Обновляем данные…</p>
-              </div>
-            )}
+              {paymentStatus === 'failed' && (
+                <div className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg">
+                  <XCircle className="w-8 h-8 text-red-600 mb-3" />
+                  <p className="text-sm font-medium text-red-900">Не удалось выполнить оплату.</p>
+                  <p className="text-xs text-red-700 mt-1">Пожалуйста, попробуйте ещё раз.</p>
+                </div>
+              )}
+            </>
+          ) : null}
+        </DialogBody>
 
-            {paymentStatus === 'failed' && (
-              <div className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg">
-                <XCircle className="w-8 h-8 text-red-600 mb-3" />
-                <p className="text-sm font-medium text-red-900">Не удалось выполнить оплату.</p>
-                <p className="text-xs text-red-700 mt-1">Пожалуйста, попробуйте ещё раз.</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          // LEGACY: Single CTA button
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+        <DialogFooter>
+          {hasOptions ? (
+            <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
               Отмена
             </Button>
-            <Button onClick={handleLegacyUpgrade} className="w-full sm:w-auto">
-              Посмотреть тарифы и варианты
-            </Button>
-          </DialogFooter>
-        )}
-
-        {hasOptions && (
-          <DialogFooter>
-            <Button variant="ghost" onClick={onClose} className="w-full">
-              Отмена
-            </Button>
-          </DialogFooter>
-        )}
+          ) : (
+            // LEGACY: Single CTA buttons
+            <>
+              <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+                Отмена
+              </Button>
+              <Button onClick={handleLegacyUpgrade} className="w-full sm:w-auto">
+                Посмотреть тарифы и варианты
+              </Button>
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
