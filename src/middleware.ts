@@ -65,7 +65,6 @@ const PROTECTED_ROUTES = [
   // Events (write operations only, GET is public)
   { path: '/api/events', methods: ['POST'] },
   { path: '/api/events/', methods: ['PUT', 'PATCH', 'DELETE'] }, // /api/events/[id] - All write operations
-  '/api/events/[id]/publish', // Publish endpoint (POST)
   
   // Billing endpoints (all require auth)
   '/api/billing/purchase-intent',
