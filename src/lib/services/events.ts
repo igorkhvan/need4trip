@@ -363,7 +363,11 @@ export async function getEventWithParticipantsVisibility(
   };
 }
 
-export async function createEvent(input: unknown, currentUser: CurrentUser | null) {
+export async function createEvent(
+  input: unknown, 
+  currentUser: CurrentUser | null,
+  confirmCredit: boolean = false
+) {
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
   }
@@ -394,8 +398,6 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
   
   // ⚡ Billing v5 Enforcement - unified for create/update
   // Throws PaywallError (402) or CreditConfirmationRequiredError (409)
-  // NOTE: confirmCredit is passed from API layer via context (not available here)
-  // For now, we pass false - API layer will handle 409 and retry with confirm=true
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
   try {
@@ -405,7 +407,7 @@ export async function createEvent(input: unknown, currentUser: CurrentUser | nul
       maxParticipants: validated.maxParticipants,
       isPaid: validated.isPaid,
       eventId: undefined, // No eventId yet (will be set after creation)
-    }, false); // confirmCredit handled by API layer
+    }, confirmCredit);
   } catch (err: any) {
     // Re-throw for API layer to handle (402/409)
     throw err;
@@ -551,7 +553,8 @@ function validateCustomFieldsUpdate(
 export async function updateEvent(
   id: string,
   input: unknown,
-  currentUser: CurrentUser | null
+  currentUser: CurrentUser | null,
+  confirmCredit: boolean = false
 ) {
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для изменения события", undefined, 401);
@@ -641,7 +644,7 @@ export async function updateEvent(
       maxParticipants: finalMaxParticipants,
       isPaid: finalIsPaid,
       eventId: id, // Existing event ID for credit tracking
-    }, false); // confirmCredit handled by API layer
+    }, confirmCredit);
   } catch (err: any) {
     // Re-throw for API layer to handle (402/409)
     throw err;

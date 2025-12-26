@@ -58,10 +58,29 @@ export async function POST(request: Request) {
       throw new UnauthorizedError("Авторизация обязательна для создания события");
     }
     
+    // Extract confirm_credit from query params
+    const url = new URL(request.url);
+    const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+    
     const payload = await request.json();
-    const event = await createEvent(payload, currentUser);
+    const event = await createEvent(payload, currentUser, confirmCredit);
+    
     return respondJSON({ event }, undefined, 201);
-  } catch (err) {
+  } catch (err: any) {
+    // Handle CreditConfirmationRequiredError (409)
+    if (err.name === "CreditConfirmationRequiredError") {
+      // Set correct CTA href for create flow
+      const url = new URL(request.url);
+      const error = err.payload;
+      error.error.cta.href = `${url.pathname}?confirm_credit=1`;
+      
+      return new Response(JSON.stringify(error), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    
+    // Other errors (PaywallError, etc) handled by respondError
     return respondError(err);
   }
 }

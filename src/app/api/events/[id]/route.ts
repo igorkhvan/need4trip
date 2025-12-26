@@ -37,8 +37,12 @@ export async function PUT(request: Request, { params }: Params) {
       throw new UnauthorizedError("Авторизация обязательна");
     }
     
+    // Extract confirm_credit from query params
+    const url = new URL(request.url);
+    const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+    
     const payload = await request.json();
-    const updated = await updateEvent(id, payload, currentUser);
+    const updated = await updateEvent(id, payload, currentUser, confirmCredit);
     
     // Revalidate pages that display this event
     revalidatePath(`/events/${id}`);        // Event detail page
@@ -46,7 +50,21 @@ export async function PUT(request: Request, { params }: Params) {
     revalidatePath("/events");              // Events list page
     
     return respondJSON({ event: updated });
-  } catch (err) {
+  } catch (err: any) {
+    // Handle CreditConfirmationRequiredError (409)
+    if (err.name === "CreditConfirmationRequiredError") {
+      // Set correct CTA href for update flow
+      const { id } = await params;
+      const error = err.payload;
+      error.error.cta.href = `/api/events/${id}?confirm_credit=1`;
+      
+      return new Response(JSON.stringify(error), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    
+    // Other errors (PaywallError, etc) handled by respondError
     return respondError(err);
   }
 }
