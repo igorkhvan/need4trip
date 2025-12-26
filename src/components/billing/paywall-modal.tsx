@@ -93,8 +93,8 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
           
           // Refresh page after successful payment
           setTimeout(() => {
-            window.location.reload();
-          }, 2000);
+            router.refresh(); // ⚡ Refresh CurrentUser (with new availableCreditsCount)
+          }, 1000);
         } else if (data.data.status === 'failed' || data.data.status === 'refunded') {
           setPaymentStatus('failed');
           clearInterval(pollInterval);
