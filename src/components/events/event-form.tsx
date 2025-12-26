@@ -206,11 +206,11 @@ export function EventForm({
         ]);
         
         if (brandsRes.ok) {
-          const brandsData = (await brandsRes.json()) as {
-            brands?: { id: string; name: string; slug?: string | null }[];
-          };
+          const response = await brandsRes.json();
+          const data = response.data || response;
+          const loadedBrands = data.brands || [];
           setBrands(
-            (brandsData.brands ?? []).map((brand) => ({
+            loadedBrands.map((brand: { id: string; name: string; slug?: string | null }) => ({
               id: brand.id,
               name: brand.name,
             }))
