@@ -4,18 +4,19 @@ alwaysApply: true
 
 # Need4Trip - SSOT Rules (Single Source of Truth)
 
-**Last Updated:** 26 декабря 2024  
+**Last Updated:** 27 декабря 2024  
 **Status:** Production Ready ✅
 
 ---
 
 ## 🎯 ГЛАВНЫЙ ПРИНЦИП
 
-> **ЧЕТЫРЕ SSOT ДОКУМЕНТА — ЕДИНСТВЕННЫЕ источники истины:**
+> **ПЯТЬ SSOT ДОКУМЕНТОВ — ЕДИНСТВЕННЫЕ источники истины:**
 > 1. `docs/ARCHITECTURE.md` — архитектура, паттерны, ownership
 > 2. `docs/DATABASE.md` — структура БД, таблицы, индексы, RLS
 > 3. `docs/BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
-> 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты ⚡
+> 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты
+> 5. `docs/DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты ✨
 
 ---
 
@@ -38,7 +39,8 @@ alwaysApply: true
 - DATABASE.md SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DATABASE.md)
 - BILLING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция BILLING)
 - ARCHITECTURE SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
-- TESTING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING) ⚡
+- TESTING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING)
+- DESIGN_SYSTEM SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DESIGN) ✨
 
 **Причина:** Rules файлы видны пользователю, Memory — только AI. Синхронизация = консистентность.
 
@@ -52,7 +54,8 @@ alwaysApply: true
    - Архитектура/паттерны → читай `ARCHITECTURE.md`
    - База данных → читай `DATABASE.md`
    - Биллинг/лимиты → читай `BILLING_SYSTEM_ANALYSIS.md`
-   - Тестирование → читай `TESTING.md` ⚡
+   - Тестирование → читай `TESTING.md`
+   - UI/UX/дизайн → читай `DESIGN_SYSTEM.md` ✨
 
 2. **Изучи SSOT:**
    - Найди соответствующий раздел
@@ -70,7 +73,8 @@ alwaysApply: true
    - Если изменилась архитектура → обнови `ARCHITECTURE.md`
    - Если изменилась БД → обнови `DATABASE.md`
    - Если изменился биллинг → обнови `BILLING_SYSTEM_ANALYSIS.md`
-   - Если изменились тесты → обнови `TESTING.md` ⚡
+   - Если изменились тесты → обнови `TESTING.md`
+   - Если изменился UI/дизайн → обнови `DESIGN_SYSTEM.md` ✨
 
 2. **Коммит:**
    - Код + обновленный SSOT в ОДНОМ коммите
@@ -290,11 +294,97 @@ docs/sessions/
 
 ---
 
-## 🎨 Дизайн-система (/figma/)
+## 🎨 DESIGN_SYSTEM.md (SSOT) ✨
+
+**Что содержит:**
+- Модальные окна (Dialog/AlertDialog) — production-ready паттерн
+- Цветовая система (CSS variables)
+- Типографика (Inter font, heading classes)
+- Buttons (variants, sizes, states)
+- Cards, Badges, другие компоненты
+- Анимации (fade/zoom, БЕЗ translateY конфликтов)
+- Адаптивность (mobile first, breakpoints)
+
+**Ключевые паттерны:**
+
+### Модалки (КРИТИЧНО!)
+
+```tsx
+// ✅ Правильная структура
+<Dialog>
+  <DialogContent className="sm:max-w-lg">
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+      <DialogDescription>Description</DialogDescription>
+    </DialogHeader>
+
+    <DialogBody className="space-y-4">
+      {/* Scrollable content */}
+    </DialogBody>
+
+    <DialogFooter>
+      <Button variant="outline">Cancel</Button>
+      <Button>Confirm</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Анатомия:**
+- DialogContent: `flex flex-col max-h-[90vh]`
+- DialogHeader: `px-4 pt-6 pb-4 border-b` (fixed)
+- DialogBody: `flex-1 overflow-y-auto px-4 py-4` (scrollable)
+- DialogFooter: `px-4 py-4 border-t` (fixed)
+
+**Анимации:**
+```tsx
+// ✅ ПРАВИЛЬНО: fade + zoom
+"data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+
+// ❌ НЕПРАВИЛЬНО: slide-in конфликтует с центрированием
+"slide-in-from-top-[48%]"  // НЕ ИСПОЛЬЗОВАТЬ!
+```
+
+### Цвета
+
+```tsx
+// ✅ Используй CSS variables
+<Button className="bg-[var(--color-primary)]">
+
+// ❌ НЕ hardcode hex
+<Button className="bg-[#FF6F2C]">
+```
+
+**Палитра:**
+- `--color-primary` (#FF6F2C) — основной оранжевый
+- `--color-success` (#22C55E) — зелёный
+- `--color-warning` (#F59E0B) — жёлтый
+- `--color-danger` (#EF4444) — красный
+
+**ЗАПРЕЩЕНО:**
+- ❌ НЕ используй grid на DialogContent (только flex flex-col)
+- ❌ НЕ ставь padding на DialogContent (только на header/body/footer)
+- ❌ НЕ используй slide-in-from-top анимации
+- ❌ НЕ ставь overflow-y-auto на DialogContent (только на DialogBody)
+- ❌ НЕ hardcode цвета (используй CSS variables)
+
+**ОБЯЗАТЕЛЬНО:**
+- ✅ Всегда используй DialogBody для контента
+- ✅ max-h только на DialogContent
+- ✅ Кнопки w-full sm:w-auto для адаптивности
+- ✅ Primary кнопка справа/снизу в footer
+
+**Правило:** ВСЕГДА читай `DESIGN_SYSTEM.md` перед UI изменениями. ВСЕГДА обновляй его после успешных изменений.
+
+---
+
+## 🎨 Дизайн-система (/figma/) — DEPRECATED
 
 **Статус:** Исключена из билда, в .gitignore
 
-**Документация:** `/figma/src/DESIGN_SYSTEM.md`
+**НОВЫЙ SSOT:** `docs/DESIGN_SYSTEM.md` ✨
+
+**Документация (старая):** `/figma/src/DESIGN_SYSTEM.md`
 
 **Цвета:**
 - Primary: #FF6F2C (оранжевый)
@@ -309,7 +399,7 @@ docs/sessions/
 - Button (4 варианта), Badge (6 типов), Card (3 размера)
 - Modal (5 размеров), Input/Select (высота 48px)
 
-**Правило:** Используй компоненты из дизайн-системы. Figma папка НЕ часть основного приложения.
+**Правило:** Старая figma папка для reference. **Используй `docs/DESIGN_SYSTEM.md` как SSOT.**
 
 ---
 
