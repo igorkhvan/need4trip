@@ -1,11 +1,19 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.0 ⚡  
+> **Версия:** 5.1 ⚡  
 > **Дата:** 26 декабря 2024  
-> **Статус:** Production (v5.0 - Direct Enforcement in Create/Update)
+> **Статус:** Production (v5.1 - Compensating Transactions)
 
 ---
+
+## 🆕 Что нового в v5.1
+
+**26 December 2024:**
+- ✅ **Compensating transactions** - credit + event save wrapped in transaction
+- ✅ **Rollback on failure** - credit returned if event save fails
+- ✅ **Retry-safe** - users can retry without losing credits
+- ✅ **Observable** - CRITICAL logs for manual intervention
 
 ## 🆕 Что нового в v5.0
 
@@ -2316,20 +2324,101 @@ export async function PUT(request: Request, { params }: Params) {
 
 ### Credit Consumption (v5)
 
-**Transaction safety:**
+**Compensating Transaction Pattern** - ensures atomicity between credit and event save.
+
+**File:** `src/lib/services/creditTransaction.ts`
+
+**Pattern:**
 ```typescript
-// In enforceEventPublish()
-if (confirmCredit) {
-  await consumeCredit(userId, "EVENT_UPGRADE_500", eventId ?? "pending");
-  // If event save fails later, credit already consumed
-  // TODO: Consider wrapping in Supabase transaction
+// Wrap operation with credit consumption + rollback on failure
+export async function executeWithCreditTransaction<T>(
+  userId: string,
+  creditCode: "EVENT_UPGRADE_500",
+  eventId: string | undefined,
+  operation: () => Promise<T>
+): Promise<T> {
+  let consumedCreditId: string | undefined;
+  
+  try {
+    // Step 1: Consume credit (mark as consumed)
+    const credit = await consumeCredit(userId, creditCode, eventId ?? "pending");
+    consumedCreditId = credit.id;
+    
+    // Step 2: Execute operation (save event)
+    const result = await operation();
+    
+    return result;
+    
+  } catch (operationError) {
+    // Step 3: Rollback credit (mark as available)
+    if (consumedCreditId) {
+      await rollbackCredit(consumedCreditId);
+    }
+    
+    throw operationError; // Re-throw to user
+  }
 }
 ```
 
-**Idempotency:**
-- Credit consumed before save (not after)
-- If save fails, credit is lost (edge case)
-- Recommendation: wrap in transaction for atomicity
+**Benefits:**
+- ✅ **Atomicity** - credit and event saved together or both fail
+- ✅ **User-friendly** - credit not lost if save fails
+- ✅ **Retry-safe** - user can retry after rollback
+- ✅ **Observable** - CRITICAL logs for manual intervention
+
+**Integration:**
+```typescript
+// In createEvent() / updateEvent()
+if (shouldUseCredit) {
+  event = await executeWithCreditTransaction(
+    userId,
+    "EVENT_UPGRADE_500",
+    eventId,
+    async () => {
+      // Save event + all related data
+      const db = await createEventRecord(validated);
+      await saveLocations(db.id, validated.locations);
+      await replaceAllowedBrands(db.id, validated.allowedBrandIds);
+      return mapDbEventToDomain(db);
+    }
+  );
+} else {
+  // Direct save without credit
+  event = await createEventRecord(validated);
+}
+```
+
+**Edge Cases:**
+
+1. **Rollback Failed (rare):**
+   - Credit stuck in "consumed" state
+   - CRITICAL log generated:
+     ```json
+     {
+       "severity": "CRITICAL",
+       "requiresManualIntervention": true,
+       "creditId": "...",
+       "userId": "...",
+       "eventId": "..."
+     }
+     ```
+   - Admin must manually fix:
+     ```sql
+     UPDATE billing_credits 
+     SET status = 'available', 
+         consumed_event_id = NULL, 
+         consumed_at = NULL
+     WHERE id = 'CREDIT_ID';
+     ```
+
+2. **Concurrent Requests:**
+   - consumeCredit() uses optimistic locking
+   - First request wins, second gets "No available credit"
+
+3. **Network Timeout:**
+   - User disconnects after credit consumed but before response
+   - Event may or may not be saved
+   - User can retry (will see "No available credit" if first succeeded)
 
 ---
       return;

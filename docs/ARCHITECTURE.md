@@ -228,10 +228,10 @@ need4trip/
 | **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ✅ UNIFIED |
 | **Error Handling** | `lib/errors.ts` | None (base classes) | Untyped errors | Custom error classes |
 | **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | Standard format |
-| **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceClubAction()`, `enforcePublish()` |
+| **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceEventPublish()` unified ⚡ |
+| **Credit Transactions** | `lib/services/creditTransaction.ts` | `lib/db/billingCreditsRepo` | Direct credit consumption | `executeWithCreditTransaction()` wrapper ⚡ |
 | **Billing Products** | `lib/db/billingProductsRepo.ts` | `lib/db/client` | Hardcoded prices | **SSOT from billing_products table** |
 | **Credit Confirmation** | `components/billing/CreditConfirmationModal.tsx` | `lib/types/billing` | Manual 409 handling | Modal + `useCreditConfirmation` hook |
-| **Publish Endpoint** | `app/api/events/[id]/publish/route.ts` | `lib/services/accessControl` | Direct publish in create/edit | **Called after create/update** |
 
 ### Critical Dependencies Graph
 
