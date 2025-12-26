@@ -65,7 +65,7 @@ export function CreditBadge() {
             </h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            У вас {user.availableCreditsCount} {pluralizeCredits(user.availableCreditsCount)}
+            У вас {pluralizeCredits(user.availableCreditsCount)}
           </p>
         </div>
 
