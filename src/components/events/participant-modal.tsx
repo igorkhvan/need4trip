@@ -75,19 +75,21 @@ export function ParticipantModal({
 
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="heading-h2">{title}</DialogTitle>
+          <DialogTitle className="heading-h3">{title}</DialogTitle>
           <DialogDescription className="text-body-small">{description}</DialogDescription>
         </DialogHeader>
 
-        <ParticipantForm
-          mode={mode}
-          eventId={eventId}
-          participantId={participantId}
-          customFieldsSchema={customFieldsSchema}
-          event={event}
-          initialValues={initialValues}
-          onSuccess={handleSuccess}
-        />
+        <div className="py-3 sm:py-4">
+          <ParticipantForm
+            mode={mode}
+            eventId={eventId}
+            participantId={participantId}
+            customFieldsSchema={customFieldsSchema}
+            event={event}
+            initialValues={initialValues}
+            onSuccess={handleSuccess}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

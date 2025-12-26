@@ -80,15 +80,15 @@ export function ConfirmDialog({
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle className="heading-h3">{title}</AlertDialogTitle>
+          <AlertDialogDescription className="text-body-small">{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogCancel disabled={loading} className="w-full sm:w-auto">{cancelText}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={loading}
-            className={destructive ? "bg-red-600 hover:bg-red-700" : ""}
+            className={`w-full sm:w-auto ${destructive ? "bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)]" : ""}`}
           >
             {loading ? (
               <>

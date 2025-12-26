@@ -59,23 +59,23 @@ export function CreditConfirmationModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-100 rounded-full">
-              <CreditCard className="w-5 h-5 text-orange-600" />
+            <div className="p-2 bg-[var(--color-primary-bg)] rounded-full">
+              <CreditCard className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
-            <DialogTitle>Подтвердите использование кредита</DialogTitle>
+            <DialogTitle className="heading-h3">Подтвердите использование кредита</DialogTitle>
           </div>
-          <DialogDescription className="text-base">
+          <DialogDescription className="text-body-small">
             Для публикации этого события будет использован один кредит <strong>{creditLabel}</strong>.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-3 sm:py-4">
           {/* Warning Box */}
-          <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex gap-3 p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
+            <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
-              <p className="font-medium text-amber-900">Это действие нельзя отменить</p>
-              <p className="text-amber-700">
+              <p className="font-medium text-[var(--color-warning-text)]">Это действие нельзя отменить</p>
+              <p className="text-[var(--color-warning-text)]">
                 После подтверждения кредит будет привязан к этому событию и станет недоступен для других событий.
               </p>
             </div>
@@ -84,33 +84,33 @@ export function CreditConfirmationModal({
           {/* Details */}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Кредит:</span>
+              <span className="text-muted-foreground">Кредит:</span>
               <span className="font-medium">{creditLabel}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Описание:</span>
-              <span className="text-gray-900">{creditDescription}</span>
+              <span className="text-muted-foreground">Описание:</span>
+              <span className="text-[var(--color-text)]">{creditDescription}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Участников:</span>
+              <span className="text-muted-foreground">Участников:</span>
               <span className="font-medium">{requestedParticipants}</span>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
             onClick={onCancel}
             disabled={isLoading}
-            className="flex-1"
+            className="w-full sm:w-auto"
           >
             Отмена
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isLoading}
-            className="flex-1 bg-orange-600 hover:bg-orange-700"
+            className="w-full sm:w-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]"
           >
             {isLoading ? 'Публикация...' : 'Подтвердить и опубликовать'}
           </Button>
