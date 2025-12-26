@@ -1,11 +1,21 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.1 ⚡  
+> **Версия:** 5.2 ⚡  
 > **Дата:** 26 декабря 2024  
-> **Статус:** Production (v5.1 - Compensating Transactions)
+> **Статус:** Production (v5.2 - Credit UI Integration)
 
 ---
+
+## 🆕 Что нового в v5.2
+
+**26 December 2024:**
+- ✅ **Credit badge in header** - Zap icon ⚡ with count (desktop + mobile)
+- ✅ **AuthContext integration** - credits count loaded with user (0 extra API calls)
+- ✅ **Profile credits section** - available + consumed history
+- ✅ **Event create banner** - contextual credit info
+- ✅ **Dropdown details** - click badge → info + CTA
+- ✅ **Improved invalidation** - router.refresh() instead of window.reload()
 
 ## 🆕 Что нового в v5.1
 
@@ -2321,6 +2331,132 @@ export async function PUT(request: Request, { params }: Params) {
 }
 // updateEvent() calls enforceEventPublish() which throws 402/409
 ```
+
+---
+
+### UI Integration (v5.2)
+
+**Visual display of available credits across the app.**
+
+#### **1. CreditBadge Component** ⚡
+
+**Location:** Header (desktop + mobile)
+
+**Component:** `src/components/billing/credit-badge.tsx`
+
+**Features:**
+- Zap icon (⚡) with count
+- Reads from AuthContext → 0 API calls
+- Auto-hide when count = 0
+- Dropdown on click with:
+  - Credit type info
+  - CTA buttons (Create Event, View Profile)
+
+**Layout:**
+```
+Desktop: [Nav] [⚡ 2] [Avatar]
+Mobile:  [Nav] → [⚡ 2] → [User Menu]
+```
+
+**Performance:**
+- Count loaded with user (getCurrentUser)
+- No N+1 queries (single JOIN)
+- Instant display (from context)
+
+---
+
+#### **2. Profile Credits Section**
+
+**Component:** `src/components/profile/profile-credits-section.tsx`
+
+**API:** `GET /api/profile/credits`
+
+**Response:**
+```json
+{
+  "available": [
+    {
+      "id": "uuid",
+      "creditCode": "EVENT_UPGRADE_500",
+      "createdAt": "2024-12-26",
+      "sourceTransaction": { ... }
+    }
+  ],
+  "consumed": [
+    {
+      "id": "uuid",
+      "consumedAt": "2024-12-20",
+      "consumedEvent": {
+        "id": "uuid",
+        "title": "Зимний поход",
+        "startDate": "2025-01-15",
+        "maxParticipants": 250
+      }
+    }
+  ],
+  "count": {
+    "available": 2,
+    "consumed": 5,
+    "total": 7
+  }
+}
+```
+
+**UI:**
+- Stats cards (available, consumed, total)
+- Green cards for available credits
+- Gray cards for consumed (with event links)
+- Empty state with CTA to /pricing
+
+---
+
+#### **3. Event Create Banner**
+
+**Location:** `/events/create` page
+
+**Logic:**
+```typescript
+const showBanner = user?.availableCreditsCount > 0;
+
+{showBanner && (
+  <InfoBanner>
+    У вас есть {count} апгрейд(а).
+    Используйте при создании события до 500 участников.
+  </InfoBanner>
+)}
+```
+
+**Design:**
+- Primary color border + bg
+- Zap icon
+- Positioned above EventForm
+- Auto-hide when no credits
+
+---
+
+#### **4. Invalidation Hooks**
+
+**After purchase:**
+```typescript
+// PaywallModal.tsx
+setPaymentStatus('success');
+router.refresh(); // ⚡ Re-fetch CurrentUser + credits count
+```
+
+**After event create/update:**
+```typescript
+// Already exists in v5.0
+router.push('/events');
+router.refresh();
+```
+
+**Flow:**
+1. User buys credit → polling → status=completed
+2. router.refresh() → getCurrentUser() re-runs
+3. availableCreditsCount updated
+4. CreditBadge updates instantly
+
+---
 
 ### Credit Consumption (v5)
 

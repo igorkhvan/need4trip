@@ -230,6 +230,7 @@ need4trip/
 | **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | Standard format |
 | **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceEventPublish()` unified ⚡ |
 | **Credit Transactions** | `lib/services/creditTransaction.ts` | `lib/db/billingCreditsRepo` | Direct credit consumption | `executeWithCreditTransaction()` wrapper ⚡ |
+| **Credit Badge UI** | `components/billing/credit-badge.tsx` | `components/auth/auth-provider` | Manual credit display | Badge reads from AuthContext (0 API calls) ⚡ |
 | **Billing Products** | `lib/db/billingProductsRepo.ts` | `lib/db/client` | Hardcoded prices | **SSOT from billing_products table** |
 | **Credit Confirmation** | `components/billing/CreditConfirmationModal.tsx` | `lib/types/billing` | Manual 409 handling | Modal + `useCreditConfirmation` hook |
 
