@@ -274,7 +274,7 @@ PostgreSQL Database
 - Transaction management
 
 **Rules:**
-- ✅ MUST use `ensureAdminClient()` at start of every function
+- ✅ MUST use `getAdminDb()` wrapper at start of every function
 - ✅ MUST return domain types (NOT database types)
 - ✅ MUST handle database errors (throw `InternalError`)
 - ❌ MUST NOT contain business logic
@@ -285,11 +285,10 @@ PostgreSQL Database
 
 ```typescript
 // ✅ CORRECT: lib/db/eventRepo.ts
-export async function getEventById(id: string): Promise<DbEvent | null> {
-  ensureAdminClient();
-  if (!supabaseAdmin) return null;
+export async function getEventById(id: string): Promise<Event | null> {
+  const db = getAdminDb();
   
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from("events")
     .select("*")
     .eq("id", id)
@@ -300,7 +299,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
 }
 
 // ❌ WRONG: Business logic in repository
-export async function getEventById(id: string, userId: string) {
+export async function getEventById(id: string, userId: string): Promise<Event> {
   const event = await fetchEvent(id);
   if (event.createdByUserId !== userId) {
     throw new UnauthorizedError(); // ❌ Authorization in repo layer
@@ -424,6 +423,7 @@ export function mapDbEventToDomain(db: DbEvent): Event {
 - ✅ MUST be pure functions (no side effects)
 - ✅ MUST handle null/undefined consistently
 - ✅ MUST map ALL fields (no silent omissions)
+- ⚠️ Mappers MAY be colocated with repos (e.g., `eventRepo.ts` exports `mapDbEventToDomain`) OR centralized in `lib/db/mappers/*.ts`
 - ⚠️ TODO: Add runtime validation in dev mode
 
 ---
@@ -446,7 +446,7 @@ Use Server Components by default. Only use Client Components when you need:
 // ✅ Server Component (default, no marker)
 export default function EventList() {
   // Can use async/await
-  // Can access database directly
+  // Can call Service layer directly (server-only)
   // Cannot use useState/useEffect
 }
 
@@ -457,6 +457,7 @@ export function EventForm() {
   // Can use hooks
   // Can use browser APIs
   // Cannot be async
+  // Must call API routes for data (NO direct service/repo access)
 }
 ```
 
@@ -583,7 +584,7 @@ export async function getCurrencyByCode(code: string): Promise<Currency | null> 
 - **5 minutes**: Dynamic reference data (pricing, plans)
 
 **NOT cached:**
-- ❌ Events (change frequently, user-specific visibility)
+- ❌ Events (change frequently, user-specific visibility; **exception:** event counts/stats may use short-lived in-process cache, see § 10)
 - ❌ Participants (real-time registration data)
 - ❌ Users (privacy, authentication state)
 - ❌ Club subscriptions (billing state)
@@ -1167,28 +1168,26 @@ Response (401) if tab=my without auth:
 
 #### Caching Matrix (CRITICAL)
 
-**Rule:** Listings and stats have DIFFERENT caching strategies based on auth.
+**Rule:** Listings are always fresh (no Next.js cache). Stats endpoints use selective caching for performance.
 
 | Endpoint | Tab | User-Specific | Next.js Cache | In-Process Cache | TTL |
 |----------|-----|--------------|---------------|-----------------|-----|
-| GET /api/events | all, upcoming | ❌ No | revalidate: 60 | ❌ None | 60s |
+| GET /api/events | all, upcoming | ❌ No | dynamic: 'force-dynamic' | ❌ None | 0s |
 | GET /api/events | my | ✅ Yes | dynamic: 'force-dynamic' | ❌ None | 0s |
 | GET /api/events/stats | all, upcoming | ❌ No | revalidate: 60 | ❌ None | 60s |
 | GET /api/events/stats | my | ✅ Yes | dynamic: 'force-dynamic' | keyed by userId+filters | 60s |
 
 **Explanation:**
 
-1. **Listings (GET /api/events):** NOT cached (frequently changing, user-sensitive for tab=my)
-   - tab=all/upcoming: `revalidate: 60` (Next.js cache, public data)
-   - tab=my: `dynamic: 'force-dynamic'` (no cache, user-specific)
+1. **Listings (GET /api/events):** ALWAYS fresh (NO cache)
+   - tab=all/upcoming: `dynamic: 'force-dynamic'` (public data, but frequently changing)
+   - tab=my: `dynamic: 'force-dynamic'` (user-specific)
+   - Rationale: Events change frequently (new registrations, edits, visibility changes)
 
 2. **Stats (GET /api/events/stats):**
-   - tab=all/upcoming: `revalidate: 60` (Next.js cache, public count)
+   - tab=all/upcoming: `revalidate: 60` (Next.js cache, public count, lightweight)
    - tab=my: `dynamic: 'force-dynamic'` + in-process cache keyed by `${userId}|${filters}` with TTL 60s
-
-**Why stats cache for tab=my?**
-
-Stats is a lightweight count query. Caching per-user (in-process, 60s TTL) reduces DB load for repeated calls from same user.
+   - Rationale: Stats is a lightweight count query. Caching reduces DB load for repeated calls.
 
 **Implementation Example (stats with user-keyed cache):**
 
@@ -1231,17 +1230,17 @@ export async function GET(request: Request) {
 }
 ```
 
-**For tab=all/upcoming stats (public):**
+**For tab=all/upcoming stats (public) — Alternative with revalidate:**
 
 ```typescript
-// app/api/events/stats/route.ts (alternative if public-only)
+// app/api/events/stats/route.ts (if separating public endpoint)
 export const revalidate = 60; // Next.js cache, public data
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tab = searchParams.get('tab') || 'all';
   
-  // If tab=my requested, require auth
+  // If tab=my requested, require auth and use force-dynamic approach
   if (tab === 'my') {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -1254,7 +1253,11 @@ export async function GET(request: Request) {
 }
 ```
 
-**Rule:** Choose ONE of the two approaches above and document it in code. Do NOT mix both without clear separation by tab.
+**CANONICAL APPROACH for Need4Trip:**
+
+Use the FIRST example (combined endpoint with explicit branching):
+- tab=my: `dynamic: 'force-dynamic'` + in-process cache keyed by userId
+- tab=all/upcoming: Next.js revalidate handled by route segment config (may add `export const revalidate = 60` for public-only branches if separated)
 
 #### Future Migration Notes (Phase 2+)
 
@@ -1645,7 +1648,7 @@ A refactor is DONE when:
 | Pattern | Why Forbidden | Alternative |
 |---------|--------------|-------------|
 | Multiple date utils | Causes confusion | Single `lib/utils/dates.ts` |
-| `ensureAdminClient()` in every function | Code duplication | `getAdminDb()` wrapper |
+| `ensureAdminClient()` in every function | Code duplication | Use `getAdminDb()` wrapper |
 | Inline visibility checks | Duplication, bugs | `lib/utils/eventVisibility.ts` |
 | Direct DB access from API routes | Breaks layering | Use service layer |
 | Server-only code in client components | Build breaks | Use API routes |
