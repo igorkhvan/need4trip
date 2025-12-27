@@ -2,16 +2,14 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Calendar, Users, TrendingUp, Filter } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 import { Tabs } from "@/components/ui/tabs";
 import { EventCardDetailed } from "@/components/events/event-card-detailed";
-import { CreateEventButton } from "@/components/events/create-event-button";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
@@ -25,9 +23,6 @@ interface EventsGridProps {
     limit: number;
     totalPages: number;
     hasMore: boolean;
-  } | null;
-  stats: {
-    total: number;
   } | null;
   currentUserId: string | null;
   isAuthenticated: boolean;
@@ -45,7 +40,6 @@ type SortBy = "date" | "name";
 export function EventsGrid({ 
   events, 
   meta, 
-  stats,
   currentUserId, 
   isAuthenticated,
   onTabChange,
@@ -105,69 +99,6 @@ export function EventsGrid({
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-2">
-          <h1 className="heading-hero">
-            Все события
-          </h1>
-          <p className="text-base text-muted-foreground">
-            Найдите подходящую автомобильную поездку или создайте свою
-          </p>
-        </div>
-        <CreateEventButton 
-          isAuthenticated={isAuthenticated}
-          className="h-12 rounded-xl px-6 text-base shadow-sm"
-        />
-      </div>
-
-      {/* Stats Cards */}
-      <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
-        <div className="flex gap-4 md:grid md:grid-cols-3 min-w-max md:min-w-0">
-          <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
-            <CardContent className="flex items-center justify-between p-6">
-              <div>
-                <div className="mb-2 text-sm text-muted-foreground">Всего событий</div>
-                <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                  {stats?.total ?? 0}
-                </div>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
-                <Calendar className="h-6 w-6 text-[var(--color-primary)]" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
-            <CardContent className="flex items-center justify-between p-6">
-              <div>
-                <div className="mb-2 text-sm text-muted-foreground">Активных регистраций</div>
-                <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                  {meta?.total ?? 0}
-                </div>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-success-bg)]">
-                <TrendingUp className="h-6 w-6 text-[var(--color-success)]" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
-            <CardContent className="flex items-center justify-between p-6">
-              <div>
-                <div className="mb-2 text-sm text-muted-foreground">Всего участников</div>
-                <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                  {events.reduce((sum, e) => sum + (e.participantsCount ?? 0), 0)}
-                </div>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
-                <Users className="h-6 w-6 text-[var(--color-primary)]" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
       {/* Tabs */}
       <Tabs
         tabs={[
