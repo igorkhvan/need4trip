@@ -1,8 +1,8 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.2  
-**Last Updated:** 26 December 2024  
+**Version:** 2.3  
+**Last Updated:** 27 December 2024  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
@@ -18,12 +18,13 @@
 7. [Caching Strategy](#caching-strategy)
 8. [Authentication & Authorization](#authentication--authorization)
 9. [Events Domain Policies](#events-domain-policies)
-10. [Type Safety Contracts](#type-safety-contracts)
-11. [Change Process & Definition of Done](#change-process--definition-of-done)
-12. [Naming & Project Structure](#naming--project-structure) ⚡
-13. [Client-Side Data Fetching](#client-side-data-fetching) ⚡
-14. [Performance Optimizations](#performance-optimizations) ⚡
-15. [Error Handling & Validation](#error-handling--validation) ⚡
+10. [Events Listing, Pagination, and Stats (SSOT)](#events-listing-pagination-and-stats-ssot) ⚡
+11. [Type Safety Contracts](#type-safety-contracts)
+12. [Naming & Project Structure](#naming--project-structure)
+13. [Client-Side Data Fetching](#client-side-data-fetching)
+14. [Performance Optimizations](#performance-optimizations)
+15. [Error Handling & Validation](#error-handling--validation)
+16. [Change Process & Definition of Done](#change-process--definition-of-done)
 
 ---
 
@@ -805,13 +806,25 @@ export async function registerGuest() {
 
 ### Event Visibility Rules
 
-**Three visibility levels:**
+**Three visibility levels (enum values FIXED):**
 
-| Level | Who Can View | Who Can Register | Link Sharing |
-|-------|--------------|------------------|--------------|
-| `public` | Everyone | Everyone | Yes |
-| `unlisted` | Link holders | Link holders | Yes (private link) |
-| `restricted` | Explicit access | Explicit access | No (invitation only) |
+| Level | Listed in Catalog | Direct Link Access | Authentication Required | Notes |
+|-------|-------------------|-------------------|------------------------|-------|
+| `public` | ✅ Yes | ✅ Everyone (including anonymous) | ❌ No | Default, maximum visibility |
+| `unlisted` | ❌ No | ✅ Everyone (including anonymous) | ❌ No | Private link, not in catalog |
+| `restricted` | ❌ No | ✅ Authenticated users only | ✅ Yes (any logged-in user) | NOT invite-only in current phase |
+
+**Critical Rules:**
+
+1. **Catalog (tab=all, tab=upcoming):** ONLY `public` events
+2. **Direct link access:**
+   - `public` → anyone can view (including anonymous)
+   - `unlisted` → anyone with link can view (including anonymous)
+   - `restricted` → requires authentication; any logged-in user can view
+3. **event_user_access table:**
+   - Used for inclusion in tab=my (explicit access)
+   - Used for future ACL features (Phase 2+)
+   - NOT required to view restricted events in Phase 1
 
 **Implementation: `lib/utils/eventVisibility.ts` (SSOT)**
 
@@ -821,40 +834,32 @@ export async function enforceEventVisibility(
   currentUser: CurrentUser | null,
   options?: { autoGrantAccessForRestricted?: boolean }
 ): Promise<void> {
-  // 1. Public events: always visible
+  // 1. Public events: always visible to everyone (including anonymous)
   if (event.visibility === 'public') return;
   
-  // 2. Owner always has access
+  // 2. Owner always has access (for all visibility levels)
   if (currentUser && event.createdByUserId === currentUser.id) return;
   
-  // 3. Unlisted: require authentication OR participant status
+  // 3. Unlisted: anyone with direct link can view (including anonymous)
   if (event.visibility === 'unlisted') {
-    if (!currentUser) {
-      throw new UnauthorizedError("Authentication required for unlisted events");
-    }
-    // Check if user is participant
-    const isParticipant = await checkParticipantStatus(event.id, currentUser.id);
-    if (isParticipant) return;
-    
-    // Check explicit access grant
-    const hasAccess = await checkEventAccess(event.id, currentUser.id);
-    if (hasAccess) return;
-    
-    throw new UnauthorizedError("Access denied to this event");
+    return; // No authentication required
   }
   
-  // 4. Restricted: require explicit access grant
+  // 4. Restricted: requires authentication (any logged-in user)
   if (event.visibility === 'restricted') {
     if (!currentUser) {
-      throw new UnauthorizedError("Authentication required");
+      throw new UnauthorizedError("Authentication required for restricted events");
     }
     
-    const hasAccess = await checkEventAccess(event.id, currentUser.id);
-    if (!hasAccess && options?.autoGrantAccessForRestricted) {
+    // In Phase 1: any authenticated user can view restricted events via direct link
+    // Future phases may add explicit ACL checks here
+    
+    // Optional: record access in event_user_access for tab=my inclusion
+    if (options?.autoGrantAccessForRestricted) {
       await upsertEventAccess(event.id, currentUser.id, 'link');
-    } else if (!hasAccess) {
-      throw new UnauthorizedError("Access denied to this event");
     }
+    
+    return; // Access granted
   }
 }
 ```
@@ -959,7 +964,307 @@ function validateCustomFieldsUpdate(
 
 ---
 
-## 10. Type Safety Contracts
+## 10. Events Listing, Pagination, and Stats (SSOT)
+
+### Decision Matrix (LOCKED)
+
+This section defines the ONLY authoritative rules for events listing, pagination, filtering, and stats endpoints.
+
+#### Visibility Semantics (enum values fixed: public/unlisted/restricted)
+
+| Visibility | Listed in Catalog (tab=all) | Direct Link Access | Auth Required |
+|-----------|---------------------------|-------------------|---------------|
+| `public` | ✅ Yes | Everyone (anonymous OK) | ❌ No |
+| `unlisted` | ❌ No | Everyone (anonymous OK) | ❌ No |
+| `restricted` | ❌ No | Authenticated users only | ✅ Yes (any logged-in user) |
+
+**Critical:** `event_user_access` table is used for tab=my inclusion and future ACL, but NOT required to view restricted events in Phase 1.
+
+#### Listing Tabs
+
+| Tab | Query Filter | Auth Required | Included Events |
+|-----|-------------|--------------|----------------|
+| `tab=all` | `visibility = 'public'` | ❌ No | Catalog (all public events) |
+| `tab=upcoming` | `visibility = 'public' AND date_time > now()` | ❌ No | Subset of tab=all |
+| `tab=my` | (see below) | ✅ Yes | User-specific events |
+
+**tab=my logic (requires authentication):**
+
+User sees events where:
+1. **Owner:** `created_by_user_id = currentUser.id`, OR
+2. **Participant:** exists in `participants` table for this event, OR
+3. **Explicit access:** exists in `event_user_access` for this event
+
+**API behavior for tab=my without auth:** Return 401 (NOT empty list, NOT redirect). UI may show auth modal.
+
+#### Pagination (Server-Side, Offset-Based)
+
+**Parameters:**
+
+| Param | Type | Default | Validation | Notes |
+|-------|------|---------|-----------|-------|
+| `page` | integer | 1 | >= 1 | 1-based page number |
+| `limit` | integer | 12 | 1-50 (clamped) | Results per page |
+| `sort` | string | `date` | `date` or `name` | Sort field |
+
+**Sorting Rules (stable tie-breaker REQUIRED):**
+
+```sql
+-- Default sort (date descending)
+ORDER BY date_time DESC, id DESC
+
+-- Name sort (alphabetical ascending)
+ORDER BY title ASC, id ASC
+
+-- participants sort: DEFERRED to Phase 2 (not implemented in Phase 1)
+```
+
+**Why stable tie-breaker:** Prevents pagination drift when multiple events have same date_time or title.
+
+**Cursor-based pagination:** Reserved for Phase 2. API response includes `nextCursor: null` for future migration.
+
+#### Search (Phase 1 Scope)
+
+**Phase 1:** Search by `title` only (case-insensitive ILIKE)
+
+**Phase 2+:** Extend to description, city, category (not in scope for current SSOT).
+
+#### Repository Contract (CRITICAL)
+
+**Rule:** Repositories MUST NOT return raw DB row types to services/API.
+
+**For listings (GET /api/events):**
+
+Repo MUST return lightweight DTO:
+
+```typescript
+export interface EventListItem {
+  id: string;
+  title: string;
+  description: string;
+  dateTime: string;
+  location: string | null;
+  maxParticipants: number | null;
+  currentParticipantsCount: number;
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  imageUrl: string | null;
+  visibility: 'public' | 'unlisted' | 'restricted';
+  isPaid: boolean;
+  createdByUserId: string | null;
+  
+  // Hydrated reference data (optional)
+  city?: { id: string; name: string; countryCode: string };
+  currency?: { code: string; symbol: string };
+  category?: { id: string; name: string; icon: string };
+}
+```
+
+**For details (GET /api/events/:id):**
+
+Repo returns full domain `Event` type (includes all fields).
+
+**Explicit columns required:**
+
+```typescript
+// ✅ CORRECT: Explicit SELECT for listings
+const EVENT_LIST_COLUMNS = `
+  id, title, description, date_time, location,
+  max_participants, current_participants_count,
+  price_amount, price_currency, image_url, visibility,
+  is_paid, created_by_user_id, city_id, category_id
+`;
+
+const { data } = await supabase
+  .from('events')
+  .select(EVENT_LIST_COLUMNS)
+  .eq('visibility', 'public')
+  .order('date_time', { ascending: false })
+  .order('id', { ascending: false })
+  .range(offset, offset + limit - 1);
+
+// ❌ FORBIDDEN for listings: select('*')
+```
+
+**For single-item getters (by ID):** `select('*')` is allowed (full row needed).
+
+#### API Contracts
+
+**GET /api/events**
+
+Request (query params):
+
+```typescript
+{
+  tab?: 'all' | 'upcoming' | 'my',  // default: 'all'
+  page?: number,                    // default: 1
+  limit?: number,                   // default: 12, max: 50
+  sort?: 'date' | 'name',          // default: 'date'
+  search?: string,                  // optional (title only in Phase 1)
+  cityId?: string,                  // optional
+  categoryId?: string               // optional
+}
+```
+
+Response (200):
+
+```typescript
+{
+  events: EventListItem[],
+  meta: {
+    total: number,           // Total matching events
+    page: number,            // Current page (1-based)
+    limit: number,           // Items per page
+    totalPages: number,      // Math.ceil(total / limit)
+    hasMore: boolean,        // page < totalPages
+    nextCursor: null         // Reserved for Phase 2 (cursor pagination)
+  }
+}
+```
+
+Response (401) if tab=my without auth:
+
+```typescript
+{
+  error: {
+    code: "UNAUTHORIZED",
+    message: "Authentication required for tab=my"
+  }
+}
+```
+
+**GET /api/events/stats**
+
+Request (query params):
+
+```typescript
+{
+  tab?: 'all' | 'upcoming' | 'my',  // default: 'all'
+  search?: string,                  // optional
+  cityId?: string,                  // optional
+  categoryId?: string               // optional
+}
+```
+
+Response (200):
+
+```typescript
+{
+  total: number  // Total events matching filters (before pagination)
+}
+```
+
+Response (401) if tab=my without auth:
+
+```typescript
+{
+  error: {
+    code: "UNAUTHORIZED",
+    message: "Authentication required for tab=my"
+  }
+}
+```
+
+#### Caching Matrix (CRITICAL)
+
+**Rule:** Listings and stats have DIFFERENT caching strategies based on auth.
+
+| Endpoint | Tab | User-Specific | Next.js Cache | In-Process Cache | TTL |
+|----------|-----|--------------|---------------|-----------------|-----|
+| GET /api/events | all, upcoming | ❌ No | revalidate: 60 | ❌ None | 60s |
+| GET /api/events | my | ✅ Yes | dynamic: 'force-dynamic' | ❌ None | 0s |
+| GET /api/events/stats | all, upcoming | ❌ No | revalidate: 60 | ❌ None | 60s |
+| GET /api/events/stats | my | ✅ Yes | dynamic: 'force-dynamic' | keyed by userId+filters | 60s |
+
+**Explanation:**
+
+1. **Listings (GET /api/events):** NOT cached (frequently changing, user-sensitive for tab=my)
+   - tab=all/upcoming: `revalidate: 60` (Next.js cache, public data)
+   - tab=my: `dynamic: 'force-dynamic'` (no cache, user-specific)
+
+2. **Stats (GET /api/events/stats):**
+   - tab=all/upcoming: `revalidate: 60` (Next.js cache, public count)
+   - tab=my: `dynamic: 'force-dynamic'` + in-process cache keyed by `${userId}|${filters}` with TTL 60s
+
+**Why stats cache for tab=my?**
+
+Stats is a lightweight count query. Caching per-user (in-process, 60s TTL) reduces DB load for repeated calls from same user.
+
+**Implementation Example (stats with user-keyed cache):**
+
+```typescript
+// app/api/events/stats/route.ts
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const statsCache = new Map<string, { count: number; expires: number }>();
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const tab = searchParams.get('tab') || 'all';
+  
+  const currentUser = await getCurrentUser();
+  
+  if (tab === 'my') {
+    if (!currentUser) {
+      return respondError(new UnauthorizedError("Authentication required for tab=my"));
+    }
+    
+    // User-keyed cache
+    const cacheKey = `${currentUser.id}|${tab}|${searchParams.toString()}`;
+    const cached = statsCache.get(cacheKey);
+    
+    if (cached && Date.now() < cached.expires) {
+      return respondJSON({ total: cached.count });
+    }
+    
+    const total = await getEventsStatsForUser(currentUser.id, { tab, ...otherFilters });
+    
+    statsCache.set(cacheKey, { count: total, expires: Date.now() + 60_000 });
+    
+    return respondJSON({ total });
+  }
+  
+  // Public stats (tab=all/upcoming): no in-process cache, rely on Next.js revalidate
+  const total = await getEventsStatsPublic({ tab, ...otherFilters });
+  return respondJSON({ total });
+}
+```
+
+**For tab=all/upcoming stats (public):**
+
+```typescript
+// app/api/events/stats/route.ts (alternative if public-only)
+export const revalidate = 60; // Next.js cache, public data
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const tab = searchParams.get('tab') || 'all';
+  
+  // If tab=my requested, require auth
+  if (tab === 'my') {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return respondError(new UnauthorizedError("Authentication required"));
+    }
+  }
+  
+  const total = await getEventsStats({ tab, ...otherFilters });
+  return respondJSON({ total });
+}
+```
+
+**Rule:** Choose ONE of the two approaches above and document it in code. Do NOT mix both without clear separation by tab.
+
+#### Future Migration Notes (Phase 2+)
+
+1. **Cursor-based pagination:** `nextCursor` field already reserved in response. Offset remains current implementation.
+2. **Participants sorting:** Deferred due to performance concerns (requires join or materialized view).
+3. **Extended search:** Description, city name, category name (requires full-text index or Algolia).
+
+---
+
+## 11. Type Safety Contracts
 
 ### Type System Rules
 
@@ -1015,215 +1320,6 @@ import type { Event, EventCreateInput } from '@/lib/types/event';
 // ❌ WRONG: Import from implementation
 import type { Event } from '@/lib/db/eventRepo';
 ```
-
----
-
-## 11. Change Process & Definition of Done
-
-### Making Architectural Changes
-
-**When you need to change architecture:**
-
-1. **Update THIS document first** (docs/ARCHITECTURE.md)
-2. **Get review** (if team > 1 person)
-3. **Implement changes**
-4. **Update related docs** (mark as "See ARCHITECTURE.md")
-5. **Add migration notes** (if breaking changes)
-6. **Commit with prefix:** `refactor:` or `arch:`
-
-### Definition of Done for Refactoring
-
-A refactor is DONE when:
-
-- ✅ Code compiles (`npm run build` succeeds)
-- ✅ TypeScript passes (`tsc --noEmit` succeeds)
-- ✅ ESLint passes (`npm run lint` succeeds)
-- ✅ THIS document updated (if architecture changed)
-- ✅ No conflicting documentation remains
-- ✅ Vercel deployment succeeds
-- ✅ All imports updated (no broken references)
-- ✅ Tests pass (when tests exist)
-
-### Forbidden Patterns
-
-**These patterns are BANNED. Violations will be caught in code review.**
-
-| Pattern | Why Forbidden | Alternative |
-|---------|--------------|-------------|
-| Multiple date utils | Causes confusion | Single `lib/utils/dates.ts` |
-| `ensureAdminClient()` in every function | Code duplication | `getAdminDb()` wrapper |
-| Inline visibility checks | Duplication, bugs | `lib/utils/eventVisibility.ts` |
-| Direct DB access from API routes | Breaks layering | Use service layer |
-| Server-only code in client components | Build breaks | Use API routes |
-| `any` types | Loses type safety | Use proper types |
-| Unvalidated API inputs | Security risk | Zod validation |
-| Mixed caching strategies | Inconsistency | Use StaticCache |
-
-### ESLint Rules (Enforcement)
-
-```javascript
-// .eslintrc.js (planned)
-module.exports = {
-  rules: {
-    // Prevent importing server-only in client
-    'no-restricted-imports': [
-      'error',
-      {
-        patterns: [
-          {
-            group: ['@/lib/db/*'],
-            message: 'Database access forbidden in client components. Use API routes.',
-          },
-        ],
-      },
-    ],
-  },
-};
-```
-
----
-
-## Document History
-
-| Date | Version | Change |
-|------|---------|--------|
-| 2024-12-25 | 2.0 | Initial creation as SSOT |
-| 2024-12-26 | 2.1 | Added billing enforcement to Ownership Map |
-| 2024-12-26 | 2.2 | Added sections 12-15 (naming, client fetching, performance, errors) |
-
----
-
-**END OF ARCHITECTURE DOCUMENT**
-
-*This is the Single Source of Truth for Need4Trip architecture. All other documents defer to this one.*
-
-
-### 4.1 Type System Organization
-
-**Critical Rule:** Domain types and Database types are SEPARATE concerns.
-
-#### Domain Types (`lib/types/`)
-
-**Purpose:** Business logic types that represent application concepts.
-
-**Characteristics:**
-- Manually written and maintained
-- Use camelCase naming (TypeScript convention)
-- Represent business rules and domain models
-- Used across services, API routes, and components
-- Independent of database schema
-
-**Examples:**
-```typescript
-// lib/types/event.ts
-export interface Event {
-  id: string;
-  title: string;
-  dateTime: string;           // camelCase
-  maxParticipants: number | null;
-  createdByUserId: string | null;
-}
-
-// lib/types/billing.ts
-export interface BillingTransaction {
-  clubId: string | null;
-  productCode: ProductCode;    // Domain enum
-  amountKzt: number;
-}
-```
-
-#### Database Types (`lib/db/types.ts`)
-
-**Purpose:** Auto-generated types from Supabase schema (infrastructure).
-
-**Characteristics:**
-- **NEVER edit manually** - always regenerate after migrations
-- Use snake_case (PostgreSQL convention)
-- Represent DB structure: `Row`, `Insert`, `Update` interfaces
-- Used ONLY in repository layer
-- Include all Supabase-specific metadata (relationships, enums)
-
-**Generation command:**
-```bash
-npx supabase gen types typescript --project-id YOUR_ID > src/lib/db/types.ts
-```
-
-**Example:**
-```typescript
-// lib/db/types.ts (AUTO-GENERATED)
-export interface Database {
-  public: {
-    Tables: {
-      events: {
-        Row: {
-          id: string;
-          title: string;
-          date_time: string;         // snake_case
-          max_participants: number | null;
-          created_by_user_id: string | null;
-        }
-        Insert: { /* ... */ }
-        Update: { /* ... */ }
-      }
-    }
-  }
-}
-```
-
-#### Mapping Between Types
-
-**Repositories are responsible for mapping DB types → Domain types:**
-
-```typescript
-// lib/db/eventRepo.ts
-import type { Database } from "./types";           // DB types
-import type { Event } from "@/lib/types/event";    // Domain types
-
-type DbEvent = Database["public"]["Tables"]["events"]["Row"];
-
-function mapDbToEvent(db: DbEvent): Event {
-  return {
-    id: db.id,
-    title: db.title,
-    dateTime: db.date_time,              // snake_case → camelCase
-    maxParticipants: db.max_participants,
-    createdByUserId: db.created_by_user_id,
-  };
-}
-```
-
-#### Rules
-
-**✅ MUST:**
-- Repositories import from `lib/db/types` (DB types)
-- Services/API routes import from `lib/types/*` (Domain types)
-- Repositories return domain types (NOT DB types)
-- Regenerate `lib/db/types.ts` after every migration
-
-**❌ MUST NOT:**
-- Import `lib/db/types` outside of `lib/db/` folder
-- Manually edit `lib/db/types.ts`
-- Use DB types (snake_case) in services or API routes
-- Mix domain and database concerns
-
-#### Rationale
-
-**Separation of concerns:**
-- Domain types = what we think (business logic)
-- Database types = what DB stores (infrastructure)
-
-**Colocation:**
-- DB types live with DB client and repositories
-- Easy to find: everything DB-related in one folder
-
-**Clarity:**
-- `lib/types/` = business concepts
-- `lib/db/types.ts` = technical schema
-
-**Safety:**
-- Auto-generation prevents drift between code and schema
-- TypeScript catches schema mismatches at compile time
-
 
 ---
 
@@ -1385,17 +1481,27 @@ const { data, loading, error } = useProfileData();
 
 ### Query Optimization (Repository Layer)
 
-**Rule:** NO `select *` in production code
+**Rule:** NO `select *` in production code for listings endpoints
 
-✅ **Good:**
+✅ **Good (listing endpoint):**
 ```typescript
-const CLUB_COLUMNS = "id, name, description, logo_url, created_at";
-const { data } = await db.from('clubs').select(CLUB_COLUMNS);
+const EVENT_LIST_COLUMNS = "id, title, description, date_time, max_participants, current_participants_count";
+const { data } = await db.from('events').select(EVENT_LIST_COLUMNS);
 ```
 
-❌ **Bad:**
+❌ **Bad (listing endpoint):**
 ```typescript
-const { data } = await db.from('clubs').select('*'); // Overfetching
+const { data } = await db.from('events').select('*'); // Overfetching
+```
+
+**Exception:** Single-item getters (by ID) MAY use `select('*')` when full row is needed.
+
+✅ **OK (single item getter):**
+```typescript
+export async function getEventById(id: string): Promise<Event | null> {
+  const { data } = await db.from('events').select('*').eq('id', id).maybeSingle();
+  return data ? mapDbToEvent(data) : null;
+}
 ```
 
 ### N+1 Query Prevention
@@ -1492,5 +1598,97 @@ if (!parsed.success) {
 
 ---
 
-**Last Updated:** 26 December 2024  
-**Version:** 2.2
+## 16. Change Process & Definition of Done
+
+### Making Architectural Changes
+
+**When you need to change architecture:**
+
+1. **Update THIS document first** (docs/ARCHITECTURE.md)
+2. **Get review** (if team > 1 person)
+3. **Implement changes**
+4. **Update related docs** (mark as "See ARCHITECTURE.md")
+5. **Add migration notes** (if breaking changes)
+6. **Commit with prefix:** `refactor:` or `arch:`
+
+### Migration Policy
+
+**SSOT changes do NOT automatically require full codebase refactor.**
+
+When SSOT is updated:
+1. **Assess violations:** Scan codebase for patterns that violate new rules
+2. **Triage violations:**
+   - **P0 (Critical):** Breaks builds, security risks, data loss → fix immediately
+   - **P1 (High):** Performance issues, maintainability debt → fix in sprint
+   - **P2 (Low):** Style inconsistencies, minor optimizations → backlog
+3. **Incremental migration:** Fix P0/P1, document P2 for future cleanup
+
+**Rule:** SSOT is prescriptive for NEW code. Existing code migrates based on priority.
+
+### Definition of Done for Refactoring
+
+A refactor is DONE when:
+
+- ✅ Code compiles (`npm run build` succeeds)
+- ✅ TypeScript passes (`tsc --noEmit` succeeds)
+- ✅ ESLint passes (`npm run lint` succeeds)
+- ✅ THIS document updated (if architecture changed)
+- ✅ No conflicting documentation remains
+- ✅ Vercel deployment succeeds
+- ✅ All imports updated (no broken references)
+- ✅ Tests pass (when tests exist)
+
+### Forbidden Patterns
+
+**These patterns are BANNED. Violations will be caught in code review.**
+
+| Pattern | Why Forbidden | Alternative |
+|---------|--------------|-------------|
+| Multiple date utils | Causes confusion | Single `lib/utils/dates.ts` |
+| `ensureAdminClient()` in every function | Code duplication | `getAdminDb()` wrapper |
+| Inline visibility checks | Duplication, bugs | `lib/utils/eventVisibility.ts` |
+| Direct DB access from API routes | Breaks layering | Use service layer |
+| Server-only code in client components | Build breaks | Use API routes |
+| `any` types | Loses type safety | Use proper types |
+| Unvalidated API inputs | Security risk | Zod validation |
+| Mixed caching strategies | Inconsistency | Use StaticCache for reference data |
+| `select('*')` for listings | Overfetching | Explicit columns (EVENT_LIST_COLUMNS) |
+
+### ESLint Rules (Enforcement)
+
+```javascript
+// .eslintrc.js (planned)
+module.exports = {
+  rules: {
+    // Prevent importing server-only in client
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          {
+            group: ['@/lib/db/*'],
+            message: 'Database access forbidden in client components. Use API routes.',
+          },
+        ],
+      },
+    ],
+  },
+};
+```
+
+---
+
+## Document History
+
+| Date | Version | Change |
+|------|---------|--------|
+| 2024-12-25 | 2.0 | Initial creation as SSOT |
+| 2024-12-26 | 2.1 | Added billing enforcement to Ownership Map |
+| 2024-12-26 | 2.2 | Added sections 12-15 (naming, client fetching, performance, errors) |
+| 2024-12-27 | 2.3 | SSOT consolidation for events listing pagination + stats (visibility + caching + repo contracts) |
+
+---
+
+**END OF ARCHITECTURE DOCUMENT**
+
+*This is the Single Source of Truth for Need4Trip architecture. All other documents defer to this one.*
