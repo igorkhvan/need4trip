@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-26 (Events Published Immediately) ⚡  
+> Последнее обновление: 2024-12-27 (Added missing columns: is_club_event, version, registration controls, club_cities table) ⚡  
 > PostgreSQL + Supabase
 
 ---
@@ -36,10 +36,10 @@
 
 - **Core Tables**: 6 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands)
 - **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans) ⚡
-- **Club & Billing**: 6 (clubs, club_members, club_subscriptions, billing_transactions, billing_credits, billing_products) ⚡
+- **Club & Billing**: 7 (clubs, club_members, club_cities, club_subscriptions, billing_transactions, billing_products, billing_credits) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
 - **User Extensions**: 1 (user_cars)
-- **Итого**: 22 таблицы ⚡
+- **Итого**: 23 таблицы ⚡
 
 ---
 
@@ -98,6 +98,7 @@ CREATE TABLE public.events (
   title TEXT NOT NULL CHECK (char_length(title) >= 3),
   description TEXT NOT NULL,
   category_id UUID REFERENCES public.event_categories(id) ON DELETE SET NULL,
+  category TEXT,  -- ⚠️ DEPRECATED: Use category_id. Will be removed in future.
   date_time TIMESTAMPTZ NOT NULL,
   location_text TEXT NOT NULL,
   location_lat DOUBLE PRECISION,
@@ -112,13 +113,23 @@ CREATE TABLE public.events (
   is_paid BOOLEAN NOT NULL DEFAULT false,
   price NUMERIC(10,2),
   currency_code TEXT REFERENCES public.currencies(code) ON DELETE SET NULL,
+  currency TEXT,  -- ⚠️ DEPRECATED: Use currency_code. Will be removed in future.
   club_id UUID REFERENCES public.clubs(id) ON DELETE SET NULL,
+  is_club_event BOOLEAN NOT NULL DEFAULT false,  -- ⚡ Auto-synced with club_id via trigger
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  version INT NOT NULL DEFAULT 1,  -- ⚡ Auto-incremented on update via trigger
   
-  -- Registration controls
-  registration_enabled BOOLEAN NOT NULL DEFAULT true,
-  registration_deadline TIMESTAMPTZ
+  -- Registration controls (added 2024-12-20)
+  allow_anonymous_registration BOOLEAN NOT NULL DEFAULT true,  -- ⚡ Allow guest registrations
+  registration_manually_closed BOOLEAN NOT NULL DEFAULT false,  -- ⚡ Manual override to close reg
+  registration_deadline TIMESTAMPTZ,
+  
+  -- ⚡ Constraints (added 2024-12-12)
+  CONSTRAINT events_club_consistency_check CHECK (
+    (is_club_event = TRUE AND club_id IS NOT NULL) OR
+    (is_club_event = FALSE AND club_id IS NULL)
+  )
 );
 ```
 
@@ -132,6 +143,19 @@ CREATE TABLE public.events (
 - `idx_events_creator_datetime` (on created_by_user_id, date_time DESC WHERE created_by_user_id IS NOT NULL)
 
 **Notes**:
+- ⚡ **`is_club_event`** (добавлен 2024-12-05, constraint 2024-12-12):
+  - Автоматически синхронизируется с `club_id` через trigger `sync_event_club_flag()`
+  - Constraint гарантирует: `is_club_event = TRUE ⇔ club_id IS NOT NULL`
+  - **НЕ требует ручной установки** — всегда вычисляется автоматически
+- ⚡ **`version`** (добавлен 2024-12-17):
+  - Автоматически инкрементируется при каждом UPDATE через trigger `increment_event_version()`
+  - Используется для оптимистичной блокировки и отслеживания изменений
+- ⚡ **Registration controls** (добавлены 2024-12-20):
+  - `allow_anonymous_registration`: разрешить гостевые регистрации
+  - `registration_manually_closed`: ручное закрытие регистрации (приоритет над deadline)
+- ⚠️ **Deprecated columns**:
+  - `category` (TEXT) — заменено на `category_id` (FK). Будет удалено в будущей миграции.
+  - `currency` (TEXT) — заменено на `currency_code` (FK). Будет удалено в будущей миграции.
 
 **RLS**: 7 policies
 - `anon_read_public_events`
@@ -580,7 +604,32 @@ CREATE TABLE public.club_members (
 
 ---
 
-### 3. `club_subscriptions`
+### 3. `club_cities` (many-to-many)
+
+**Назначение**: Связь клубов с городами (клуб может действовать в нескольких городах)
+
+```sql
+CREATE TABLE public.club_cities (
+  club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
+  city_id UUID NOT NULL REFERENCES public.cities(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  PRIMARY KEY (club_id, city_id)
+);
+```
+
+**Indexes**:
+- `club_cities_pkey` (PRIMARY KEY on club_id, city_id)
+
+**RLS**: Наследуется от clubs (через FK)
+
+**Связи**:
+- → `clubs` (club_id)
+- → `cities` (city_id)
+
+---
+
+### 4. `club_subscriptions`
 
 **Назначение**: Подписки клубов на тарифные планы
 
@@ -617,7 +666,7 @@ CREATE TABLE public.club_subscriptions (
 
 ---
 
-### 4. `billing_transactions`
+### 5. `billing_transactions`
 
 **Назначение**: Аудит биллинговых транзакций (поддерживает клубы + one-off credits)
 
@@ -681,7 +730,7 @@ CREATE TABLE public.billing_transactions (
 
 ---
 
-### 5. `billing_products` ⚡
+### 6. `billing_products` ⚡
 
 **Назначение**: SSOT для purchasable products (one-off credits pricing and constraints)
 
@@ -723,7 +772,7 @@ CREATE TABLE public.billing_products (
 
 ---
 
-### 6. `club_plans` ⚡
+### 7. `club_plans` ⚡
 
 **Назначение**: Тарифные планы для клубов (including FREE plan)
 
@@ -765,7 +814,7 @@ CREATE TABLE public.club_plans (
 
 ---
 
-### 7. `billing_credits` ⚡
+### 8. `billing_credits` ⚡
 
 **Назначение**: Purchased one-off credits для event upgrades (perpetual, consumed once)
 
@@ -990,22 +1039,36 @@ CREATE INDEX idx_event_participants_user_event
 
 ### Triggers:
 
-1. **Auto-grant access on event creation**
+1. **Auto-sync is_club_event with club_id** ⚡
+   - Таблица: `events`
+   - Функция: `sync_event_club_flag()`
+   - Событие: BEFORE INSERT OR UPDATE OF club_id
+   - Действие: Автоматически устанавливает `is_club_event = (club_id IS NOT NULL)`
+   - Миграция: `20241212_alter_events_club_and_visibility.sql`
+
+2. **Auto-increment event version** ⚡
+   - Таблица: `events`
+   - Функция: `increment_event_version()`
+   - Событие: BEFORE UPDATE
+   - Действие: Инкрементирует `version` при каждом обновлении события
+   - Миграция: `20241217_create_notification_tables.sql`
+
+3. **Auto-grant access on event creation**
    - Таблица: `event_user_access`
    - Событие: AFTER INSERT on `events`
    - Действие: Автоматически дает создателю доступ к restricted событию
 
-2. **Auto-grant access on participant registration**
+4. **Auto-grant access on participant registration**
    - Таблица: `event_user_access`
    - Событие: AFTER INSERT on `event_participants`
    - Действие: Автоматически дает участнику доступ к restricted событию
 
-3. **Auto-add creator as club owner**
+5. **Auto-add creator as club owner**
    - Таблица: `club_members`
    - Событие: AFTER INSERT on `clubs`
    - Действие: Автоматически добавляет создателя клуба как owner
 
-4. **Update timestamps**
+6. **Update timestamps**
    - Все таблицы с `updated_at`
    - Событие: BEFORE UPDATE
    - Действие: Автоматически обновляет `updated_at = NOW()`
@@ -1162,7 +1225,7 @@ user_cars ──→ car_brands
 
 ---
 
-**Последнее обновление**: 2024-12-25  
-**Версия документа**: 1.0  
+**Последнее обновление**: 2024-12-27  
+**Версия документа**: 1.1 ⚡  
 **Статус**: SSOT (Single Source of Truth) для структуры БД Need4Trip
 
