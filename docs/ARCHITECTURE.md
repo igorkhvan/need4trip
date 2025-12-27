@@ -1,7 +1,7 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.3  
+**Version:** 2.5  
 **Last Updated:** 27 December 2024  
 **This document is the ONLY authoritative source for architectural decisions.**
 
@@ -141,8 +141,9 @@ DevOps:
 **Critical Rules:**
 - ❌ **NEVER** call Repository from Presentation Layer directly
 - ❌ **NEVER** call Database from API Layer directly
-- ✅ **ALWAYS** flow: UI → API → Service → Repository → DB
-- ✅ **ALWAYS** validate at boundaries (API input, Service domain rules)
+- ✅ **Client Components:** UI → API → Service → Repository → DB
+- ✅ **Server Components:** UI → Service → Repository → DB (may skip API layer)
+- ✅ **ALWAYS** validate at boundaries (API input for client requests, Service domain rules)
 
 ---
 
@@ -214,7 +215,7 @@ need4trip/
 | Topic | Canonical Module | Allowed Imports | Forbidden Patterns | Notes |
 |-------|-----------------|-----------------|-------------------|-------|
 | **Date/Time Utilities** | `lib/utils/dates.ts` | None (pure) | Multiple date utils | ✅ CONSOLIDATED |
-| **Supabase Admin Client** | `lib/db/client.ts` | `@supabase/supabase-js` | Direct supabase imports in repos | ✅ CENTRALIZED |
+| **Supabase Admin Client** | `lib/db/client.ts` | `@supabase/supabase-js` | Direct `createClient()` calls (use `getAdminDb()` wrapper) | ✅ CENTRALIZED |
 | **Event Visibility** | `lib/utils/eventVisibility.ts` | `lib/types/event`, `lib/auth/currentUser` | Inline visibility checks | ✅ CENTRALIZED |
 | **Event Permissions** | `lib/utils/eventPermissions.ts` | `lib/types/event`, `lib/types/user` | Duplicate permission logic | ✅ CENTRALIZED |
 | **Hydration (Cities)** | `lib/utils/hydration.ts` | `lib/db/cityRepo` | Manual city hydration | Batch loading pattern |
@@ -275,7 +276,7 @@ PostgreSQL Database
 
 **Rules:**
 - ✅ MUST use `getAdminDb()` wrapper at start of every function
-- ✅ MUST return domain types (NOT database types)
+- ✅ MUST return **domain types** or **listing DTOs** (NOT raw database types). Listing DTOs (e.g., `EventListItem`) are colocated with repo and mapped explicitly.
 - ✅ MUST handle database errors (throw `InternalError`)
 - ❌ MUST NOT contain business logic
 - ❌ MUST NOT perform authorization checks
@@ -389,7 +390,7 @@ export async function POST(request: Request) {
 
 ### Data Mappers
 
-**All DB ↔ Domain mapping happens in `lib/mappers.ts`.**
+**All DB ↔ Domain mapping happens in repository files (colocated with repos).**
 
 ```typescript
 // Database type (snake_case)
@@ -423,7 +424,7 @@ export function mapDbEventToDomain(db: DbEvent): Event {
 - ✅ MUST be pure functions (no side effects)
 - ✅ MUST handle null/undefined consistently
 - ✅ MUST map ALL fields (no silent omissions)
-- ⚠️ Mappers MAY be colocated with repos (e.g., `eventRepo.ts` exports `mapDbEventToDomain`) OR centralized in `lib/db/mappers/*.ts`
+- ✅ MUST be colocated with repos: `eventRepo.ts` exports `mapDbEventToDomain`, `mapDbEventToListItem`, etc.
 - ⚠️ TODO: Add runtime validation in dev mode
 
 ---
@@ -584,7 +585,7 @@ export async function getCurrencyByCode(code: string): Promise<Currency | null> 
 - **5 minutes**: Dynamic reference data (pricing, plans)
 
 **NOT cached:**
-- ❌ Events (change frequently, user-specific visibility; **exception:** event counts/stats may use short-lived in-process cache, see § 10)
+- ❌ Events (change frequently, user-specific visibility; **exception:** event counts/stats may use short-lived **in-process cache only**, see § 10)
 - ❌ Participants (real-time registration data)
 - ❌ Users (privacy, authentication state)
 - ❌ Club subscriptions (billing state)
@@ -811,21 +812,22 @@ export async function registerGuest() {
 
 | Level | Listed in Catalog | Direct Link Access | Authentication Required | Notes |
 |-------|-------------------|-------------------|------------------------|-------|
-| `public` | ✅ Yes | ✅ Everyone (including anonymous) | ❌ No | Default, maximum visibility |
-| `unlisted` | ❌ No | ✅ Everyone (including anonymous) | ❌ No | Private link, not in catalog |
-| `restricted` | ❌ No | ✅ Authenticated users only | ✅ Yes (any logged-in user) | NOT invite-only in current phase |
+| `public` | ✅ Yes | Everyone (anonymous OK) | ❌ No | Default, maximum visibility |
+| `unlisted` | ❌ No | Everyone (anonymous OK) | ❌ No | Private link, not in catalog |
+| `restricted` | ❌ No | Authenticated users only | ✅ Yes (any logged-in user) | NOT invite-only in current phase |
 
 **Critical Rules:**
 
 1. **Catalog (tab=all, tab=upcoming):** ONLY `public` events
 2. **Direct link access:**
-   - `public` → anyone can view (including anonymous)
-   - `unlisted` → anyone with link can view (including anonymous)
+   - `public` → anyone can view (anonymous OK)
+   - `unlisted` → anyone with link can view (anonymous OK)
    - `restricted` → requires authentication; any logged-in user can view
 3. **event_user_access table:**
    - Used for inclusion in tab=my (explicit access)
    - Used for future ACL features (Phase 2+)
-   - NOT required to view restricted events in Phase 1
+   - Does NOT gate view access for restricted events in Phase 1 (any logged-in user can view via direct link)
+   - Optional recording on restricted event view adds event to user's tab=my
 
 **Implementation: `lib/utils/eventVisibility.ts` (SSOT)**
 
@@ -979,7 +981,7 @@ This section defines the ONLY authoritative rules for events listing, pagination
 | `unlisted` | ❌ No | Everyone (anonymous OK) | ❌ No |
 | `restricted` | ❌ No | Authenticated users only | ✅ Yes (any logged-in user) |
 
-**Critical:** `event_user_access` table is used for tab=my inclusion and future ACL, but NOT required to view restricted events in Phase 1.
+**Critical:** `event_user_access` table is used for tab=my inclusion and future ACL (see § 9 for full visibility rules).
 
 #### Listing Tabs
 
@@ -996,7 +998,9 @@ User sees events where:
 2. **Participant:** exists in `participants` table for this event, OR
 3. **Explicit access:** exists in `event_user_access` for this event
 
-**API behavior for tab=my without auth:** Return 401 (NOT empty list, NOT redirect). UI may show auth modal.
+**Note:** `tab=my` does NOT filter by visibility. Events of ANY visibility level (public/unlisted/restricted) appear if user meets ownership/participant/access criteria.
+
+**API behavior for tab=my without auth:** Return HTTP 401 status + JSON error (code: "UNAUTHORIZED"). Do NOT return empty list. Do NOT redirect. UI may show auth modal.
 
 #### Pagination (Server-Side, Offset-Based)
 
@@ -1006,15 +1010,15 @@ User sees events where:
 |-------|------|---------|-----------|-------|
 | `page` | integer | 1 | >= 1 | 1-based page number |
 | `limit` | integer | 12 | 1-50 (clamped) | Results per page |
-| `sort` | string | `date` | `date` or `name` | Sort field |
+| `sort` | string | `date` | `date` or `name` | Sort field (date=DESC, name=ASC) |
 
 **Sorting Rules (stable tie-breaker REQUIRED):**
 
 ```sql
--- Default sort (date descending)
+-- Default: sort=date (descending)
 ORDER BY date_time DESC, id DESC
 
--- Name sort (alphabetical ascending)
+-- sort=name (ascending alphabetical)
 ORDER BY title ASC, id ASC
 
 -- participants sort: DEFERRED to Phase 2 (not implemented in Phase 1)
@@ -1022,7 +1026,7 @@ ORDER BY title ASC, id ASC
 
 **Why stable tie-breaker:** Prevents pagination drift when multiple events have same date_time or title.
 
-**Cursor-based pagination:** Reserved for Phase 2. API response includes `nextCursor: null` for future migration.
+**Cursor-based pagination:** Deferred to Phase 2. API response includes `nextCursor: null` (field reserved for future cursor-based pagination).
 
 #### Search (Phase 1 Scope)
 
@@ -1036,7 +1040,7 @@ ORDER BY title ASC, id ASC
 
 **For listings (GET /api/events):**
 
-Repo MUST return lightweight DTO:
+Repo MUST return lightweight DTO (`EventListItem` — a repo-owned listing DTO, not a domain type):
 
 ```typescript
 export interface EventListItem {
@@ -1087,7 +1091,11 @@ const { data } = await supabase
 // ❌ FORBIDDEN for listings: select('*')
 ```
 
-**For single-item getters (by ID):** `select('*')` is allowed (full row needed).
+**Note:** `EVENT_LIST_COLUMNS` MUST be defined in `lib/db/eventRepo.ts` as a constant (canonical location for repo-specific column lists).
+
+**For single-item getters (by ID):** `select('*')` is allowed (full row needed, see § 14).
+
+**Mapper location:** Mappers for `EventListItem` and `Event` MUST be exported from `lib/db/eventRepo.ts` (colocated with repo).
 
 #### API Contracts
 
@@ -1168,14 +1176,14 @@ Response (401) if tab=my without auth:
 
 #### Caching Matrix (CRITICAL)
 
-**Rule:** Listings are always fresh (no Next.js cache). Stats endpoints use selective caching for performance.
+**Rule:** Listings are always fresh (no cache). Stats endpoints use selective in-process caching for performance.
 
 | Endpoint | Tab | User-Specific | Next.js Cache | In-Process Cache | TTL |
 |----------|-----|--------------|---------------|-----------------|-----|
 | GET /api/events | all, upcoming | ❌ No | dynamic: 'force-dynamic' | ❌ None | 0s |
 | GET /api/events | my | ✅ Yes | dynamic: 'force-dynamic' | ❌ None | 0s |
-| GET /api/events/stats | all, upcoming | ❌ No | revalidate: 60 | ❌ None | 60s |
-| GET /api/events/stats | my | ✅ Yes | dynamic: 'force-dynamic' | keyed by userId+filters | 60s |
+| GET /api/events/stats | all, upcoming | ❌ No | dynamic: 'force-dynamic' | ✅ Yes (keyed by tab+filters) | 60s |
+| GET /api/events/stats | my | ✅ Yes | dynamic: 'force-dynamic' | ✅ Yes (keyed by userId+tab+filters) | 60s |
 
 **Explanation:**
 
@@ -1185,11 +1193,12 @@ Response (401) if tab=my without auth:
    - Rationale: Events change frequently (new registrations, edits, visibility changes)
 
 2. **Stats (GET /api/events/stats):**
-   - tab=all/upcoming: `revalidate: 60` (Next.js cache, public count, lightweight)
-   - tab=my: `dynamic: 'force-dynamic'` + in-process cache keyed by `${userId}|${filters}` with TTL 60s
-   - Rationale: Stats is a lightweight count query. Caching reduces DB load for repeated calls.
+   - ALL tabs: `dynamic: 'force-dynamic'` (no Next.js revalidate)
+   - tab=all/upcoming: in-process cache (Map) keyed by `${tab}|${filters}` with TTL 60s
+   - tab=my: in-process cache (Map) keyed by `${userId}|${tab}|${filters}` with TTL 60s
+   - Rationale: Stats is a lightweight count query. In-process caching reduces DB load for repeated calls without Next.js cache complications.
 
-**Implementation Example (stats with user-keyed cache):**
+**Implementation Example (stats with cache):**
 
 ```typescript
 // app/api/events/stats/route.ts
@@ -1224,40 +1233,28 @@ export async function GET(request: Request) {
     return respondJSON({ total });
   }
   
-  // Public stats (tab=all/upcoming): no in-process cache, rely on Next.js revalidate
-  const total = await getEventsStatsPublic({ tab, ...otherFilters });
-  return respondJSON({ total });
-}
-```
-
-**For tab=all/upcoming stats (public) — Alternative with revalidate:**
-
-```typescript
-// app/api/events/stats/route.ts (if separating public endpoint)
-export const revalidate = 60; // Next.js cache, public data
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const tab = searchParams.get('tab') || 'all';
+  // Public stats (tab=all/upcoming): in-process cache keyed by tab+filters
+  const cacheKey = `public|${tab}|${searchParams.toString()}`;
+  const cached = statsCache.get(cacheKey);
   
-  // If tab=my requested, require auth and use force-dynamic approach
-  if (tab === 'my') {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return respondError(new UnauthorizedError("Authentication required"));
-    }
+  if (cached && Date.now() < cached.expires) {
+    return respondJSON({ total: cached.count });
   }
   
-  const total = await getEventsStats({ tab, ...otherFilters });
+  const total = await getEventsStatsPublic({ tab, ...otherFilters });
+  
+  statsCache.set(cacheKey, { count: total, expires: Date.now() + 60_000 });
+  
   return respondJSON({ total });
 }
 ```
 
 **CANONICAL APPROACH for Need4Trip:**
 
-Use the FIRST example (combined endpoint with explicit branching):
-- tab=my: `dynamic: 'force-dynamic'` + in-process cache keyed by userId
-- tab=all/upcoming: Next.js revalidate handled by route segment config (may add `export const revalidate = 60` for public-only branches if separated)
+Use explicit branching within stats endpoint:
+- **ALL tabs:** `dynamic: 'force-dynamic'` (no Next.js revalidate due to Route Segment Config constraints)
+- **tab=my:** in-process cache keyed by userId|tab|filters
+- **tab=all/upcoming:** in-process cache keyed by public|tab|filters
 
 #### Future Migration Notes (Phase 2+)
 
@@ -1497,7 +1494,7 @@ const { data } = await db.from('events').select(EVENT_LIST_COLUMNS);
 const { data } = await db.from('events').select('*'); // Overfetching
 ```
 
-**Exception:** Single-item getters (by ID) MAY use `select('*')` when full row is needed.
+**Exception:** Single-item getters (by ID) MAY use `select('*')` when full row is needed (see § 10 for listing contracts).
 
 ✅ **OK (single item getter):**
 ```typescript
@@ -1648,7 +1645,7 @@ A refactor is DONE when:
 | Pattern | Why Forbidden | Alternative |
 |---------|--------------|-------------|
 | Multiple date utils | Causes confusion | Single `lib/utils/dates.ts` |
-| `ensureAdminClient()` in every function | Code duplication | Use `getAdminDb()` wrapper |
+| ~~`ensureAdminClient()`~~ (legacy) | Code duplication | Use `getAdminDb()` wrapper (see § 5) |
 | Inline visibility checks | Duplication, bugs | `lib/utils/eventVisibility.ts` |
 | Direct DB access from API routes | Breaks layering | Use service layer |
 | Server-only code in client components | Build breaks | Use API routes |
@@ -1689,9 +1686,11 @@ module.exports = {
 | 2024-12-26 | 2.1 | Added billing enforcement to Ownership Map |
 | 2024-12-26 | 2.2 | Added sections 12-15 (naming, client fetching, performance, errors) |
 | 2024-12-27 | 2.3 | SSOT consolidation for events listing pagination + stats (visibility + caching + repo contracts) |
+| 2024-12-27 | 2.4 | Self-consistency consolidation pass: unified visibility definitions, clarified event_user_access role, explicit caching rules, canonical mapper location, runtime boundaries |
+| 2024-12-27 | 2.5 | SSOT self-consistency pass: resolved Next.js cache constraints (stats in-process only), clarified repo return types (domain + listing DTOs), strengthened mapper colocating rules, unified caching terminology across §7 and §10 |
 
 ---
 
-**END OF ARCHITECTURE DOCUMENT**
-
 *This is the Single Source of Truth for Need4Trip architecture. All other documents defer to this one.*
+
+**END OF ARCHITECTURE DOCUMENT**
