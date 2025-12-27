@@ -1,10 +1,70 @@
 import { getAdminDbSafe, getAdminDb } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import { DbEvent, DbEventWithOwner } from "@/lib/mappers";
-import { EventCreateInput, EventUpdateInput } from "@/lib/types/event";
+import { EventCreateInput, EventUpdateInput, Visibility } from "@/lib/types/event";
 import { log } from "@/lib/utils/logger";
 
 const table = "events";
+
+/**
+ * EventListItem DTO (lightweight for listings)
+ * 
+ * SSOT: This is the canonical listing type returned by repo listing queries.
+ * Does NOT include heavy fields (rules, custom_fields_schema).
+ * Does NOT include owner info (loaded separately if needed).
+ */
+export interface EventListItem {
+  id: string;
+  title: string;
+  description: string;
+  dateTime: string;
+  cityId: string;
+  categoryId: string | null;
+  maxParticipants: number | null;
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  visibility: Visibility;
+  isPaid: boolean;
+  createdByUserId: string | null;
+  clubId: string | null;
+  isClubEvent: boolean;
+}
+
+/**
+ * EVENT_LIST_COLUMNS (SSOT)
+ * 
+ * Explicit column list for listing queries (NO select('*')).
+ * Excludes heavy fields: rules, custom_fields_schema.
+ */
+const EVENT_LIST_COLUMNS = `
+  id, title, description, date_time, city_id, category_id,
+  max_participants, price, currency_code, visibility,
+  is_paid, created_by_user_id, club_id, is_club_event
+`.trim();
+
+/**
+ * Mapper: DB row → EventListItem
+ * 
+ * SSOT: Colocated with eventRepo (see ARCHITECTURE.md § 10).
+ */
+export function mapDbRowToListItem(row: any): EventListItem {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    dateTime: row.date_time,
+    cityId: row.city_id,
+    categoryId: row.category_id ?? null,
+    maxParticipants: row.max_participants ?? null,
+    priceAmount: row.price ?? null,
+    priceCurrency: row.currency_code ?? null,
+    visibility: row.visibility ?? "public",
+    isPaid: row.is_paid ?? false,
+    createdByUserId: row.created_by_user_id ?? null,
+    clubId: row.club_id ?? null,
+    isClubEvent: row.is_club_event ?? false,
+  };
+}
 
 export async function listEvents(page = 1, limit = 12): Promise<{
   data: DbEvent[];
@@ -540,4 +600,270 @@ export async function listEventsByCreator(
     total: count ?? 0,
     hasMore: (count ?? 0) > to + 1,
   };
+}
+
+/**
+ * =============================================================================
+ * NEW PAGINATION API (Phase 1) — SSOT § 10
+ * =============================================================================
+ */
+
+export interface EventListFilters {
+  tab: 'all' | 'upcoming' | 'my';
+  search?: string;
+  cityId?: string;
+  categoryId?: string;
+}
+
+export interface EventListSort {
+  sort: 'date' | 'name';
+}
+
+export interface EventListPagination {
+  page: number;  // 1-based
+  limit: number; // default 12, clamped 1..50
+}
+
+export interface EventListResult {
+  data: EventListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+/**
+ * Query public events with filters, sort, pagination (tab=all, tab=upcoming)
+ * 
+ * SSOT: Explicit columns (EVENT_LIST_COLUMNS), stable sort (date_time+id or title+id).
+ */
+export async function queryEventsPaginated(
+  filters: EventListFilters,
+  sort: EventListSort,
+  pagination: EventListPagination
+): Promise<EventListResult> {
+  const db = getAdminDbSafe();
+  if (!db) {
+    return {
+      data: [],
+      total: 0,
+      page: pagination.page,
+      limit: pagination.limit,
+      totalPages: 0,
+      hasMore: false,
+    };
+  }
+
+  // Clamp limit
+  const limit = Math.max(1, Math.min(50, pagination.limit));
+  const offset = (pagination.page - 1) * limit;
+
+  // Base query
+  let query = db
+    .from(table)
+    .select(EVENT_LIST_COLUMNS, { count: "exact" });
+
+  // Filters
+  if (filters.tab === 'all') {
+    query = query.eq('visibility', 'public');
+  } else if (filters.tab === 'upcoming') {
+    const now = new Date().toISOString();
+    query = query.eq('visibility', 'public').gte('date_time', now);
+  }
+
+  if (filters.search) {
+    query = query.ilike('title', `%${filters.search}%`);
+  }
+
+  if (filters.cityId) {
+    query = query.eq('city_id', filters.cityId);
+  }
+
+  if (filters.categoryId) {
+    query = query.eq('category_id', filters.categoryId);
+  }
+
+  // Sort (stable tie-breaker REQUIRED)
+  if (sort.sort === 'date') {
+    query = query.order('date_time', { ascending: false }).order('id', { ascending: false });
+  } else if (sort.sort === 'name') {
+    query = query.order('title', { ascending: true }).order('id', { ascending: true });
+  }
+
+  // Pagination
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    log.error("Failed to query events paginated", { filters, sort, pagination, error });
+    throw new InternalError("Failed to query events", error);
+  }
+
+  const events = (data ?? []).map(mapDbRowToListItem);
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / limit);
+  const hasMore = pagination.page < totalPages;
+
+  return {
+    data: events,
+    total,
+    page: pagination.page,
+    limit,
+    totalPages,
+    hasMore,
+  };
+}
+
+/**
+ * Query events by IDs subset (for tab=my after collecting user's event IDs)
+ * 
+ * SSOT: Same filters/sort/pagination as queryEventsPaginated, but operates on ID list.
+ */
+export async function queryEventsByIdsPaginated(
+  eventIds: string[],
+  filters: EventListFilters,
+  sort: EventListSort,
+  pagination: EventListPagination
+): Promise<EventListResult> {
+  const db = getAdminDbSafe();
+  if (!db || eventIds.length === 0) {
+    return {
+      data: [],
+      total: 0,
+      page: pagination.page,
+      limit: pagination.limit,
+      totalPages: 0,
+      hasMore: false,
+    };
+  }
+
+  // Clamp limit
+  const limit = Math.max(1, Math.min(50, pagination.limit));
+  const offset = (pagination.page - 1) * limit;
+
+  // Base query: filter by IDs
+  let query = db
+    .from(table)
+    .select(EVENT_LIST_COLUMNS, { count: "exact" })
+    .in('id', eventIds);
+
+  // Additional filters (search, city, category)
+  if (filters.search) {
+    query = query.ilike('title', `%${filters.search}%`);
+  }
+
+  if (filters.cityId) {
+    query = query.eq('city_id', filters.cityId);
+  }
+
+  if (filters.categoryId) {
+    query = query.eq('category_id', filters.categoryId);
+  }
+
+  // Sort (stable tie-breaker)
+  if (sort.sort === 'date') {
+    query = query.order('date_time', { ascending: false }).order('id', { ascending: false });
+  } else if (sort.sort === 'name') {
+    query = query.order('title', { ascending: true }).order('id', { ascending: true });
+  }
+
+  // Pagination
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    log.error("Failed to query events by IDs", { eventIdsCount: eventIds.length, filters, sort, pagination, error });
+    throw new InternalError("Failed to query events by IDs", error);
+  }
+
+  const events = (data ?? []).map(mapDbRowToListItem);
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / limit);
+  const hasMore = pagination.page < totalPages;
+
+  return {
+    data: events,
+    total,
+    page: pagination.page,
+    limit,
+    totalPages,
+    hasMore,
+  };
+}
+
+/**
+ * Count events matching filters (for stats endpoint)
+ */
+export async function countEventsByFilters(filters: EventListFilters): Promise<number> {
+  const db = getAdminDbSafe();
+  if (!db) return 0;
+
+  let query = db.from(table).select('*', { count: 'exact', head: true });
+
+  // Filters
+  if (filters.tab === 'all') {
+    query = query.eq('visibility', 'public');
+  } else if (filters.tab === 'upcoming') {
+    const now = new Date().toISOString();
+    query = query.eq('visibility', 'public').gte('date_time', now);
+  }
+
+  if (filters.search) {
+    query = query.ilike('title', `%${filters.search}%`);
+  }
+
+  if (filters.cityId) {
+    query = query.eq('city_id', filters.cityId);
+  }
+
+  if (filters.categoryId) {
+    query = query.eq('category_id', filters.categoryId);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    log.error("Failed to count events by filters", { filters, error });
+    throw new InternalError("Failed to count events", error);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Count events by ID list (for tab=my stats)
+ */
+export async function countEventsByIds(
+  eventIds: string[],
+  filters: EventListFilters
+): Promise<number> {
+  const db = getAdminDbSafe();
+  if (!db || eventIds.length === 0) return 0;
+
+  let query = db.from(table).select('*', { count: 'exact', head: true }).in('id', eventIds);
+
+  // Additional filters
+  if (filters.search) {
+    query = query.ilike('title', `%${filters.search}%`);
+  }
+
+  if (filters.cityId) {
+    query = query.eq('city_id', filters.cityId);
+  }
+
+  if (filters.categoryId) {
+    query = query.eq('category_id', filters.categoryId);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    log.error("Failed to count events by IDs", { eventIdsCount: eventIds.length, filters, error });
+    throw new InternalError("Failed to count events by IDs", error);
+  }
+
+  return count ?? 0;
 }

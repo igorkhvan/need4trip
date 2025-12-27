@@ -1,48 +1,76 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { UnauthorizedError } from "@/lib/errors";
-import { createEvent, hydrateEvent, listVisibleEventsForUser } from "@/lib/services/events";
+import { createEvent, listVisibleEventsForUserPaginated } from "@/lib/services/events";
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
-// Force dynamic rendering to prevent caching of events list
+// Force dynamic rendering to prevent caching of events list (SSOT § 10)
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /**
+ * Zod schema for GET /api/events query params (SSOT § 10)
+ */
+const eventsListQuerySchema = z.object({
+  tab: z.enum(['all', 'upcoming', 'my']).default('all'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(12),
+  sort: z.enum(['date', 'name']).default('date'),
+  search: z.string().trim().optional(),
+  cityId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
+});
+
+/**
  * GET /api/events
  * 
- * Returns list of events visible to current user.
+ * Returns paginated list of events visible to current user.
  * 
- * Security:
- * - Anonymous users: only public events
- * - Authenticated users: public + owned + participant + restricted with access
+ * SSOT § 10: Server-side pagination, offset-based.
+ * - tab=all: public events
+ * - tab=upcoming: public + future events
+ * - tab=my: owner/participant/access events (requires auth, throws 401 if not authenticated)
  * 
- * Pagination applied at application level after visibility filtering.
+ * Response: { events: EventListItem[], meta: { total, page, limit, totalPages, hasMore, nextCursor } }
  */
 export async function GET(req: NextRequest) {
   try {
-    // 1. Get current user (or null for anonymous)
+    // 1. Validate query params
+    const rawParams = Object.fromEntries(req.nextUrl.searchParams.entries());
+    const parsed = eventsListQuerySchema.safeParse(rawParams);
+
+    if (!parsed.success) {
+      return respondJSON(
+        { error: { code: "VALIDATION_ERROR", message: "Invalid query parameters", details: parsed.error.errors } },
+        undefined,
+        400
+      );
+    }
+
+    const params = parsed.data;
+
+    // 2. Get current user (or null for anonymous)
     const currentUser = await getCurrentUser();
-    
-    // 2. Load events with proper visibility filtering
-    const allVisibleEvents = await listVisibleEventsForUser(currentUser?.id ?? null);
-    
-    // 3. Apply pagination at application level
-    const searchParams = req.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "12", 10);
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    
-    const paginatedEvents = allVisibleEvents.slice(start, end);
-    const hydrated = await Promise.all(paginatedEvents.map((e) => hydrateEvent(e)));
-    
+
+    // 3. Call service layer (throws AuthError if tab=my without auth)
+    const result = await listVisibleEventsForUserPaginated(
+      {
+        filters: {
+          tab: params.tab,
+          search: params.search,
+          cityId: params.cityId,
+          categoryId: params.categoryId,
+        },
+        sort: { sort: params.sort },
+        pagination: { page: params.page, limit: params.limit },
+      },
+      currentUser
+    );
+
     return respondJSON({
-      events: hydrated,
-      total: allVisibleEvents.length,
-      hasMore: end < allVisibleEvents.length,
-      page,
-      limit,
+      events: result.events,
+      meta: result.meta,
     });
   } catch (err) {
     return respondError(err);

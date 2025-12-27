@@ -14,25 +14,57 @@ import { EventCardDetailed } from "@/components/events/event-card-detailed";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
-import { Event } from "@/lib/types/event";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
+import { EventListItemHydrated } from "@/lib/services/events";
 
 interface EventsGridProps {
-  events: Event[];
+  events: EventListItemHydrated[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasMore: boolean;
+  } | null;
+  stats: {
+    total: number;
+  } | null;
   currentUserId: string | null;
   isAuthenticated: boolean;
+  onTabChange: (tab: string) => void;
+  onPageChange: (page: number) => void;
+  onSearchChange: (search: string) => void;
+  onSortChange: (sort: string) => void;
+  onCityChange: (cityId: string) => void;
+  onCategoryChange: (categoryId: string) => void;
 }
 
 type TabType = "all" | "upcoming" | "my";
-type PriceFilter = "all" | "free" | "paid";
-type SortBy = "date" | "participants" | "name";
+type SortBy = "date" | "name";
 
-export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGridProps) {
+export function EventsGrid({ 
+  events, 
+  meta, 
+  stats,
+  currentUserId, 
+  isAuthenticated,
+  onTabChange,
+  onPageChange,
+  onSearchChange,
+  onSortChange,
+  onCityChange,
+  onCategoryChange,
+}: EventsGridProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [categories, setCategories] = useState<EventCategoryDto[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   
-  // Read activeTab directly from URL (single source of truth)
+  // Read activeTab from URL
   const activeTab = useMemo((): TabType => {
     const tabParam = searchParams.get("tab");
     if (tabParam === "upcoming" || tabParam === "my" || tabParam === "all") {
@@ -41,16 +73,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
     return "all";
   }, [searchParams]);
   
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterCity, setFilterCity] = useState<string>("all");
-  const [filterPrice, setFilterPrice] = useState<PriceFilter>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("date");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12; // Fixed items per page matching design
-  const [categories, setCategories] = useState<EventCategoryDto[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  
-  // Use loading transition for smooth filter/pagination changes
+  // Use loading transition for smooth filter changes
   const { isPending, showLoading, startTransition } = useLoadingTransition(300);
 
   // Load categories from API
@@ -72,101 +95,13 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
     loadCategories();
   }, []);
 
-  // Get unique cities from events
+  // Get unique cities from events (client-side for filter dropdown)
   const uniqueCities = useMemo(() => {
     const cities = events
       .map((e) => e.city?.name)
       .filter((c): c is string => c !== null && c !== undefined && c.trim() !== "");
     return Array.from(new Set(cities)).sort();
   }, [events]);
-
-  const filteredByTab = useMemo(() => {
-    if (activeTab === "upcoming") {
-      const now = new Date();
-      return events.filter((e) => new Date(e.dateTime) > now);
-    }
-    if (activeTab === "my" && currentUserId) {
-      return events.filter((e) => e.createdByUserId === currentUserId);
-    }
-    return events;
-  }, [events, activeTab, currentUserId]);
-
-  const filteredBySearch = useMemo(() => {
-    if (!searchQuery.trim()) return filteredByTab;
-    const query = searchQuery.toLowerCase();
-    return filteredByTab.filter(
-      (e) =>
-        e.title.toLowerCase().includes(query) ||
-        e.description?.toLowerCase().includes(query) ||
-        e.locations[0]?.title?.toLowerCase().includes(query) ||
-        e.ownerName?.toLowerCase().includes(query) ||
-        e.ownerHandle?.toLowerCase().includes(query)
-    );
-  }, [filteredByTab, searchQuery]);
-
-  const filteredAndSorted = useMemo(() => {
-    let result = [...filteredBySearch];
-
-    // Filter by category
-    if (filterCategory !== "all") {
-      result = result.filter((e) => e.category?.id === filterCategory);
-    }
-
-    // Filter by city
-    if (filterCity !== "all") {
-      result = result.filter((e) => e.city?.name === filterCity);
-    }
-
-    // Filter by price
-    if (filterPrice !== "all") {
-      result = result.filter((e) => {
-        if (filterPrice === "free") return !e.isPaid;
-        if (filterPrice === "paid") return e.isPaid;
-        return true;
-      });
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "date":
-          return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
-        case "participants":
-          return (b.participantsCount ?? 0) - (a.participantsCount ?? 0);
-        case "name":
-          return a.title.localeCompare(b.title);
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [filteredBySearch, filterCategory, filterCity, filterPrice, sortBy]);
-
-  const stats = useMemo(() => {
-    const now = new Date();
-    const activeRegistrations = events.filter((e) => new Date(e.dateTime) > now).length;
-    const totalParticipants = events.reduce((sum, e) => sum + (e.participantsCount ?? 0), 0);
-    return {
-      totalEvents: events.length,
-      activeRegistrations,
-      totalParticipants,
-    };
-  }, [events]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedEvents = filteredAndSorted.slice(startIndex, startIndex + itemsPerPage);
-
-  // Reset to page 1 when filters change
-  useMemo(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
-
-  // Функция getStatusBadge удалена - логика перенесена в EventStatusBadge component
 
   return (
     <div className="space-y-8">
@@ -194,7 +129,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               <div>
                 <div className="mb-2 text-sm text-muted-foreground">Всего событий</div>
                 <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                  {stats.totalEvents}
+                  {stats?.total ?? 0}
                 </div>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
@@ -208,7 +143,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               <div>
                 <div className="mb-2 text-sm text-muted-foreground">Активных регистраций</div>
                 <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                  {stats.activeRegistrations}
+                  {meta?.total ?? 0}
                 </div>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-success-bg)]">
@@ -222,7 +157,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               <div>
                 <div className="mb-2 text-sm text-muted-foreground">Всего участников</div>
                 <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                  {stats.totalParticipants}
+                  {events.reduce((sum, e) => sum + (e.participantsCount ?? 0), 0)}
                 </div>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
@@ -243,22 +178,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
         activeTab={activeTab}
         onChange={(tabId) => {
           startTransition(() => {
-            const newTab = tabId as TabType;
-            setCurrentPage(1);
-            
-            // Update URL with tab parameter (URL is single source of truth)
-            const params = new URLSearchParams(searchParams.toString());
-            if (newTab === "all") {
-              params.delete("tab");
-            } else {
-              params.set("tab", newTab);
-            }
-            
-            const newUrl = params.toString() 
-              ? `/events?${params.toString()}`
-              : "/events";
-            
-            router.push(newUrl, { scroll: false });
+            onTabChange(tabId);
           });
         }}
       />
@@ -269,11 +189,23 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Поиск по названию, организатору или месту..."
+            placeholder="Поиск по названию..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setCurrentPage(1);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                startTransition(() => {
+                  onSearchChange(searchQuery.trim());
+                });
+              }
+            }}
+            onBlur={() => {
+              // Apply search on blur
+              startTransition(() => {
+                onSearchChange(searchQuery.trim());
+              });
             }}
             className="pl-12"
           />
@@ -286,7 +218,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Фильтры и сортировка</span>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {/* Category filter */}
           <div className="space-y-1">
             <label className="text-sm text-muted-foreground">Тип события</label>
@@ -295,7 +227,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               onValueChange={(value) => {
                 startTransition(() => {
                   setFilterCategory(value);
-                  setCurrentPage(1);
+                  onCategoryChange(value);
                 });
               }}
             >
@@ -321,7 +253,7 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
               onValueChange={(value) => {
                 startTransition(() => {
                   setFilterCity(value);
-                  setCurrentPage(1);
+                  onCityChange(value);
                 });
               }}
             >
@@ -339,41 +271,20 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
             </Select>
           </div>
 
-          {/* Price filter */}
-          <div className="space-y-1">
-            <label className="text-sm text-muted-foreground">Стоимость</label>
-            <Select
-              value={filterPrice}
-              onValueChange={(value: PriceFilter) => {
-                startTransition(() => {
-                  setFilterPrice(value);
-                  setCurrentPage(1);
-                });
-              }}
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Любая" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Любая</SelectItem>
-                <SelectItem value="free">Бесплатно</SelectItem>
-                <SelectItem value="paid">Платно</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Sort by */}
           <div className="space-y-1">
             <label className="text-sm text-muted-foreground">Сортировка</label>
             <Select value={sortBy} onValueChange={(value: SortBy) => {
-              startTransition(() => setSortBy(value));
+              startTransition(() => {
+                setSortBy(value);
+                onSortChange(value);
+              });
             }}>
               <SelectTrigger className="h-10">
                 <SelectValue placeholder="По дате" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="date">По дате</SelectItem>
-                <SelectItem value="participants">По участникам</SelectItem>
                 <SelectItem value="name">По названию</SelectItem>
               </SelectContent>
             </Select>
@@ -382,9 +293,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       </div>
 
       {/* Results count */}
-      {filteredAndSorted.length > 0 && (
+      {meta && meta.total > 0 && (
         <div className="text-sm text-muted-foreground">
-          Найдено событий: <span className="font-medium text-[var(--color-text)]">{filteredAndSorted.length}</span>
+          Найдено событий: <span className="font-medium text-[var(--color-text)]">{meta.total}</span>
+          {meta.totalPages > 1 && ` (страница ${meta.page} из ${meta.totalPages})`}
         </div>
       )}
 
@@ -392,27 +304,26 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
       <DelayedSpinner show={showLoading} className="mb-4" />
       
       {/* Events Grid */}
-      {paginatedEvents.length > 0 ? (
+      {events.length > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {paginatedEvents.map((event) => (
+            {events.map((event) => (
               <EventCardDetailed
                 key={event.id}
-                event={event}
+                event={event as any}
                 onClick={() => router.push(`/events/${event.id}`)}
               />
             ))}
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {meta && meta.totalPages > 1 && (
             <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
+              currentPage={meta.page}
+              totalPages={meta.totalPages}
               onPageChange={(page) => {
                 startTransition(() => {
-                  setCurrentPage(page);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  onPageChange(page);
                 });
               }}
             />
@@ -428,7 +339,10 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
           <p className="mb-6 text-base text-muted-foreground">
             Попробуйте изменить поисковый запрос или фильтр
           </p>
-          <Button variant="ghost" onClick={() => setSearchQuery("")}>
+          <Button variant="ghost" onClick={() => {
+            setSearchQuery("");
+            onSearchChange("");
+          }}>
             Сбросить поиск
           </Button>
         </div>
@@ -436,4 +350,3 @@ export function EventsGrid({ events, currentUserId, isAuthenticated }: EventsGri
     </div>
   );
 }
-

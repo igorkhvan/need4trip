@@ -9,6 +9,15 @@ import {
   replaceAllowedBrands,
   getAllowedBrands,
   getAllowedBrandsByEventIds,
+  queryEventsPaginated,
+  queryEventsByIdsPaginated,
+  countEventsByFilters,
+  countEventsByIds,
+  type EventListItem,
+  type EventListFilters,
+  type EventListSort,
+  type EventListPagination,
+  type EventListResult,
 } from "@/lib/db/eventRepo";
 import {
   countParticipants,
@@ -883,4 +892,258 @@ export async function deleteEvent(id: string, currentUser: CurrentUser | null): 
     throw new AuthError("Недостаточно прав для удаления события", undefined, 403);
   }
   return deleteEventRecord(id);
+}
+
+/**
+ * =============================================================================
+ * NEW PAGINATION API (Phase 1) — SSOT § 10
+ * =============================================================================
+ */
+
+export interface EventListItemHydrated extends EventListItem {
+  city?: { id: string; name: string; countryCode: string };
+  currency?: { code: string; symbol: string };
+  category?: { id: string; name: string; icon: string };
+  participantsCount?: number;
+}
+
+export interface ListVisibleEventsResult {
+  events: EventListItemHydrated[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasMore: boolean;
+    nextCursor: null; // Reserved for Phase 2
+  };
+}
+
+/**
+ * List visible events for user with pagination, filters, sort
+ * 
+ * SSOT: tab=all/upcoming → public only, tab=my → owner/participant/access (requires auth).
+ * 
+ * @param params Filters, sort, pagination params
+ * @param currentUser Current user (or null for anonymous)
+ * @returns Paginated events with meta
+ * @throws AuthError if tab=my without auth (401)
+ */
+export async function listVisibleEventsForUserPaginated(
+  params: {
+    filters: EventListFilters;
+    sort: EventListSort;
+    pagination: EventListPagination;
+  },
+  currentUser: CurrentUser | null
+): Promise<ListVisibleEventsResult> {
+  const { filters, sort, pagination } = params;
+
+  // tab=my REQUIRES authentication
+  if (filters.tab === 'my') {
+    if (!currentUser) {
+      throw new AuthError("Authentication required for tab=my", undefined, 401);
+    }
+
+    // Collect event IDs from 3 sources in parallel
+    const [ownerEventIds, participantEventIds, accessEventIds] = await Promise.all([
+      // 1. Events created by user
+      listEventsByCreator(currentUser.id, 1, 10000)
+        .then(result => result.data.map(e => e.id))
+        .catch(err => {
+          log.errorWithStack("Failed to load owned events for tab=my", err, { userId: currentUser.id });
+          return [];
+        }),
+
+      // 2. Events where user is participant
+      listEventIdsForUser(currentUser.id)
+        .catch(err => {
+          log.errorWithStack("Failed to load participant events for tab=my", err, { userId: currentUser.id });
+          return [];
+        }),
+
+      // 3. Events with explicit access
+      listAccessibleEventIds(currentUser.id)
+        .catch(err => {
+          log.errorWithStack("Failed to load accessible events for tab=my", err, { userId: currentUser.id });
+          return [];
+        }),
+    ]);
+
+    // Deduplicate IDs
+    const allIds = new Set([...ownerEventIds, ...participantEventIds, ...accessEventIds]);
+    const uniqueIds = Array.from(allIds);
+
+    // Query by IDs with filters/sort/pagination
+    const result = await queryEventsByIdsPaginated(uniqueIds, filters, sort, pagination);
+
+    // Hydrate results
+    const hydrated = await hydrateEventListItems(result.data);
+
+    return {
+      events: hydrated,
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+        hasMore: result.hasMore,
+        nextCursor: null,
+      },
+    };
+  }
+
+  // tab=all or tab=upcoming: public events only
+  const result = await queryEventsPaginated(filters, sort, pagination);
+
+  // Hydrate results
+  const hydrated = await hydrateEventListItems(result.data);
+
+  return {
+    events: hydrated,
+    meta: {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      hasMore: result.hasMore,
+      nextCursor: null,
+    },
+  };
+}
+
+/**
+ * Hydrate event list items (cities, currencies, categories, participants count)
+ * 
+ * Internal helper: batch loading to avoid N+1 queries.
+ */
+async function hydrateEventListItems(items: EventListItem[]): Promise<EventListItemHydrated[]> {
+  if (items.length === 0) return [];
+
+  const eventIds = items.map(e => e.id);
+
+  // Batch load all reference data + counts in parallel
+  const [cityMap, currencyMap, categoryMap, participantCounts] = await Promise.all([
+    // Load cities
+    hydrateCitiesByIds(items).catch(err => {
+      log.warn("Failed to hydrate cities for event list", { error: err });
+      return new Map();
+    }),
+
+    // Load currencies
+    hydrateCurrenciesByIds(items).catch(err => {
+      log.warn("Failed to hydrate currencies for event list", { error: err });
+      return new Map();
+    }),
+
+    // Load categories
+    hydrateCategoriesByIds(items).catch(err => {
+      log.warn("Failed to hydrate categories for event list", { error: err });
+      return new Map();
+    }),
+
+    // Count participants
+    getParticipantsCountByEventIds(eventIds),
+  ]);
+
+  // Merge hydrated data
+  return items.map(event => ({
+    ...event,
+    city: cityMap.get(event.cityId) ?? undefined,
+    currency: event.priceCurrency ? currencyMap.get(event.priceCurrency) ?? undefined : undefined,
+    category: event.categoryId ? categoryMap.get(event.categoryId) ?? undefined : undefined,
+    participantsCount: participantCounts[event.id] ?? 0,
+  }));
+}
+
+/**
+ * Hydrate cities by IDs (batch loading)
+ */
+async function hydrateCitiesByIds(items: EventListItem[]): Promise<Map<string, { id: string; name: string; countryCode: string }>> {
+  const cityIds = [...new Set(items.map(e => e.cityId))];
+  if (cityIds.length === 0) return new Map();
+
+  const { getCitiesByIds } = await import("@/lib/db/cityRepo");
+  const citiesMap = await getCitiesByIds(cityIds);
+
+  // Transform Map<string, City> → Map<string, { id, name, countryCode }>
+  const result = new Map<string, { id: string; name: string; countryCode: string }>();
+  for (const [id, city] of citiesMap.entries()) {
+    result.set(id, { id: city.id, name: city.name, countryCode: city.country });
+  }
+  return result;
+}
+
+/**
+ * Hydrate currencies by codes (batch loading)
+ */
+async function hydrateCurrenciesByIds(items: EventListItem[]): Promise<Map<string, { code: string; symbol: string }>> {
+  const codes = [...new Set(items.map(e => e.priceCurrency).filter((c): c is string => c !== null))];
+  if (codes.length === 0) return new Map();
+
+  const { getCurrenciesByCodes } = await import("@/lib/db/currencyRepo");
+  const currenciesMap = await getCurrenciesByCodes(codes);
+
+  // Transform Map<string, Currency> → Map<string, { code, symbol }>
+  const result = new Map<string, { code: string; symbol: string }>();
+  for (const [code, currency] of currenciesMap.entries()) {
+    result.set(code, { code: currency.code, symbol: currency.symbol });
+  }
+  return result;
+}
+
+/**
+ * Hydrate categories by IDs (batch loading)
+ */
+async function hydrateCategoriesByIds(items: EventListItem[]): Promise<Map<string, { id: string; name: string; icon: string }>> {
+  const categoryIds = [...new Set(items.map(e => e.categoryId).filter((id): id is string => id !== null))];
+  if (categoryIds.length === 0) return new Map();
+
+  const { getEventCategoriesByIds } = await import("@/lib/db/eventCategoryRepo");
+  const categoriesMap = await getEventCategoriesByIds(categoryIds);
+
+  // Transform Map<string, EventCategory> → Map<string, { id, name, icon }>
+  const result = new Map<string, { id: string; name: string; icon: string }>();
+  for (const [id, category] of categoriesMap.entries()) {
+    result.set(id, { id: category.id, name: category.nameRu, icon: category.icon });
+  }
+  return result;
+}
+
+/**
+ * Get events stats (count only) for filters
+ * 
+ * @param filters Filters (tab, search, city, category)
+ * @param currentUser Current user (required for tab=my)
+ * @returns Total count
+ * @throws AuthError if tab=my without auth (401)
+ */
+export async function getEventsStats(
+  filters: EventListFilters,
+  currentUser: CurrentUser | null
+): Promise<{ total: number }> {
+  if (filters.tab === 'my') {
+    if (!currentUser) {
+      throw new AuthError("Authentication required for tab=my", undefined, 401);
+    }
+
+    // Collect event IDs (same logic as listVisibleEventsForUserPaginated)
+    const [ownerEventIds, participantEventIds, accessEventIds] = await Promise.all([
+      listEventsByCreator(currentUser.id, 1, 10000)
+        .then(result => result.data.map(e => e.id))
+        .catch(() => []),
+      listEventIdsForUser(currentUser.id).catch(() => []),
+      listAccessibleEventIds(currentUser.id).catch(() => []),
+    ]);
+
+    const allIds = new Set([...ownerEventIds, ...participantEventIds, ...accessEventIds]);
+    const uniqueIds = Array.from(allIds);
+
+    const total = await countEventsByIds(uniqueIds, filters);
+    return { total };
+  }
+
+  // tab=all or tab=upcoming
+  const total = await countEventsByFilters(filters);
+  return { total };
 }
