@@ -36,17 +36,11 @@ const eventsListQuerySchema = z.object({
  */
 export async function GET(req: NextRequest) {
   try {
-    console.log("🟢 [API] GET /api/events START", {
-      url: req.url,
-      searchParams: Object.fromEntries(req.nextUrl.searchParams.entries()),
-    });
-
     // 1. Validate query params
     const rawParams = Object.fromEntries(req.nextUrl.searchParams.entries());
     const parsed = eventsListQuerySchema.safeParse(rawParams);
 
     if (!parsed.success) {
-      console.error("🔴 [API] Validation failed", parsed.error.errors);
       return respondJSON(
         { error: { code: "VALIDATION_ERROR", message: "Invalid query parameters", details: parsed.error.errors } },
         undefined,
@@ -55,17 +49,11 @@ export async function GET(req: NextRequest) {
     }
 
     const params = parsed.data;
-    console.log("🟢 [API] Query params validated", params);
 
     // 2. Get current user (or null for anonymous)
     const currentUser = await getCurrentUser();
-    console.log("🟢 [API] Current user", {
-      userId: currentUser?.id,
-      isAuthenticated: !!currentUser,
-    });
 
     // 3. Call service layer (throws AuthError if tab=my without auth)
-    console.log("🟢 [API] Calling service layer...");
     const result = await listVisibleEventsForUserPaginated(
       {
         filters: {
@@ -80,17 +68,11 @@ export async function GET(req: NextRequest) {
       currentUser
     );
 
-    console.log("🟢 [API] Service returned", {
-      eventsCount: result.events.length,
-      meta: result.meta,
-    });
-
     return respondJSON({
       events: result.events,
       meta: result.meta,
     });
   } catch (err) {
-    console.error("🔴 [API] Error", err);
     return respondError(err);
   }
 }
