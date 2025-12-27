@@ -937,19 +937,33 @@ export async function listVisibleEventsForUserPaginated(
   },
   currentUser: CurrentUser | null
 ): Promise<ListVisibleEventsResult> {
+  console.log("🟡 [SERVICE] listVisibleEventsForUserPaginated START", {
+    filters: params.filters,
+    sort: params.sort,
+    pagination: params.pagination,
+    currentUser: currentUser?.id,
+  });
+
   const { filters, sort, pagination } = params;
 
   // tab=my REQUIRES authentication
   if (filters.tab === 'my') {
+    console.log("🟡 [SERVICE] Processing tab=my");
+
     if (!currentUser) {
+      console.error("🔴 [SERVICE] tab=my without auth, throwing 401");
       throw new AuthError("Authentication required for tab=my", undefined, 401);
     }
 
+    console.log("🟡 [SERVICE] Collecting event IDs from 3 sources...");
     // Collect event IDs from 3 sources in parallel
     const [ownerEventIds, participantEventIds, accessEventIds] = await Promise.all([
       // 1. Events created by user
       listEventsByCreator(currentUser.id, 1, 10000)
-        .then(result => result.data.map(e => e.id))
+        .then(result => {
+          console.log("🟡 [SERVICE] Owner events loaded", { count: result.data.length });
+          return result.data.map(e => e.id);
+        })
         .catch(err => {
           log.errorWithStack("Failed to load owned events for tab=my", err, { userId: currentUser.id });
           return [];
@@ -957,6 +971,10 @@ export async function listVisibleEventsForUserPaginated(
 
       // 2. Events where user is participant
       listEventIdsForUser(currentUser.id)
+        .then(ids => {
+          console.log("🟡 [SERVICE] Participant events loaded", { count: ids.length });
+          return ids;
+        })
         .catch(err => {
           log.errorWithStack("Failed to load participant events for tab=my", err, { userId: currentUser.id });
           return [];
@@ -964,6 +982,10 @@ export async function listVisibleEventsForUserPaginated(
 
       // 3. Events with explicit access
       listAccessibleEventIds(currentUser.id)
+        .then(ids => {
+          console.log("🟡 [SERVICE] Accessible events loaded", { count: ids.length });
+          return ids;
+        })
         .catch(err => {
           log.errorWithStack("Failed to load accessible events for tab=my", err, { userId: currentUser.id });
           return [];
@@ -974,11 +996,28 @@ export async function listVisibleEventsForUserPaginated(
     const allIds = new Set([...ownerEventIds, ...participantEventIds, ...accessEventIds]);
     const uniqueIds = Array.from(allIds);
 
+    console.log("🟡 [SERVICE] Event IDs collected", {
+      owner: ownerEventIds.length,
+      participant: participantEventIds.length,
+      access: accessEventIds.length,
+      unique: uniqueIds.length,
+    });
+
+    console.log("🟡 [SERVICE] Querying events by IDs...");
     // Query by IDs with filters/sort/pagination
     const result = await queryEventsByIdsPaginated(uniqueIds, filters, sort, pagination);
 
+    console.log("🟡 [SERVICE] Repo returned", {
+      dataCount: result.data.length,
+      total: result.total,
+      page: result.page,
+    });
+
+    console.log("🟡 [SERVICE] Hydrating event list items...");
     // Hydrate results
     const hydrated = await hydrateEventListItems(result.data);
+
+    console.log("🟡 [SERVICE] Hydration complete", { hydratedCount: hydrated.length });
 
     return {
       events: hydrated,
@@ -994,10 +1033,21 @@ export async function listVisibleEventsForUserPaginated(
   }
 
   // tab=all or tab=upcoming: public events only
+  console.log("🟡 [SERVICE] Processing tab=all/upcoming (public events)");
+  console.log("🟡 [SERVICE] Calling queryEventsPaginated...");
   const result = await queryEventsPaginated(filters, sort, pagination);
 
+  console.log("🟡 [SERVICE] Repo returned", {
+    dataCount: result.data.length,
+    total: result.total,
+    page: result.page,
+  });
+
+  console.log("🟡 [SERVICE] Hydrating event list items...");
   // Hydrate results
   const hydrated = await hydrateEventListItems(result.data);
+
+  console.log("🟡 [SERVICE] Hydration complete", { hydratedCount: hydrated.length });
 
   return {
     events: hydrated,

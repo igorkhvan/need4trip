@@ -50,6 +50,17 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
 
   useEffect(() => {
     async function loadData() {
+      console.log("🔵 [CLIENT] EventsPage.loadData START", {
+        tab,
+        page,
+        sort,
+        search,
+        cityId,
+        categoryId,
+        currentUser: currentUser?.id,
+        isAuthenticated,
+      });
+
       setLoading(true);
       setError(null);
 
@@ -63,14 +74,25 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
         if (cityId) params.set("cityId", cityId);
         if (categoryId) params.set("categoryId", categoryId);
 
+        console.log("🔵 [CLIENT] Fetching events + stats", {
+          eventsUrl: `/api/events?${params.toString()}`,
+          statsUrl: `/api/events/stats?${params.toString()}`,
+        });
+
         // Load events + stats in parallel
         const [eventsRes, statsRes] = await Promise.all([
           fetch(`/api/events?${params.toString()}`, { cache: 'no-store' }),
           fetch(`/api/events/stats?${params.toString()}`, { cache: 'no-store' }),
         ]);
 
+        console.log("🔵 [CLIENT] Fetch responses", {
+          eventsStatus: eventsRes.status,
+          statsStatus: statsRes.status,
+        });
+
         // Handle 401 for tab=my without auth
         if (eventsRes.status === 401 && tab === "my") {
+          console.log("🔵 [CLIENT] 401 for tab=my, opening auth modal");
           openAuthModal();
           setEvents([]);
           setMeta(null);
@@ -82,10 +104,17 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
         const eventsData = await parseApiResponse<{ events: EventListItemHydrated[]; meta: EventsMeta }>(eventsRes);
         const statsData = await parseApiResponse<{ total: number }>(statsRes);
 
+        console.log("🔵 [CLIENT] Data parsed successfully", {
+          eventsCount: eventsData.events?.length || 0,
+          meta: eventsData.meta,
+          total: statsData.total,
+        });
+
         setEvents(eventsData.events || []);
         setMeta(eventsData.meta);
         setStats(statsData);
       } catch (err) {
+        console.error("🔴 [CLIENT] Error loading events", err);
         if (err instanceof ClientError) {
           log.error("Failed to load events", { code: err.code });
           setError(err.message);
@@ -94,6 +123,7 @@ export default function EventsPage({ searchParams }: EventsPageProps) {
           setError("Не удалось загрузить события");
         }
       } finally {
+        console.log("🔵 [CLIENT] EventsPage.loadData DONE");
         setLoading(false);
       }
     }

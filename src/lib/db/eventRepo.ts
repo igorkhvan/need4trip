@@ -643,8 +643,11 @@ export async function queryEventsPaginated(
   sort: EventListSort,
   pagination: EventListPagination
 ): Promise<EventListResult> {
+  console.log("🟣 [REPO] queryEventsPaginated START", { filters, sort, pagination });
+
   const db = getAdminDbSafe();
   if (!db) {
+    console.error("🔴 [REPO] DB not available");
     return {
       data: [],
       total: 0,
@@ -659,6 +662,8 @@ export async function queryEventsPaginated(
   const limit = Math.max(1, Math.min(50, pagination.limit));
   const offset = (pagination.page - 1) * limit;
 
+  console.log("🟣 [REPO] Building query", { limit, offset });
+
   // Base query
   let query = db
     .from(table)
@@ -666,45 +671,68 @@ export async function queryEventsPaginated(
 
   // Filters
   if (filters.tab === 'all') {
+    console.log("🟣 [REPO] Filter: visibility=public");
     query = query.eq('visibility', 'public');
   } else if (filters.tab === 'upcoming') {
     const now = new Date().toISOString();
+    console.log("🟣 [REPO] Filter: visibility=public, date_time>=now", { now });
     query = query.eq('visibility', 'public').gte('date_time', now);
   }
 
   if (filters.search) {
+    console.log("🟣 [REPO] Filter: search", { search: filters.search });
     query = query.ilike('title', `%${filters.search}%`);
   }
 
   if (filters.cityId) {
+    console.log("🟣 [REPO] Filter: cityId", { cityId: filters.cityId });
     query = query.eq('city_id', filters.cityId);
   }
 
   if (filters.categoryId) {
+    console.log("🟣 [REPO] Filter: categoryId", { categoryId: filters.categoryId });
     query = query.eq('category_id', filters.categoryId);
   }
 
   // Sort (stable tie-breaker REQUIRED)
   if (sort.sort === 'date') {
+    console.log("🟣 [REPO] Sort: date_time DESC, id DESC");
     query = query.order('date_time', { ascending: false }).order('id', { ascending: false });
   } else if (sort.sort === 'name') {
+    console.log("🟣 [REPO] Sort: title ASC, id ASC");
     query = query.order('title', { ascending: true }).order('id', { ascending: true });
   }
 
   // Pagination
   query = query.range(offset, offset + limit - 1);
 
+  console.log("🟣 [REPO] Executing query...");
   const { data, error, count } = await query;
 
   if (error) {
+    console.error("🔴 [REPO] Query failed", { error, filters, sort, pagination });
     log.error("Failed to query events paginated", { filters, sort, pagination, error });
     throw new InternalError("Failed to query events", error);
   }
+
+  console.log("🟣 [REPO] Query succeeded", {
+    rowCount: data?.length ?? 0,
+    totalCount: count ?? 0,
+  });
 
   const events = (data ?? []).map(mapDbRowToListItem);
   const total = count ?? 0;
   const totalPages = Math.ceil(total / limit);
   const hasMore = pagination.page < totalPages;
+
+  console.log("🟣 [REPO] queryEventsPaginated DONE", {
+    eventsCount: events.length,
+    total,
+    page: pagination.page,
+    limit,
+    totalPages,
+    hasMore,
+  });
 
   return {
     data: events,
