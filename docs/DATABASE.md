@@ -100,9 +100,6 @@ CREATE TABLE public.events (
   category_id UUID REFERENCES public.event_categories(id) ON DELETE SET NULL,
   category TEXT,  -- ⚠️ DEPRECATED: Use category_id. Will be removed in future.
   date_time TIMESTAMPTZ NOT NULL,
-  location_text TEXT NOT NULL,
-  location_lat DOUBLE PRECISION,
-  location_lng DOUBLE PRECISION,
   city_id UUID REFERENCES public.cities(id) ON DELETE SET NULL,
   max_participants INTEGER CHECK (max_participants IS NULL OR max_participants > 0),
   custom_fields_schema JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -143,6 +140,10 @@ CREATE TABLE public.events (
 - `idx_events_creator_datetime` (on created_by_user_id, date_time DESC WHERE created_by_user_id IS NOT NULL)
 
 **Notes**:
+- ⚡ **Location data moved to `event_locations` table** (2024-12-18):
+  - `location_text`, `location_lat`, `location_lng` удалены из `events`
+  - Данные мигрированы в отдельную таблицу `event_locations` (поддержка множественных точек)
+  - Каждое событие имеет минимум 1 локацию (sort_order=1, обязательная)
 - ⚡ **`is_club_event`** (добавлен 2024-12-05, constraint 2024-12-12):
   - Автоматически синхронизируется с `club_id` через trigger `sync_event_club_flag()`
   - Constraint гарантирует: `is_club_event = TRUE ⇔ club_id IS NOT NULL`
@@ -261,31 +262,47 @@ CREATE TABLE public.event_user_access (
 
 ### 5. `event_locations`
 
-**Назначение**: Маршрутные точки для событий (многопользовательские)
+**Назначение**: Маршрутные точки для событий (множественные локации)
 
 ```sql
 CREATE TABLE public.event_locations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
-  location_text TEXT NOT NULL,
-  location_lat DOUBLE PRECISION,
-  location_lng DOUBLE PRECISION,
-  sort_order INTEGER NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL CHECK (sort_order > 0),
+  title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+  latitude NUMERIC(10, 7),  -- nullable until coordinates are entered
+  longitude NUMERIC(10, 7),  -- nullable until coordinates are entered
+  raw_input TEXT,  -- stores original user input for audit/debugging
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  -- Guarantee unique sort_order per event
+  CONSTRAINT uq_event_location_sort UNIQUE(event_id, sort_order),
+  
+  -- Coordinate validation constraints
+  CONSTRAINT chk_latitude_range CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
+  CONSTRAINT chk_longitude_range CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180))
 );
 ```
 
 **Indexes**:
 - `event_locations_pkey` (PRIMARY KEY on id)
 - `idx_event_locations_event_id` (on event_id)
-- `idx_event_locations_event_sort` (on event_id, sort_order) -- pre-sorted results
+- `idx_event_locations_sort_order` (on event_id, sort_order) -- pre-sorted results
+
+**Notes**:
+- ⚡ **Множественные локации** (добавлено 2024-12-18):
+  - Каждое событие имеет минимум 1 локацию (sort_order=1, "Точка сбора")
+  - Первая локация (sort_order=1) не может быть удалена (trigger защита)
+  - Пользователи могут добавлять неограниченное количество дополнительных точек маршрута
+- `raw_input`: Оригинальный ввод пользователя (координаты/адрес/описание) для аудита
+- Миграция данных (2024-12-18): `events.location_text/lat/lng` → `event_locations` (sort_order=1)
 
 **RLS**: 4 policies
-- `authenticated_read_all_locations`
-- `authenticated_create_own_event_locations`
-- `authenticated_update_own_event_locations`
-- `authenticated_delete_own_event_locations`
+- `event_locations_select` (public read, owner read restricted)
+- `event_locations_insert` (owner only)
+- `event_locations_update` (owner only)
+- `event_locations_delete` (owner only, except sort_order=1)
 
 **Связи**:
 - → `events` (event_id)

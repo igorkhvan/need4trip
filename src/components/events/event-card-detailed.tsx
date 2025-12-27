@@ -59,7 +59,7 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
   // Extract location text (handle both full Event and lightweight EventListItemHydrated)
   const locationText = hasFullEvent
     ? ((event as Event).locations?.[0]?.title || "Не указано")
-    : ('locationText' in event ? event.locationText : "Не указано");
+    : (event.city?.name || "Не указано"); // Use city name for lightweight DTO
 
   // Owner info (only available in full Event)
   const ownerInfo = hasFullEvent && 'ownerHandle' in event

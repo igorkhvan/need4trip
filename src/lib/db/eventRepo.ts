@@ -18,7 +18,6 @@ export interface EventListItem {
   title: string;
   description: string;
   dateTime: string;
-  locationText: string;  // Primary location for listing view
   cityId: string;
   categoryId: string | null;
   maxParticipants: number | null;
@@ -38,7 +37,7 @@ export interface EventListItem {
  * Excludes heavy fields: rules, custom_fields_schema.
  */
 const EVENT_LIST_COLUMNS = `
-  id, title, description, date_time, location_text, city_id, category_id,
+  id, title, description, date_time, city_id, category_id,
   max_participants, price, currency_code, visibility,
   is_paid, created_by_user_id, club_id, is_club_event
 `.trim();
@@ -54,7 +53,6 @@ export function mapDbRowToListItem(row: any): EventListItem {
     title: row.title,
     description: row.description,
     dateTime: row.date_time,
-    locationText: row.location_text,
     cityId: row.city_id,
     categoryId: row.category_id ?? null,
     maxParticipants: row.max_participants ?? null,
