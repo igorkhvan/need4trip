@@ -18,12 +18,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
 import { EventStatusBadge } from "@/components/events/event-status-badge";
 import { Event } from "@/lib/types/event";
+import { EventListItemHydrated } from "@/lib/services/events";
 import { getCategoryLabel, getCategoryIcon } from "@/lib/utils/eventCategories";
 import { formatDateTimeShort } from "@/lib/utils/dates";
 import { formatEventPrice } from "@/lib/utils/eventFormatters";
 
 export interface EventCardDetailedProps {
-  event: Event;
+  event: Event | EventListItemHydrated; // Support both full event and lightweight listing DTO
   onClick?: () => void;
 }
 
@@ -35,10 +36,35 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
     event.maxParticipants
   );
   
-  const CategoryIcon = event.category ? getCategoryIcon(event.category) : Users;
-  const categoryLabel = event.category ? getCategoryLabel(event.category) : "Событие";
+  // Handle category (full Event has EventCategoryDto, lightweight has { id, name, icon })
+  const hasFullEvent = 'locations' in event;
+  const CategoryIcon = event.category 
+    ? (hasFullEvent ? getCategoryIcon(event.category as any) : Users)
+    : Users;
+  const categoryLabel = event.category 
+    ? (hasFullEvent 
+        ? getCategoryLabel(event.category as any) 
+        : ('name' in event.category ? event.category.name : "Событие"))
+    : "Событие";
   
-  const priceLabel = formatEventPrice(event);
+  // Format price (lightweight DTO has priceAmount/priceCurrency instead of nested objects)
+  const priceLabel = hasFullEvent 
+    ? formatEventPrice(event as Event)
+    : (event.isPaid 
+        ? (event.priceAmount && event.priceCurrency 
+            ? `${event.priceAmount} ${event.priceCurrency}` 
+            : "Платно")
+        : "Бесплатно");
+
+  // Extract location text (handle both full Event and lightweight EventListItemHydrated)
+  const locationText = hasFullEvent
+    ? ((event as Event).locations?.[0]?.title || "Не указано")
+    : ('locationText' in event ? event.locationText : "Не указано");
+
+  // Owner info (only available in full Event)
+  const ownerInfo = hasFullEvent && 'ownerHandle' in event
+    ? (event.ownerHandle ? `@${event.ownerHandle}` : event.ownerName ?? "Организатор")
+    : "Организатор";
 
   const handleClick = () => {
     if (onClick) {
@@ -66,14 +92,10 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
                 <span>{categoryLabel}</span>
               </div>
               <span>•</span>
-              <span>
-                {event.ownerHandle
-                  ? `@${event.ownerHandle}`
-                  : event.ownerName ?? "Организатор"}
-              </span>
+              <span>{ownerInfo}</span>
             </div>
           </div>
-          <EventStatusBadge event={event} size="md" />
+          {hasFullEvent && <EventStatusBadge event={event as Event} size="md" />}
         </div>
 
         {/* Info Grid */}
@@ -89,7 +111,7 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
             <div className="mb-1 text-sm text-muted-foreground">Место сбора</div>
             <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="truncate">{event.locations[0]?.title || "Не указано"}</span>
+              <span className="truncate">{locationText}</span>
             </div>
           </div>
           <div>
