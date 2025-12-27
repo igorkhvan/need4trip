@@ -1,7 +1,7 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.5  
+**Version:** 2.6  
 **Last Updated:** 27 December 2024  
 **This document is the ONLY authoritative source for architectural decisions.**
 
@@ -1166,6 +1166,74 @@ Response (200):
 ```
 
 Response (401) if tab=my without auth:
+
+```typescript
+{
+  error: {
+    code: "UNAUTHORIZED",
+    message: "Authentication required"
+  }
+}
+```
+
+#### Stats Caching Strategy (Client-Side)
+
+**Rule:** Stats use **stale-while-revalidate** pattern to prevent skeleton flashing:
+
+- **Initial load:** Show skeleton, fetch stats
+- **Tab/filter change:** Keep previous stats visible, refetch in background, show LoadingBar
+- **Page change:** Stats do NOT refetch (page param excluded from stats query)
+
+**Implementation:**
+
+```typescript
+// Hook pattern (useEventsStats)
+const [stats, setStats] = useState(null);
+const [loading, setLoading] = useState(true);      // TRUE only on initial mount
+const [refetching, setRefetching] = useState(false); // TRUE on background refetch
+
+useEffect(() => {
+  if (stats === null) {
+    setLoading(true);  // Initial load → show skeleton
+  } else {
+    setRefetching(true);  // Background refetch → show LoadingBar
+  }
+  
+  // Fetch stats...
+  
+  setLoading(false);
+  setRefetching(false);
+}, [searchParams]);
+```
+
+**UI pattern:**
+
+```tsx
+{statsLoading ? (
+  <StatsSkeleton />  // Initial load
+) : (
+  <Card className="relative">
+    {statsRefetching && <LoadingBar />}  // Background refetch
+    <CardContent>{stats.total}</CardContent>
+  </Card>
+)}
+```
+
+**Benefits:**
+- ✅ No skeleton flashing on tab/filter changes
+- ✅ Instant visual feedback (previous data visible)
+- ✅ Perceived performance boost
+- ✅ Better UX for frequent filter adjustments
+
+**See also:** `docs/DESIGN_SYSTEM.md` § Loading States for LoadingBar component details.
+
+---
+
+#### Forbidden Patterns
+
+```typescript
+// ❌ FORBIDDEN: Hardcoded tab values in repo
+if (tab === 'my') { ... }
 
 ```typescript
 {

@@ -1,6 +1,6 @@
 # Need4Trip — Design System (SSOT)
 
-**Версия:** 1.0  
+**Версия:** 1.1  
 **Дата обновления:** 27 декабря 2024  
 **Статус:** Production Ready ✅
 
@@ -800,6 +800,111 @@ shadow-lg  /* Modals, popovers */
 
 ---
 
+## 📊 LOADING STATES
+
+### LoadingBar — Фоновая загрузка данных
+
+**Компонент:** `src/components/ui/loading-bar.tsx`
+
+**Назначение:** Тонкая полоска загрузки для stale-while-revalidate паттерна (когда данные уже показаны, но обновляются в фоне).
+
+**Использование:**
+
+```tsx
+import { LoadingBar } from "@/components/ui/loading-bar";
+
+<div className="relative">
+  {refetching && <LoadingBar />}
+  <Card>Content</Card>
+</div>
+```
+
+**Props:**
+
+```typescript
+interface LoadingBarProps {
+  position?: "top" | "bottom";  // default: "top"
+  height?: number;               // default: 2 (px)
+  className?: string;            // optional
+}
+```
+
+**Визуал:**
+
+```
+┌─────────────────────────┐
+│ ━━━━━━━ (animate)       │  ← LoadingBar (2px, primary color)
+│                         │
+│   Card Content          │
+│   (data visible)        │
+│                         │
+└─────────────────────────┘
+```
+
+**Правила:**
+
+- ✅ Используй для background refetch (когда данные уже показаны)
+- ✅ Height 2-3px (тонкая, ненавязчивая)
+- ✅ Primary color с shimmer анимацией
+- ❌ НЕ используй для initial load (используй Skeleton)
+- ❌ НЕ используй для блокирующих операций (используй Spinner)
+
+**Примеры использования:**
+
+```tsx
+// Stats cards при фоновом обновлении
+<Card className="relative">
+  {statsRefetching && <LoadingBar />}
+  <CardContent>{stats.total}</CardContent>
+</Card>
+
+// Events list при пагинации
+<div className="relative">
+  {listRefetching && events.length > 0 && <LoadingBar height={3} />}
+  <EventsGrid events={events} />
+</div>
+
+// Bottom position для карточек
+<Card className="relative">
+  {refetching && <LoadingBar position="bottom" />}
+  <CardContent>Content</CardContent>
+</Card>
+```
+
+**Pattern: Stale-While-Revalidate**
+
+LoadingBar используется в паре с хуками, которые реализуют SWR паттерн:
+
+```typescript
+// Hook implementation
+const [data, setData] = useState(null);
+const [loading, setLoading] = useState(true);      // Initial load
+const [refetching, setRefetching] = useState(false); // Background update
+
+useEffect(() => {
+  if (data === null) {
+    setLoading(true);  // Show skeleton
+  } else {
+    setRefetching(true);  // Show LoadingBar
+  }
+  
+  // Fetch data...
+  
+  setLoading(false);
+  setRefetching(false);
+}, [params]);
+
+// UI
+{loading ? <Skeleton /> : (
+  <div className="relative">
+    {refetching && <LoadingBar />}
+    <Content data={data} />
+  </div>
+)}
+```
+
+---
+
 ## ✅ CHECKLIST ПЕРЕД КОММИТОМ
 
 При изменении UI компонентов проверь:
@@ -833,6 +938,16 @@ shadow-lg  /* Modals, popovers */
 ---
 
 ## 🔄 ИСТОРИЯ ИЗМЕНЕНИЙ
+
+### v1.1 — 27 декабря 2024
+
+**Добавлено:**
+- ✅ LoadingBar компонент для stale-while-revalidate паттерна
+- ✅ Pattern для фоновой загрузки данных (без skeleton flashing)
+- ✅ Примеры использования в stats cards и events list
+
+**Применено к:**
+- EventsPageClient (stats cards + events list refetching)
 
 ### v1.0 — 27 декабря 2024
 

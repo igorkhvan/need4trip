@@ -22,12 +22,14 @@ interface EventsStats {
 interface EventsStatsResult {
   stats: EventsStats | null;
   loading: boolean;
+  refetching: boolean;
   error: string | null;
 }
 
 export function useEventsStats(searchParams: ReadonlyURLSearchParams): EventsStatsResult {
   const [stats, setStats] = useState<EventsStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refetching, setRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Request ID для защиты от race conditions
@@ -38,7 +40,12 @@ export function useEventsStats(searchParams: ReadonlyURLSearchParams): EventsSta
     const abortController = new AbortController();
 
     async function fetchStats() {
-      setLoading(true);
+      // Stale-while-revalidate: loading=true только на initial load
+      if (stats === null) {
+        setLoading(true);
+      } else {
+        setRefetching(true);
+      }
       setError(null);
 
       try {
@@ -98,6 +105,7 @@ export function useEventsStats(searchParams: ReadonlyURLSearchParams): EventsSta
         // Race condition guard
         if (currentRequestId === requestIdRef.current) {
           setLoading(false);
+          setRefetching(false);
         }
       }
     }
@@ -110,6 +118,6 @@ export function useEventsStats(searchParams: ReadonlyURLSearchParams): EventsSta
     };
   }, [searchParams]);
 
-  return { stats, loading, error };
+  return { stats, loading, refetching, error };
 }
 

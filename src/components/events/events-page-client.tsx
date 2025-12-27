@@ -19,6 +19,7 @@ import { EventsGrid } from "@/components/events/events-grid";
 import { StatsSkeleton } from "@/components/events/stats-skeleton";
 import { EventCardSkeletonGrid } from "@/components/ui/skeletons/event-card-skeleton";
 import { CreateEventButton } from "@/components/events/create-event-button";
+import { LoadingBar } from "@/components/ui/loading-bar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useEventsQuery } from "@/hooks/use-events-query";
@@ -38,8 +39,8 @@ export function EventsPageClient() {
   }, [searchParams]);
 
   // Data fetching (independent)
-  const { events, meta, loading: listLoading, error: listError } = useEventsQuery(searchParams);
-  const { stats, loading: statsLoading, error: statsError } = useEventsStats(statsParams);
+  const { events, meta, loading: listLoading, refetching: listRefetching, error: listError } = useEventsQuery(searchParams);
+  const { stats, loading: statsLoading, refetching: statsRefetching, error: statsError } = useEventsStats(statsParams);
 
   // Handle 401 on "my" tab
   const currentTab = searchParams.get("tab") || "all";
@@ -158,7 +159,8 @@ export function EventsPageClient() {
         <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
           <div className="flex gap-4 md:grid md:grid-cols-3 min-w-max md:min-w-0">
             {/* Card 1: Всего событий */}
-            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
+            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0 relative">
+              {statsRefetching && <LoadingBar />}
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <div className="mb-2 text-sm text-muted-foreground">Всего событий</div>
@@ -173,7 +175,8 @@ export function EventsPageClient() {
             </Card>
 
             {/* Card 2: Активных регистраций */}
-            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
+            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0 relative">
+              {statsRefetching && <LoadingBar />}
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <div className="mb-2 text-sm text-muted-foreground">Активных регистраций</div>
@@ -188,7 +191,8 @@ export function EventsPageClient() {
             </Card>
 
             {/* Card 3: Всего участников */}
-            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0">
+            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0 relative">
+              {statsRefetching && <LoadingBar />}
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <div className="mb-2 text-sm text-muted-foreground">Всего участников</div>
@@ -206,26 +210,30 @@ export function EventsPageClient() {
       )}
 
       {/* Events List Section */}
-      {listLoading ? (
-        <EventCardSkeletonGrid count={6} />
-      ) : listError ? (
-        <div className="py-16 text-center">
-          <p className="text-red-500">{listError}</p>
-        </div>
-      ) : (
-        <EventsGrid
-          events={events}
-          meta={meta}
-          currentUserId={currentUser?.id || null}
-          isAuthenticated={isAuthenticated}
-          onTabChange={handleTabChange}
-          onPageChange={handlePageChange}
-          onSearchChange={handleSearchChange}
-          onSortChange={handleSortChange}
-          onCityChange={handleCityChange}
-          onCategoryChange={handleCategoryChange}
-        />
-      )}
+      <div className="relative">
+        {listRefetching && events.length > 0 && <LoadingBar position="top" height={3} />}
+        
+        {listLoading ? (
+          <EventCardSkeletonGrid count={6} />
+        ) : listError ? (
+          <div className="py-16 text-center">
+            <p className="text-red-500">{listError}</p>
+          </div>
+        ) : (
+          <EventsGrid
+            events={events}
+            meta={meta}
+            currentUserId={currentUser?.id || null}
+            isAuthenticated={isAuthenticated}
+            onTabChange={handleTabChange}
+            onPageChange={handlePageChange}
+            onSearchChange={handleSearchChange}
+            onSortChange={handleSortChange}
+            onCityChange={handleCityChange}
+            onCategoryChange={handleCategoryChange}
+          />
+        )}
+      </div>
     </div>
   );
 }

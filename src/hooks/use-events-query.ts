@@ -27,6 +27,7 @@ interface EventsQueryResult {
   events: EventListItemHydrated[];
   meta: EventsMeta | null;
   loading: boolean;
+  refetching: boolean;
   error: string | null;
 }
 
@@ -34,6 +35,7 @@ export function useEventsQuery(searchParams: ReadonlyURLSearchParams): EventsQue
   const [events, setEvents] = useState<EventListItemHydrated[]>([]);
   const [meta, setMeta] = useState<EventsMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refetching, setRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Request ID для защиты от race conditions
@@ -44,7 +46,12 @@ export function useEventsQuery(searchParams: ReadonlyURLSearchParams): EventsQue
     const abortController = new AbortController();
 
     async function fetchEvents() {
-      setLoading(true);
+      // Stale-while-revalidate: loading=true только на initial load
+      if (events.length === 0 && meta === null) {
+        setLoading(true);
+      } else {
+        setRefetching(true);
+      }
       setError(null);
 
       try {
@@ -104,6 +111,7 @@ export function useEventsQuery(searchParams: ReadonlyURLSearchParams): EventsQue
         // Race condition guard
         if (currentRequestId === requestIdRef.current) {
           setLoading(false);
+          setRefetching(false);
         }
       }
     }
@@ -116,6 +124,6 @@ export function useEventsQuery(searchParams: ReadonlyURLSearchParams): EventsQue
     };
   }, [searchParams]);
 
-  return { events, meta, loading, error };
+  return { events, meta, loading, refetching, error };
 }
 
