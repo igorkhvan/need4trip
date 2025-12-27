@@ -629,10 +629,12 @@ export const revalidate = 3600; // 1 hour
 ```
 
 **Rules:**
-- API routes with user auth → `dynamic = 'force-dynamic'`
-- API routes with public data → `revalidate = 3600`
+- API routes with user auth → `dynamic = 'force-dynamic', revalidate = 0`
+- API routes with frequently changing data (e.g. events listings) → `dynamic = 'force-dynamic', revalidate = 0` (NO cache)
+- API routes with stable public data (e.g. reference tables) → `revalidate = 3600`
 - Server Components → Use `cache()` from React
 - DO NOT mix caching strategies (StaticCache vs unstable_cache)
+- For events: listings NO cache, stats use in-process cache 60s TTL (see § 10)
 
 ### Cache Invalidation
 
