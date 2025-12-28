@@ -39,6 +39,7 @@ import { getErrorMessage } from "@/lib/utils/errors";
 import { useClubPlan } from "@/hooks/use-club-plan";
 import { PaywallModal, usePaywall } from "@/components/billing/paywall-modal";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
+import { Spinner } from "@/components/ui/spinner";
 // Section components
 import { EventBasicInfoSection } from "./event-form/sections/event-basic-info-section";
 import { EventLocationsSection } from "./event-form/sections/event-locations-section";
@@ -688,8 +689,20 @@ export function EventForm({
                 variant="secondary"
                 onClick={handleAiButtonClick}
                 disabled={disabled || isGeneratingRules || isSubmitting}
+                className="whitespace-nowrap"
               >
-                ✨ AI
+                {isGeneratingRules ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    <span className="hidden sm:inline">Генерируем правила...</span>
+                    <span className="sm:hidden">Генерация...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">✨ Сгенерировать правила с помощью ИИ</span>
+                    <span className="sm:hidden">✨ ИИ генерация</span>
+                  </>
+                )}
               </Button>
             </div>
           </CardHeader>
@@ -757,7 +770,7 @@ export function EventForm({
             cancelText="Продолжить редактирование"
             onConfirm={() => router.push(backHref)}
           />
-          <Button type="submit" disabled={isSubmitting || disabled} className="px-5">
+          <Button type="submit" disabled={isSubmitting || isGeneratingRules || disabled} className="px-5">
             {isSubmitting ? "Сохраняем..." : submitLabel}
           </Button>
         </div>

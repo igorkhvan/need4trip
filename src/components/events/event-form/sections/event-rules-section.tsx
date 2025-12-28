@@ -36,7 +36,7 @@ export function EventRulesSection({
       rows={8}
       value={rules}
       onChange={(e) => onRulesChange(e.target.value)}
-      placeholder="Опишите условия: порядок движения, скорость, рация, запреты... Или используйте кнопку 'Сгенерировать правила (ИИ)'"
+      placeholder="Опишите условия: порядок движения, скорость, рация, запреты... Или используйте кнопку генерации с помощью ИИ в заголовке секции"
       disabled={disabled}
       className={isGeneratingRules ? "opacity-50" : ""}
     />

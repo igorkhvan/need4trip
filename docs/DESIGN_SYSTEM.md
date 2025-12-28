@@ -593,6 +593,37 @@ className="slide-in-from-top-[48%]"
 </Button>
 ```
 
+### Адаптивный текст (десктоп/мобильная)
+
+```tsx
+// Пример: AI кнопка генерации (event-form.tsx)
+<Button
+  variant="secondary"
+  disabled={disabled || isGeneratingRules}
+  className="whitespace-nowrap"
+>
+  {isGeneratingRules ? (
+    <>
+      <Spinner size="sm" className="mr-2" />
+      <span className="hidden sm:inline">Генерируем правила...</span>
+      <span className="sm:hidden">Генерация...</span>
+    </>
+  ) : (
+    <>
+      <span className="hidden sm:inline">✨ Сгенерировать правила с помощью ИИ</span>
+      <span className="sm:hidden">✨ ИИ генерация</span>
+    </>
+  )}
+</Button>
+```
+
+**Принципы:**
+- ✅ `hidden sm:inline` — скрыть на мобильной, показать на десктопе
+- ✅ `sm:hidden` — показать на мобильной, скрыть на десктопе
+- ✅ `whitespace-nowrap` — предотвратить перенос строки
+- ✅ Spinner только в loading state
+- ✅ Короткий текст для мобильной (< 15 символов)
+
 ---
 
 ## 🎴 CARDS
