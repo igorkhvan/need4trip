@@ -3,6 +3,7 @@ import { CityHydrated } from "./city";
 import { CurrencyHydrated } from "./currency";
 import { EventCategoryDto } from "./eventCategory";
 import { EventLocation, EventLocationInput, eventLocationsArraySchema } from "./eventLocation";
+import type { VehicleType } from "./vehicleType";
 
 // Legacy enum - kept for backward compatibility during migration
 // Will be removed after full migration to event_categories table
@@ -113,6 +114,7 @@ export interface Event {
   updatedAt: string;
   visibility: Visibility;
   vehicleTypeRequirement: VehicleTypeRequirement;
+  vehicleType?: VehicleType | null; // Hydrated vehicle type info
   allowedBrands: CarBrand[];
   rules?: string | null;
   isClubEvent: boolean;

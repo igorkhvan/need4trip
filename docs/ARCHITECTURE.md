@@ -1,8 +1,8 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.7  
-**Last Updated:** 28 December 2024  
+**Version:** 2.8  
+**Last Updated:** 28 December 2024 (Added Vehicle Type Hydration)  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---

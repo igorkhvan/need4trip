@@ -7,9 +7,11 @@
 import { getCitiesByIds } from "@/lib/db/cityRepo";
 import { getCurrenciesByCodes } from "@/lib/db/currencyRepo";
 import { getEventCategoriesByIds } from "@/lib/db/eventCategoryRepo";
+import { getVehicleTypesByIds } from "@/lib/db/vehicleTypeRepo";
 import { CityHydrated } from "@/lib/types/city";
 import { CurrencyHydrated } from "@/lib/types/currency";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
+import { VehicleType } from "@/lib/types/vehicleType";
 
 // ============================================================================
 // City Hydration
@@ -231,6 +233,48 @@ export async function hydrateEventCategories<T extends { categoryId: string | nu
   return items.map((item) => ({
     ...item,
     category: item.categoryId ? categoriesMap.get(item.categoryId) || null : null,
+  }));
+}
+
+// ============================================================================
+// Vehicle Type Hydration
+// ============================================================================
+
+/**
+ * Hydrate vehicle types for items with vehicleTypeRequirement
+ * Efficiently loads all vehicle types in one batch query
+ * 
+ * @example
+ * const events = await getEvents();
+ * const hydratedEvents = await hydrateVehicleTypes(events);
+ * // Now events[0].vehicleType = { id, nameRu, ... }
+ */
+export async function hydrateVehicleTypes<T extends { vehicleTypeRequirement: string }>(
+  items: T[]
+): Promise<(T & { vehicleType?: VehicleType | null })[]> {
+  // Collect all unique vehicle type IDs (excluding 'any')
+  const vehicleTypeIds = items
+    .map((item) => item.vehicleTypeRequirement)
+    .filter((id): id is string => id !== null && id !== 'any');
+  
+  const uniqueVehicleTypeIds = Array.from(new Set(vehicleTypeIds));
+
+  // Batch load vehicle types
+  let vehicleTypesMap = new Map<string, VehicleType>();
+  if (uniqueVehicleTypeIds.length > 0) {
+    try {
+      vehicleTypesMap = await getVehicleTypesByIds(uniqueVehicleTypeIds);
+    } catch (err) {
+      console.error("[hydrateVehicleTypes] Failed to load vehicle types", err);
+    }
+  }
+
+  // Attach vehicle types to items
+  return items.map((item) => ({
+    ...item,
+    vehicleType: item.vehicleTypeRequirement === 'any' 
+      ? null 
+      : vehicleTypesMap.get(item.vehicleTypeRequirement) || null,
   }));
 }
 

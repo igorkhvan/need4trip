@@ -74,13 +74,9 @@ export default async function EventDetails({
   const categoryLabel = event.category ? getCategoryLabel(event.category) : null;
   const categoryBadgeVariant = event.category ? getCategoryBadgeVariant(event.category) : "solid-gray";
   const formattedDateTime = formatDateTime(event.dateTime);
-  const vehicleTypeLabelMap: Record<string, string> = {
-    any: "Любой",
-    sedan: "Легковой",
-    crossover: "Кроссовер",
-    suv: "Внедорожник",
-  };
-  const vehicleTypeLabel = vehicleTypeLabelMap[event.vehicleTypeRequirement] ?? "Любой";
+  
+  // Use hydrated vehicle type data
+  const vehicleTypeLabel = event.vehicleType?.nameRu ?? "Любой";
   
   // Проверяем, прошло ли событие
   const isPastEvent = new Date(event.dateTime) < new Date();

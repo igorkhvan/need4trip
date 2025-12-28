@@ -32,7 +32,7 @@ import {
   createDefaultLocation,
 } from "@/lib/db/eventLocationsRepo";
 import type { EventLocationInput } from "@/lib/types/eventLocation";
-import { hydrateCitiesAndCurrencies, hydrateEventCategories } from "@/lib/utils/hydration";
+import { hydrateCitiesAndCurrencies, hydrateEventCategories, hydrateVehicleTypes } from "@/lib/utils/hydration";
 import {
   mapDbEventToDomain,
   mapDbEventWithOwnerToDomain,
@@ -101,6 +101,7 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
       getAllowedBrandsByEventIds(eventIds),
       hydrateCitiesAndCurrencies(mapped),
       hydrateEventCategories(mapped),
+      hydrateVehicleTypes(mapped),
     ]);
 
     return eventsWithHydration.map((event) => ({
@@ -150,6 +151,7 @@ export async function listVisibleEventsForUser(userId: string | null): Promise<E
     getAllowedBrandsByEventIds(eventIds),
     hydrateCitiesAndCurrencies(filtered),
     hydrateEventCategories(filtered),
+    hydrateVehicleTypes(filtered),
   ]);
 
   return eventsWithHydration.map((event) => ({
@@ -183,7 +185,8 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     participantsCount,
     locations,
     hydratedWithCity,
-    hydratedWithCategory
+    hydratedWithCategory,
+    hydratedWithVehicleType
   ] = await Promise.all([
     // Load allowed brands
     getAllowedBrands(event.id).catch((err) => {
@@ -213,6 +216,12 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     hydrateEventCategories([event]).then(([hydrated]) => hydrated).catch((err) => {
       log.warn("Failed to hydrate category for event", { eventId: event.id, error: err });
       return event;
+    }),
+    
+    // Hydrate vehicle type (parallel with above)
+    hydrateVehicleTypes([event]).then(([hydrated]) => hydrated).catch((err) => {
+      log.warn("Failed to hydrate vehicle type for event", { eventId: event.id, error: err });
+      return event;
     })
   ]);
   
@@ -220,6 +229,7 @@ export async function hydrateEvent(event: Event): Promise<Event> {
   return {
     ...hydratedWithCity,
     ...hydratedWithCategory,
+    ...hydratedWithVehicleType,
     allowedBrands,
     participantsCount,
     locations,
@@ -332,6 +342,10 @@ export async function getEventBasicInfo(
   // Hydrate category
   const [eventWithCategory] = await hydrateEventCategories([event]);
   event = eventWithCategory;
+  
+  // Hydrate vehicle type
+  const [eventWithVehicleType] = await hydrateVehicleTypes([event]);
+  event = eventWithVehicleType;
 
   await ensureEventVisibility(event, options);
 
@@ -364,6 +378,10 @@ export async function getEventWithParticipantsVisibility(
   // Hydrate category
   const [eventWithCategory] = await hydrateEventCategories([event]);
   event = eventWithCategory;
+  
+  // Hydrate vehicle type
+  const [eventWithVehicleType] = await hydrateVehicleTypes([event]);
+  event = eventWithVehicleType;
   
   await ensureEventVisibility(event, options);
   return {
