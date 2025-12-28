@@ -1,5 +1,6 @@
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { AuthError } from "@/lib/errors";
 import { getEventsStats } from "@/lib/services/events";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -127,12 +128,9 @@ export async function GET(req: NextRequest) {
     const currentUser = await getCurrentUser();
 
     // 4. Enforce auth for tab=my BEFORE any cache lookup or service call
+    // Use canonical project error mechanism (AuthError + respondError)
     if (params.tab === 'my' && !currentUser) {
-      return respondJSON(
-        { error: { code: "UNAUTHORIZED", message: "Authentication required for tab=my" } },
-        undefined,
-        401
-      );
+      throw new AuthError("Authentication required for tab=my", undefined, 401);
     }
 
     // 5. Build normalized cache key
@@ -143,9 +141,10 @@ export async function GET(req: NextRequest) {
       categoryId: params.categoryId,
     });
     
+    // Avoid trailing pipe when filtersKey is empty
     const cacheKey = params.tab === 'my' 
-      ? `${currentUser!.id}|my|${filtersKey}`
-      : `public|${params.tab}|${filtersKey}`;
+      ? `${currentUser!.id}|my${filtersKey ? '|' + filtersKey : ''}`
+      : `public|${params.tab}${filtersKey ? '|' + filtersKey : ''}`;
 
     // 6. Check cache
     const cached = statsCache.get(cacheKey);
