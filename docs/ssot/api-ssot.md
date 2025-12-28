@@ -1928,10 +1928,47 @@ Create new event (personal or club).
 - **Success:** 201
   ```json
   {
-    "event": { /* Created Event */ }
+    "success": true,
+    "data": {
+      "event": {
+        "id": "uuid",
+        "title": "string",
+        "description": "string",
+        "dateTime": "ISO 8601",
+        "cityId": "uuid",
+        "categoryId": "uuid",
+        "maxParticipants": 100,
+        "participantsCount": 0,
+        "visibility": "public",
+        "isPaid": false,
+        "price": null,
+        "currencyCode": null,
+        "createdByUserId": "uuid",
+        "clubId": null,
+        "allowedBrands": [],
+        "locations": [
+          {
+            "id": "uuid",
+            "title": "Точка сбора",
+            "sortOrder": 1,
+            "latitude": null,
+            "longitude": null
+          }
+        ],
+        "vehicleTypeRequirement": "any",
+        "customFieldsSchema": [],
+        "rules": null,
+        "allowAnonymousRegistration": true,
+        "registrationManuallyClosed": false,
+        "createdAt": "ISO 8601",
+        "updatedAt": "ISO 8601"
+      }
+    }
   }
   ```
-- **Side effects:** Inserts into `events` table
+  **Note:** Response follows global success format (§ 1.4). Event object includes `id` field needed for navigation.
+  
+- **Side effects:** Inserts into `events` table, creates default location, grants owner access
 
 **Errors:**
 
@@ -2048,9 +2085,14 @@ Update event details.
 - **Success:** 200
   ```json
   {
-    "event": { /* Updated Event */ }
+    "success": true,
+    "data": {
+      "event": { /* Updated Event */ }
+    }
   }
   ```
+  **Note:** Response follows global success format (§ 1.4).
+  
 - **Side effects:** 
   - Updates `events` table
   - Revalidates Next.js cache (`/events/[id]`, `/events`)
@@ -2226,17 +2268,22 @@ Get list of event participants with status, user details.
 - **Success:** 200
   ```json
   {
-    "participants": [
-      {
-        "id": "uuid",
-        "status": "confirmed",
-        "user": { /* User profile (if registered) */ },
-        "guestName": "Guest Name (if guest)",
-        ...
-      }
-    ]
+    "success": true,
+    "data": {
+      "participants": [
+        {
+          "id": "uuid",
+          "status": "confirmed",
+          "user": { /* User profile (if registered) */ },
+          "guestName": "Guest Name (if guest)",
+          ...
+        }
+      ]
+    }
   }
   ```
+  **Note:** Response follows global success format (§ 1.4).
+  
 - **Side effects:** None
 
 **Errors:**
