@@ -1,8 +1,8 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Version:** 2.6  
-**Last Updated:** 27 December 2024  
+**Version:** 2.7  
+**Last Updated:** 28 December 2024  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
@@ -1268,63 +1268,114 @@ if (tab === 'my') { ... }
    - tab=my: in-process cache (Map) keyed by `${userId}|${tab}|${filters}` with TTL 60s
    - Rationale: Stats is a lightweight count query. In-process caching reduces DB load for repeated calls without Next.js cache complications.
 
-**Implementation Example (stats with cache):**
+**Implementation Details (stats with cache):**
 
 ```typescript
-// app/api/events/stats/route.ts
+// app/api/events/stats/route.ts (CANONICAL IMPLEMENTATION)
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const statsCache = new Map<string, { count: number; expires: number }>();
+interface CacheEntry {
+  payload: { total: number };
+  expiresAt: number;
+}
+
+const statsCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 60_000; // 60 seconds
+const MAX_ENTRIES = 300;   // Prevent unbounded memory growth
+
+// Cleanup strategy: "cleanup on access" (NO background timers)
+function cleanupCache(): void {
+  const now = Date.now();
+  
+  // 1. Remove expired entries
+  for (const [key, entry] of statsCache.entries()) {
+    if (now >= entry.expiresAt) {
+      statsCache.delete(key);
+    }
+  }
+  
+  // 2. Enforce max size (evict oldest by insertion order)
+  if (statsCache.size > MAX_ENTRIES) {
+    const keysToEvict = Array.from(statsCache.keys())
+      .slice(0, statsCache.size - MAX_ENTRIES);
+    for (const key of keysToEvict) {
+      statsCache.delete(key);
+    }
+  }
+}
+
+// Key normalization: stable ordering + normalize search
+function buildFiltersKey(params: {
+  tab: string;
+  search?: string;
+  cityId?: string;
+  categoryId?: string;
+}): string {
+  const parts: string[] = [params.tab];
+  
+  // Normalize search: trim, collapse whitespace, lowercase
+  if (params.search) {
+    const normalized = params.search.trim()
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+    if (normalized) {
+      parts.push(`search:${normalized}`);
+    }
+  }
+  
+  // Add optional filters in stable order
+  if (params.cityId) parts.push(`city:${params.cityId}`);
+  if (params.categoryId) parts.push(`cat:${params.categoryId}`);
+  
+  return parts.join('|');
+}
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const tab = searchParams.get('tab') || 'all';
+  // 1. Cleanup cache on every request (deterministic, no setInterval)
+  cleanupCache();
   
+  // 2. Validate & parse params...
   const currentUser = await getCurrentUser();
   
-  if (tab === 'my') {
-    if (!currentUser) {
-      return respondError(new UnauthorizedError("Authentication required for tab=my"));
-    }
-    
-    // User-keyed cache
-    const cacheKey = `${currentUser.id}|${tab}|${searchParams.toString()}`;
-    const cached = statsCache.get(cacheKey);
-    
-    if (cached && Date.now() < cached.expires) {
-      return respondJSON({ total: cached.count });
-    }
-    
-    const total = await getEventsStatsForUser(currentUser.id, { tab, ...otherFilters });
-    
-    statsCache.set(cacheKey, { count: total, expires: Date.now() + 60_000 });
-    
-    return respondJSON({ total });
+  // 3. Enforce auth for tab=my BEFORE cache lookup
+  if (params.tab === 'my' && !currentUser) {
+    return respondError(new UnauthorizedError("..."));
   }
   
-  // Public stats (tab=all/upcoming): in-process cache keyed by tab+filters
-  const cacheKey = `public|${tab}|${searchParams.toString()}`;
+  // 4. Build normalized cache key
+  const filtersKey = buildFiltersKey(params);
+  const cacheKey = params.tab === 'my'
+    ? `${currentUser!.id}|my|${filtersKey}`
+    : `public|${filtersKey}`;
+  
+  // 5. Check cache
   const cached = statsCache.get(cacheKey);
-  
-  if (cached && Date.now() < cached.expires) {
-    return respondJSON({ total: cached.count });
+  if (cached && Date.now() < cached.expiresAt) {
+    return respondJSON(cached.payload);
   }
   
-  const total = await getEventsStatsPublic({ tab, ...otherFilters });
+  // 6. Call service layer
+  const result = await getEventsStats(params, currentUser);
   
-  statsCache.set(cacheKey, { count: total, expires: Date.now() + 60_000 });
+  // 7. Cache result
+  statsCache.set(cacheKey, {
+    payload: result,
+    expiresAt: Date.now() + CACHE_TTL,
+  });
   
-  return respondJSON({ total });
+  return respondJSON(result);
 }
 ```
 
 **CANONICAL APPROACH for Need4Trip:**
 
-Use explicit branching within stats endpoint:
 - **ALL tabs:** `dynamic: 'force-dynamic'` (no Next.js revalidate due to Route Segment Config constraints)
-- **tab=my:** in-process cache keyed by userId|tab|filters
-- **tab=all/upcoming:** in-process cache keyed by public|tab|filters
+- **tab=my:** in-process cache keyed by `${userId}|my|${normalizedFilters}`
+- **tab=all/upcoming:** in-process cache keyed by `public|${normalizedFilters}`
+- **Cleanup strategy:** On-access cleanup (NO background timers for Vercel serverless compatibility)
+- **Size limit:** MAX_ENTRIES = 300 (prevents unbounded memory growth)
+- **Key normalization:** Stable ordering + search normalization (trim, collapse whitespace, lowercase)
 
 #### Future Migration Notes (Phase 2+)
 
