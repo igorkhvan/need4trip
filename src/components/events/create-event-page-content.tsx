@@ -73,9 +73,17 @@ export function CreateEventPageContent({
       return;
     }
     
-    // Success - redirect to events list with force refresh to show new event
-    router.push('/events');
-    router.refresh();
+    // Success - redirect to created event page
+    const data = await res.json();
+    const createdEvent = data.event || data;
+    
+    if (createdEvent?.id) {
+      router.push(`/events/${createdEvent.id}`);
+    } else {
+      // Fallback если нет id (не должно случиться, но на всякий случай)
+      router.push('/events');
+      router.refresh();
+    }
   };
 
   // Show loading or empty state while auth check happens
