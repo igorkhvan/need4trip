@@ -221,6 +221,7 @@ need4trip/
 | **Hydration (Cities)** | `lib/utils/hydration.ts` | `lib/db/cityRepo` | Manual city hydration | Batch loading pattern |
 | **Hydration (Currencies)** | `lib/utils/hydration.ts` | `lib/db/currencyRepo` | Manual currency hydration | Batch loading pattern |
 | **Hydration (Categories)** | `lib/utils/hydration.ts` | `lib/db/eventCategoryRepo` | Manual category hydration | ✅ CONSOLIDATED |
+|| **Hydration (Vehicle Types)** | `lib/utils/hydration.ts` | `lib/db/vehicleTypeRepo` | Manual vehicle type hydration | ✅ CONSOLIDATED |
 | **Event Formatters** | `lib/utils/eventFormatters.ts` | `lib/types/event` | Inline price formatting | ✅ EXTRACTED |
 | **Event Repository** | `lib/db/eventRepo.ts` | `lib/db/client` | Service-level DB access | Data access only |
 | **Event Service** | `lib/services/events.ts` | `lib/db/eventRepo`, `lib/utils/*` | Direct DB access | Business logic only |
