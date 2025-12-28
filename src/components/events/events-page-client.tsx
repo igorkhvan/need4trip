@@ -43,7 +43,7 @@ export function EventsPageClient() {
   const { stats, loading: statsLoading, refetching: statsRefetching, error: statsError } = useEventsStats(statsParams);
 
   // Handle 401 on "my" tab
-  const currentTab = searchParams.get("tab") || "upcoming";
+  const currentTab = searchParams.get("tab") || "all";
   if (listError && currentTab === "my" && !isAuthenticated) {
     openAuthModal();
   }
