@@ -13,7 +13,7 @@ export const revalidate = 0;
  * Zod schema for GET /api/events query params (SSOT § 10)
  */
 const eventsListQuerySchema = z.object({
-  tab: z.enum(['all', 'upcoming', 'my']).default('all'),
+  tab: z.enum(['all', 'upcoming', 'my']).default('upcoming'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(12),
   sort: z.enum(['date', 'name']).default('date'),
@@ -28,9 +28,9 @@ const eventsListQuerySchema = z.object({
  * Returns paginated list of events visible to current user.
  * 
  * SSOT § 10: Server-side pagination, offset-based.
- * - tab=all: public events
- * - tab=upcoming: public + future events
+ * - tab=upcoming (default): public + future events
  * - tab=my: owner/participant/access events (requires auth, throws 401 if not authenticated)
+ * - tab=all: public events
  * 
  * Response: { events: EventListItem[], meta: { total, page, limit, totalPages, hasMore, nextCursor } }
  */
