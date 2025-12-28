@@ -90,11 +90,15 @@ export function EventsGrid({
   }, []);
 
   // Get unique cities from events (client-side for filter dropdown)
+  // SSOT: Use city.id (UUID) instead of city.name for API compatibility
   const uniqueCities = useMemo(() => {
-    const cities = events
-      .map((e) => e.city?.name)
-      .filter((c): c is string => c !== null && c !== undefined && c.trim() !== "");
-    return Array.from(new Set(cities)).sort();
+    const citiesMap = new Map<string, { id: string; name: string }>();
+    events.forEach((e) => {
+      if (e.city?.id && e.city?.name) {
+        citiesMap.set(e.city.id, { id: e.city.id, name: e.city.name });
+      }
+    });
+    return Array.from(citiesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [events]);
 
   return (
@@ -194,8 +198,8 @@ export function EventsGrid({
               <SelectContent>
                 <SelectItem value="all">Все города</SelectItem>
                 {uniqueCities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
+                  <SelectItem key={city.id} value={city.id}>
+                    {city.name}
                   </SelectItem>
                 ))}
               </SelectContent>
