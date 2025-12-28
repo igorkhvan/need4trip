@@ -74,13 +74,14 @@ export function CreateEventPageContent({
     }
     
     // Success - redirect to created event page
-    const data = await res.json();
-    const createdEvent = data.event || data;
+    const response = await res.json();
+    const createdEvent = response.data?.event || response.event;
     
     if (createdEvent?.id) {
       router.push(`/events/${createdEvent.id}`);
     } else {
       // Fallback если нет id (не должно случиться, но на всякий случай)
+      console.error('No event.id in response:', response);
       router.push('/events');
       router.refresh();
     }
