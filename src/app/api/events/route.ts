@@ -13,7 +13,7 @@ export const revalidate = 0;
  * Zod schema for GET /api/events query params (SSOT § 10)
  */
 const eventsListQuerySchema = z.object({
-  tab: z.enum(['all', 'upcoming', 'my']).default('all'),
+  tab: z.enum(['all', 'upcoming', 'my']).default('upcoming'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(12),
   sort: z.enum(['date', 'name']).default('date'),

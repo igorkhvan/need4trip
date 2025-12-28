@@ -64,7 +64,7 @@ export function EventsGrid({
     if (tabParam === "upcoming" || tabParam === "my" || tabParam === "all") {
       return tabParam;
     }
-    return "all";
+    return "upcoming";
   }, [searchParams]);
   
   // Use loading transition for smooth filter changes
@@ -106,9 +106,9 @@ export function EventsGrid({
       {/* Tabs */}
       <Tabs
         tabs={[
-          { id: "all", label: "Все события" },
           { id: "upcoming", label: "Предстоящие" },
           { id: "my", label: "Мои события", hidden: !currentUserId },
+          { id: "all", label: "Все события" },
         ]}
         activeTab={activeTab}
         onChange={(tabId) => {

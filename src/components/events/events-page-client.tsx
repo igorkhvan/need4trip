@@ -31,7 +31,7 @@ export function EventsPageClient() {
   const { events, meta, loading: listLoading, refetching: listRefetching, error: listError } = useEventsQuery(searchParams);
 
   // Handle 401 on "my" tab
-  const currentTab = searchParams.get("tab") || "all";
+  const currentTab = searchParams.get("tab") || "upcoming";
   if (listError && currentTab === "my" && !isAuthenticated) {
     openAuthModal();
   }
@@ -55,7 +55,7 @@ export function EventsPageClient() {
       const params = new URLSearchParams(searchParams.toString());
 
       // Update/delete param
-      if (value === null || value === "" || value === "all") {
+      if (value === null || value === "" || value === "upcoming") {
         params.delete(name);
       } else {
         params.set(name, value);

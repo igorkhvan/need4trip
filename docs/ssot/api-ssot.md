@@ -1,7 +1,7 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Last Updated:** 28 декабря 2024  
 **This document is the ONLY authoritative source for all API endpoints.**
 
@@ -1835,7 +1835,7 @@ List events with filters, search, pagination. Server-side rendering.
 **Request:**
 
 - **Query params:**
-  - `tab` (optional): `all` | `upcoming` | `my` (default: `all`)
+  - `tab` (optional): `all` | `upcoming` | `my` (default: `upcoming`)
   - `page` (optional): Page number (default: 1)
   - `limit` (optional): Items per page (min: 1, max: 50, default: 12)
   - `sort` (optional): `date` | `name` (default: `date`)

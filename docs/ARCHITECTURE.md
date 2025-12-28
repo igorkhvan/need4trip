@@ -1,6 +1,8 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
+**Last Updated:** 2024-12-28  
+**Version:** 3.0  
 **Version:** 2.8  
 **Last Updated:** 28 December 2024 (Added Vehicle Type Hydration)  
 **This document is the ONLY authoritative source for architectural decisions.**
@@ -1003,6 +1005,25 @@ User sees events where:
 **Note:** `tab=my` does NOT filter by visibility. Events of ANY visibility level (public/unlisted/restricted) appear if user meets ownership/participant/access criteria.
 
 **API behavior for tab=my without auth:** Return HTTP 401 status + JSON error (code: "UNAUTHORIZED"). Do NOT return empty list. Do NOT redirect. UI may show auth modal.
+
+#### Default Tab Behavior (UI)
+
+**Default tab (when `?tab` param is missing):** `tab=upcoming`
+
+**Rationale:**
+- Most users want to see upcoming events by default
+- Reduces cognitive load (one less tab to click)
+- `tab=all` includes past events (less relevant for casual browsing)
+
+**UI Tab Order:**
+1. **Предстоящие** (`upcoming`) — default, показано первым
+2. **Мои события** (`my`) — authenticated users only
+3. **Все события** (`all`) — full catalog (past + future)
+
+**URL behavior:**
+- `/events` → defaults to `tab=upcoming` (param omitted in URL for cleaner URLs)
+- `/events?tab=all` → explicit `tab=all` (past + future events)
+- `/events?tab=my` → explicit `tab=my` (requires authentication)
 
 #### Pagination (Server-Side, Offset-Based)
 
