@@ -53,16 +53,16 @@ function cleanupCache(): void {
 }
 
 /**
- * Build normalized cache key from filters
+ * Build normalized filters key (WITHOUT tab)
+ * SSOT § 10: filters only, tab is added separately in cache key construction
  * Stable ordering and normalization to maximize cache hit rate
  */
 function buildFiltersKey(params: {
-  tab: 'all' | 'upcoming' | 'my';
   search?: string;
   cityId?: string;
   categoryId?: string;
 }): string {
-  const parts: string[] = [params.tab];
+  const parts: string[] = [];
   
   // Normalize search: trim, collapse whitespace, lowercase
   if (params.search) {
@@ -126,26 +126,26 @@ export async function GET(req: NextRequest) {
     // 3. Get current user (or null for anonymous)
     const currentUser = await getCurrentUser();
 
-    // 4. Enforce auth for tab=my BEFORE cache lookup
+    // 4. Enforce auth for tab=my BEFORE any cache lookup or service call
     if (params.tab === 'my' && !currentUser) {
-      // Consistent error format (will be caught by respondError)
-      const result = await getEventsStats(
-        {
-          tab: params.tab,
-          search: params.search,
-          cityId: params.cityId,
-          categoryId: params.categoryId,
-        },
-        currentUser
+      return respondJSON(
+        { error: { code: "UNAUTHORIZED", message: "Authentication required for tab=my" } },
+        undefined,
+        401
       );
-      return respondJSON(result);
     }
 
     // 5. Build normalized cache key
-    const filtersKey = buildFiltersKey(params);
+    // SSOT § 10: public|${tab}|${filters} OR ${userId}|my|${filters}
+    const filtersKey = buildFiltersKey({
+      search: params.search,
+      cityId: params.cityId,
+      categoryId: params.categoryId,
+    });
+    
     const cacheKey = params.tab === 'my' 
       ? `${currentUser!.id}|my|${filtersKey}`
-      : `public|${filtersKey}`;
+      : `public|${params.tab}|${filtersKey}`;
 
     // 6. Check cache
     const cached = statsCache.get(cacheKey);
@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
       return respondJSON(cached.payload);
     }
 
-    // 7. Call service layer (throws AuthError if tab=my without auth)
+    // 7. Call service layer
     const result = await getEventsStats(
       {
         tab: params.tab,
