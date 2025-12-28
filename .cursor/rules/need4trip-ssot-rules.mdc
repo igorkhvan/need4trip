@@ -11,12 +11,13 @@ alwaysApply: true
 
 ## 🎯 ГЛАВНЫЙ ПРИНЦИП
 
-> **ПЯТЬ SSOT ДОКУМЕНТОВ — ЕДИНСТВЕННЫЕ источники истины:**
+> **ШЕСТЬ SSOT ДОКУМЕНТОВ — ЕДИНСТВЕННЫЕ источники истины:**
 > 1. `docs/ARCHITECTURE.md` — архитектура, паттерны, ownership
 > 2. `docs/DATABASE.md` — структура БД, таблицы, индексы, RLS
 > 3. `docs/BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
 > 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты
-> 5. `docs/DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты ✨
+> 5. `docs/DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты
+> 6. `docs/ssot/api-ssot.md` — API endpoints, auth, rate limits ⚡ NEW
 
 ---
 
@@ -40,7 +41,8 @@ alwaysApply: true
 - BILLING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция BILLING)
 - ARCHITECTURE SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
 - TESTING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING)
-- DESIGN_SYSTEM SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DESIGN) ✨
+- DESIGN_SYSTEM SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DESIGN)
+- API SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция API) ⚡ NEW
 
 **Причина:** Rules файлы видны пользователю, Memory — только AI. Синхронизация = консистентность.
 
@@ -55,7 +57,8 @@ alwaysApply: true
    - База данных → читай `DATABASE.md`
    - Биллинг/лимиты → читай `BILLING_SYSTEM_ANALYSIS.md`
    - Тестирование → читай `TESTING.md`
-   - UI/UX/дизайн → читай `DESIGN_SYSTEM.md` ✨
+   - UI/UX/дизайн → читай `DESIGN_SYSTEM.md`
+   - API endpoints → читай `ssot/api-ssot.md` ⚡ NEW
 
 2. **Изучи SSOT:**
    - Найди соответствующий раздел
@@ -74,7 +77,8 @@ alwaysApply: true
    - Если изменилась БД → обнови `DATABASE.md`
    - Если изменился биллинг → обнови `BILLING_SYSTEM_ANALYSIS.md`
    - Если изменились тесты → обнови `TESTING.md`
-   - Если изменился UI/дизайн → обнови `DESIGN_SYSTEM.md` ✨
+   - Если изменился UI/дизайн → обнови `DESIGN_SYSTEM.md`
+   - Если изменились API endpoints → обнови `ssot/api-ssot.md` ⚡ NEW
 
 2. **Коммит:**
    - Код + обновленный SSOT в ОДНОМ коммите
@@ -561,3 +565,151 @@ STAGE 6: Caching Strategy
 **Помни:** Архитектура существует чтобы СНИЗИТЬ когнитивную нагрузку, а не увеличить её.
 
 **Single Source of Truth = Меньше мест для принятия решений = Меньше ошибок.**
+
+---
+
+## 🌐 docs/ssot/api-ssot.md (API SSOT) ⚡ NEW
+
+**Что содержит:**
+- Полная инвентаризация всех 50 API endpoints (API-001 to API-050)
+- Глобальные конвенции (auth, authorization, rate limiting, billing, error model)
+- Self-audit с coverage check (33 route handlers = 50 endpoints)
+- Security sanity check (abuse risks, cost risks, sensitive data)
+
+**Структура документа (3630 строк):**
+
+### 1. Global Sections
+- **Conventions:** HTTP methods, request/response format, runtime
+- **Auth model:** JWT (HTTP-only cookie), middleware verification
+- **Authorization:** Ownership checks, role-based (clubs), visibility-based (events)
+- **Rate limiting:** Upstash Redis, 4 tiers (critical 3/min, write 30/min, read 300/5min, guest 10/min)
+- **Billing touchpoints:** PaywallError (402), CreditConfirmationRequiredError (409)
+- **Error model:** AppError classes, special errors (402, 409)
+
+### 2. Endpoints Inventory (50 endpoints)
+
+**Auth (3 endpoints):**
+- API-001: POST/GET `/api/auth/telegram` (Telegram login)
+- API-002: GET `/api/auth/me` (get current user)
+- API-003: POST/GET `/api/auth/logout` (logout)
+
+**Users & Profile (10 endpoints):**
+- API-004 to API-008: Profile, credits, notifications
+- API-009 to API-013: User cars (CRUD)
+
+**Clubs (11 endpoints):**
+- API-014 to API-018: Clubs CRUD
+- API-019 to API-022: Club members management
+- API-023: Get club current plan
+- API-024: Export members (CSV, requires plan feature)
+
+**Events (11 endpoints):**
+- API-025 to API-027: List events, stats
+- API-028 to API-031: Event CRUD, registration toggle
+- API-032 to API-035: Participants management (guest-friendly)
+
+**Billing (4 endpoints):**
+- API-036: Get billing products
+- API-037: Create purchase intent (Kaspi stub)
+- API-038: Get transaction status
+- API-039: DEV settle transaction (DEV only)
+
+**Reference Data (7 endpoints):**
+- API-040 to API-046: Plans, cities, currencies, categories, car brands, vehicle types
+
+**AI (1 endpoint):**
+- API-047: POST `/api/ai/events/generate-rules` (OpenAI, rate limit 3 req/min)
+
+**Admin (1 endpoint):**
+- API-048: POST `/api/admin/cache/clear` (secret-protected)
+
+**Cron (2 endpoints):**
+- API-049, API-050: Process notifications queue
+
+### 3. Self-Audit
+
+**Coverage check:**
+- ✅ 33 route handlers discovered
+- ✅ 50 endpoints documented (some files have multiple methods)
+- ✅ All endpoints have unique Endpoint ID
+- ✅ All endpoints have Security & Abuse section
+
+**Security risks identified:**
+- **High abuse risk:** API-033 (guest event registration, no auth required)
+- **Critical cost risk:** API-047 (AI generation, OpenAI API costs, 3 req/min limit)
+- **Sensitive data:** API-024 (CSV export with personal data)
+
+**Known gaps/TODOs:**
+- Authorization TODO in API-038 (transaction status, no club owner check)
+- Club subscription settlement not implemented (API-039 TODO)
+- Kaspi payment provider in STUB mode (API-037)
+
+### 4. SSOT Rules
+
+**Обязательно для всех API изменений:**
+
+```typescript
+// ✅ ПЕРЕД изменением endpoint:
+// 1. Читаю docs/ssot/api-ssot.md
+// 2. Находжу соответствующий API-XXX
+// 3. Изучаю текущий контракт, auth, rate limits
+
+// ✅ ПОСЛЕ изменения endpoint:
+// 1. Обновляю docs/ssot/api-ssot.md (тот же PR)
+// 2. Обновляю версию документа
+// 3. Коммичу код + SSOT вместе
+```
+
+**Правила:**
+- ❌ Новый endpoint без документации в api-ssot.md = rejected PR
+- ❌ Изменение endpoint behavior без обновления SSOT = rejected PR
+- ❌ Дублирующая/противоречивая API документация вне SSOT = удалить
+- ✅ API SSOT имеет такой же приоритет как ARCHITECTURE.md, BILLING_SYSTEM_ANALYSIS.md
+
+**Для AI/Cursor:**
+При любой работе с API (анализ, рефакторинг, добавление):
+1. Прочитать `docs/ssot/api-ssot.md`
+2. Учесть текущие контракты, auth, rate limits
+3. Явно указать несоответствия code ↔ SSOT
+
+**Ключевые паттерны:**
+
+```typescript
+// ✅ Auth (protected endpoints)
+const user = await getCurrentUserFromMiddleware(request);
+if (!user) throw new UnauthorizedError();
+
+// ✅ Auth (optional auth endpoints)
+const user = await getCurrentUser(); // May be null
+
+// ✅ Guest access (participants)
+const guestSessionId = await getOrCreateGuestSessionId();
+
+// ✅ Rate limiting (middleware handles automatically)
+// Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+
+// ✅ Billing enforcement
+await enforceClubAction({
+  clubId: string,
+  action: BillingActionCode,
+  context?: { ... }
+}); // Throws PaywallError (402) if limit exceeded
+
+// ✅ Response format
+return respondSuccess({ data }, message?, status?, headers?);
+return respondError(error); // Handles all error types
+```
+
+**ЗАПРЕЩЕНО:**
+- ❌ Новый endpoint без Security & Abuse секции
+- ❌ Изменение rate limit без обновления SSOT
+- ❌ Добавление secret-protected endpoint без документации
+- ❌ Изменение auth model без обновления § 2
+
+**ОБЯЗАТЕЛЬНО:**
+- ✅ Каждый endpoint имеет Endpoint ID (API-XXX)
+- ✅ Каждый endpoint имеет Security & Abuse секцию
+- ✅ Изменения в middleware отражены в § 2, § 4
+- ✅ Новые error types добавлены в § 6
+
+**Правило:** API SSOT — это первая точка контакта для любой работы с endpoints. Читай ДО изменений, обновляй ПОСЛЕ изменений.
