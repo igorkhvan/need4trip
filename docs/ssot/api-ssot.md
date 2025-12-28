@@ -1,8 +1,8 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.0.0  
-**Last Updated:** 28 December 2024  
+**Version:** 1.1.0  
+**Last Updated:** 28 декабря 2024  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
@@ -1960,61 +1960,7 @@ Create new event (personal or club).
 
 ---
 
-#### API-027: Get Event Stats
-
-**Endpoint ID:** API-027  
-**Method:** GET  
-**Path:** `/api/events/stats`  
-**Runtime:** Node.js  
-**Auth:** Optional (tab=my requires auth)  
-**Auth mechanism:** JWT (optional for public tabs)  
-**Authorization:** Same as API-025 (visibility-based)  
-
-**Purpose:**  
-Get total count of events matching filters (for pagination metadata).
-
-**Request:**
-
-- **Query params:** Same as API-025 (tab, search, cityId, categoryId)
-- **Idempotency:** Yes (read-only)
-
-**Response:**
-
-- **Success:** 200
-  ```json
-  {
-    "total": 42
-  }
-  ```
-- **Side effects:** None
-
-**Errors:**
-
-| Status | Condition | Notes |
-|--------|-----------|-------|
-| 400 | Validation error | Invalid query params (Zod) |
-| 401 | tab=my without auth | AuthError |
-
-**Security & Abuse:**
-
-- **Rate limit:** read tier (300 req/5min)
-- **Spam / Cost abuse risk:** Low (read-only, cached 60s)
-- **Sensitive data exposure:** No
-
-**Dependencies:**
-
-- Supabase (events table)
-- In-process cache (60s TTL, max 300 entries)
-
-**Code pointers:**
-
-- Route handler: `/src/app/api/events/stats/route.ts`
-- Key functions: `getEventsStats()`
-- SSOT: `docs/ARCHITECTURE.md § 10` (Stats endpoint with in-process cache)
-
----
-
-#### API-028: Get Event Details
+#### API-027: Get Event Details
 
 **Endpoint ID:** API-028  
 **Method:** GET  
@@ -2076,9 +2022,9 @@ Get full event details with hydrated relations (city, category, organizer, parti
 
 ---
 
-#### API-029: Update Event
+#### API-028: Update Event
 
-**Endpoint ID:** API-029  
+**Endpoint ID:** API-028  
 **Method:** PUT  
 **Path:** `/api/events/[id]`  
 **Runtime:** Node.js  
@@ -2138,9 +2084,9 @@ Update event details.
 
 ---
 
-#### API-030: Delete Event
+#### API-029: Delete Event
 
-**Endpoint ID:** API-030  
+**Endpoint ID:** API-029  
 **Method:** DELETE  
 **Path:** `/api/events/[id]`  
 **Runtime:** Node.js  
@@ -2194,9 +2140,9 @@ Delete event (cascades participants, access grants).
 
 ---
 
-#### API-031: Toggle Event Registration
+#### API-030: Toggle Event Registration
 
-**Endpoint ID:** API-031  
+**Endpoint ID:** API-030  
 **Method:** PATCH  
 **Path:** `/api/events/[id]/registration`  
 **Runtime:** Node.js  
@@ -2257,9 +2203,9 @@ Manually open/close event registration (for future events only).
 
 ---
 
-#### API-032: Get Event Participants
+#### API-031: Get Event Participants
 
-**Endpoint ID:** API-032  
+**Endpoint ID:** API-031  
 **Method:** GET  
 **Path:** `/api/events/[id]/participants`  
 **Runtime:** Node.js  
@@ -2317,9 +2263,9 @@ Get list of event participants with status, user details.
 
 ---
 
-#### API-033: Register for Event (Guest or User)
+#### API-032: Register for Event (Guest or User)
 
-**Endpoint ID:** API-033  
+**Endpoint ID:** API-032  
 **Method:** POST  
 **Path:** `/api/events/[id]/participants`  
 **Runtime:** Node.js  
@@ -2385,9 +2331,9 @@ Register for event (authenticated user OR guest).
 
 ---
 
-#### API-034: Update Participant
+#### API-033: Update Participant
 
-**Endpoint ID:** API-034  
+**Endpoint ID:** API-033  
 **Method:** PATCH  
 **Path:** `/api/events/[id]/participants/[participantId]`  
 **Runtime:** Node.js  
@@ -2449,9 +2395,9 @@ Update participant status, vehicle count, etc.
 
 ---
 
-#### API-035: Delete Participant
+#### API-034: Delete Participant
 
-**Endpoint ID:** API-035  
+**Endpoint ID:** API-034  
 **Method:** DELETE  
 **Path:** `/api/events/[id]/participants/[participantId]`  
 **Runtime:** Node.js  
@@ -2505,9 +2451,9 @@ Cancel event registration.
 
 ### 9.5 Billing
 
-#### API-036: Get Billing Products
+#### API-035: Get Billing Products
 
-**Endpoint ID:** API-036  
+**Endpoint ID:** API-035  
 **Method:** GET  
 **Path:** `/api/billing/products`  
 **Runtime:** Node.js  
@@ -2563,9 +2509,9 @@ List active purchasable products (one-off credits).
 
 ---
 
-#### API-037: Create Purchase Intent
+#### API-036: Create Purchase Intent
 
-**Endpoint ID:** API-037  
+**Endpoint ID:** API-036  
 **Method:** POST  
 **Path:** `/api/billing/purchase-intent`  
 **Runtime:** Node.js  
@@ -2640,9 +2586,9 @@ Create purchase intent for one-off credit OR club subscription. Returns Kaspi pa
 
 ---
 
-#### API-038: Get Transaction Status
+#### API-037: Get Transaction Status
 
-**Endpoint ID:** API-038  
+**Endpoint ID:** API-037  
 **Method:** GET  
 **Path:** `/api/billing/transactions/status`  
 **Runtime:** Node.js  
@@ -2703,9 +2649,9 @@ Poll transaction status (for payment confirmation in paywall).
 
 ---
 
-#### API-039: DEV Settle Transaction
+#### API-038: DEV Settle Transaction
 
-**Endpoint ID:** API-039  
+**Endpoint ID:** API-038  
 **Method:** POST  
 **Path:** `/api/dev/billing/settle`  
 **Runtime:** Node.js  
@@ -2773,9 +2719,9 @@ Poll transaction status (for payment confirmation in paywall).
 
 ### 9.6 Reference Data
 
-#### API-040: List Plans
+#### API-039: List Plans
 
-**Endpoint ID:** API-040  
+**Endpoint ID:** API-039  
 **Method:** GET  
 **Path:** `/api/plans`  
 **Runtime:** Node.js  
@@ -2836,9 +2782,9 @@ List all club plans (for pricing page).
 
 ---
 
-#### API-041: List Cities
+#### API-040: List Cities
 
-**Endpoint ID:** API-041  
+**Endpoint ID:** API-040  
 **Method:** GET  
 **Path:** `/api/cities`  
 **Runtime:** Node.js  
@@ -2899,9 +2845,9 @@ List cities with search, filter (popular, by IDs).
 
 ---
 
-#### API-042: Get City by ID
+#### API-041: Get City by ID
 
-**Endpoint ID:** API-042  
+**Endpoint ID:** API-041  
 **Method:** GET  
 **Path:** `/api/cities/[id]`  
 **Runtime:** Node.js  
@@ -2959,9 +2905,9 @@ Get city details by UUID.
 
 ---
 
-#### API-043: List Currencies
+#### API-042: List Currencies
 
-**Endpoint ID:** API-043  
+**Endpoint ID:** API-042  
 **Method:** GET  
 **Path:** `/api/currencies`  
 **Runtime:** Node.js  
@@ -3016,9 +2962,9 @@ List active currencies (for paid events).
 
 ---
 
-#### API-044: List Event Categories
+#### API-043: List Event Categories
 
-**Endpoint ID:** API-044  
+**Endpoint ID:** API-043  
 **Method:** GET  
 **Path:** `/api/event-categories`  
 **Runtime:** Node.js  
@@ -3078,9 +3024,9 @@ List active event categories (offroad, camping, etc).
 
 ---
 
-#### API-045: List Car Brands
+#### API-044: List Car Brands
 
-**Endpoint ID:** API-045  
+**Endpoint ID:** API-044  
 **Method:** GET  
 **Path:** `/api/car-brands`  
 **Runtime:** Node.js  
@@ -3137,9 +3083,9 @@ List car brands (Toyota, Land Rover, etc).
 
 ---
 
-#### API-046: List Vehicle Types
+#### API-045: List Vehicle Types
 
-**Endpoint ID:** API-046  
+**Endpoint ID:** API-045  
 **Method:** GET  
 **Path:** `/api/vehicle-types`  
 **Runtime:** Node.js  
@@ -3197,9 +3143,9 @@ List active vehicle types (SUV, sedan, etc) for forms.
 
 ### 9.7 AI
 
-#### API-047: Generate Event Rules (AI)
+#### API-046: Generate Event Rules (AI)
 
-**Endpoint ID:** API-047  
+**Endpoint ID:** API-046  
 **Method:** POST  
 **Path:** `/api/ai/events/generate-rules`  
 **Runtime:** Node.js  
@@ -3272,9 +3218,9 @@ Generate event rules text using OpenAI GPT (based on event data).
 
 ### 9.8 Admin
 
-#### API-048: Clear Caches
+#### API-047: Clear Caches
 
-**Endpoint ID:** API-048  
+**Endpoint ID:** API-047  
 **Method:** POST  
 **Path:** `/api/admin/cache/clear`  
 **Runtime:** Node.js  
@@ -3332,9 +3278,9 @@ Manually clear all in-memory static caches (plans, currencies, car brands, etc).
 
 ### 9.9 Cron
 
-#### API-049: Process Notifications Queue
+#### API-048: Process Notifications Queue
 
-**Endpoint ID:** API-049  
+**Endpoint ID:** API-048  
 **Method:** POST  
 **Path:** `/api/cron/process-notifications`  
 **Runtime:** Node.js  
@@ -3407,9 +3353,9 @@ Process notification queue (send pending notifications, reset stuck ones).
 
 ---
 
-#### API-050: Get Notification Queue Stats (Manual)
+#### API-049: Get Notification Queue Stats (Manual)
 
-**Endpoint ID:** API-050  
+**Endpoint ID:** API-049  
 **Method:** GET  
 **Path:** `/api/cron/process-notifications`  
 **Runtime:** Node.js  
@@ -3487,30 +3433,29 @@ Total route handlers discovered: **33 files**
 | 12 | `/src/app/api/clubs/[id]/current-plan/route.ts` | GET | API-023 |
 | 13 | `/src/app/api/clubs/[id]/export/route.ts` | GET | API-024 |
 | 14 | `/src/app/api/events/route.ts` | GET, POST | API-025, API-026 |
-| 15 | `/src/app/api/events/stats/route.ts` | GET | API-027 |
-| 16 | `/src/app/api/events/[id]/route.ts` | GET, PUT, DELETE | API-028 to API-030 |
-| 17 | `/src/app/api/events/[id]/registration/route.ts` | PATCH | API-031 |
-| 18 | `/src/app/api/events/[id]/participants/route.ts` | GET, POST | API-032, API-033 |
-| 19 | `/src/app/api/events/[id]/participants/[participantId]/route.ts` | PATCH, DELETE | API-034, API-035 |
-| 20 | `/src/app/api/billing/products/route.ts` | GET | API-036 |
-| 21 | `/src/app/api/billing/purchase-intent/route.ts` | POST | API-037 |
-| 22 | `/src/app/api/billing/transactions/status/route.ts` | GET | API-038 |
-| 23 | `/src/app/api/dev/billing/settle/route.ts` | POST | API-039 |
-| 24 | `/src/app/api/plans/route.ts` | GET | API-040 |
-| 25 | `/src/app/api/cities/route.ts` | GET | API-041 |
-| 26 | `/src/app/api/cities/[id]/route.ts` | GET | API-042 |
-| 27 | `/src/app/api/currencies/route.ts` | GET | API-043 |
-| 28 | `/src/app/api/event-categories/route.ts` | GET | API-044 |
-| 29 | `/src/app/api/car-brands/route.ts` | GET | API-045 |
-| 30 | `/src/app/api/vehicle-types/route.ts` | GET | API-046 |
-| 31 | `/src/app/api/ai/events/generate-rules/route.ts` | POST | API-047 |
-| 32 | `/src/app/api/admin/cache/clear/route.ts` | POST | API-048 |
-| 33 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-049, API-050 |
+| 15 | `/src/app/api/events/[id]/route.ts` | GET, PUT, DELETE | API-027 to API-029 |
+| 16 | `/src/app/api/events/[id]/registration/route.ts` | PATCH | API-030 |
+| 17 | `/src/app/api/events/[id]/participants/route.ts` | GET, POST | API-031, API-032 |
+| 18 | `/src/app/api/events/[id]/participants/[participantId]/route.ts` | PATCH, DELETE | API-033, API-034 |
+| 19 | `/src/app/api/billing/products/route.ts` | GET | API-035 |
+| 20 | `/src/app/api/billing/purchase-intent/route.ts` | POST | API-036 |
+| 21 | `/src/app/api/billing/transactions/status/route.ts` | GET | API-037 |
+| 22 | `/src/app/api/dev/billing/settle/route.ts` | POST | API-038 |
+| 23 | `/src/app/api/plans/route.ts` | GET | API-039 |
+| 24 | `/src/app/api/cities/route.ts` | GET | API-040 |
+| 25 | `/src/app/api/cities/[id]/route.ts` | GET | API-041 |
+| 26 | `/src/app/api/currencies/route.ts` | GET | API-042 |
+| 27 | `/src/app/api/event-categories/route.ts` | GET | API-043 |
+| 28 | `/src/app/api/car-brands/route.ts` | GET | API-044 |
+| 29 | `/src/app/api/vehicle-types/route.ts` | GET | API-045 |
+| 30 | `/src/app/api/ai/events/generate-rules/route.ts` | POST | API-046 |
+| 31 | `/src/app/api/admin/cache/clear/route.ts` | POST | API-047 |
+| 32 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 33
-- **Total endpoints documented:** 50 (API-001 to API-050)
+- **Total route handler files:** 32
+- **Total endpoints documented:** 49 (API-001 to API-049)
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -3526,29 +3471,29 @@ Total route handlers discovered: **33 files**
 - None (all endpoints have middleware rate limiting OR secret protection)
 
 **Endpoints with HIGH abuse risk:**
-- API-033: Register for Event (guest registration, no auth, DB insert)
+- API-032: Register for Event (guest registration, no auth, DB insert)
 
 **Endpoints with CRITICAL cost abuse risk:**
-- API-047: Generate Event Rules (AI) — OpenAI API costs per token, rate limit 3 req/min
+- API-046: Generate Event Rules (AI) — OpenAI API costs per token, rate limit 3 req/min
 
 **Endpoints returning sensitive data:**
 - API-024: Export Club Members (CSV) — member personal data (telegram, city, car)
-- API-038: Get Transaction Status — transaction amount (but only own transactions)
+- API-037: Get Transaction Status — transaction amount (but only own transactions)
 
 **Billing/Credits/AI cost touchpoints:**
-- API-026, API-029: Create/Update Event (consumes one-off credits for personal events 16-500 participants)
-- API-037: Create Purchase Intent (creates pending transaction)
-- API-039: DEV Settle Transaction (issues credits, DEV only)
-- API-047: Generate Event Rules (OpenAI API costs)
+- API-026, API-028: Create/Update Event (consumes one-off credits for personal events 16-500 participants)
+- API-036: Create Purchase Intent (creates pending transaction)
+- API-038: DEV Settle Transaction (issues credits, DEV only)
+- API-046: Generate Event Rules (OpenAI API costs)
 
 ### 10.4 Unknowns & Gaps
 
 **Known gaps:**
-1. **Authorization TODO** in API-038: Transaction status query doesn't check club owner access (only user_id match)
-2. **Club subscription settlement** in API-039: TODO comment, not yet implemented
-3. **Kaspi payment provider** in API-037: STUB mode, fake payment URLs
+1. **Authorization TODO** in API-037: Transaction status query doesn't check club owner access (only user_id match)
+2. **Club subscription settlement** in API-038: TODO comment, not yet implemented
+3. **Kaspi payment provider** in API-036: STUB mode, fake payment URLs
 4. **Rate limiting on AI endpoint:** 3 req/min tier exists, but might need per-user quota tracking for production abuse prevention
-5. **Guest participant spam:** API-033 allows unlimited guest registrations per IP (rate limit 10 req/min, but could rotate IPs)
+5. **Guest participant spam:** API-032 allows unlimited guest registrations per IP (rate limit 10 req/min, but could rotate IPs)
 
 **Infrastructure unknowns:**
 - Actual Upstash Redis latency in production (middleware logs slow checks >100ms)

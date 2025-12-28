@@ -12,18 +12,14 @@
 
 import { useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Users, TrendingUp } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { EventsGrid } from "@/components/events/events-grid";
-import { StatsSkeleton } from "@/components/events/stats-skeleton";
 import { EventCardSkeletonGrid } from "@/components/ui/skeletons/event-card-skeleton";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { LoadingBar } from "@/components/ui/loading-bar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useEventsQuery } from "@/hooks/use-events-query";
-import { useEventsStats } from "@/hooks/use-events-stats";
 
 export function EventsPageClient() {
   const router = useRouter();
@@ -31,16 +27,8 @@ export function EventsPageClient() {
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openModal: openAuthModal } = useAuthModalContext();
 
-  // Build params WITHOUT "page" for stats query
-  const statsParams = useMemo(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("page");
-    return params as unknown as ReturnType<typeof useSearchParams>;
-  }, [searchParams]);
-
-  // Data fetching (independent)
+  // Data fetching
   const { events, meta, loading: listLoading, refetching: listRefetching, error: listError } = useEventsQuery(searchParams);
-  const { stats, loading: statsLoading, refetching: statsRefetching, error: statsError } = useEventsStats(statsParams);
 
   // Handle 401 on "my" tab
   const currentTab = searchParams.get("tab") || "all";
@@ -147,67 +135,6 @@ export function EventsPageClient() {
           className="h-12 rounded-xl px-6 text-base shadow-sm"
         />
       </div>
-
-      {/* Stats Section */}
-      {statsLoading ? (
-        <StatsSkeleton />
-      ) : statsError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-          Не удалось загрузить статистику
-        </div>
-      ) : (
-        <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide sm:mx-0 sm:px-0">
-          <div className="flex gap-4 md:grid md:grid-cols-3 min-w-max md:min-w-0">
-            {/* Card 1: Всего событий */}
-            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0 relative">
-              {statsRefetching && <LoadingBar />}
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <div className="mb-2 text-sm text-muted-foreground">Всего событий</div>
-                  <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                    {stats?.total ?? 0}
-                  </div>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
-                  <Calendar className="h-6 w-6 text-[var(--color-primary)]" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Card 2: Активных регистраций */}
-            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0 relative">
-              {statsRefetching && <LoadingBar />}
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <div className="mb-2 text-sm text-muted-foreground">Активных регистраций</div>
-                  <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                    {meta?.total ?? 0}
-                  </div>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-success-bg)]">
-                  <TrendingUp className="h-6 w-6 text-[var(--color-success)]" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Card 3: Всего участников */}
-            <Card className="border-[var(--color-border)] shadow-sm min-w-[240px] md:min-w-0 relative">
-              {statsRefetching && <LoadingBar />}
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <div className="mb-2 text-sm text-muted-foreground">Всего участников</div>
-                  <div className="text-4xl font-bold leading-none text-[var(--color-text)]">
-                    {events.reduce((sum, e) => sum + (e.participantsCount ?? 0), 0)}
-                  </div>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-bg)]">
-                  <Users className="h-6 w-6 text-[var(--color-primary)]" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
 
       {/* Events List Section */}
       <div className="relative">

@@ -12,7 +12,6 @@ import {
   queryEventsPaginated,
   queryEventsByIdsPaginated,
   countEventsByFilters,
-  countEventsByIds,
   type EventListItem,
   type EventListFilters,
   type EventListSort,
@@ -1126,42 +1125,4 @@ async function hydrateCategoriesByIds(items: EventListItem[]): Promise<Map<strin
     result.set(id, { id: category.id, name: category.nameRu, icon: category.icon });
   }
   return result;
-}
-
-/**
- * Get events stats (count only) for filters
- * 
- * @param filters Filters (tab, search, city, category)
- * @param currentUser Current user (required for tab=my)
- * @returns Total count
- * @throws AuthError if tab=my without auth (401)
- */
-export async function getEventsStats(
-  filters: EventListFilters,
-  currentUser: CurrentUser | null
-): Promise<{ total: number }> {
-  if (filters.tab === 'my') {
-    if (!currentUser) {
-      throw new AuthError("Authentication required for tab=my", undefined, 401);
-    }
-
-    // Collect event IDs (same logic as listVisibleEventsForUserPaginated)
-    const [ownerEventIds, participantEventIds, accessEventIds] = await Promise.all([
-      listEventsByCreator(currentUser.id, 1, 10000)
-        .then(result => result.data.map(e => e.id))
-        .catch(() => []),
-      listEventIdsForUser(currentUser.id).catch(() => []),
-      listAccessibleEventIds(currentUser.id).catch(() => []),
-    ]);
-
-    const allIds = new Set([...ownerEventIds, ...participantEventIds, ...accessEventIds]);
-    const uniqueIds = Array.from(allIds);
-
-    const total = await countEventsByIds(uniqueIds, filters);
-    return { total };
-  }
-
-  // tab=all or tab=upcoming
-  const total = await countEventsByFilters(filters);
-  return { total };
 }

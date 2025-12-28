@@ -18,7 +18,7 @@
 7. [Caching Strategy](#caching-strategy)
 8. [Authentication & Authorization](#authentication--authorization)
 9. [Events Domain Policies](#events-domain-policies)
-10. [Events Listing, Pagination, and Stats (SSOT)](#events-listing-pagination-and-stats-ssot) ⚡
+10. [Events Listing and Pagination (SSOT)](#events-listing-and-pagination-ssot) ⚡
 11. [Type Safety Contracts](#type-safety-contracts)
 12. [Naming & Project Structure](#naming--project-structure)
 13. [Client-Side Data Fetching](#client-side-data-fetching)
@@ -586,7 +586,7 @@ export async function getCurrencyByCode(code: string): Promise<Currency | null> 
 - **5 minutes**: Dynamic reference data (pricing, plans)
 
 **NOT cached:**
-- ❌ Events (change frequently, user-specific visibility; **exception:** event counts/stats may use short-lived **in-process cache only**, see § 10)
+- ❌ Events (change frequently, user-specific visibility)
 - ❌ Participants (real-time registration data)
 - ❌ Users (privacy, authentication state)
 - ❌ Club subscriptions (billing state)
@@ -635,7 +635,6 @@ export const revalidate = 3600; // 1 hour
 - API routes with stable public data (e.g. reference tables) → `revalidate = 3600`
 - Server Components → Use `cache()` from React
 - DO NOT mix caching strategies (StaticCache vs unstable_cache)
-- For events: listings NO cache, stats use in-process cache 60s TTL (see § 10)
 
 ### Cache Invalidation
 
@@ -970,11 +969,11 @@ function validateCustomFieldsUpdate(
 
 ---
 
-## 10. Events Listing, Pagination, and Stats (SSOT)
+## 10. Events Listing and Pagination (SSOT)
 
 ### Decision Matrix (LOCKED)
 
-This section defines the ONLY authoritative rules for events listing, pagination, filtering, and stats endpoints.
+This section defines the ONLY authoritative rules for events listing, pagination, and filtering.
 
 #### Visibility Semantics (enum values fixed: public/unlisted/restricted)
 
@@ -1145,88 +1144,109 @@ Response (401) if tab=my without auth:
 }
 ```
 
-**GET /api/events/stats**
+---
 
-Request (query params):
+### Future: Statistics & Analytics (Guidance)
+
+**Status:** NOT IMPLEMENTED (removed 2024-12-28)
+
+If statistics/analytics endpoints are needed in the future, follow these principles:
+
+#### When Statistics ARE Needed
+
+Statistics endpoints make sense when:
+- ✅ Count query is significantly simpler than full listing query
+- ✅ Statistics are displayed BEFORE user applies pagination (e.g., dashboard totals)
+- ✅ Multiple aggregations needed (count, sum, avg) that would be expensive to compute client-side
+- ✅ Statistics refresh independently from listings (different polling intervals)
+
+Statistics endpoints are NOT needed when:
+- ❌ `meta.total` from paginated listing already provides the count
+- ❌ Statistics can be computed client-side from loaded data
+- ❌ Count query has same complexity as listing query (no performance gain)
+
+#### Recommended Architecture (If Needed)
+
+**1. Use `meta` from paginated endpoints:**
 
 ```typescript
+// GET /api/events?tab=all&page=1&limit=12
 {
-  tab?: 'all' | 'upcoming' | 'my',  // default: 'all'
-  search?: string,                  // optional
-  cityId?: string,                  // optional
-  categoryId?: string               // optional
-}
-```
-
-Response (200):
-
-```typescript
-{
-  total: number  // Total events matching filters (before pagination)
-}
-```
-
-Response (401) if tab=my without auth:
-
-```typescript
-{
-  error: {
-    code: "UNAUTHORIZED",
-    message: "Authentication required"
+  events: EventListItem[],
+  meta: {
+    total: 42,           // ← Use this for "Total Events" stat
+    page: 1,
+    limit: 12,
+    totalPages: 4,
+    hasMore: true
   }
 }
-```
-
-#### Stats Caching Strategy (Client-Side)
-
-**Rule:** Stats use **stale-while-revalidate** pattern to prevent skeleton flashing:
-
-- **Initial load:** Show skeleton, fetch stats
-- **Tab/filter change:** Keep previous stats visible, refetch in background, show LoadingBar
-- **Page change:** Stats do NOT refetch (page param excluded from stats query)
-
-**Implementation:**
-
-```typescript
-// Hook pattern (useEventsStats)
-const [stats, setStats] = useState(null);
-const [loading, setLoading] = useState(true);      // TRUE only on initial mount
-const [refetching, setRefetching] = useState(false); // TRUE on background refetch
-
-useEffect(() => {
-  if (stats === null) {
-    setLoading(true);  // Initial load → show skeleton
-  } else {
-    setRefetching(true);  // Background refetch → show LoadingBar
-  }
-  
-  // Fetch stats...
-  
-  setLoading(false);
-  setRefetching(false);
-}, [searchParams]);
-```
-
-**UI pattern:**
-
-```tsx
-{statsLoading ? (
-  <StatsSkeleton />  // Initial load
-) : (
-  <Card className="relative">
-    {statsRefetching && <LoadingBar />}  // Background refetch
-    <CardContent>{stats.total}</CardContent>
-  </Card>
-)}
 ```
 
 **Benefits:**
-- ✅ No skeleton flashing on tab/filter changes
-- ✅ Instant visual feedback (previous data visible)
-- ✅ Perceived performance boost
-- ✅ Better UX for frequent filter adjustments
+- ✅ Single DB query (with `COUNT(*) OVER()`)
+- ✅ Always synchronized with listing
+- ✅ No cache invalidation issues
+- ✅ Simpler codebase
 
-**See also:** `docs/DESIGN_SYSTEM.md` § Loading States for LoadingBar component details.
+**2. If separate stats endpoint is required:**
+
+```typescript
+// GET /api/events/stats (ONLY if dashboard needs it BEFORE listing loads)
+{
+  totalEvents: 142,
+  upcomingEvents: 89,
+  activeParticipants: 2341,
+  // ... other aggregations
+}
+```
+
+**Critical Rules:**
+- ✅ **NO in-process cache** (use Redis if caching needed)
+- ✅ **TTL < 60s** (stale stats worse than slightly slower query)
+- ✅ **Document why** separate endpoint exists (justify in SSOT)
+- ✅ **`meta` approach preferred** unless strong justification
+
+**Why NOT in-process cache:**
+- ❌ Memory leaks (unbounded growth in serverless)
+- ❌ Cache invalidation complexity
+- ❌ Inconsistent state across instances (Vercel multi-region)
+- ❌ Stale data (60s TTL means stats lag behind listings)
+
+**Alternative: Redis cache (if needed)**
+```typescript
+// Use Upstash Redis (already used for rate limiting)
+const cached = await redis.get(`stats:events:${cacheKey}`);
+if (cached) return JSON.parse(cached);
+
+const stats = await computeStats();
+await redis.setex(`stats:events:${cacheKey}`, 60, JSON.stringify(stats));
+return stats;
+```
+
+**Benefits of Redis:**
+- ✅ Centralized (consistent across instances)
+- ✅ Built-in TTL
+- ✅ Can invalidate explicitly
+- ✅ Scales independently
+
+#### Historical Context
+
+**Why stats endpoint was removed (2024-12-28):**
+
+1. **Duplication:** `GET /api/events/stats` returned `{ total: N }` which was IDENTICAL to `meta.total` from `GET /api/events`
+2. **Double queries:** Every page load made 2 DB queries instead of 1 (same SQL conditions, same result)
+3. **Cache overhead:** In-process Map with TTL management, cleanup logic, key normalization — all for a duplicate count
+4. **Stale data risk:** Stats cached 60s, listings fresh → potential mismatch in UI
+5. **No performance gain:** Count query had identical complexity to listing query (same filters, same indexes)
+
+**Result after removal:**
+- ✅ -50% API requests
+- ✅ -50% DB queries
+- ✅ -100% cache management code
+- ✅ Single source of truth (`meta.total`)
+
+**Decision:** Stats endpoint removal was correct. Future stats should use `meta` approach unless dashboard requirements explicitly justify separate endpoint with different aggregations.
 
 ---
 
@@ -1247,14 +1267,12 @@ if (tab === 'my') { ... }
 
 #### Caching Matrix (CRITICAL)
 
-**Rule:** Listings are always fresh (no cache). Stats endpoints use selective in-process caching for performance.
+**Rule:** Listings are always fresh (no cache). Future statistics endpoints should use Redis if caching is needed.
 
-| Endpoint | Tab | User-Specific | Next.js Cache | In-Process Cache | TTL |
-|----------|-----|--------------|---------------|-----------------|-----|
-| GET /api/events | all, upcoming | ❌ No | dynamic: 'force-dynamic' | ❌ None | 0s |
-| GET /api/events | my | ✅ Yes | dynamic: 'force-dynamic' | ❌ None | 0s |
-| GET /api/events/stats | all, upcoming | ❌ No | dynamic: 'force-dynamic' | ✅ Yes (keyed by tab+filters) | 60s |
-| GET /api/events/stats | my | ✅ Yes | dynamic: 'force-dynamic' | ✅ Yes (keyed by userId+tab+filters) | 60s |
+| Endpoint | Tab | User-Specific | Next.js Cache | Notes |
+|----------|-----|--------------|---------------|-------|
+| GET /api/events | all, upcoming | ❌ No | dynamic: 'force-dynamic' | Always fresh |
+| GET /api/events | my | ✅ Yes | dynamic: 'force-dynamic' | User-specific, always fresh |
 
 **Explanation:**
 
@@ -1262,127 +1280,25 @@ if (tab === 'my') { ... }
    - tab=all/upcoming: `dynamic: 'force-dynamic'` (public data, but frequently changing)
    - tab=my: `dynamic: 'force-dynamic'` (user-specific)
    - Rationale: Events change frequently (new registrations, edits, visibility changes)
+   - `meta.total` provided in response for count statistics
 
-2. **Stats (GET /api/events/stats):**
-   - ALL tabs: `dynamic: 'force-dynamic'` (no Next.js revalidate)
-   - tab=all/upcoming: in-process cache (Map) keyed by `${tab}|${filters}` with TTL 60s
-   - tab=my: in-process cache (Map) keyed by `${userId}|${tab}|${filters}` with TTL 60s
-   - Rationale: Stats is a lightweight count query. In-process caching reduces DB load for repeated calls without Next.js cache complications.
+2. **Future statistics endpoints:** Use Redis cache (NOT in-process)
+   - Centralized caching (Upstash Redis)
+   - TTL < 60s recommended
+   - Explicit invalidation on mutations
+   - See "Future: Statistics & Analytics (Guidance)" section above
 
-**Implementation Details (stats with cache):**
+**Implementation Details (future stats with Redis cache, if needed):**
 
-```typescript
-// app/api/events/stats/route.ts (CANONICAL IMPLEMENTATION)
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+See "Future: Statistics & Analytics (Guidance)" section in § 10 for Redis cache patterns.
 
-interface CacheEntry {
-  payload: { total: number };
-  expiresAt: number;
-}
-
-const statsCache = new Map<string, CacheEntry>();
-const CACHE_TTL = 60_000; // 60 seconds
-const MAX_ENTRIES = 300;   // Prevent unbounded memory growth
-
-// Cleanup strategy: "cleanup on access" (NO background timers)
-function cleanupCache(): void {
-  const now = Date.now();
-  
-  // 1. Remove expired entries
-  for (const [key, entry] of statsCache.entries()) {
-    if (now >= entry.expiresAt) {
-      statsCache.delete(key);
-    }
-  }
-  
-  // 2. Enforce max size (evict oldest by insertion order)
-  if (statsCache.size > MAX_ENTRIES) {
-    const keysToEvict = Array.from(statsCache.keys())
-      .slice(0, statsCache.size - MAX_ENTRIES);
-    for (const key of keysToEvict) {
-      statsCache.delete(key);
-    }
-  }
-}
-
-// Key normalization: stable ordering + normalize search
-function buildFiltersKey(params: {
-  tab: string;
-  search?: string;
-  cityId?: string;
-  categoryId?: string;
-}): string {
-  const parts: string[] = [params.tab];
-  
-  // Normalize search: trim, collapse whitespace, lowercase
-  if (params.search) {
-    const normalized = params.search.trim()
-      .replace(/\s+/g, ' ')
-      .toLowerCase();
-    if (normalized) {
-      parts.push(`search:${normalized}`);
-    }
-  }
-  
-  // Add optional filters in stable order
-  if (params.cityId) parts.push(`city:${params.cityId}`);
-  if (params.categoryId) parts.push(`cat:${params.categoryId}`);
-  
-  return parts.join('|');
-}
-
-export async function GET(request: Request) {
-  // 1. Cleanup cache on every request (deterministic, no setInterval)
-  cleanupCache();
-  
-  // 2. Validate & parse params...
-  const currentUser = await getCurrentUser();
-  
-  // 3. Enforce auth for tab=my BEFORE cache lookup
-  if (params.tab === 'my' && !currentUser) {
-    return respondError(new UnauthorizedError("..."));
-  }
-  
-  // 4. Build normalized cache key
-  const filtersKey = buildFiltersKey(params);
-  const cacheKey = params.tab === 'my'
-    ? `${currentUser!.id}|my|${filtersKey}`
-    : `public|${filtersKey}`;
-  
-  // 5. Check cache
-  const cached = statsCache.get(cacheKey);
-  if (cached && Date.now() < cached.expiresAt) {
-    return respondJSON(cached.payload);
-  }
-  
-  // 6. Call service layer
-  const result = await getEventsStats(params, currentUser);
-  
-  // 7. Cache result
-  statsCache.set(cacheKey, {
-    payload: result,
-    expiresAt: Date.now() + CACHE_TTL,
-  });
-  
-  return respondJSON(result);
-}
-```
-
-**CANONICAL APPROACH for Need4Trip:**
-
-- **ALL tabs:** `dynamic: 'force-dynamic'` (no Next.js revalidate due to Route Segment Config constraints)
-- **tab=my:** in-process cache keyed by `${userId}|my|${normalizedFilters}`
-- **tab=all/upcoming:** in-process cache keyed by `public|${normalizedFilters}`
-- **Cleanup strategy:** On-access cleanup (NO background timers for Vercel serverless compatibility)
-- **Size limit:** MAX_ENTRIES = 300 (prevents unbounded memory growth)
-- **Key normalization:** Stable ordering + search normalization (trim, collapse whitespace, lowercase)
-
+---
 #### Future Migration Notes (Phase 2+)
 
 1. **Cursor-based pagination:** `nextCursor` field already reserved in response. Offset remains current implementation.
 2. **Participants sorting:** Deferred due to performance concerns (requires join or materialized view).
 3. **Extended search:** Description, city name, category name (requires full-text index or Algolia).
+4. **Statistics/Analytics:** If needed, prefer `meta` from paginated endpoints. See "Future: Statistics & Analytics (Guidance)" section above for Redis cache patterns if separate stats endpoint is required.
 
 ---
 
@@ -1809,7 +1725,7 @@ module.exports = {
 | 2024-12-26 | 2.2 | Added sections 12-15 (naming, client fetching, performance, errors) |
 | 2024-12-27 | 2.3 | SSOT consolidation for events listing pagination + stats (visibility + caching + repo contracts) |
 | 2024-12-27 | 2.4 | Self-consistency consolidation pass: unified visibility definitions, clarified event_user_access role, explicit caching rules, canonical mapper location, runtime boundaries |
-| 2024-12-27 | 2.5 | SSOT self-consistency pass: resolved Next.js cache constraints (stats in-process only), clarified repo return types (domain + listing DTOs), strengthened mapper colocating rules, unified caching terminology across §7 and §10 |
+| 2024-12-28 | 2.8 | Added Vehicle Type Hydration; Removed /api/events/stats endpoint (duplicated meta.total); Updated § 10 with future stats guidance |
 
 ---
 
