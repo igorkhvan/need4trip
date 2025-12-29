@@ -50,16 +50,23 @@ export function CreateEventPageContent({
   }, [isAuthenticated, execute, clubId]);
 
   const handleSubmit = async (payload: Record<string, unknown>) => {
+    console.log('[CreateEvent] Starting event creation with payload:', payload);
+    
     const res = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     
+    console.log('[CreateEvent] API response status:', res.status, res.statusText);
+    
     if (!res.ok) {
+      console.log('[CreateEvent] API request failed with status:', res.status);
+      
       // ⚡ Billing v2.0: Handle paywall error (402)
       if (res.status === 402) {
         const errorData = await res.json();
+        console.log('[CreateEvent] Paywall error (402):', errorData);
         const paywallError = errorData.error?.details || errorData.error;
         
         if (paywallError) {
@@ -75,13 +82,19 @@ export function CreateEventPageContent({
     
     // Success - redirect to created event page
     const response = await res.json();
+    console.log('[CreateEvent] Full API response:', response);
+    
     const createdEvent = response.data?.event || response.event;
+    console.log('[CreateEvent] Extracted event:', createdEvent);
+    console.log('[CreateEvent] Event ID:', createdEvent?.id);
     
     if (createdEvent?.id) {
-      router.push(`/events/${createdEvent.id}`);
+      const targetUrl = `/events/${createdEvent.id}`;
+      console.log('[CreateEvent] ✅ Redirecting to:', targetUrl);
+      router.push(targetUrl);
     } else {
       // Fallback если нет id (не должно случиться, но на всякий случай)
-      console.error('No event.id in response:', response);
+      console.error('[CreateEvent] ❌ No event.id in response:', response);
       router.push('/events');
       router.refresh();
     }

@@ -394,10 +394,18 @@ export async function createEvent(
   currentUser: CurrentUser | null,
   confirmCredit: boolean = false
 ) {
+  console.log('[Service createEvent] Starting event creation', { 
+    userId: currentUser?.id, 
+    confirmCredit 
+  });
+  
   if (!currentUser) {
+    console.log('[Service createEvent] ❌ No current user');
     throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
   }
+  
   const parsed = eventCreateSchema.parse(input) as any;
+  console.log('[Service createEvent] Input validation passed');
   
   // Apply defaults explicitly (Zod .default() doesn't infer correctly)
   const validated: EventCreateInput = {
@@ -422,10 +430,19 @@ export async function createEvent(
     allowAnonymousRegistration: parsed.allowAnonymousRegistration ?? true,
   };
   
+  console.log('[Service createEvent] Validated input:', {
+    title: validated.title,
+    maxParticipants: validated.maxParticipants,
+    clubId: validated.clubId,
+    isPaid: validated.isPaid,
+    visibility: validated.visibility,
+  });
+  
   // ⚡ Billing v5 Enforcement - unified for create/update
   // Throws PaywallError (402) or CreditConfirmationRequiredError (409)
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
+  console.log('[Service createEvent] Running billing enforcement...');
   await enforceEventPublish({
     userId: currentUser.id,
     clubId: validated.clubId ?? null,
@@ -433,10 +450,13 @@ export async function createEvent(
     isPaid: validated.isPaid,
     eventId: undefined, // No eventId yet (will be set after creation)
   }, confirmCredit);
+  console.log('[Service createEvent] ✅ Billing enforcement passed');
   
   // If confirmCredit=true and enforcement passed, wrap in credit transaction
   const shouldUseCredit = confirmCredit && validated.clubId === null && 
     validated.maxParticipants && validated.maxParticipants > 15 && validated.maxParticipants <= 500;
+  
+  console.log('[Service createEvent] Should use credit:', shouldUseCredit);
   
   let event: Event;
   
@@ -523,6 +543,13 @@ export async function createEvent(
     }
   }
   
+  console.log('[Service createEvent] ✅ Event created successfully in database:', {
+    id: event.id,
+    title: event.title,
+    hasId: !!event.id,
+    visibility: event.visibility,
+  });
+  
   // Queue notifications for new event (non-blocking)
   if (event.visibility === "public" && event.cityId) {
     queueNewEventNotificationsAsync(event).catch((err) => {
@@ -530,6 +557,7 @@ export async function createEvent(
     });
   }
   
+  console.log('[Service createEvent] Returning event with id:', event.id);
   return event;
 }
 
