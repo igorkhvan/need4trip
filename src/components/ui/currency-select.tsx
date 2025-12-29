@@ -60,7 +60,6 @@ export function CurrencySelect({
     ) {
       const kzt = currencies.find(c => c.code === 'KZT');
       if (kzt) {
-        console.log('🇰🇿 Setting default currency to KZT');
         defaultSetRef.current = true;
         onChange('KZT');
       }
@@ -74,10 +73,8 @@ export function CurrencySelect({
       if (res.ok) {
         const response = await res.json();
         const data = response.data || response;
-        console.log("✅ Loaded currencies:", data);
         setCurrencies(data.currencies || data);
       } else {
-        console.error("❌ Failed to load currencies, status:", res.status);
         // Fallback to hardcoded popular currencies (KZT first as default)
         const fallback = [
           { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
@@ -85,11 +82,9 @@ export function CurrencySelect({
           { code: "USD", symbol: "$", nameRu: "Доллар США", nameEn: "US Dollar", decimalPlaces: 2, isActive: true, sortOrder: 10, createdAt: new Date().toISOString() },
           { code: "EUR", symbol: "€", nameRu: "Евро", nameEn: "Euro", decimalPlaces: 2, isActive: true, sortOrder: 11, createdAt: new Date().toISOString() },
         ];
-        console.log("⚠️ Using fallback currencies");
         setCurrencies(fallback);
       }
     } catch (error) {
-      console.error("❌ Failed to load currencies:", error);
       // Fallback currencies (KZT first as default)
       const fallback = [
         { code: "KZT", symbol: "₸", nameRu: "Казахстанский тенге", nameEn: "Kazakhstani Tenge", decimalPlaces: 2, isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
@@ -97,7 +92,6 @@ export function CurrencySelect({
         { code: "USD", symbol: "$", nameRu: "Доллар США", nameEn: "US Dollar", decimalPlaces: 2, isActive: true, sortOrder: 10, createdAt: new Date().toISOString() },
         { code: "EUR", symbol: "€", nameRu: "Евро", nameEn: "Euro", decimalPlaces: 2, isActive: true, sortOrder: 11, createdAt: new Date().toISOString() },
       ];
-      console.log("⚠️ Using fallback currencies");
       setCurrencies(fallback);
     } finally {
       setLoading(false);

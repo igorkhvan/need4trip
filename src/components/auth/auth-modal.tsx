@@ -88,13 +88,6 @@ export function AuthModal({
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   
-  // Debug: Log when modal state changes
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("[auth-modal] Modal state changed:", { open, title, reason });
-    }
-  }, [open, title, reason]);
-  
   const username = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
     if (!raw) return null;
@@ -112,7 +105,6 @@ export function AuthModal({
       setError(null);
       
       try {
-        console.info("[auth-modal] onAuth received", payload?.id);
         const res = await fetch("/api/auth/telegram", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -161,7 +153,6 @@ export function AuthModal({
         // Close modal
         setTimeout(() => onOpenChange(false), 300);
       } catch (err) {
-        console.error("[auth-modal] Telegram auth failed", err);
         setError(
           err instanceof Error 
             ? err.message 
@@ -189,9 +180,6 @@ export function AuthModal({
   // Load Telegram widget when modal opens
   useEffect(() => {
     if (!open || !username || isAuthed) {
-      if (open && !username && process.env.NODE_ENV === 'development') {
-        console.error("[auth-modal] NEXT_PUBLIC_TELEGRAM_BOT_USERNAME not set");
-      }
       return;
     }
 
@@ -208,8 +196,6 @@ export function AuthModal({
         if (retryCount < maxRetries) {
           retryCount++;
           timeoutId = setTimeout(initWidget, 50);
-        } else {
-          console.error("[auth-modal] Container ref is null after max retries");
         }
         return;
       }
@@ -229,11 +215,6 @@ export function AuthModal({
       }
       script.setAttribute("data-request-access", "write");
       script.setAttribute("data-onauth", "onTelegramAuthModal(user)");
-      
-      // Add error handler
-      script.onerror = (error) => {
-        console.error("[auth-modal] Failed to load Telegram Widget script:", error);
-      };
       
       container.appendChild(script);
     };

@@ -282,7 +282,6 @@ export function ProfilePageClient() {
 
       setIsEditing(false);
     } catch (error) {
-      console.error('[handleSave] Error:', error);
       setErrorDialog({ 
         open: true, 
         message: 'Не удалось сохранить профиль' 
@@ -348,19 +347,14 @@ export function ProfilePageClient() {
     setOptimisticCars([...cars, optimisticCar]);
     
     try {
-      console.log('[handleAddCar] Sending payload:', payload);
-
       const res = await fetch('/api/profile/cars', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      console.log('[handleAddCar] Response status:', res.status);
-
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        console.error('[handleAddCar] API Error:', errorData);
         
         // Rollback optimistic update
         setOptimisticCars(cars);
@@ -380,7 +374,6 @@ export function ProfilePageClient() {
       }
 
       const data = await res.json();
-      console.log('[handleAddCar] Success:', data);
       
       // Reload cars list from server to get correct data
       await loadCars();
@@ -388,7 +381,6 @@ export function ProfilePageClient() {
       setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
       setShowAddCar(false);
     } catch (error) {
-      console.error('[handleAddCar] Error:', error);
       // Optimistic state already rolled back
       
       // Safe error message extraction
@@ -457,19 +449,14 @@ export function ProfilePageClient() {
         color: newCar.color.trim() || null,
       };
 
-      console.log('[handleUpdateCar] Sending payload:', payload);
-
       const res = await fetch(`/api/profile/cars?id=${editingCarId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      console.log('[handleUpdateCar] Response status:', res.status);
-
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        console.error('[handleUpdateCar] API Error:', errorData);
         
         let errorMessage = 'Не удалось обновить автомобиль';
         
@@ -485,7 +472,6 @@ export function ProfilePageClient() {
       }
 
       const data = await res.json();
-      console.log('[handleUpdateCar] Success:', data);
       
       // Reload cars list from server
       await loadCars();
@@ -493,8 +479,6 @@ export function ProfilePageClient() {
       setEditingCarId(null);
       setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
     } catch (error) {
-      console.error('[handleUpdateCar] Error:', error);
-      
       let message = 'Не удалось обновить автомобиль';
       
       if (error instanceof Error && typeof error.message === 'string') {
@@ -523,7 +507,6 @@ export function ProfilePageClient() {
         isPrimary: car.id === carId
       })));
     } catch (error) {
-      console.error('[handleSetPrimary] Error:', error);
       setErrorDialog({ 
         open: true, 
         message: 'Не удалось изменить основной автомобиль' 
@@ -553,8 +536,6 @@ export function ProfilePageClient() {
       // Reload cars from server to get correct state
       await loadCars();
     } catch (error) {
-      console.error('[confirmDeleteCar] Error:', error);
-      
       // Rollback optimistic update
       setOptimisticCars(previousCars);
       
