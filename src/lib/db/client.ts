@@ -7,12 +7,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-log.info("Supabase client configuration", {
-  url: !!supabaseUrl,
-  anonKey: !!supabaseAnonKey,
-  serviceRoleKey: !!supabaseServiceRoleKey,
-});
-
+// Only log configuration errors/warnings, not successful initialization
 if (!supabaseUrl || !supabaseAnonKey) {
   log.warn("Supabase configuration incomplete", {
     message: "URL or anon key is missing. API calls will fail until env vars are set.",
@@ -139,18 +134,15 @@ export function getAdminDbSafe() {
   }
 }
 
-if (supabase) {
-  log.info("Supabase client created successfully");
-} else {
+// Only log errors, not successful initialization
+if (!supabase) {
   log.error("Failed to create Supabase client");
 }
 
 // Admin client is only available on server-side
 // Don't log warning on client as SERVICE_ROLE_KEY should never be exposed to browser
 if (typeof window === 'undefined') {
-  if (supabaseAdmin) {
-    log.info("Supabase admin client created successfully");
-  } else {
+  if (!supabaseAdmin) {
     log.warn("Supabase admin client not available (SERVICE_ROLE_KEY missing)");
   }
 }

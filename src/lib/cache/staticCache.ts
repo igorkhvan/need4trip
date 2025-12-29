@@ -111,10 +111,13 @@ export class StaticCache<T> {
       });
       this.timestamp = Date.now();
       
-      log.info(`Cache loaded: ${this.config.name}`, { 
-        count: items.length,
-        ttlMinutes: Math.round(this.config.ttl / 60000),
-      });
+      // Only log cache loads in development
+      if (process.env.NODE_ENV === 'development') {
+        log.info(`Cache loaded: ${this.config.name}`, { 
+          count: items.length,
+          ttlMinutes: Math.round(this.config.ttl / 60000),
+        });
+      }
     } catch (error) {
       log.error(`Cache reload failed: ${this.config.name}`, { error });
       // Don't clear existing cache on error - graceful degradation
