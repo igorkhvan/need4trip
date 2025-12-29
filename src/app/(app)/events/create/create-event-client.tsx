@@ -62,8 +62,6 @@ export function CreateEventPageClient({
   }, [isAuthenticated, execute, clubId]);
   
   const handleSubmit = async (payload: Record<string, unknown>, retryWithCredit = false) => {
-    console.log('[CreateEvent] Starting event creation with payload:', payload);
-    
     const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
     
     const res = await fetch(url, {
@@ -72,11 +70,8 @@ export function CreateEventPageClient({
       body: JSON.stringify(payload),
     });
     
-    console.log('[CreateEvent] API response status:', res.status, res.statusText);
-    
     // Handle 409 CREDIT_CONFIRMATION_REQUIRED
     if (res.status === 409) {
-      console.log('[CreateEvent] Credit confirmation required (409)');
       const error409 = await res.json();
       const meta = error409.error?.meta;
       
@@ -93,7 +88,6 @@ export function CreateEventPageClient({
     
     // Handle 402 PAYWALL
     if (res.status === 402) {
-      console.log('[CreateEvent] Paywall error (402)');
       const errorData = await res.json();
       const paywallError = errorData.error?.details || errorData.error;
       
@@ -105,26 +99,19 @@ export function CreateEventPageClient({
     
     // Handle other errors
     if (!res.ok) {
-      console.log('[CreateEvent] API request failed with status:', res.status);
       await handleApiError(res);
       return;
     }
     
     // Success - redirect to created event page
     const response = await res.json();
-    console.log('[CreateEvent] Full API response:', response);
-    
     const createdEvent = response.data?.event || response.event;
-    console.log('[CreateEvent] Extracted event:', createdEvent);
-    console.log('[CreateEvent] Event ID:', createdEvent?.id);
     
     if (createdEvent?.id) {
-      const targetUrl = `/events/${createdEvent.id}`;
-      console.log('[CreateEvent] ✅ Redirecting to:', targetUrl);
-      router.push(targetUrl);
+      router.push(`/events/${createdEvent.id}`);
     } else {
       // Fallback если нет id (не должно случиться, но на всякий случай)
-      console.error('[CreateEvent] ❌ No event.id in response:', response);
+      console.error('[CreateEvent] No event.id in response:', response);
       router.push('/events');
       router.refresh();
     }

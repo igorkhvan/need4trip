@@ -79,42 +79,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    console.log('[API /events POST] Starting event creation');
-    
     // Get user from middleware (JWT already verified)
     const currentUser = await getCurrentUserFromMiddleware(request);
-    console.log('[API /events POST] Current user:', currentUser?.id, currentUser?.name);
     
     if (!currentUser) {
-      console.log('[API /events POST] ❌ No current user - throwing UnauthorizedError');
       throw new UnauthorizedError("Авторизация обязательна для создания события");
     }
     
     // Extract confirm_credit from query params
     const url = new URL(request.url);
     const confirmCredit = url.searchParams.get("confirm_credit") === "1";
-    console.log('[API /events POST] Confirm credit:', confirmCredit);
     
     const payload = await request.json();
-    console.log('[API /events POST] Received payload:', JSON.stringify(payload, null, 2));
-    
     const event = await createEvent(payload, currentUser, confirmCredit);
-    console.log('[API /events POST] ✅ Event created successfully:', { 
-      id: event.id, 
-      title: event.title,
-      maxParticipants: event.maxParticipants,
-      clubId: event.clubId 
-    });
     
-    const response = respondJSON({ event }, undefined, 201);
-    console.log('[API /events POST] Returning response with event.id:', event.id);
-    return response;
+    return respondJSON({ event }, undefined, 201);
   } catch (err: any) {
-    console.log('[API /events POST] ❌ Error caught:', err.name, err.message);
-    
     // Handle CreditConfirmationRequiredError (409)
     if (err.name === "CreditConfirmationRequiredError") {
-      console.log('[API /events POST] Credit confirmation required (409)');
       // Set correct CTA href for create flow
       const url = new URL(request.url);
       const error = err.payload;
