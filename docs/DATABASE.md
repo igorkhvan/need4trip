@@ -526,9 +526,9 @@ CREATE TABLE public.club_plans (
   max_event_participants INTEGER,
   max_club_members INTEGER,
   
-  -- Фичи
-  can_create_paid_events BOOLEAN NOT NULL DEFAULT FALSE,
-  can_export_csv BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Возможности (canonical field names per SSOT)
+  allow_paid_events BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_csv_export BOOLEAN NOT NULL DEFAULT FALSE,
   
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -540,6 +540,8 @@ CREATE TABLE public.club_plans (
 - `club_plans_pkey` (PRIMARY KEY on id)
 
 **Access**: `GRANT SELECT TO anon, authenticated`
+
+**Semantic Helper (code)**: Use `planAllowsPaidEvents(plan)` to check `allow_paid_events` field (SSOT §A7.1)
 
 **Данные**: Seeded в `20241215_seed_club_plans.sql`
 

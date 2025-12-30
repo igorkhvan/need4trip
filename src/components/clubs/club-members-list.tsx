@@ -81,7 +81,7 @@ export function ClubMembersList({
     switch (role) {
       case "owner":
         return <Crown className="h-4 w-4 text-[#D97706]" />;
-      case "organizer":
+      case "admin":
         return <Shield className="h-4 w-4 text-[#3B82F6]" />;
       case "member":
         return <UsersIcon className="h-4 w-4 text-muted-foreground" />;
@@ -94,7 +94,7 @@ export function ClubMembersList({
     switch (role) {
       case "owner":
         return "premium";
-      case "organizer":
+      case "admin":
         return "default";
       default:
         return "secondary";
@@ -210,16 +210,16 @@ export function ClubMembersList({
                 {actionUserId === member.userId && (
                   <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border border-[#E5E7EB] bg-white py-1 shadow-lg">
                     {/* Смена роли */}
-                    {member.role !== "organizer" && (
+                    {member.role !== "admin" && (
                       <button
-                        onClick={() => handleRoleChange(member.userId, "organizer")}
+                        onClick={() => handleRoleChange(member.userId, "admin")}
                         className="flex w-full items-center gap-2 px-4 py-2 text-left text-[14px] text-[#111827] hover:bg-[#F9FAFB]"
                       >
                         <UserCog className="h-4 w-4" />
-                        <span>Сделать организатором</span>
+                        <span>Сделать администратором</span>
                       </button>
                     )}
-                    {member.role === "organizer" && (
+                    {member.role === "admin" && (
                       <button
                         onClick={() => handleRoleChange(member.userId, "member")}
                         className="flex w-full items-center gap-2 px-4 py-2 text-left text-[14px] text-[#111827] hover:bg-[#F9FAFB]"

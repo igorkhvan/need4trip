@@ -39,9 +39,9 @@ export async function GET(req: NextRequest, { params }: Params) {
       throw new NotFoundError("Клуб не найден");
     }
 
-    // Check user permission (owner/organizer)
+    // Check user permission (owner/admin)
     const userRole = await getUserClubRole(user.id, clubId);
-    const canManage = userRole === "owner" || userRole === "organizer";
+    const canManage = userRole === "owner" || userRole === "admin";
     
     if (!canManage) {
       throw new ForbiddenError("Нет доступа к экспорту участников");

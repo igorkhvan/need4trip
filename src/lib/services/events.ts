@@ -423,6 +423,20 @@ export async function createEvent(
     allowAnonymousRegistration: parsed.allowAnonymousRegistration ?? true,
   };
   
+  // ⚡ SSOT §5.1: IF club_id != null THEN user MUST be owner/admin in that club
+  if (validated.clubId) {
+    const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
+    const role = await getUserClubRole(validated.clubId, currentUser.id);
+    
+    if (!role || (role !== "owner" && role !== "admin")) {
+      throw new AuthError(
+        "Недостаточно прав для создания события в этом клубе. Требуется роль owner или admin.",
+        undefined,
+        403
+      );
+    }
+  }
+  
   // ⚡ Billing v5 Enforcement - unified for create/update
   // Throws PaywallError (402) or CreditConfirmationRequiredError (409)
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
@@ -664,8 +678,30 @@ export async function updateEvent(
   if (!existing) {
     throw new NotFoundError("Event not found");
   }
-  if (existing.created_by_user_id !== currentUser.id) {
-    throw new AuthError("Недостаточно прав для изменения события", undefined, 403);
+  
+  // ⚡ SSOT §5.1 & §5.2: Authorization check
+  // IF club_id != null THEN user MUST be owner/admin in that club
+  // IF club_id == null THEN only event creator can update
+  
+  const finalClubId = validated.clubId !== undefined ? validated.clubId : existing.club_id;
+  
+  if (finalClubId) {
+    // Club event: check club role
+    const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
+    const role = await getUserClubRole(finalClubId, currentUser.id);
+    
+    if (!role || (role !== "owner" && role !== "admin")) {
+      throw new AuthError(
+        "Недостаточно прав для изменения события клуба. Требуется роль owner или admin.",
+        undefined,
+        403
+      );
+    }
+  } else {
+    // Personal event: only creator can update
+    if (existing.created_by_user_id !== currentUser.id) {
+      throw new AuthError("Недостаточно прав для изменения события", undefined, 403);
+    }
   }
 
   // Валидация даты: разрешаем менять прошедшие события на будущие даты

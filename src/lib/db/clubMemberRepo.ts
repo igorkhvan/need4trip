@@ -363,3 +363,20 @@ export async function isClubMember(clubId: string, userId: string): Promise<bool
   return member !== null && member.role !== "pending";
 }
 
+/**
+ * Get user's role in a specific club
+ * Returns null if user is not a member or membership is pending
+ * 
+ * SSOT: Used for authorization checks in event create/update
+ */
+export async function getUserClubRole(
+  clubId: string,
+  userId: string
+): Promise<ClubRole | null> {
+  const member = await getMember(clubId, userId);
+  if (!member || member.role === "pending") {
+    return null;
+  }
+  return member.role;
+}
+

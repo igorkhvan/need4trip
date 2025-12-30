@@ -23,7 +23,7 @@ export function UserClubsList({ clubs, isAuthenticated = true }: UserClubsListPr
     switch (role) {
       case "owner":
         return <Crown className="w-4 h-4 text-yellow-600" />;
-      case "organizer":
+      case "admin":
         return <Shield className="w-4 h-4 text-blue-600" />;
       default:
         return <Users className="w-4 h-4 text-gray-600" />;

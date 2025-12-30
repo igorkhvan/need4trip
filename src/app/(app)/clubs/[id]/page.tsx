@@ -39,7 +39,7 @@ export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) 
     notFound();
   }
 
-  const canManage = userRole === "owner" || userRole === "organizer";
+  const canManage = userRole === "owner" || userRole === "admin";
   const isOwner = userRole === "owner";
   
   // Показывать боковую панель только для owner

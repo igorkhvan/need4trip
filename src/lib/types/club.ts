@@ -6,7 +6,10 @@ import { ClubSubscription } from "./billing";
 // Club Types
 // ============================================================================
 
-export const clubRoleSchema = z.enum(["owner", "organizer", "member", "pending"]);
+// SSOT: docs/SSOT_CLUBS_EVENTS_ACCESS.md §2
+// Canonical club roles: owner, admin, member, pending
+// 'organizer' is deprecated and must not exist
+export const clubRoleSchema = z.enum(["owner", "admin", "member", "pending"]);
 export type ClubRole = z.infer<typeof clubRoleSchema>;
 
 
@@ -129,7 +132,7 @@ export type ClubMemberRoleUpdateInput = z.infer<typeof clubMemberRoleUpdateSchem
 export function getClubRoleLabel(role: ClubRole): string {
   const labels: Record<ClubRole, string> = {
     owner: "Владелец",
-    organizer: "Организатор",
+    admin: "Администратор",
     member: "Участник",
     pending: "Ожидает подтверждения",
   };
@@ -151,17 +154,19 @@ export function getClubPlanLabel(plan: string): string {
 }
 
 /**
- * Check if user can manage club (owner or organizer)
+ * Check if user can manage club page content (owner or admin)
+ * SSOT §6.1: Owner and Admin may edit club page content
  */
 export function canManageClub(role: ClubRole | null): boolean {
-  return role === "owner" || role === "organizer";
+  return role === "owner" || role === "admin";
 }
 
 /**
- * Check if user can create events for club
+ * Check if user can create events for club (owner or admin)
+ * SSOT §4.2: Club dropdown options = clubs where user role ∈ {owner, admin}
  */
 export function canCreateClubEvents(role: ClubRole | null): boolean {
-  return role === "owner" || role === "organizer";
+  return role === "owner" || role === "admin";
 }
 
 /**
