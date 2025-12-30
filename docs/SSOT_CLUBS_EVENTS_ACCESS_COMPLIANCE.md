@@ -52,11 +52,11 @@ All critical rules defined in the SSOT have been implemented and enforced.
 | Rule | Implementation | Status |
 |------|---------------|--------|
 | Personal paid: credits only | `enforceEventPublish` line 364-474 (personal branch) | ✅ |
-| Club paid: subscription only | `enforceEventPublish` line 294-360 (club branch, no credits) | ✅ |
+| Club paid: subscription only | `enforceEventPublish` line 294-367 (club branch, no credits) | ✅ |
 | No mixing | `shouldUseCredit` checks `clubId === null` (lines 453, 763) | ✅ |
 
 **Evidence**:
-- `src/lib/services/accessControl.ts:294-360` (club events: NO credit code)
+- `src/lib/services/accessControl.ts:294-367` (club events: NO credit code)
 - `src/lib/services/events.ts:453` `validated.clubId === null` guards credit usage
 
 ---
@@ -339,7 +339,8 @@ if (isPaid) {
 | §5.1 Club create/update authorization | `src/lib/services/events.ts` | 427-438, 697-715 | ✅ |
 | §5.2 Personal event ownership | `src/lib/services/events.ts` | 710-713 | ✅ |
 | §5.3 Personal paid (credits) | `src/lib/services/accessControl.ts` | 364-474 | ✅ |
-| §5.4 Club paid (subscription, no credits) | `src/lib/services/accessControl.ts` | 294-360 | ✅ |
+| §5.4 Club paid (subscription, no credits) | `src/lib/services/accessControl.ts` | 294-367 | ✅ |
+| §5.4 Owner-only paid club publish | `src/lib/services/accessControl.ts` | 336-349 | ✅ **NEW** |
 | §1.3 No credit mixing | `src/lib/services/events.ts` | 453, 763 | ✅ |
 
 ### TypeScript Types
