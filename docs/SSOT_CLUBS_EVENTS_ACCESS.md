@@ -64,9 +64,10 @@ No mixing is allowed:
 ## 2. Roles (Simplified RBAC)
 
 Canonical club roles (and ONLY these values):
-- owner
-- admin
-- member
+- **owner** — Full control, billing authority
+- **admin** — Content & operations (events, club page), NO member management, NO paid event publish
+- **member** — Read-only access to club content
+- **pending** — Invited but not yet accepted; NO elevated permissions (treated as non-member for all authorization checks)
 
 `organizer` is deprecated and must not exist.
 
@@ -75,6 +76,12 @@ Guest is not a club role (it is unauthenticated state).
 Trusted Partner is NOT a role:
 - It is a per-club badge + scoped permissions limited to partner directories only.
 - Trusted Partner never gains event creation/publish rights by the badge alone.
+
+**Authorization Rules for `pending`:**
+- `pending` has NO elevated permissions (same effective permissions as non-member or guest)
+- `pending` MUST NOT grant club event creation/publish rights
+- All authorization checks treat `pending` as insufficient for any club operations
+- Example: `if (role !== "owner" && role !== "admin") throw 403` — this rejects `pending` and `member`
 
 ---
 
@@ -237,7 +244,8 @@ This appendix defines MUST-PASS scenarios. Any implementation is considered inva
 ### A0. Notation
 - User U
 - Clubs: A, B, C
-- Roles per club: owner/admin/member
+- Roles per club: owner/admin/member/pending
+- `pending` = invited but not accepted, has NO permissions (treated as none/insufficient for all checks)
 - "Club event checkbox" refers to UI toggle that enables club mode (i.e., sets club_id)
 - "Dropdown" refers to the SINGLE club dropdown shown only when club mode is enabled.
 

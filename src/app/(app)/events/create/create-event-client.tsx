@@ -114,6 +114,13 @@ export function CreateEventPageClient({
       clubId: isClubEvent ? selectedClubId : null,
     };
     
+    // DEFENSIVE: Prevent credit retry for club events (SSOT §1.3 No Mixing)
+    // Even if a bug triggers 409 for club event, do not retry with confirm_credit=1
+    if (retryWithCredit && isClubEvent) {
+      console.error("[BUG] Attempted credit retry for club event — blocked by client guard");
+      throw new Error("Кредиты не могут быть использованы для клубных событий");
+    }
+    
     const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
     
     const res = await fetch(url, {
@@ -127,7 +134,8 @@ export function CreateEventPageClient({
       const error409 = await res.json();
       const meta = error409.error?.meta;
       
-      if (meta) {
+      // DEFENSIVE: Do not show credit confirmation for club events
+      if (meta && !isClubEvent) {
         setPendingPayload(finalPayload); // Save payload for retry
         showConfirmation({
           creditCode: meta.creditCode,
@@ -135,6 +143,12 @@ export function CreateEventPageClient({
           requestedParticipants: meta.requestedParticipants,
         });
         return;
+      }
+      
+      // If 409 for club event, treat as error (should never happen per backend)
+      if (meta && isClubEvent) {
+        console.error("[BUG] Backend returned 409 for club event — this should not happen");
+        throw new Error("Ошибка биллинга. Клубные события не используют кредиты.");
       }
     }
     
@@ -207,7 +221,7 @@ export function CreateEventPageClient({
                 У вас есть {user.availableCreditsCount || 0} апгрейд{(user.availableCreditsCount || 0) === 1 ? '' : (user.availableCreditsCount || 0) < 5 ? 'а' : 'ов'}!
               </h4>
               <p className="text-sm text-muted-foreground">
-                Используйте для создания события до 500 участников. Апгрейд будет применён автоматически при необходимости.
+                Используйте для создания личного события до 500 участников. Апгрейд может быть использован при публикации с вашим подтверждением.
               </p>
             </div>
           </div>

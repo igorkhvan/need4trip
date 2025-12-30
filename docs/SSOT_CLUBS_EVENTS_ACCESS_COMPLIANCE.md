@@ -1,7 +1,7 @@
 # SSOT_CLUBS_EVENTS_ACCESS — Compliance Report
 
 **Date**: 2024-12-30  
-**SSOT Version**: 1.0  
+**SSOT Version**: 1.0 (updated 2024-12-30: pending role clarification)  
 **Status**: ✅ **FULL COMPLIANCE** (All P0 gaps closed)  
 **Deployment**: Ready for production push
 
@@ -24,6 +24,9 @@ All critical rules defined in the SSOT have been implemented and enforced.
 6. ✅ Code committed and verified (TypeScript ✅, Build ✅)
 7. ✅ **P0 GAP CLOSED**: Owner-only paid club event publish enforced (SSOT §5.4 + A4.3)
 8. ✅ **P0 GAP CLOSED**: UI checkbox + single club dropdown implemented (SSOT §4 + A1.*)
+9. ✅ **SSOT CLARIFIED**: `pending` role explicitly defined with NO permissions (SSOT §2)
+10. ✅ **UI COPY FIXED**: Credit banner no longer claims "automatic application" (requires confirmation)
+11. ✅ **DEFENSIVE GUARD**: Client blocks credit retry for club events (SSOT §1.3 No Mixing)
 
 ---
 
@@ -69,11 +72,17 @@ All critical rules defined in the SSOT have been implemented and enforced.
 |------|---------------|--------|
 | ONLY: owner, admin, member, pending | DB constraint in migration `20241230_remove_organizer_role.sql` | ✅ |
 | 'organizer' deprecated | Updated in `src/lib/types/club.ts:9` + RLS policies | ✅ |
+| `pending` has NO permissions | SSOT §2 clarified: pending = invited but not accepted, treated as non-member | ✅ **CLARIFIED** |
 | Trusted Partner not a role | Correct (not in clubRoleSchema) | ✅ |
 
 **Evidence**:
 - `supabase/migrations/20241230_remove_organizer_role.sql` (UPDATE + constraint)
 - `src/lib/types/club.ts:9` `z.enum(["owner", "admin", "member", "pending"])`
+- **SSOT §2 lines 64-88**: Explicit definition of `pending` role with NO elevated permissions
+
+**Authorization Enforcement**:
+- All checks use `role !== "owner" && role !== "admin"` → this correctly rejects `pending` and `member`
+- Example: `src/lib/services/events.ts:432` `if (!role || (role !== "owner" && role !== "admin")) throw 403`
 
 ---
 
@@ -362,6 +371,28 @@ if (isPaid) {
 ## 12. Known Gaps & TODOs
 
 **ALL P0 GAPS CLOSED** ✅
+
+### Recent Improvements (2024-12-30)
+
+1. **SSOT Role Clarification**
+   - `pending` role now explicitly defined in SSOT §2 with NO permissions
+   - Authorization checks correctly reject `pending` (same as `member`)
+   - SSOT Appendix A0 updated to include `pending` notation
+   - File: `docs/SSOT_CLUBS_EVENTS_ACCESS.md` lines 64-88, 244-250
+
+2. **UI Copy Accuracy**
+   - Credit banner no longer claims "automatic application"
+   - Text now reflects: "может быть использован при публикации с вашим подтверждением"
+   - Clarifies 409 → confirmation modal flow
+   - File: `src/app/(app)/events/create/create-event-client.tsx` line 210
+
+3. **Defensive Guard: Credit Retry for Club Events**
+   - Client now blocks `retryWithCredit` if `isClubEvent === true`
+   - Prevents accidental credit usage even if backend bug returns 409 for club event
+   - Logs error to console: "[BUG] Attempted credit retry for club event"
+   - File: `src/app/(app)/events/create/create-event-client.tsx` lines 117-152
+
+**Impact**: Stronger SSOT consistency, clearer user expectations, defense-in-depth against billing bugs.
 
 ### Optional Future Enhancements (Not required by SSOT)
 
