@@ -2,9 +2,11 @@
  * Create Event Page Client Component
  * 
  * Получает готовые данные от серверного компонента:
- * - club (если создается club event)
- * - planLimits (from club plan or FREE plan)
+ * - manageableClubs (clubs where user has owner/admin role)
+ * - defaultPlanLimits (FREE plan, will be updated when club selected)
  * - userCityId (for pre-filling city)
+ * 
+ * SSOT §4: Implements checkbox + single dropdown for club selection
  */
 
 "use client";
@@ -13,7 +15,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
-import type { Club } from "@/lib/types/club";
+import type { ClubWithMembership } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
 import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
@@ -29,17 +31,17 @@ const EventForm = dynamic(
 interface CreateEventPageClientProps {
   isAuthenticated: boolean;
   userCityId: string | null;
-  club: Club | null;
-  planLimits: ClubPlanLimits;
-  clubId: string | null;
+  manageableClubs: ClubWithMembership[];
+  defaultPlanLimits: ClubPlanLimits;
+  legacyClubId: string | null; // Backward compat for ?clubId=X
 }
 
 export function CreateEventPageClient({
   isAuthenticated,
   userCityId,
-  club,
-  planLimits,
-  clubId,
+  manageableClubs,
+  defaultPlanLimits,
+  legacyClubId,
 }: CreateEventPageClientProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -47,6 +49,11 @@ export function CreateEventPageClient({
   const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
   const { execute } = useProtectedAction(isAuthenticated);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  
+  // SSOT §4: Club selection state
+  const [isClubEvent, setIsClubEvent] = useState(false);
+  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
+  const [planLimits, setPlanLimits] = useState<ClubPlanLimits>(defaultPlanLimits);
   
   // Protect page access
   useEffect(() => {
@@ -56,18 +63,63 @@ export function CreateEventPageClient({
         reason: "REQUIRED",
         title: "Создание события",
         description: "Для создания события необходимо войти через Telegram.",
-        redirectTo: clubId ? `/events/create?clubId=${clubId}` : '/events/create',
+        redirectTo: '/events/create',
       }
     );
-  }, [isAuthenticated, execute, clubId]);
+  }, [isAuthenticated, execute]);
+  
+  // SSOT §4.2: Auto-select if exactly one manageable club
+  useEffect(() => {
+    if (manageableClubs.length === 1 && isClubEvent && !selectedClubId) {
+      setSelectedClubId(manageableClubs[0].id);
+    }
+  }, [manageableClubs, isClubEvent, selectedClubId]);
+  
+  // Update plan limits when club is selected
+  useEffect(() => {
+    async function updatePlanLimits() {
+      if (!selectedClubId) {
+        setPlanLimits(defaultPlanLimits);
+        return;
+      }
+      
+      // Fetch club plan limits
+      try {
+        const res = await fetch(`/api/clubs/${selectedClubId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const club = data.data?.club || data.club;
+          if (club?.subscription?.plan) {
+            const plan = club.subscription.plan;
+            setPlanLimits({
+              maxMembers: plan.maxMembers,
+              maxEventParticipants: plan.maxEventParticipants,
+              allowPaidEvents: plan.allowPaidEvents,
+              allowCsvExport: plan.allowCsvExport,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load club plan limits", err);
+      }
+    }
+    
+    updatePlanLimits();
+  }, [selectedClubId, defaultPlanLimits]);
   
   const handleSubmit = async (payload: Record<string, unknown>, retryWithCredit = false) => {
+    // SSOT §4.3: Inject clubId based on checkbox state
+    const finalPayload = {
+      ...payload,
+      clubId: isClubEvent ? selectedClubId : null,
+    };
+    
     const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
     
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(finalPayload),
     });
     
     // Handle 409 CREDIT_CONFIRMATION_REQUIRED
@@ -76,7 +128,7 @@ export function CreateEventPageClient({
       const meta = error409.error?.meta;
       
       if (meta) {
-        setPendingPayload(payload); // Save payload for retry
+        setPendingPayload(finalPayload); // Save payload for retry
         showConfirmation({
           creditCode: meta.creditCode,
           eventId: meta.eventId,
@@ -122,8 +174,8 @@ export function CreateEventPageClient({
     return null; // Modal will show
   }
   
-  // Pre-fill cityId: prioritize user's city, fallback to club's first city
-  const initialCityId = userCityId ?? club?.cities?.[0]?.id ?? null;
+  // Pre-fill cityId: prioritize user's city
+  const initialCityId = userCityId ?? null;
   
   // Show credit banner if user has available credits
   const showCreditBanner = !!(user?.availableCreditsCount && user.availableCreditsCount > 0);
@@ -162,19 +214,72 @@ export function CreateEventPageClient({
         </div>
       )}
       
+      {/* SSOT §4: Club Selection UI */}
+      {manageableClubs.length > 0 && (
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="isClubEvent"
+              checked={isClubEvent}
+              onChange={(e) => {
+                setIsClubEvent(e.target.checked);
+                if (!e.target.checked) {
+                  setSelectedClubId(null);
+                }
+              }}
+              className="h-5 w-5 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+            />
+            <label htmlFor="isClubEvent" className="text-base font-medium text-[var(--color-text)] cursor-pointer">
+              Создать событие от клуба
+            </label>
+          </div>
+          
+          {/* SSOT §4.2: Single club dropdown (shown only when checkbox ON) */}
+          {isClubEvent && (
+            <div className="space-y-2">
+              <label htmlFor="clubSelect" className="text-sm font-medium text-[var(--color-text)]">
+                Выберите клуб <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="clubSelect"
+                value={selectedClubId || ""}
+                onChange={(e) => setSelectedClubId(e.target.value || null)}
+                className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 text-base text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                required={isClubEvent}
+              >
+                {manageableClubs.length > 1 && (
+                  <option value="">Выберите клуб...</option>
+                )}
+                {manageableClubs.map((club) => (
+                  <option key={club.id} value={club.id}>
+                    {club.name} ({club.userRole === "owner" ? "Владелец" : "Администратор"})
+                  </option>
+                ))}
+              </select>
+              {isClubEvent && !selectedClubId && manageableClubs.length > 1 && (
+                <p className="text-sm text-red-500">Выберите клуб для создания события</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      
       <EventForm
         mode="create"
         backHref="/events"
         submitLabel="Создать событие"
-        headerTitle={club ? `Создание события для ${club.name}` : "Создание события"}
+        headerTitle={
+          isClubEvent && selectedClubId 
+            ? `Создание события для ${manageableClubs.find(c => c.id === selectedClubId)?.name || "клуба"}`
+            : "Создание события"
+        }
         headerDescription="Заполните информацию о вашей автомобильной поездке"
         planLimits={planLimits}
         onSubmit={handleSubmit}
         initialValues={{
-          isClubEvent: !!clubId,
           cityId: initialCityId || "",
         }}
-        club={club}
       />
       
       {/* Paywall Modal */}

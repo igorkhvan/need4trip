@@ -6,9 +6,10 @@
  * 
  * Source: docs/BILLING_AND_LIMITS.md
  * Updated: 2024-12-25 - Added publish enforcement for one-off credits
+ * Updated: 2024-12-30 - Added owner-only check for paid club events (SSOT §5.4)
  */
 
-import { PaywallError } from "@/lib/errors";
+import { PaywallError, AuthError } from "@/lib/errors";
 import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { 
   getPlanById,
@@ -331,6 +332,21 @@ export async function enforceEventPublish(params: {
           },
         ],
       });
+    }
+    
+    // ⚡ SSOT §5.4 + Appendix A4.3: Paid club event publish is OWNER-ONLY
+    // admin may publish club FREE events, but NOT paid events
+    if (isPaid) {
+      const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
+      const role = await getUserClubRole(clubId, userId);
+      
+      if (role !== "owner") {
+        throw new AuthError(
+          "Только владелец клуба может публиковать платные события. Обратитесь к владельцу клуба.",
+          undefined,
+          403
+        );
+      }
     }
 
     // Check participants limit

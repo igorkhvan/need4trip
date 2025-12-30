@@ -2,16 +2,17 @@
  * Create Event Page (Server Component)
  * 
  * Архитектура:
- * - Server: загружает user + club (если clubId) + plan limits
- * - Client: рендерит форму с готовыми данными
+ * - Server: загружает user + user's manageable clubs + plan limits
+ * - Client: рендерит форму с checkbox + dropdown (SSOT §4)
  */
 
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getPlanById } from "@/lib/db/planRepo";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
-import { getClub } from "@/lib/services/clubs";
+import { getUserClubs } from "@/lib/services/clubs";
 import { CreateEventPageClient } from "./create-event-client";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
+import type { ClubWithMembership } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
 
@@ -21,56 +22,37 @@ interface PageProps {
 
 export default async function CreateEventPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const clubId = params.clubId;
+  const legacyClubId = params.clubId; // Keep for backward compat, but UI will use dropdown
   
   // 1. Load current user
   const currentUser = await getCurrentUser();
   
-  // 2. Load club if clubId is provided
-  let club = null;
-  let planLimits: ClubPlanLimits;
-  
-  if (clubId && currentUser) {
-    // Load club
-    club = await getClub(clubId).catch(() => null);
-    
-    if (club) {
-      // Load club plan limits
-      const { plan } = await getClubCurrentPlan(clubId);
-      planLimits = {
-        maxMembers: plan.maxMembers,
-        maxEventParticipants: plan.maxEventParticipants,
-        allowPaidEvents: plan.allowPaidEvents,
-        allowCsvExport: plan.allowCsvExport,
-      };
-    } else {
-      // Club not found, use FREE plan
-      const freePlan = await getPlanById("free");
-      planLimits = {
-        maxMembers: freePlan.maxMembers,
-        maxEventParticipants: freePlan.maxEventParticipants,
-        allowPaidEvents: freePlan.allowPaidEvents,
-        allowCsvExport: freePlan.allowCsvExport,
-      };
-    }
-  } else {
-    // No club, use FREE plan
-    const freePlan = await getPlanById("free");
-    planLimits = {
-      maxMembers: freePlan.maxMembers,
-      maxEventParticipants: freePlan.maxEventParticipants,
-      allowPaidEvents: freePlan.allowPaidEvents,
-      allowCsvExport: freePlan.allowCsvExport,
-    };
+  // 2. Load user's clubs where they can manage (owner/admin) - SSOT §4
+  let manageableClubs: ClubWithMembership[] = [];
+  if (currentUser) {
+    const allClubs = await getUserClubs(currentUser.id);
+    // Filter to only owner/admin clubs (SSOT §4.2: options = clubs where role ∈ {owner, admin})
+    manageableClubs = allClubs.filter(club => 
+      club.userRole === "owner" || club.userRole === "admin"
+    );
   }
+  
+  // 3. Determine plan limits (use FREE plan as default, club-specific later)
+  const freePlan = await getPlanById("free");
+  const defaultPlanLimits: ClubPlanLimits = {
+    maxMembers: freePlan.maxMembers,
+    maxEventParticipants: freePlan.maxEventParticipants,
+    allowPaidEvents: freePlan.allowPaidEvents,
+    allowCsvExport: freePlan.allowCsvExport,
+  };
   
   return (
     <CreateEventPageClient
       isAuthenticated={!!currentUser}
       userCityId={currentUser?.cityId ?? null}
-      club={club}
-      planLimits={planLimits}
-      clubId={clubId ?? null}
+      manageableClubs={manageableClubs}
+      defaultPlanLimits={defaultPlanLimits}
+      legacyClubId={legacyClubId ?? null}
     />
   );
 }
