@@ -86,13 +86,12 @@ All critical rules defined in the SSOT have been implemented and enforced.
 | Admin can manage club content | `canManageClub(role)` checks `owner OR admin` (line 156) | ✅ |
 | Admin can create/update free club events | Authorization check allows admin (line 427-438) | ✅ |
 | Admin CANNOT manage members | RLS INSERT/DELETE owner-only (`20241230_fix_rls_owner_only_members.sql`) | ✅ |
-| Admin CANNOT publish paid club events | Default policy (not implemented, requires explicit owner check in publish endpoint) | ⚠️ TODO |
+| Admin CANNOT publish paid club events | `enforceEventPublish()` owner-only check (line 336-349) | ✅ **ENFORCED** |
 
 **Evidence**:
 - `src/lib/types/club.ts:156` `canManageClub`
 - `supabase/migrations/20241230_fix_rls_owner_only_members.sql` (owner-only INSERT/DELETE)
-
-**NOTE**: Paid club event publish owner-only check is now enforced in `enforceEventPublish()` (line 336-349).
+- `src/lib/services/accessControl.ts:336-349` (owner-only paid club publish)
 
 ---
 
@@ -236,8 +235,8 @@ if (isPaid) {
 | Context | Role | Create/Update | Publish Free | Publish Paid | Implementation | Status |
 |---------|------|:-------------:|:------------:|:------------:|----------------|--------|
 | Personal (club_id=null) | Creator | ✅ | ✅ | ✅ (credit) | `events.ts:710-713` | ✅ |
-| Club (club_id=X) | owner | ✅ | ✅ | ✅ (subscription) | `events.ts:427-438, accessControl.ts:294-360` | ✅ |
-| Club (club_id=X) | admin | ✅ | ✅ | ❌ (default) | Authorization allows admin, paid publish TODO | ⚠️ |
+| Club (club_id=X) | owner | ✅ | ✅ | ✅ (subscription) | `events.ts:427-438, accessControl.ts:336-349` | ✅ |
+| Club (club_id=X) | admin | ✅ | ✅ | ❌ (owner-only) | `accessControl.ts:336-349` enforces owner-only for paid | ✅ |
 | Club (club_id=X) | member/none | ❌ | ❌ | ❌ | `if (!role || role !== owner/admin) 403` | ✅ |
 
 ### 8.2 Club Operations
@@ -250,21 +249,21 @@ if (isPaid) {
 
 ---
 
-## 9. SSOT §9: Non-negotiable Consistency Checks — STATUS
+## 9. SSOT §9: Non-negotiable Consistency Checks — COMPLIANT ✅
 
 | Check | Implementation | Status |
 |-------|---------------|--------|
 | 1) DB roles do not contain 'organizer' | Migration `20241230_remove_organizer_role.sql` | ✅ |
-| 2) UI shows checkbox only if owner/admin | Not implemented | ⏳ TODO |
-| 3) Exactly one club dropdown, shown only when checkbox ON | Not implemented | ⏳ TODO |
+| 2) UI shows checkbox only if owner/admin | `create-event-client.tsx:195-238` conditional render | ✅ **ENFORCED** |
+| 3) Exactly one club dropdown, shown only when checkbox ON | `create-event-client.tsx:211-232` (shown when `isClubEvent`) | ✅ **ENFORCED** |
 | 4) Club selection validation in backend | `events.ts:427-438` | ✅ |
-| 5) No personal credits for club-paid events | `accessControl.ts:294-360` (club branch has no credits) | ✅ |
-| 6) Paid club publish is owner-only (default policy) | Not implemented | ⚠️ TODO |
-| 7) Documentation updated in same commit | DATABASE.md updated | ✅ |
+| 5) No personal credits for club-paid events | `accessControl.ts:294-367` (club branch has no credits) | ✅ |
+| 6) Paid club publish is owner-only | `accessControl.ts:336-349` role check | ✅ **ENFORCED** |
+| 7) Documentation updated in same commit | DATABASE.md + this report updated | ✅ |
 
 ---
 
-## 10. SSOT Appendix A — Negative Test Cases — PARTIAL ✅
+## 10. SSOT Appendix A — Negative Test Cases — COMPLIANT ✅
 
 ### A1. UI Visibility & Club Dropdown Scenarios
 
