@@ -46,8 +46,7 @@ interface EventBasicInfoSectionProps {
   isPaid: boolean;
   price: string;
   currencyCode: string | null;
-  isClubEvent: boolean;
-  allowAnonymousRegistration: boolean; // NEW
+  allowAnonymousRegistration: boolean;
   
   // Change handlers
   onTitleChange: (value: string) => void;
@@ -60,8 +59,7 @@ interface EventBasicInfoSectionProps {
   onIsPaidChange: (value: boolean) => void;
   onPriceChange: (value: string) => void;
   onCurrencyChange: (value: string | null) => void;
-  onIsClubEventChange: (value: boolean) => void;
-  onAllowAnonymousRegistrationChange: (value: boolean) => void; // NEW
+  onAllowAnonymousRegistrationChange: (value: boolean) => void;
   
   // External data
   categories: EventCategoryDto[];
@@ -77,7 +75,6 @@ interface EventBasicInfoSectionProps {
   
   // UI state
   disabled?: boolean;
-  club?: Club | null;
 }
 
 export function EventBasicInfoSection({
@@ -91,7 +88,6 @@ export function EventBasicInfoSection({
   isPaid,
   price,
   currencyCode,
-  isClubEvent,
   allowAnonymousRegistration,
   onTitleChange,
   onDescriptionChange,
@@ -103,7 +99,6 @@ export function EventBasicInfoSection({
   onIsPaidChange,
   onPriceChange,
   onCurrencyChange,
-  onIsClubEventChange,
   onAllowAnonymousRegistrationChange,
   categories,
   loadingCategories,
@@ -112,7 +107,6 @@ export function EventBasicInfoSection({
   fieldErrors,
   clearFieldError,
   disabled,
-  club,
 }: EventBasicInfoSectionProps) {
   return (
     <div className="space-y-4">
@@ -443,15 +437,6 @@ export function EventBasicInfoSection({
             disabled={disabled}
           />
         </div>
-        
-        {/* Club Event (overrides anonymous) */}
-        {isClubEvent && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <p className="text-sm text-amber-900">
-              <strong>Клубное событие:</strong> Регистрация доступна только членам клуба (независимо от настройки выше)
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

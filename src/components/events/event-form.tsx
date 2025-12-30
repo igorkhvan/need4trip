@@ -33,11 +33,8 @@ import {
 } from "@/lib/types/event";
 import { EventLocationInput } from "@/lib/types/eventLocation";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
-import type { Club } from "@/lib/types/club";
 import { getCategoryIcon } from "@/lib/utils/eventCategories";
 import { getErrorMessage } from "@/lib/utils/errors";
-import { useClubPlan } from "@/hooks/use-club-plan";
-import { PaywallModal, usePaywall } from "@/components/billing/paywall-modal";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import { Spinner } from "@/components/ui/spinner";
 // Section components
@@ -46,6 +43,7 @@ import { EventLocationsSection } from "./event-form/sections/event-locations-sec
 import { EventVehicleSection } from "./event-form/sections/event-vehicle-section";
 import { EventRulesSection } from "./event-form/sections/event-rules-section";
 import { EventCustomFieldsSection } from "./event-form/sections/event-custom-fields-section";
+import { EventClubSection } from "./event-form/sections/event-club-section";
 
 
 const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
@@ -69,11 +67,11 @@ export type EventFormValues = {
   vehicleTypeRequirement: VehicleTypeRequirement;
   allowedBrandIds: string[];
   rules: string;
-  isClubEvent: boolean;
+  clubId: string | null; // SSOT §1.2: clubId is source of truth (NOT isClubEvent)
   isPaid: boolean;
   price: string;
   currencyCode: string | null; // ISO 4217 code
-  allowAnonymousRegistration: boolean; // NEW
+  allowAnonymousRegistration: boolean;
 };
 
 export type EventFormProps = {
@@ -86,7 +84,11 @@ export type EventFormProps = {
   disabled?: boolean;
   headerTitle: string;
   headerDescription: string;
-  club?: Club | null; // Клуб, если событие создается от клуба (deprecated - use planLimits)
+  manageableClubs?: Array<{
+    id: string;
+    name: string;
+    userRole: "owner" | "admin";
+  }>; // Clubs where user can create events (owner/admin) - SSOT §4
   planLimits?: {
     maxMembers: number | null;
     maxEventParticipants: number | null;
@@ -116,25 +118,13 @@ export function EventForm({
   disabled,
   headerTitle,
   headerDescription,
-  club,
+  manageableClubs = [],
   planLimits: planLimitsProp,
 }: EventFormProps) {
   const router = useRouter();
   
-  // ⚡ Billing v2.0: Support both SSR (planLimits prop) and CSR (useClubPlan hook)
-  // Prefer planLimits prop if provided (SSR, instant, no API call)
-  // Fall back to useClubPlan hook for backward compatibility (CSR, API call)
-  const { limits: clubLimitsFromHook, loading: loadingPlan } = useClubPlan(
-    planLimitsProp ? null : club?.id
-  );
-  
-  const { showPaywall, PaywallModalComponent } = usePaywall();
-  
-  // Use planLimits prop if available (SSR), otherwise use hook result (CSR)
-  const effectiveLimits = planLimitsProp ?? clubLimitsFromHook;
-  
-  // Determine max participants based on plan limits (default to 30 for Free)
-  const maxAllowedParticipants = effectiveLimits?.maxEventParticipants ?? 30;
+  // Determine max participants based on plan limits (default to 15 for Free)
+  const maxAllowedParticipants = planLimitsProp?.maxEventParticipants ?? 15;
   
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
@@ -167,7 +157,7 @@ export function EventForm({
   const [brands, setBrands] = useState<MultiBrandSelectOption[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [rules, setRules] = useState<string>(initialValues?.rules ?? "");
-  const [isClubEvent, setIsClubEvent] = useState<boolean>(initialValues?.isClubEvent ?? false);
+  const [clubId, setClubId] = useState<string | null>(initialValues?.clubId ?? null);
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
   const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? null);
@@ -190,13 +180,13 @@ export function EventForm({
   
   // Auto-fill maxParticipants with plan limit for new events (only once, on initial load)
   useEffect(() => {
-    if (mode === 'create' && maxParticipants === null && effectiveLimits && !loadingPlan && !hasUserSetMaxParticipants) {
+    if (mode === 'create' && maxParticipants === null && planLimitsProp && !hasUserSetMaxParticipants) {
       // Set default maxParticipants to plan limit
-      if (effectiveLimits.maxEventParticipants !== null && effectiveLimits.maxEventParticipants > 0) {
-        setMaxParticipants(effectiveLimits.maxEventParticipants);
+      if (planLimitsProp.maxEventParticipants !== null && planLimitsProp.maxEventParticipants > 0) {
+        setMaxParticipants(planLimitsProp.maxEventParticipants);
       }
     }
-  }, [mode, maxParticipants, effectiveLimits, loadingPlan, hasUserSetMaxParticipants]);
+  }, [mode, maxParticipants, planLimitsProp, hasUserSetMaxParticipants]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -382,7 +372,7 @@ export function EventForm({
         visibility,
         vehicleTypeRequirement: vehicleType,
         allowedBrandIds,
-        isClubEvent,
+        clubId, // SSOT §1.2: clubId is source of truth
         isPaid,
         price: isPaid && price ? Number(price) : null,
         currencyCode: isPaid ? currencyCode : null,
@@ -470,7 +460,7 @@ export function EventForm({
       vehicleTypeRequirement: vehicleType,
       allowedBrandIds,
       rules: rules.trim() || null,
-      isClubEvent,
+      clubId, // SSOT §1.2: clubId is source of truth
       isPaid,
       price: isPaid ? (trimmedPrice ? Number(trimmedPrice) : null) : null,
       currencyCode: isPaid ? currencyCode || null : null,
@@ -482,31 +472,8 @@ export function EventForm({
       // Редирект и обновление страницы делает родительский компонент (после onSubmit)
       // Не делаем здесь, чтобы избежать конфликтов и дать родителю контроль
     } catch (err: any) {
-      // Check if this is a paywall error that's already been handled
-      if (err?.isPaywall || err?.message === 'PAYWALL_SHOWN') {
-        // Paywall modal is already shown, don't show error message
-        return;
-      }
-      
-      // ⚡ Billing v2.0: Handle paywall errors (402)
-      if (err && typeof err === 'object' && 'message' in err) {
-        const errorMsg = String(err.message || '');
-        // Check if this is a fetch response error with paywall details
-        try {
-          // Try to parse error as API response
-          const match = errorMsg.match(/\{[\s\S]*\}/);
-          if (match) {
-            const apiError = JSON.parse(match[0]);
-            if (apiError.error?.details?.code === 'PAYWALL') {
-              showPaywall(apiError.error.details);
-              return;
-            }
-          }
-        } catch {
-          // Not a JSON error, continue with default handling
-        }
-      }
-      
+      // Paywall errors are handled by parent component (create-event-client/edit-event-client)
+      // If we reach here, just show generic error
       setErrorMessage(getErrorMessage(err, "Не удалось сохранить событие. Попробуйте ещё раз."));
     } finally {
       setIsSubmitting(false);
@@ -544,6 +511,43 @@ export function EventForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+        {/* Section 0: Club Selection (SSOT §4) - shown only if user has manageable clubs */}
+        {manageableClubs.length > 0 && (
+          <Card className="border border-[#E5E7EB] shadow-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs sm:text-sm font-semibold text-white">
+                  0
+                </div>
+                <div>
+                  <CardTitle className="heading-h2 !mb-0">Создать событие от клуба</CardTitle>
+                  <CardDescription className="text-body-small !mt-1">
+                    Выберите клуб-организатор (опционально)
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <EventClubSection
+                clubId={clubId}
+                onClubIdChange={setClubId}
+                manageableClubs={manageableClubs}
+                fieldError={fieldErrors.clubId}
+                clearFieldError={() => {
+                  setFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.clubId;
+                    return next;
+                  });
+                }}
+                disabled={disabled}
+                mode={mode}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border border-[#E5E7EB] shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -571,7 +575,6 @@ export function EventForm({
               isPaid={isPaid}
               price={price}
               currencyCode={currencyCode}
-              isClubEvent={isClubEvent}
               allowAnonymousRegistration={allowAnonymousRegistration}
               onTitleChange={setTitle}
               onDescriptionChange={setDescription}
@@ -586,11 +589,10 @@ export function EventForm({
               onIsPaidChange={setIsPaid}
               onPriceChange={setPrice}
               onCurrencyChange={setCurrencyCode}
-              onIsClubEventChange={setIsClubEvent}
               onAllowAnonymousRegistrationChange={setAllowAnonymousRegistration}
               categories={categories}
               loadingCategories={loadingCategories}
-              loadingPlan={loadingPlan}
+              loadingPlan={false} // Always false as planLimits are provided via prop
               maxAllowedParticipants={maxAllowedParticipants}
               fieldErrors={fieldErrors}
               clearFieldError={(field) => {
@@ -601,7 +603,6 @@ export function EventForm({
                 });
               }}
               disabled={disabled}
-              club={club}
             />
           </CardContent>
         </Card>
@@ -775,9 +776,6 @@ export function EventForm({
           </Button>
         </div>
       </form>
-      
-      {/* ⚡ Billing v2.0: Paywall Modal */}
-      {PaywallModalComponent}
 
       {/* 🚫 Required Fields Error Dialog */}
       <AlertDialog open={showRequiredFieldsDialog} onOpenChange={setShowRequiredFieldsDialog}>

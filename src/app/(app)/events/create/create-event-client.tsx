@@ -15,7 +15,6 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
-import type { ClubWithMembership } from "@/lib/types/club";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
 import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
@@ -31,7 +30,11 @@ const EventForm = dynamic(
 interface CreateEventPageClientProps {
   isAuthenticated: boolean;
   userCityId: string | null;
-  manageableClubs: ClubWithMembership[];
+  manageableClubs: Array<{
+    id: string;
+    name: string;
+    userRole: "owner" | "admin";
+  }>;
   defaultPlanLimits: ClubPlanLimits;
   legacyClubId: string | null; // Backward compat for ?clubId=X
 }
@@ -50,11 +53,6 @@ export function CreateEventPageClient({
   const { execute } = useProtectedAction(isAuthenticated);
   const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
   
-  // SSOT §4: Club selection state
-  const [isClubEvent, setIsClubEvent] = useState(false);
-  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
-  const [planLimits, setPlanLimits] = useState<ClubPlanLimits>(defaultPlanLimits);
-  
   // Protect page access
   useEffect(() => {
     execute(
@@ -68,55 +66,11 @@ export function CreateEventPageClient({
     );
   }, [isAuthenticated, execute]);
   
-  // SSOT §4.2: Auto-select if exactly one manageable club
-  useEffect(() => {
-    if (manageableClubs.length === 1 && isClubEvent && !selectedClubId) {
-      setSelectedClubId(manageableClubs[0].id);
-    }
-  }, [manageableClubs, isClubEvent, selectedClubId]);
-  
-  // Update plan limits when club is selected
-  useEffect(() => {
-    async function updatePlanLimits() {
-      if (!selectedClubId) {
-        setPlanLimits(defaultPlanLimits);
-        return;
-      }
-      
-      // Fetch club plan limits
-      try {
-        const res = await fetch(`/api/clubs/${selectedClubId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const club = data.data?.club || data.club;
-          if (club?.subscription?.plan) {
-            const plan = club.subscription.plan;
-            setPlanLimits({
-              maxMembers: plan.maxMembers,
-              maxEventParticipants: plan.maxEventParticipants,
-              allowPaidEvents: plan.allowPaidEvents,
-              allowCsvExport: plan.allowCsvExport,
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load club plan limits", err);
-      }
-    }
-    
-    updatePlanLimits();
-  }, [selectedClubId, defaultPlanLimits]);
-  
   const handleSubmit = async (payload: Record<string, unknown>, retryWithCredit = false) => {
-    // SSOT §4.3: Inject clubId based on checkbox state
-    const finalPayload = {
-      ...payload,
-      clubId: isClubEvent ? selectedClubId : null,
-    };
-    
     // DEFENSIVE: Prevent credit retry for club events (SSOT §1.3 No Mixing)
     // Even if a bug triggers 409 for club event, do not retry with confirm_credit=1
-    if (retryWithCredit && isClubEvent) {
+    const clubId = payload.clubId as string | null;
+    if (retryWithCredit && clubId) {
       console.error("[BUG] Attempted credit retry for club event — blocked by client guard");
       throw new Error("Кредиты не могут быть использованы для клубных событий");
     }
@@ -126,7 +80,7 @@ export function CreateEventPageClient({
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(finalPayload),
+      body: JSON.stringify(payload), // clubId already in payload from EventForm
     });
     
     // Handle 409 CREDIT_CONFIRMATION_REQUIRED
@@ -135,8 +89,9 @@ export function CreateEventPageClient({
       const meta = error409.error?.meta;
       
       // DEFENSIVE: Do not show credit confirmation for club events
-      if (meta && !isClubEvent) {
-        setPendingPayload(finalPayload); // Save payload for retry
+      const clubId = payload.clubId as string | null;
+      if (meta && !clubId) {
+        setPendingPayload(payload); // Save payload for retry (no modification needed)
         showConfirmation({
           creditCode: meta.creditCode,
           eventId: meta.eventId,
@@ -146,7 +101,7 @@ export function CreateEventPageClient({
       }
       
       // If 409 for club event, treat as error (should never happen per backend)
-      if (meta && isClubEvent) {
+      if (meta && clubId) {
         console.error("[BUG] Backend returned 409 for club event — this should not happen");
         throw new Error("Ошибка биллинга. Клубные события не используют кредиты.");
       }
@@ -228,68 +183,14 @@ export function CreateEventPageClient({
         </div>
       )}
       
-      {/* SSOT §4: Club Selection UI */}
-      {manageableClubs.length > 0 && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="isClubEvent"
-              checked={isClubEvent}
-              onChange={(e) => {
-                setIsClubEvent(e.target.checked);
-                if (!e.target.checked) {
-                  setSelectedClubId(null);
-                }
-              }}
-              className="h-5 w-5 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-            />
-            <label htmlFor="isClubEvent" className="text-base font-medium text-[var(--color-text)] cursor-pointer">
-              Создать событие от клуба
-            </label>
-          </div>
-          
-          {/* SSOT §4.2: Single club dropdown (shown only when checkbox ON) */}
-          {isClubEvent && (
-            <div className="space-y-2">
-              <label htmlFor="clubSelect" className="text-sm font-medium text-[var(--color-text)]">
-                Выберите клуб <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="clubSelect"
-                value={selectedClubId || ""}
-                onChange={(e) => setSelectedClubId(e.target.value || null)}
-                className="w-full rounded-lg border border-[var(--color-border)] px-4 py-3 text-base text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
-                required={isClubEvent}
-              >
-                {manageableClubs.length > 1 && (
-                  <option value="">Выберите клуб...</option>
-                )}
-                {manageableClubs.map((club) => (
-                  <option key={club.id} value={club.id}>
-                    {club.name} ({club.userRole === "owner" ? "Владелец" : "Администратор"})
-                  </option>
-                ))}
-              </select>
-              {isClubEvent && !selectedClubId && manageableClubs.length > 1 && (
-                <p className="text-sm text-red-500">Выберите клуб для создания события</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      
       <EventForm
         mode="create"
         backHref="/events"
         submitLabel="Создать событие"
-        headerTitle={
-          isClubEvent && selectedClubId 
-            ? `Создание события для ${manageableClubs.find(c => c.id === selectedClubId)?.name || "клуба"}`
-            : "Создание события"
-        }
+        headerTitle="Создание события"
         headerDescription="Заполните информацию о вашей автомобильной поездке"
-        planLimits={planLimits}
+        manageableClubs={manageableClubs}
+        planLimits={defaultPlanLimits}
         onSubmit={handleSubmit}
         initialValues={{
           cityId: initialCityId || "",

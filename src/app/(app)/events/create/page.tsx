@@ -12,7 +12,6 @@ import { getClubCurrentPlan } from "@/lib/services/accessControl";
 import { getUserClubs } from "@/lib/services/clubs";
 import { CreateEventPageClient } from "./create-event-client";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
-import type { ClubWithMembership } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +27,21 @@ export default async function CreateEventPage({ searchParams }: PageProps) {
   const currentUser = await getCurrentUser();
   
   // 2. Load user's clubs where they can manage (owner/admin) - SSOT §4
-  let manageableClubs: ClubWithMembership[] = [];
+  let manageableClubs: Array<{
+    id: string;
+    name: string;
+    userRole: "owner" | "admin";
+  }> = [];
   if (currentUser) {
     const allClubs = await getUserClubs(currentUser.id);
     // Filter to only owner/admin clubs (SSOT §4.2: options = clubs where role ∈ {owner, admin})
-    manageableClubs = allClubs.filter(club => 
-      club.userRole === "owner" || club.userRole === "admin"
-    );
+    manageableClubs = allClubs
+      .filter(club => club.userRole === "owner" || club.userRole === "admin")
+      .map(club => ({
+        id: club.id,
+        name: club.name,
+        userRole: club.userRole as "owner" | "admin",
+      }));
   }
   
   // 3. Determine plan limits (use FREE plan as default, club-specific later)

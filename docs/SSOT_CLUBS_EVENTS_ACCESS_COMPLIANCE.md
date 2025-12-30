@@ -447,7 +447,119 @@ git log --oneline -3
 
 ---
 
-## 14. Conclusion
+## 14. UI Refactoring (2024-12-30) — § 2 COMPLIANCE ✅
+
+**Status**: ✅ **COMPLIANT** with SSOT §4 and DESIGN_SYSTEM.md
+
+### Summary
+
+Successfully refactored "Create event from club" section to achieve full compliance with:
+- `docs/SSOT_CLUBS_EVENTS_ACCESS.md` (§4 UI rules)
+- `docs/DESIGN_SYSTEM.md` (Card pattern, shadcn/ui components)
+- `docs/ARCHITECTURE.md` (Single Source of Truth principles)
+
+### What Was Fixed
+
+#### 1. Section Placement ✅
+- **Before**: Club selection UI was in `create-event-client.tsx` (outside the form)
+- **After**: Integrated as **Section 0** inside `EventForm` component
+- **Why**: Self-contained form, better UX, SSOT compliance
+
+#### 2. State Management ✅
+- **Before**: `isClubEvent` (boolean) + `clubId` injected by parent
+- **After**: `clubId: string | null` as single source of truth in form state
+- **Computed**: `const isClubEvent = Boolean(clubId)`
+- **Why**: SSOT §1.2 - `club_id` is canonical, no dual state
+
+#### 3. UI Components ✅
+- **Before**: Native HTML `<input type="checkbox">` and `<select>`
+- **After**: shadcn/ui `<Checkbox />` and `<Select />` components
+- **Card Structure**: Follows `DESIGN_SYSTEM.md` Card pattern with numbered sections
+- **Colors**: Uses CSS variables (`var(--color-primary)`) instead of hardcoded hex
+
+#### 4. Edit Flow ✅
+- **Create mode**: Interactive checkbox + dropdown with auto-select
+- **Edit mode**: Read-only club info with disabled state message
+- **Rule**: `clubId` cannot be changed after event creation (SSOT §5.7)
+
+#### 5. Data Flow ✅
+- **Before**: `create-event-client` injected `clubId` into payload after form submission
+- **After**: `clubId` is part of form state and included in payload directly
+- **Validation**: Required if checkbox is ON, handled by `EventClubSection`
+
+#### 6. Cleanup ✅
+- **Removed**: `isClubEvent` prop from `EventBasicInfoSection`
+- **Removed**: Redundant club event warning in `BasicInfoSection`
+- **Removed**: `useClubPlan` hook (replaced with `planLimits` prop everywhere)
+- **Removed**: `club` prop from `EventForm` (unused)
+
+### New Component
+
+**File**: `src/components/events/event-form/sections/event-club-section.tsx`
+
+**Features**:
+- Checkbox: "Создать событие от клуба"
+- Dropdown: Single club select (owner/admin clubs only)
+- Auto-select: If exactly 1 club → auto-select (SSOT §4.2)
+- Validation: `clubId` required when checkbox ON
+- Edit mode: Read-only club info with disabled state
+
+**Design**:
+- shadcn/ui `<Checkbox />` and `<Select />` components
+- `FormField` wrapper for label + error handling
+- Helper text for club events
+- Edit mode: Bordered card with checkmark icon
+
+### Files Modified
+
+**Core refactoring**:
+1. `src/components/events/event-form.tsx` - State + Section 0 integration
+2. `src/components/events/event-form/sections/event-club-section.tsx` - NEW component
+3. `src/app/(app)/events/create/create-event-client.tsx` - Removed injection logic
+4. `src/app/(app)/events/[id]/edit/edit-event-client.tsx` - Added manageableClubs
+5. `src/app/(app)/events/[id]/edit/page.tsx` - Load manageableClubs
+6. `src/components/events/event-form/sections/event-basic-info-section.tsx` - Cleanup
+
+**Type changes**:
+- `EventFormValues`: `isClubEvent` → `clubId: string | null`
+- `EventFormProps`: Added `manageableClubs`, removed `club`
+
+### Verification
+
+```bash
+✅ npx tsc --noEmit  # 0 errors in src/
+✅ npm run build     # Production build successful
+```
+
+### SSOT Compliance Matrix
+
+| Rule | Before | After | Status |
+|------|--------|-------|--------|
+| §1.2 club_id canonical | ❌ isClubEvent + clubId injection | ✅ clubId in form state | ✅ FIXED |
+| §4.1 UI sections | ❌ Outside form | ✅ Section 0 in EventForm | ✅ FIXED |
+| §4.2 Auto-select | ✅ Working | ✅ Preserved | ✅ OK |
+| §5.7 Edit immutability | ❌ No UI for edit | ✅ Read-only in edit mode | ✅ FIXED |
+| DESIGN_SYSTEM Card | ❌ No Card structure | ✅ Card with header/body | ✅ FIXED |
+| DESIGN_SYSTEM Components | ❌ Native HTML | ✅ shadcn/ui | ✅ FIXED |
+| DESIGN_SYSTEM Colors | ❌ Some hardcoded | ✅ CSS variables | ✅ FIXED |
+
+### DB vs UI (Decision)
+
+**Database**: `is_club_event` column stays (denormalized/derived field)
+- Used by DB for triggers, RLS policies
+- Backend service layer uses `clubId` for logic decisions
+- No changes to DB schema or backend logic required
+
+**UI/State**: `clubId` only
+- Single source of truth in component state
+- Computed `isClubEvent` for display logic
+- Payload includes `clubId` directly
+
+**Rationale**: Minimal scope, no breaking changes, UI compliance achieved without backend refactor.
+
+---
+
+## 15. Conclusion
 
 **Overall Compliance**: ✅ **FULL COMPLIANCE ACHIEVED**
 
@@ -458,18 +570,21 @@ The Need4Trip codebase is in **COMPLETE** compliance with **SSOT_CLUBS_EVENTS_AC
 ✅ Paid modes separation (no credits for club events)  
 ✅ **Owner-only paid club publish** (SSOT §5.4 + Appendix A4.3) — **ENFORCED**  
 ✅ **UI: Checkbox + single club dropdown** (SSOT §4 + Appendix A1.*) — **IMPLEMENTED**  
+✅ **UI: Section 0 integration** (DESIGN_SYSTEM.md Card pattern) — **COMPLIANT**  
+✅ **State: clubId as source of truth** (ARCHITECTURE.md SSOT principles) — **COMPLIANT**  
 ✅ Documentation consistency (DATABASE.md)  
 ✅ TypeScript compilation successful  
 ✅ Production build successful
 
 **ALL P0 GAPS CLOSED:**
 1. ✅ Owner-only check for paid club events (`accessControl.ts:336-349`)
-2. ✅ UI checkbox + dropdown for club selection (`events/create/*`)
+2. ✅ UI checkbox + dropdown for club selection (`EventClubSection`)
+3. ✅ UI refactoring (Section 0 inside form, shadcn/ui components, clubId state)
 
 **Deployment Status**: 
 - Database: ✅ Ready (migrations applied)
 - Backend: ✅ Ready (all enforcement complete)
-- Frontend: ✅ Ready (UI matches SSOT exactly)
+- Frontend: ✅ Ready (UI matches SSOT exactly, DESIGN_SYSTEM compliance)
 - Build: ✅ Verified (TypeScript + Next.js build passed)
 - Next: Push to production (`git push origin main`)
 
@@ -477,7 +592,11 @@ The Need4Trip codebase is in **COMPLETE** compliance with **SSOT_CLUBS_EVENTS_AC
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Last Updated**: 2024-12-30  
+**Changes in 1.1**:
+- Added § 14: UI Refactoring compliance (Section 0, clubId state, DESIGN_SYSTEM)
+- Updated conclusion with new compliance items
+
 **Signed Off**: AI Assistant (Compliance Audit Complete)
 

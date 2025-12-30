@@ -22,12 +22,18 @@ interface EditEventPageClientProps {
   event: Event;
   planLimits: ClubPlanLimits;
   currentUserId: string;
+  manageableClubs: Array<{
+    id: string;
+    name: string;
+    userRole: "owner" | "admin";
+  }>;
 }
 
 export function EditEventPageClient({
   event,
   planLimits,
   currentUserId,
+  manageableClubs,
 }: EditEventPageClientProps) {
   const router = useRouter();
   const { showPaywall, PaywallModalComponent } = usePaywall();
@@ -94,6 +100,7 @@ export function EditEventPageClient({
         submitLabel="Сохранить изменения"
         headerTitle="Редактирование события"
         headerDescription="Обновите параметры события. Изменения сразу будут видны участникам."
+        manageableClubs={manageableClubs}
         planLimits={planLimits}
         lockedFieldIds={
           hasParticipants && event.customFieldsSchema
@@ -122,10 +129,11 @@ export function EditEventPageClient({
           vehicleTypeRequirement: event.vehicleTypeRequirement,
           allowedBrandIds: event.allowedBrands?.map((b) => b.id) ?? [],
           rules: event.rules ?? "",
-          isClubEvent: event.isClubEvent,
+          clubId: event.clubId ?? null, // clubId instead of isClubEvent
           isPaid: event.isPaid,
           price: event.price ? String(event.price) : "",
           currencyCode: event.currencyCode ?? null,
+          allowAnonymousRegistration: event.allowAnonymousRegistration,
         }}
         onSubmit={handleSubmit}
       />

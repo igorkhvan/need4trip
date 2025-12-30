@@ -13,6 +13,7 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getEventWithVisibility, hydrateEvent } from "@/lib/services/events";
 import { getPlanById } from "@/lib/db/planRepo";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
+import { getUserClubs } from "@/lib/services/clubs";
 import { EditEventPageClient } from "./edit-event-client";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 
@@ -52,7 +53,17 @@ export default async function EditEventPage({ params }: PageProps) {
   // 4. Hydrate event (load related data)
   const hydratedEvent = await hydrateEvent(event);
   
-  // 5. Load plan limits based on event type
+  // 5. Load manageable clubs (for showing club name in edit mode)
+  const allClubs = await getUserClubs(currentUser.id);
+  const manageableClubs = allClubs
+    .filter(club => club.userRole === "owner" || club.userRole === "admin")
+    .map(club => ({
+      id: club.id,
+      name: club.name,
+      userRole: club.userRole as "owner" | "admin",
+    }));
+  
+  // 6. Load plan limits based on event type
   let planLimits: ClubPlanLimits;
   
   if (event.clubId) {
@@ -75,12 +86,13 @@ export default async function EditEventPage({ params }: PageProps) {
     };
   }
   
-  // 6. Render client component with all data ready
+  // 7. Render client component with all data ready
   return (
     <EditEventPageClient
       event={hydratedEvent}
       planLimits={planLimits}
       currentUserId={currentUser.id}
+      manageableClubs={manageableClubs}
     />
   );
 }
