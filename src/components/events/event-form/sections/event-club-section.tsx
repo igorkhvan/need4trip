@@ -161,11 +161,6 @@ export function EventClubSection({
               <SelectValue placeholder="Выберите клуб..." />
             </SelectTrigger>
             <SelectContent>
-              {manageableClubs.length > 1 && (
-                <SelectItem value="" disabled>
-                  Выберите клуб...
-                </SelectItem>
-              )}
               {manageableClubs.map((club) => (
                 <SelectItem key={club.id} value={club.id}>
                   {club.name} ({club.userRole === "owner" ? "Владелец" : "Администратор"})
