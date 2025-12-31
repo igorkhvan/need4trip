@@ -4,23 +4,23 @@ alwaysApply: true
 
 # Need4Trip - SSOT Rules (Single Source of Truth)
 
-**Last Updated:** 27 декабря 2024  
+**Last Updated:** 30 декабря 2024  
 **Status:** Production Ready ✅
 
 ---
 
 ## 🎯 ГЛАВНЫЙ ПРИНЦИП
 
-> **ТОЛЬКО файлы с префиксом SSOT_ являются источниками истины (Single Source of Truth):**
-> 1. `docs/SSOT_ARCHITECTURE.md` — архитектура, паттерны, ownership
-> 2. `docs/SSOT_DATABASE.md` — структура БД, таблицы, индексы, RLS
-> 3. `docs/SSOT_BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
-> 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты (будет переименован)
-> 5. `docs/SSOT_DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты
-> 6. `docs/SSOT_CLUBS_EVENTS_ACCESS.md` — club & event access rules
-> 7. `docs/ssot/api-ssot.md` — API endpoints, auth, rate limits
+> **ТОЛЬКО файлы с префиксом SSOT_ в папке docs/ssot/ являются источниками истины:**
+> 1. `docs/ssot/SSOT_ARCHITECTURE.md` — архитектура, паттерны, ownership map
+> 2. `docs/ssot/SSOT_DATABASE.md` — структура БД, таблицы, индексы, RLS
+> 3. `docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
+> 4. `docs/ssot/SSOT_TESTING.md` — тестирование, тест-кейсы, результаты
+> 5. `docs/ssot/SSOT_DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты
+> 6. `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md` — club & event access rules
+> 7. `docs/ssot/SSOT_API.md` — API endpoints, auth, rate limits
 >
-> **Правило**: Если файл НЕ имеет префикса SSOT_, он НЕ является источником истины, даже если содержит важную информацию.
+> **Правило**: Если файл НЕ в `docs/ssot/` с префиксом `SSOT_`, он НЕ является источником истины.
 
 ---
 
@@ -40,13 +40,13 @@ alwaysApply: true
 3. ✅ Убедись что нет разногласий
 
 **Mapping:**
-- SSOT_DATABASE.md (Memory) → `need4trip-ssot-rules.mdc` (секция DATABASE.md)
-- SSOT_BILLING_SYSTEM_ANALYSIS.md (Memory) → `need4trip-ssot-rules.mdc` (секция BILLING)
-- SSOT_ARCHITECTURE.md (Memory) → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
-- TESTING.md (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING)
-- SSOT_DESIGN_SYSTEM.md (Memory) → `need4trip-ssot-rules.mdc` (секция DESIGN)
-- SSOT_CLUBS_EVENTS_ACCESS.md (Memory) → `need4trip-ssot-rules.mdc` (секция CLUBS_EVENTS)
-- ssot/api-ssot.md (Memory) → `need4trip-ssot-rules.mdc` (секция API)
+- SSOT_ARCHITECTURE.md → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
+- SSOT_DATABASE.md → `need4trip-ssot-rules.mdc` (секция DATABASE)
+- SSOT_BILLING_SYSTEM_ANALYSIS.md → `need4trip-ssot-rules.mdc` (секция BILLING)
+- SSOT_TESTING.md → `need4trip-ssot-rules.mdc` (секция TESTING)
+- SSOT_DESIGN_SYSTEM.md → `need4trip-ssot-rules.mdc` (секция DESIGN)
+- SSOT_CLUBS_EVENTS_ACCESS.md → `need4trip-ssot-rules.mdc` (секция CLUBS_EVENTS)
+- SSOT_API.md → `need4trip-ssot-rules.mdc` (секция API)
 
 **Причина:** Rules файлы видны пользователю, Memory — только AI. Синхронизация = консистентность.
 
@@ -57,13 +57,13 @@ alwaysApply: true
 ### ПЕРЕД любым изменением:
 
 1. **Определи область:**
-   - Архитектура/паттерны → читай `SSOT_ARCHITECTURE.md`
-   - База данных → читай `SSOT_DATABASE.md`
-   - Биллинг/лимиты → читай `SSOT_BILLING_SYSTEM_ANALYSIS.md`
-   - Тестирование → читай `TESTING.md`
-   - UI/UX/дизайн → читай `SSOT_DESIGN_SYSTEM.md`
-   - Club/Event access → читай `SSOT_CLUBS_EVENTS_ACCESS.md`
-   - API endpoints → читай `ssot/api-ssot.md`
+   - Архитектура/паттерны → читай `docs/ssot/SSOT_ARCHITECTURE.md`
+   - База данных → читай `docs/ssot/SSOT_DATABASE.md`
+   - Биллинг/лимиты → читай `docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md`
+   - Тестирование → читай `docs/ssot/SSOT_TESTING.md`
+   - UI/UX/дизайн → читай `docs/ssot/SSOT_DESIGN_SYSTEM.md`
+   - Club/Event access → читай `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md`
+   - API endpoints → читай `docs/ssot/SSOT_API.md`
 
 2. **Изучи SSOT:**
    - Найди соответствующий раздел
@@ -78,14 +78,8 @@ alwaysApply: true
 ### ПОСЛЕ изменения:
 
 1. **Обнови SSOT:**
-   - Если изменилась архитектура → обнови `SSOT_ARCHITECTURE.md`
-   - Если изменилась БД → обнови `SSOT_DATABASE.md`
-   - Если изменился биллинг → обнови `SSOT_BILLING_SYSTEM_ANALYSIS.md`
-   - Если изменились тесты → обнови `TESTING.md`
-   - Если изменился UI/дизайн → обнови `SSOT_DESIGN_SYSTEM.md`
-   - Если изменились club/event access → обнови `SSOT_CLUBS_EVENTS_ACCESS.md`
-   - Если изменились API endpoints → обнови `ssot/api-ssot.md`
-
+   - Соответствующий файл в `docs/ssot/SSOT_*.md`
+   
 2. **Коммит:**
    - Код + обновленный SSOT в ОДНОМ коммите
    - Коммит message указывает что обновлен SSOT
@@ -110,22 +104,22 @@ alwaysApply: true
 **Ключевые паттерны:**
 
 ```typescript
-// ✅ DB Access (SSOT: src/lib/db/client.ts)
-const db = getAdminDb(); // гарантированно non-null
+// ✅ DB Access
+const db = getAdminDb();
 
-// ✅ Date/Time (SSOT: src/lib/utils/dates.ts)
+// ✅ Date/Time
 import { formatDateTime, parseDateTime } from '@/lib/utils/dates';
 
-// ✅ Hydration (SSOT: src/lib/utils/hydration.ts)
+// ✅ Hydration
 const events = await hydrateCities(rawEvents);
 
-// ✅ Visibility (SSOT: src/lib/utils/eventVisibility.ts)
+// ✅ Visibility
 const canView = await canViewEvent(event, currentUser);
 
-// ✅ Permissions (SSOT: src/lib/utils/eventPermissions.ts)
+// ✅ Permissions
 const canRegister = await canRegisterForEvent(event, currentUser);
 
-// ✅ Caching (SSOT: src/lib/cache/staticCache.ts)
+// ✅ Caching
 const cache = new StaticCache<T>({ ttl, name }, loader, keyExtractor);
 ```
 
@@ -133,42 +127,37 @@ const cache = new StaticCache<T>({ ttl, name }, loader, keyExtractor);
 - ❌ Дублировать логику (всегда используй canonical модуль)
 - ❌ UI → Repository напрямую (только через Services)
 - ❌ Server-only код в client components
-- ❌ Множественные способы делать одно и то же
+
+**Правило:** Перед добавлением кода открой Ownership Map, найди владельца concern, используй ТОЛЬКО канонический модуль.
 
 ---
 
 ## 🗄️ SSOT_DATABASE.md
 
 **Что содержит:**
-- 20 таблиц с полными CREATE TABLE схемами
+- 23 таблицы с полными CREATE TABLE схемами
 - Performance indexes (compound, covering, partial)
-- RLS policies summary для всех защищенных таблиц
+- RLS policies summary
 - Database functions & triggers
-- Migration history (60+ миграций)
-- ERD диаграмма связей
-- Maintenance rules
+- Migration history (81+ миграций)
 
 **SQL Миграции (СТРОГО!):**
 
 ```bash
 # Формат имени (ОБЯЗАТЕЛЬНО с timestamp):
 supabase/migrations/YYYYMMDD_description.sql
-
-# Пример:
-supabase/migrations/20241225_add_event_tags.sql
 ```
 
 **Workflow:**
-1. Читай `DATABASE.md` перед изменением
+1. Читай `docs/ssot/SSOT_DATABASE.md` перед изменением
 2. Создай миграцию с timestamp
 3. Примени миграцию в Supabase
-4. Обнови `DATABASE.md` с новой структурой
-5. Коммить миграцию + `DATABASE.md` вместе
+4. Обнови SSOT_DATABASE.md с новой структурой
+5. Коммить миграцию + SSOT вместе
 
 **ЗАПРЕЩЕНО:**
 - ❌ SQL файлы без timestamp в названии
 - ❌ SQL файлы в корне проекта
-- ❌ SQL файлы с UPPERCASE названиями (APPLY_VIA_DASHBOARD*.sql)
 - ❌ Временные файлы типа `.temp_migrations/`
 - ❌ Изменение уже примененных миграций
 - ❌ Прямые изменения в БД без миграции
@@ -183,7 +172,6 @@ supabase/migrations/20241225_add_event_tags.sql
 - Enforcement логика (enforceClubAction)
 - PaywallError структура
 - Frontend интеграция (PaywallModal)
-- Grace period правила
 
 **Ключевые принципы:**
 
@@ -194,83 +182,139 @@ supabase/migrations/20241225_add_event_tags.sql
 
 2. **Backend — единственный источник истины:**
    - `enforceClubAction()` в `src/lib/services/accessControl.ts`
-   - Проверяет текущую подписку клуба
    - Throws `PaywallError` (402) если лимит превышен
 
-3. **Billing transactions — только аудит:**
-   - НЕ участвуют в проверках доступа
-   - Используются для истории платежей
-
-**Пример использования:**
+**Пример:**
 
 ```typescript
-// Backend (API Route)
-import { enforceClubAction } from '@/lib/services/accessControl';
-
+// Backend
 await enforceClubAction({
   clubId: event.clubId,
   action: 'CREATE_EVENT_WITH_PARTICIPANTS',
   context: { eventParticipantsCount: 100 }
-}); // throws PaywallError если превышен лимит
+});
 
-// Frontend (Component)
-import { usePaywall } from '@/components/billing/PaywallModal';
-
+// Frontend
 const { showPaywall, PaywallModalComponent } = usePaywall();
-
-try {
-  await createEvent(...);
-} catch (err) {
-  if (err.response?.status === 402) {
-    showPaywall(err.response.data.error.details);
-  }
+if (err.response?.status === 402) {
+  showPaywall(err.response.data.error.details);
 }
-
-return <>{PaywallModalComponent}</>;
 ```
-
-**ЗАПРЕЩЕНО:**
-- ❌ Проверки лимитов на фронтенде
-- ❌ Использовать старый `paywall-modal.tsx` (удален)
-- ❌ Изменять логику enforcement без обновления SSOT
 
 ---
 
-## 🧪 TESTING.md (SSOT)
+## 🧪 SSOT_TESTING.md
 
 **Что содержит:**
 - 53 automated tests (43 integration + 2 skipped + 8 E2E TODO)
-- QA-1 to QA-8: Core billing v4 tests (publish enforcement, SSOT verification)
-- QA-9 to QA-15: Event create/update enforcement (Production Bug Fix 2024-12-26) ⚡
-- QA-16 to QA-45: Extended coverage (API routes, webhooks, boundaries)
+- QA-1 to QA-8: Core billing v4 tests
+- QA-9 to QA-15: Event enforcement (Production Bug Fix 2024-12-26)
+- QA-16 to QA-45: Extended coverage
 - QA-46 to QA-53: E2E Playwright tests (TODO)
-- Test configuration (Jest, .env.test, helpers)
-- Execution results (~35 seconds для всех integration tests)
-- Continuous testing guidelines
-
-**Production Bug Fix (2024-12-26):** ⚡
-Plan limit enforcement в `createEvent()`/`updateEvent()` дублировала проверку из publish endpoint, блокируя one-off credit flow для редактирования событий 16-500 участников.
-
-**Solution:**
-- create/update проверяют только `maxParticipants > 500` (impossible state)
-- `POST /api/events/:id/publish` — единственный источник истины для монетизации
-- Personal events 16-500 сохраняются успешно, monetization check в publish
 
 **Команды:**
 ```bash
 npm test                    # Все integration tests
 npm test -- billing.v4      # Core billing tests  
-npm test -- events.enforcement  # Production bug fix tests
-npm run test:e2e           # E2E Playwright tests (TODO)
+npm run test:e2e           # E2E Playwright tests
 ```
 
-**Status (2024-12-26):**
-✅ 15/15 integration tests PASS (QA-1 to QA-15)
-⏱️ Total: ~35 seconds
-🗄️ Production Supabase
-✅ Production bug fixed and tested
+**Правило:** Перед изменением тестов читай `docs/ssot/SSOT_TESTING.md`. После изменений обновляй SSOT + коммить вместе.
 
-**Правило:** Перед изменением тестов читай `docs/TESTING.md`. После изменений обновляй SSOT + коммить вместе.
+---
+
+## 🎨 SSOT_DESIGN_SYSTEM.md
+
+**Что содержит:**
+- Модальные окна (Dialog/AlertDialog) — production-ready паттерн
+- Цветовая система (CSS variables)
+- Типографика (Inter font)
+- Buttons, Cards, Badges
+- Анимации (fade/zoom, БЕЗ translateY конфликтов)
+- Адаптивность (mobile first)
+
+**Модалки (КРИТИЧНО!):**
+
+```tsx
+<Dialog>
+  <DialogContent className="sm:max-w-lg">
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+    </DialogHeader>
+    <DialogBody className="space-y-4">
+      {/* Scrollable content */}
+    </DialogBody>
+    <DialogFooter>
+      <Button>Confirm</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Анатомия:**
+- DialogContent: `flex flex-col max-h-[90vh]`
+- DialogHeader: fixed (border-b)
+- DialogBody: scrollable (`flex-1 overflow-y-auto`)
+- DialogFooter: fixed (border-t)
+
+**Цвета:**
+```tsx
+// ✅ Используй CSS variables
+<Button className="bg-[var(--color-primary)]">
+```
+
+**Правило:** ВСЕГДА читай SSOT_DESIGN_SYSTEM.md перед UI изменениями.
+
+---
+
+## 🔐 SSOT_CLUBS_EVENTS_ACCESS.md
+
+**Что содержит:**
+- Club roles (owner, admin, member, pending)
+- Event clubness (club_id IS NOT NULL)
+- Paid modes (personal credit vs club subscription)
+- UI rules (checkbox + single club dropdown)
+- Backend authorization rules
+- Canonical matrices for permissions
+
+**Ключевые правила:**
+- Club event publish (paid): ONLY owner
+- Club ID immutable after creation
+- No mixing personal + club billing
+- Club selection: Section 0 in EventForm
+
+**Правило:** Читай SSOT_CLUBS_EVENTS_ACCESS.md для любых изменений в club/event access.
+
+---
+
+## 🌐 SSOT_API.md
+
+**Что содержит:**
+- Полная инвентаризация всех 50 API endpoints (API-001 to API-050)
+- Глобальные конвенции (auth, authorization, rate limiting, billing)
+- Self-audit с coverage check
+- Security sanity check
+
+**Ключевые паттерны:**
+
+```typescript
+// ✅ Auth (protected)
+const user = await getCurrentUserFromMiddleware(request);
+if (!user) throw new UnauthorizedError();
+
+// ✅ Billing enforcement
+await enforceClubAction({
+  clubId: string,
+  action: BillingActionCode,
+  context?: { ... }
+});
+
+// ✅ Response format
+return respondSuccess({ data }, message?, status?, headers?);
+return respondError(error);
+```
+
+**Правило:** Новый endpoint MUST be documented в SSOT_API.md в том же PR.
 
 ---
 
@@ -282,138 +326,21 @@ npm run test:e2e           # E2E Playwright tests (TODO)
 ```
 docs/sessions/
 ├── YYYY-MM-DD-название/
-│   ├── analysis.md       # Начальный анализ
-│   ├── implementation.md # Детали реализации
-│   ├── stages-N-M.md    # Промежуточные отчёты
-│   └── complete.md      # Финальный отчёт
-└── README.md            # Правила работы
+│   ├── analysis.md
+│   ├── implementation.md
+│   └── complete.md
+└── README.md
 ```
-
-**Workflow:**
-1. **СОЗДАНИЕ:** AI создаёт папку для контекста большой задачи
-2. **ЗАВЕРШЕНИЕ:** Ключевые insights переносятся в SSOT
-3. **CLEANUP:** Sessions старше 30 дней можно удалять
 
 **Правила:**
-- ✅ Создавай session для больших задач (НЕ для мелких изменений)
+- ✅ Создавай session для больших задач
 - ✅ Переноси insights в SSOT после завершения
-- ✅ Удаляй старые sessions периодически
+- ✅ Удаляй старые sessions (>30 дней)
 - ❌ НЕ используй sessions как источник истины
-- ❌ НЕ ссылайся на них из кода/документов
-- ❌ НЕ храни критичную информацию только в sessions
 
 ---
 
-## 🎨 SSOT_DESIGN_SYSTEM.md
-
-**Что содержит:**
-- Модальные окна (Dialog/AlertDialog) — production-ready паттерн
-- Цветовая система (CSS variables)
-- Типографика (Inter font, heading classes)
-- Buttons (variants, sizes, states)
-- Cards, Badges, другие компоненты
-- Анимации (fade/zoom, БЕЗ translateY конфликтов)
-- Адаптивность (mobile first, breakpoints)
-
-**Ключевые паттерны:**
-
-### Модалки (КРИТИЧНО!)
-
-```tsx
-// ✅ Правильная структура
-<Dialog>
-  <DialogContent className="sm:max-w-lg">
-    <DialogHeader>
-      <DialogTitle>Title</DialogTitle>
-      <DialogDescription>Description</DialogDescription>
-    </DialogHeader>
-
-    <DialogBody className="space-y-4">
-      {/* Scrollable content */}
-    </DialogBody>
-
-    <DialogFooter>
-      <Button variant="outline">Cancel</Button>
-      <Button>Confirm</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-```
-
-**Анатомия:**
-- DialogContent: `flex flex-col max-h-[90vh]`
-- DialogHeader: `px-4 pt-6 pb-4 border-b` (fixed)
-- DialogBody: `flex-1 overflow-y-auto px-4 py-4` (scrollable)
-- DialogFooter: `px-4 py-4 border-t` (fixed)
-
-**Анимации:**
-```tsx
-// ✅ ПРАВИЛЬНО: fade + zoom
-"data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
-
-// ❌ НЕПРАВИЛЬНО: slide-in конфликтует с центрированием
-"slide-in-from-top-[48%]"  // НЕ ИСПОЛЬЗОВАТЬ!
-```
-
-### Цвета
-
-```tsx
-// ✅ Используй CSS variables
-<Button className="bg-[var(--color-primary)]">
-
-// ❌ НЕ hardcode hex
-<Button className="bg-[#FF6F2C]">
-```
-
-**Палитра:**
-- `--color-primary` (#FF6F2C) — основной оранжевый
-- `--color-success` (#22C55E) — зелёный
-- `--color-warning` (#F59E0B) — жёлтый
-- `--color-danger` (#EF4444) — красный
-
-**ЗАПРЕЩЕНО:**
-- ❌ НЕ используй grid на DialogContent (только flex flex-col)
-- ❌ НЕ ставь padding на DialogContent (только на header/body/footer)
-- ❌ НЕ используй slide-in-from-top анимации
-- ❌ НЕ ставь overflow-y-auto на DialogContent (только на DialogBody)
-- ❌ НЕ hardcode цвета (используй CSS variables)
-
-**ОБЯЗАТЕЛЬНО:**
-- ✅ Всегда используй DialogBody для контента
-- ✅ max-h только на DialogContent
-- ✅ Кнопки w-full sm:w-auto для адаптивности
-- ✅ Primary кнопка справа/снизу в footer
-
-**Правило:** ВСЕГДА читай `DESIGN_SYSTEM.md` перед UI изменениями. ВСЕГДА обновляй его после успешных изменений.
-
----
-
-## 🎨 Дизайн-система (/figma/) — DEPRECATED
-
-**Статус:** Исключена из билда, в .gitignore
-
-**НОВЫЙ SSOT:** `docs/DESIGN_SYSTEM.md` ✨
-
-**Документация (старая):** `/figma/src/DESIGN_SYSTEM.md`
-
-**Цвета:**
-- Primary: #FF6F2C (оранжевый)
-- Success: #22C55E, Warning: #F59E0B, Danger: #EF4444
-
-**Типографика:**
-- Шрифт: Inter (Google Fonts)
-- h1: 32px (desktop) / 36px (mobile)
-- Body: 15px
-
-**Компоненты:**
-- Button (4 варианта), Badge (6 типов), Card (3 размера)
-- Modal (5 размеров), Input/Select (высота 48px)
-
-**Правило:** Старая figma папка для reference. **Используй `docs/DESIGN_SYSTEM.md` как SSOT.**
-
----
-
-## ✅ Vercel Compatibility (КРИТИЧНО!)
+## ✅ Vercel Compatibility
 
 **Runtime boundaries:**
 
@@ -426,21 +353,12 @@ import { getAdminDb } from '@/lib/db/client'; // OK в API routes
 import { supabaseAdmin } from '@/lib/db/client'; // ❌ ОШИБКА БИЛДА
 ```
 
-**Правила:**
-- Server-only код НЕ должен импортироваться в `'use client'` компонентах
-- Утилиты для обеих сторон должны быть pure functions
-- No Node-only APIs в Edge runtimes
-- Изоморфный код только для shared utilities
-
 **Checklist перед push:**
 ```bash
 npx tsc --noEmit  # TypeScript ✅
 npm run build     # Production build ✅
-git status        # Clean или tracked changes ✅
 git push origin main
 ```
-
-**Правило:** Если build не проходит — НЕ пушь. Сначала исправь.
 
 ---
 
@@ -457,37 +375,18 @@ Details...
 Verified: TypeScript ✅, Build ✅"
 ```
 
-**Conventional Commits format:**
+**Conventional Commits:**
 - `feat:` — новая функциональность
 - `fix:` — исправление бага
 - `refactor:` — рефакторинг без изменения поведения
 - `docs:` — только документация
 - `chore:` — инфраструктура, зависимости
 
-**Staged commits при рефакторинге:**
-- НЕ "big rewrite" в одном коммите
-- Один коммит = одна атомарная стадия с верификацией
-- Пример: `refactor: consolidate dates (STAGE 1)`
-
-**NO Breaking Changes без явного запроса:**
-- Сохраняй сигнатуры через overloads, union типы
-- Обратная совместимость обязательна
+**NO Breaking Changes без явного запроса.**
 
 ---
 
 ## 🚨 TypeScript Strict Mode
-
-**Обязательный workflow перед использованием типа:**
-
-```bash
-# 1. Проверь что тип экспортируется
-grep "^export.*TypeName" path/to/file.ts
-
-# 2. Проверь возвращаемый тип функции
-grep "functionName.*Promise" path/to/file.ts
-
-# 3. Не предполагай типы по названию функции
-```
 
 **Правила:**
 - НИКОГДА не используй `any`
@@ -497,46 +396,20 @@ grep "functionName.*Promise" path/to/file.ts
 
 ---
 
-## 📦 Ownership Map (из ARCHITECTURE.md)
+## 📦 Ownership Map
 
-| Topic | Canonical Module | Notes |
-|-------|-----------------|-------|
-| Date/Time | `lib/utils/dates.ts` | Все форматирование дат |
-| Hydration | `lib/utils/hydration.ts` | Batch loading reference data |
-| DB Access | `lib/db/client.ts` | `getAdminDb()` wrapper |
-| Visibility | `lib/utils/eventVisibility.ts` | Event visibility checks |
-| Permissions | `lib/utils/eventPermissions.ts` | Registration eligibility |
-| Caching | `lib/cache/staticCache.ts` | Reference data caching |
-| UI Formatting | `lib/utils/eventFormatters.ts` | Event price, etc |
-| Billing Enforcement | `lib/services/accessControl.ts` | `enforceClubAction()` |
+| Topic | Canonical Module |
+|-------|------------------|
+| Date/Time | `lib/utils/dates.ts` |
+| Hydration | `lib/utils/hydration.ts` |
+| DB Access | `lib/db/client.ts` |
+| Visibility | `lib/utils/eventVisibility.ts` |
+| Permissions | `lib/utils/eventPermissions.ts` |
+| Caching | `lib/cache/staticCache.ts` |
+| UI Formatting | `lib/utils/eventFormatters.ts` |
+| Billing Enforcement | `lib/services/accessControl.ts` |
 
-**Правило:** Перед добавлением кода открой Ownership Map в SSOT_ARCHITECTURE.md, найди владельца concern, используй ТОЛЬКО канонический модуль.
-
----
-
-## 🔄 Staged Refactoring Pattern
-
-**Пример правильного подхода:**
-
-```
-STAGE 0: Inventory & Doc Foundation
-STAGE 1: Date/Time Consolidation
-STAGE 2: Supabase Admin DB Client
-STAGE 3: Hydration Consolidation
-STAGE 4: Visibility & Permissions
-STAGE 5: UI Formatters
-STAGE 6: Caching Strategy
-```
-
-**Каждая стадия:**
-1. Изменения в коде
-2. Обновление SSOT документов
-3. TypeScript check
-4. Production build
-5. Git commit
-6. Push to Vercel
-
-**Правило:** Маленькие атомарные коммиты > один большой rewrite.
+**Правило:** Перед добавлением кода открой Ownership Map в SSOT_ARCHITECTURE.md.
 
 ---
 
@@ -549,8 +422,6 @@ STAGE 6: Caching Strategy
 3. Vercel build fails
 4. SSOT документы противоречат коду
 5. Требуется доступ к env/secrets/CLI
-
-**Правило:** Лучше спросить, чем сделать неправильно.
 
 ---
 
@@ -568,154 +439,6 @@ STAGE 6: Caching Strategy
 
 ---
 
-**Помни:** Архитектура существует чтобы СНИЗИТЬ когнитивную нагрузку, а не увеличить её.
+**Помни:** Архитектура существует чтобы СНИЗИТЬ когнитивную нагрузку.
 
 **Single Source of Truth = Меньше мест для принятия решений = Меньше ошибок.**
-
----
-
-## 🌐 docs/ssot/api-ssot.md (API SSOT) ⚡ NEW
-
-**Что содержит:**
-- Полная инвентаризация всех 50 API endpoints (API-001 to API-050)
-- Глобальные конвенции (auth, authorization, rate limiting, billing, error model)
-- Self-audit с coverage check (33 route handlers = 50 endpoints)
-- Security sanity check (abuse risks, cost risks, sensitive data)
-
-**Структура документа (3630 строк):**
-
-### 1. Global Sections
-- **Conventions:** HTTP methods, request/response format, runtime
-- **Auth model:** JWT (HTTP-only cookie), middleware verification
-- **Authorization:** Ownership checks, role-based (clubs), visibility-based (events)
-- **Rate limiting:** Upstash Redis, 4 tiers (critical 3/min, write 30/min, read 300/5min, guest 10/min)
-- **Billing touchpoints:** PaywallError (402), CreditConfirmationRequiredError (409)
-- **Error model:** AppError classes, special errors (402, 409)
-
-### 2. Endpoints Inventory (50 endpoints)
-
-**Auth (3 endpoints):**
-- API-001: POST/GET `/api/auth/telegram` (Telegram login)
-- API-002: GET `/api/auth/me` (get current user)
-- API-003: POST/GET `/api/auth/logout` (logout)
-
-**Users & Profile (10 endpoints):**
-- API-004 to API-008: Profile, credits, notifications
-- API-009 to API-013: User cars (CRUD)
-
-**Clubs (11 endpoints):**
-- API-014 to API-018: Clubs CRUD
-- API-019 to API-022: Club members management
-- API-023: Get club current plan
-- API-024: Export members (CSV, requires plan feature)
-
-**Events (11 endpoints):**
-- API-025 to API-027: List events, stats
-- API-028 to API-031: Event CRUD, registration toggle
-- API-032 to API-035: Participants management (guest-friendly)
-
-**Billing (4 endpoints):**
-- API-036: Get billing products
-- API-037: Create purchase intent (Kaspi stub)
-- API-038: Get transaction status
-- API-039: DEV settle transaction (DEV only)
-
-**Reference Data (7 endpoints):**
-- API-040 to API-046: Plans, cities, currencies, categories, car brands, vehicle types
-
-**AI (1 endpoint):**
-- API-047: POST `/api/ai/events/generate-rules` (OpenAI, rate limit 3 req/min)
-
-**Admin (1 endpoint):**
-- API-048: POST `/api/admin/cache/clear` (secret-protected)
-
-**Cron (2 endpoints):**
-- API-049, API-050: Process notifications queue
-
-### 3. Self-Audit
-
-**Coverage check:**
-- ✅ 33 route handlers discovered
-- ✅ 50 endpoints documented (some files have multiple methods)
-- ✅ All endpoints have unique Endpoint ID
-- ✅ All endpoints have Security & Abuse section
-
-**Security risks identified:**
-- **High abuse risk:** API-033 (guest event registration, no auth required)
-- **Critical cost risk:** API-047 (AI generation, OpenAI API costs, 3 req/min limit)
-- **Sensitive data:** API-024 (CSV export with personal data)
-
-**Known gaps/TODOs:**
-- Authorization TODO in API-038 (transaction status, no club owner check)
-- Club subscription settlement not implemented (API-039 TODO)
-- Kaspi payment provider in STUB mode (API-037)
-
-### 4. SSOT Rules
-
-**Обязательно для всех API изменений:**
-
-```typescript
-// ✅ ПЕРЕД изменением endpoint:
-// 1. Читаю docs/ssot/api-ssot.md
-// 2. Находжу соответствующий API-XXX
-// 3. Изучаю текущий контракт, auth, rate limits
-
-// ✅ ПОСЛЕ изменения endpoint:
-// 1. Обновляю docs/ssot/api-ssot.md (тот же PR)
-// 2. Обновляю версию документа
-// 3. Коммичу код + SSOT вместе
-```
-
-**Правила:**
-- ❌ Новый endpoint без документации в api-ssot.md = rejected PR
-- ❌ Изменение endpoint behavior без обновления SSOT = rejected PR
-- ❌ Дублирующая/противоречивая API документация вне SSOT = удалить
-- ✅ API SSOT имеет такой же приоритет как ARCHITECTURE.md, BILLING_SYSTEM_ANALYSIS.md
-
-**Для AI/Cursor:**
-При любой работе с API (анализ, рефакторинг, добавление):
-1. Прочитать `docs/ssot/api-ssot.md`
-2. Учесть текущие контракты, auth, rate limits
-3. Явно указать несоответствия code ↔ SSOT
-
-**Ключевые паттерны:**
-
-```typescript
-// ✅ Auth (protected endpoints)
-const user = await getCurrentUserFromMiddleware(request);
-if (!user) throw new UnauthorizedError();
-
-// ✅ Auth (optional auth endpoints)
-const user = await getCurrentUser(); // May be null
-
-// ✅ Guest access (participants)
-const guestSessionId = await getOrCreateGuestSessionId();
-
-// ✅ Rate limiting (middleware handles automatically)
-// Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
-
-// ✅ Billing enforcement
-await enforceClubAction({
-  clubId: string,
-  action: BillingActionCode,
-  context?: { ... }
-}); // Throws PaywallError (402) if limit exceeded
-
-// ✅ Response format
-return respondSuccess({ data }, message?, status?, headers?);
-return respondError(error); // Handles all error types
-```
-
-**ЗАПРЕЩЕНО:**
-- ❌ Новый endpoint без Security & Abuse секции
-- ❌ Изменение rate limit без обновления SSOT
-- ❌ Добавление secret-protected endpoint без документации
-- ❌ Изменение auth model без обновления § 2
-
-**ОБЯЗАТЕЛЬНО:**
-- ✅ Каждый endpoint имеет Endpoint ID (API-XXX)
-- ✅ Каждый endpoint имеет Security & Abuse секцию
-- ✅ Изменения в middleware отражены в § 2, § 4
-- ✅ Новые error types добавлены в § 6
-
-**Правило:** API SSOT — это первая точка контакта для любой работы с endpoints. Читай ДО изменений, обновляй ПОСЛЕ изменений.
