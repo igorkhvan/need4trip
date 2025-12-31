@@ -11,13 +11,16 @@ alwaysApply: true
 
 ## 🎯 ГЛАВНЫЙ ПРИНЦИП
 
-> **ШЕСТЬ SSOT ДОКУМЕНТОВ — ЕДИНСТВЕННЫЕ источники истины:**
-> 1. `docs/ARCHITECTURE.md` — архитектура, паттерны, ownership
-> 2. `docs/DATABASE.md` — структура БД, таблицы, индексы, RLS
-> 3. `docs/BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
-> 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты
-> 5. `docs/DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты
-> 6. `docs/ssot/api-ssot.md` — API endpoints, auth, rate limits ⚡ NEW
+> **ТОЛЬКО файлы с префиксом SSOT_ являются источниками истины (Single Source of Truth):**
+> 1. `docs/SSOT_ARCHITECTURE.md` — архитектура, паттерны, ownership
+> 2. `docs/SSOT_DATABASE.md` — структура БД, таблицы, индексы, RLS
+> 3. `docs/SSOT_BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
+> 4. `docs/TESTING.md` — тестирование, тест-кейсы, результаты (будет переименован)
+> 5. `docs/SSOT_DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты
+> 6. `docs/SSOT_CLUBS_EVENTS_ACCESS.md` — club & event access rules
+> 7. `docs/ssot/api-ssot.md` — API endpoints, auth, rate limits
+>
+> **Правило**: Если файл НЕ имеет префикса SSOT_, он НЕ является источником истины, даже если содержит важную информацию.
 
 ---
 
@@ -37,12 +40,13 @@ alwaysApply: true
 3. ✅ Убедись что нет разногласий
 
 **Mapping:**
-- DATABASE.md SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DATABASE.md)
-- BILLING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция BILLING)
-- ARCHITECTURE SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
-- TESTING SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING)
-- DESIGN_SYSTEM SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция DESIGN)
-- API SSOT (Memory) → `need4trip-ssot-rules.mdc` (секция API) ⚡ NEW
+- SSOT_DATABASE.md (Memory) → `need4trip-ssot-rules.mdc` (секция DATABASE.md)
+- SSOT_BILLING_SYSTEM_ANALYSIS.md (Memory) → `need4trip-ssot-rules.mdc` (секция BILLING)
+- SSOT_ARCHITECTURE.md (Memory) → `need4trip-ssot-rules.mdc` (секция ARCHITECTURE)
+- TESTING.md (Memory) → `need4trip-ssot-rules.mdc` (секция TESTING)
+- SSOT_DESIGN_SYSTEM.md (Memory) → `need4trip-ssot-rules.mdc` (секция DESIGN)
+- SSOT_CLUBS_EVENTS_ACCESS.md (Memory) → `need4trip-ssot-rules.mdc` (секция CLUBS_EVENTS)
+- ssot/api-ssot.md (Memory) → `need4trip-ssot-rules.mdc` (секция API)
 
 **Причина:** Rules файлы видны пользователю, Memory — только AI. Синхронизация = консистентность.
 
@@ -53,12 +57,13 @@ alwaysApply: true
 ### ПЕРЕД любым изменением:
 
 1. **Определи область:**
-   - Архитектура/паттерны → читай `ARCHITECTURE.md`
-   - База данных → читай `DATABASE.md`
-   - Биллинг/лимиты → читай `BILLING_SYSTEM_ANALYSIS.md`
+   - Архитектура/паттерны → читай `SSOT_ARCHITECTURE.md`
+   - База данных → читай `SSOT_DATABASE.md`
+   - Биллинг/лимиты → читай `SSOT_BILLING_SYSTEM_ANALYSIS.md`
    - Тестирование → читай `TESTING.md`
-   - UI/UX/дизайн → читай `DESIGN_SYSTEM.md`
-   - API endpoints → читай `ssot/api-ssot.md` ⚡ NEW
+   - UI/UX/дизайн → читай `SSOT_DESIGN_SYSTEM.md`
+   - Club/Event access → читай `SSOT_CLUBS_EVENTS_ACCESS.md`
+   - API endpoints → читай `ssot/api-ssot.md`
 
 2. **Изучи SSOT:**
    - Найди соответствующий раздел
@@ -73,12 +78,13 @@ alwaysApply: true
 ### ПОСЛЕ изменения:
 
 1. **Обнови SSOT:**
-   - Если изменилась архитектура → обнови `ARCHITECTURE.md`
-   - Если изменилась БД → обнови `DATABASE.md`
-   - Если изменился биллинг → обнови `BILLING_SYSTEM_ANALYSIS.md`
+   - Если изменилась архитектура → обнови `SSOT_ARCHITECTURE.md`
+   - Если изменилась БД → обнови `SSOT_DATABASE.md`
+   - Если изменился биллинг → обнови `SSOT_BILLING_SYSTEM_ANALYSIS.md`
    - Если изменились тесты → обнови `TESTING.md`
-   - Если изменился UI/дизайн → обнови `DESIGN_SYSTEM.md`
-   - Если изменились API endpoints → обнови `ssot/api-ssot.md` ⚡ NEW
+   - Если изменился UI/дизайн → обнови `SSOT_DESIGN_SYSTEM.md`
+   - Если изменились club/event access → обнови `SSOT_CLUBS_EVENTS_ACCESS.md`
+   - Если изменились API endpoints → обнови `ssot/api-ssot.md`
 
 2. **Коммит:**
    - Код + обновленный SSOT в ОДНОМ коммите
@@ -91,7 +97,7 @@ alwaysApply: true
 
 ---
 
-## 🏗️ ARCHITECTURE.md (SSOT)
+## 🏗️ SSOT_ARCHITECTURE.md
 
 **Что содержит:**
 - Module ownership map (кто отвечает за что)
@@ -131,7 +137,7 @@ const cache = new StaticCache<T>({ ttl, name }, loader, keyExtractor);
 
 ---
 
-## 🗄️ DATABASE.md (SSOT)
+## 🗄️ SSOT_DATABASE.md
 
 **Что содержит:**
 - 20 таблиц с полными CREATE TABLE схемами
@@ -169,7 +175,7 @@ supabase/migrations/20241225_add_event_tags.sql
 
 ---
 
-## 💳 BILLING_SYSTEM_ANALYSIS.md (SSOT)
+## 💳 SSOT_BILLING_SYSTEM_ANALYSIS.md
 
 **Что содержит:**
 - Тарифы (free, club_50, club_500, club_unlimited)
@@ -298,7 +304,7 @@ docs/sessions/
 
 ---
 
-## 🎨 DESIGN_SYSTEM.md (SSOT) ✨
+## 🎨 SSOT_DESIGN_SYSTEM.md
 
 **Что содержит:**
 - Модальные окна (Dialog/AlertDialog) — production-ready паттерн
@@ -504,7 +510,7 @@ grep "functionName.*Promise" path/to/file.ts
 | UI Formatting | `lib/utils/eventFormatters.ts` | Event price, etc |
 | Billing Enforcement | `lib/services/accessControl.ts` | `enforceClubAction()` |
 
-**Правило:** Перед добавлением кода открой Ownership Map, найди владельца concern, используй ТОЛЬКО канонический модуль.
+**Правило:** Перед добавлением кода открой Ownership Map в SSOT_ARCHITECTURE.md, найди владельца concern, используй ТОЛЬКО канонический модуль.
 
 ---
 
