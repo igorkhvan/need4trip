@@ -57,7 +57,7 @@ export async function getIdempotencyKey(
 ): Promise<IdempotencyKey | null> {
   const db = getAdminDb();
   
-  const { data, error } = await (db as any)
+  const { data, error } = await db
     .from('idempotency_keys')
     .select('*')
     .eq('user_id', userId)
@@ -91,7 +91,7 @@ export async function createInProgressKey(
 ): Promise<IdempotencyKey> {
   const db = getAdminDb();
   
-  const { data, error } = await (db as any)
+  const { data, error } = await db
     .from('idempotency_keys')
     .insert({
       user_id: userId,
@@ -134,7 +134,7 @@ export async function completeIdempotencyKey(
 ): Promise<void> {
   const db = getAdminDb();
   
-  const { error } = await (db as any)
+  const { error } = await db
     .from('idempotency_keys')
     .update({
       status: 'completed',
@@ -170,7 +170,7 @@ export async function failIdempotencyKey(
 ): Promise<void> {
   const db = getAdminDb();
   
-  const { error } = await (db as any)
+  const { error } = await db
     .from('idempotency_keys')
     .update({
       status: 'failed',

@@ -3,6 +3,8 @@ import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
+import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
+import { NextRequest } from "next/server";
 
 // ❌ Edge Runtime не совместим с Supabase + revalidatePath
 // Используем Node.js runtime с оптимизированными запросами
@@ -26,7 +28,7 @@ export async function GET(_: Request, { params }: Params) {
   }
 }
 
-export async function PUT(request: Request, { params }: Params) {
+export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     
@@ -37,7 +39,39 @@ export async function PUT(request: Request, { params }: Params) {
       throw new UnauthorizedError("Авторизация обязательна");
     }
     
-    // Extract confirm_credit from query params
+    // Extract idempotency key from headers
+    const idempotencyKey = extractIdempotencyKey(request);
+    
+    // ⚡ NEW: Wrap with idempotency if key provided
+    if (idempotencyKey && isValidIdempotencyKey(idempotencyKey)) {
+      return withIdempotency(
+        {
+          userId: currentUser.id,
+          route: `PUT /api/events/${id}`,
+          key: idempotencyKey,
+        },
+        async () => {
+          // Extract confirm_credit from query params
+          const url = new URL(request.url);
+          const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+          
+          const payload = await request.json();
+          const updated = await updateEvent(id, payload, currentUser, confirmCredit);
+          
+          // Revalidate pages that display this event
+          revalidatePath(`/events/${id}`);        // Event detail page
+          revalidatePath(`/events/${id}/edit`);   // Event edit page
+          revalidatePath("/events");              // Events list page
+          
+          return {
+            status: 200,
+            body: { success: true, data: { event: updated } },
+          };
+        }
+      );
+    }
+    
+    // Fallback: no idempotency (shouldn't happen with new UI)
     const url = new URL(request.url);
     const confirmCredit = url.searchParams.get("confirm_credit") === "1";
     

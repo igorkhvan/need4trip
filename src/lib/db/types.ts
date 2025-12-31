@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       billing_credits: {
@@ -977,6 +952,42 @@ export type Database = {
           },
         ]
       }
+      idempotency_keys: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          key: string
+          response_body: Json | null
+          response_status: number | null
+          route: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          key: string
+          response_body?: Json | null
+          response_status?: number | null
+          route: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          key?: string
+          response_body?: Json | null
+          response_status?: number | null
+          route?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_logs: {
         Row: {
           error_message: string | null
@@ -1472,6 +1483,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      cleanup_old_idempotency_keys: { Args: never; Returns: undefined }
       deactivate_expired_club_subscriptions: { Args: never; Returns: undefined }
       get_club_city_ids: { Args: { p_club_id: string }; Returns: string[] }
       get_club_total_revenue: { Args: { p_club_id: string }; Returns: number }
@@ -1635,9 +1647,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       notification_status: [

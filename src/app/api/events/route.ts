@@ -2,6 +2,7 @@ import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { createEvent, listVisibleEventsForUserPaginated } from "@/lib/services/events";
+import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     // Get user from middleware (JWT already verified)
     const currentUser = await getCurrentUserFromMiddleware(request);
@@ -86,7 +87,34 @@ export async function POST(request: Request) {
       throw new UnauthorizedError("Авторизация обязательна для создания события");
     }
     
-    // Extract confirm_credit from query params
+    // Extract idempotency key from headers
+    const idempotencyKey = extractIdempotencyKey(request);
+    
+    // ⚡ NEW: Wrap with idempotency if key provided
+    if (idempotencyKey && isValidIdempotencyKey(idempotencyKey)) {
+      return withIdempotency(
+        {
+          userId: currentUser.id,
+          route: 'POST /api/events',
+          key: idempotencyKey,
+        },
+        async () => {
+          // Extract confirm_credit from query params
+          const url = new URL(request.url);
+          const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+          
+          const payload = await request.json();
+          const event = await createEvent(payload, currentUser, confirmCredit);
+          
+          return {
+            status: 201,
+            body: { success: true, data: { event } },
+          };
+        }
+      );
+    }
+    
+    // Fallback: no idempotency (shouldn't happen with new UI)
     const url = new URL(request.url);
     const confirmCredit = url.searchParams.get("confirm_credit") === "1";
     
