@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-27 (Added missing columns: is_club_event, version, registration controls, club_cities table) ⚡  
+> Последнее обновление: 2024-12-31 (Added club_id immutability trigger + recent migrations) ⚡  
 > PostgreSQL + Supabase
 
 ---
@@ -1092,9 +1092,18 @@ CREATE INDEX idx_event_participants_user_event
    - Событие: BEFORE UPDATE
    - Действие: Автоматически обновляет `updated_at = NOW()`
 
+7. **Prevent club_id changes** ⚡ NEW (2024-12-31)
+   - Таблица: `events`
+   - Событие: BEFORE UPDATE
+   - Действие: Блокирует ANY изменения `club_id` после создания события
+   - Enforcement: SSOT_CLUBS_EVENTS_ACCESS.md §5.7 (Club ID Immutability)
+   - Миграция: `20241231_enforce_club_id_immutability_v2.sql`
+   - Ратionale: Defense in depth (service layer + DB constraint)
+
 ### Functions:
 
 - `gen_random_uuid()` - генерация UUID для PRIMARY KEY
+- `prevent_club_id_change()` - ⚡ блокирует изменения club_id (SSOT §5.7)
 - Геопространственные функции (если используются для cities)
 - Custom validation functions (через CHECK constraints)
 
@@ -1138,8 +1147,11 @@ CREATE INDEX idx_event_participants_user_event
 | 2024-12-26 | `normalize_billing_products` | ⚡ **Normalization**: price_kzt→price + currency_code FK |
 | 2024-12-26 | `normalize_club_plans` | ⚡ **Normalization**: price_monthly_kzt→price_monthly + currency_code FK |
 | 2024-12-26 | `cleanup_currency_columns` | ⚡ Удалены deprecated columns (price_kzt, price_monthly_kzt) |
+| 2024-12-30 | `remove_organizer_role` | 🔥 Удалена роль `organizer` из club_members (SSOT §2) |
+| 2024-12-30 | `fix_rls_owner_only_members` | 🔒 RLS: ТОЛЬКО owner может управлять members (SSOT §6.2) |
+| 2024-12-31 | `enforce_club_id_immutability_v2` | 🔒 DB trigger: club_id immutability (SSOT §5.7) |
 
-**Всего миграций**: 81 timestamped файлов ⚡
+**Всего миграций**: 84 timestamped файлов ⚡
 
 **Расположение**: `/supabase/migrations/`
 
