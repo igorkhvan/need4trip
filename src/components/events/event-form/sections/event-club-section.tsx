@@ -8,6 +8,11 @@
  * - Validation: clubId required when checkbox ON
  * 
  * Design: Follows DESIGN_SYSTEM.md Card pattern with shadcn/ui components
+ * 
+ * Architecture:
+ * - UI state: isClubEventMode (controls checkbox display)
+ * - Data state: clubId (source of truth for API payload, SSOT §1.2)
+ * - When checkbox ON + multiple clubs → isClubEventMode=true, clubId=null (user must choose)
  */
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { FormField } from "@/components/ui/form-field";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ClubOption {
   id: string;
@@ -54,15 +59,23 @@ export function EventClubSection({
   disabled,
   mode = "create",
 }: EventClubSectionProps) {
-  // Computed: isClubEvent = Boolean(clubId)
-  const isClubEvent = Boolean(clubId);
+  // UI state: controls checkbox (independent from clubId to allow "checkbox ON but club not selected yet")
+  // SSOT §1.2: clubId is source of truth for DATA, isClubEventMode is UI state
+  const [isClubEventMode, setIsClubEventMode] = useState<boolean>(Boolean(clubId));
+  
+  // Sync UI state with clubId on mount (for edit mode or pre-filled clubId)
+  useEffect(() => {
+    if (clubId) {
+      setIsClubEventMode(true);
+    }
+  }, []); // Only on mount
   
   // SSOT §4.2: Auto-select if exactly one manageable club (create mode only)
   useEffect(() => {
-    if (mode === "create" && manageableClubs.length === 1 && isClubEvent && !clubId) {
+    if (mode === "create" && manageableClubs.length === 1 && isClubEventMode && !clubId) {
       onClubIdChange(manageableClubs[0].id);
     }
-  }, [manageableClubs, isClubEvent, clubId, onClubIdChange, mode]);
+  }, [manageableClubs, isClubEventMode, clubId, onClubIdChange, mode]);
   
   // Edit mode: show read-only club info
   if (mode === "edit" && clubId) {
@@ -101,16 +114,17 @@ export function EventClubSection({
       <div className="flex items-center gap-3">
         <Checkbox
           id="isClubEvent"
-          checked={isClubEvent}
+          checked={isClubEventMode}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             const checked = e.target.checked;
+            setIsClubEventMode(checked);
+            
             if (checked) {
-              // Turning ON: auto-select if single club, else null (user must choose)
+              // Turning ON: auto-select if single club, else leave clubId=null (dropdown will require selection)
               if (manageableClubs.length === 1) {
                 onClubIdChange(manageableClubs[0].id);
-              } else {
-                onClubIdChange(null); // Will show dropdown with required validation
               }
+              // else: clubId stays null, dropdown will show with validation
             } else {
               // Turning OFF: clear clubId
               onClubIdChange(null);
@@ -128,7 +142,7 @@ export function EventClubSection({
       </div>
       
       {/* Dropdown: Club selection (shown only when checkbox ON) */}
-      {isClubEvent && (
+      {isClubEventMode && (
         <FormField
           id="clubId"
           label="Выберите клуб"
@@ -163,7 +177,7 @@ export function EventClubSection({
       )}
       
       {/* Helper text */}
-      {isClubEvent && (
+      {isClubEventMode && (
         <p className="text-sm text-muted-foreground">
           Событие будет опубликовано от имени клуба. Лимиты участников и возможность платных событий определяются тарифным планом клуба.
         </p>
