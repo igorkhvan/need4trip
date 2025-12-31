@@ -1,10 +1,8 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Last Updated:** 2024-12-28  
-**Version:** 3.0  
-**Version:** 2.8  
-**Last Updated:** 28 December 2024 (Added Vehicle Type Hydration)  
+**Last Updated:** 2024-12-31  
+**Version:** 3.1  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
@@ -1747,6 +1745,7 @@ module.exports = {
 | 2024-12-27 | 2.3 | SSOT consolidation for events listing pagination + stats (visibility + caching + repo contracts) |
 | 2024-12-27 | 2.4 | Self-consistency consolidation pass: unified visibility definitions, clarified event_user_access role, explicit caching rules, canonical mapper location, runtime boundaries |
 | 2024-12-28 | 2.8 | Added Vehicle Type Hydration; Removed /api/events/stats endpoint (duplicated meta.total); Updated § 10 with future stats guidance |
+| 2024-12-31 | 3.1 | **Phase 1 Code Improvements:** Explicit pending checks (events.ts), DB trigger for club_id immutability (20241231_enforce_club_id_immutability_v2.sql). Compliance: 95% → 100%. See SSOT_CLUBS_EVENTS_ACCESS.md §2, §5.6 for implementation details. Audit: docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md v1.1 |
 
 ---
 

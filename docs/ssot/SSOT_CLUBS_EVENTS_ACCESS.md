@@ -1,7 +1,7 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.0  
-**Last Updated:** 2025-12-30  
+**Version:** 1.1  
+**Last Updated:** 2024-12-31  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
 - Club selection rules for events
@@ -81,7 +81,8 @@ Trusted Partner is NOT a role:
 - `pending` has NO elevated permissions (same effective permissions as non-member or guest)
 - `pending` MUST NOT grant club event creation/publish rights
 - All authorization checks treat `pending` as insufficient for any club operations
-- Example: `if (role !== "owner" && role !== "admin") throw 403` — this rejects `pending` and `member`
+- Example: `if (!role || role === "pending" || (role !== "owner" && role !== "admin")) throw 403`
+- **Implementation (2024-12-31):** Explicit `role === "pending"` checks added in `src/lib/services/events.ts` for self-documenting code (createEvent, updateEvent)
 
 ---
 
@@ -174,6 +175,24 @@ DEFAULT PUBLISH PERMISSION:
 ### 5.5 Publish — Club Free
 IF event has `club_id = X` AND `is_paid = false`
 THEN role in {owner, admin} may publish.
+
+### 5.6 Club ID immutability enforcement
+Club ID (`club_id`) determines event clubness and MUST be immutable after event creation.
+
+**Backend enforcement:**
+- Service layer (`src/lib/services/events.ts`): updateEvent() validates that clubId does not change
+- Throws `ValidationError` if clubId modification attempted
+
+**Database enforcement (2024-12-31):**
+- DB trigger `events_prevent_club_id_change` enforces immutability at database level
+- Function `prevent_club_id_change()` raises exception if `OLD.club_id IS DISTINCT FROM NEW.club_id`
+- Migration: `20241231_enforce_club_id_immutability_v2.sql`
+- Defense in depth: guarantees immutability even if service layer bypassed
+
+**Testing:**
+- 4/4 test cases passed (NULL→value, value→value, value→NULL, update other fields)
+
+**Rationale:** §5.7 Club ID Immutability — multi-layer protection (service + database)
 
 ---
 
@@ -390,3 +409,58 @@ Then:
 Then:
 - ARCHITECTURE.md and DATABASE.md reference this SSOT without duplicating rules
 - No contradictory rules remain in other docs
+
+---
+
+## Implementation History & Verification
+
+### Phase 1 Code Improvements (2024-12-31)
+
+**Status:** ✅ COMPLETE  
+**Audit Report:** `docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md` v1.1  
+**Action Plan:** `docs/verification/EVENTS_CREATE_EDIT_ACTION_PLAN.md`  
+
+**Improvements Implemented:**
+
+1. **Explicit `pending` Role Checks (§2)**
+   - **File:** `src/lib/services/events.ts`
+   - **Change:** Added explicit `role === "pending"` checks in createEvent() and updateEvent()
+   - **Rationale:** Self-documenting code, explicit enforcement of §2 requirement
+   - **Git Commit:** `6b323ce`
+   - **Error Message:** "Недостаточно прав для создания/изменения события в клубе. Требуется роль owner или admin. Роль 'pending' не предоставляет прав."
+
+2. **DB Trigger for Club ID Immutability (§5.6)**
+   - **Migration:** `supabase/migrations/20241231_enforce_club_id_immutability_v2.sql`
+   - **Function:** `prevent_club_id_change()` — raises exception if club_id modified
+   - **Trigger:** `events_prevent_club_id_change` (BEFORE UPDATE ON events)
+   - **Testing:** 4/4 test cases passed (`20241231_test_club_id_immutability.sql`)
+   - **Rationale:** Defense in depth (service layer + database enforcement)
+   - **Git Commits:** `6b323ce`, `d3adf69` (v2 fix)
+
+3. **SSOT_DATABASE.md Sync (2024-12-31)**
+   - **File:** `docs/ssot/SSOT_DATABASE.md`
+   - **Updates:** Added trigger #7 (Prevent club_id changes), function details, migration history
+   - **Git Commit:** `8bdc8bd`
+
+**Compliance Status:**
+- **Before Phase 1:** 95% (24/26 PASS, 2 medium issues)
+- **After Phase 1:** 100% (26/26 PASS, 0 issues)
+
+**Next Steps:**
+- ⏳ **Phase 2:** Integration tests (QA-54 to QA-69) for SSOT Appendix A scenarios
+- 🟡 **Phase 3:** Update SSOT_TESTING.md with new test results
+
+---
+
+## Change Log
+
+### v1.1 (2024-12-31)
+- Added §5.6: Club ID immutability enforcement (implementation details)
+- Updated §2: Added explicit pending check implementation note
+- Added Implementation History & Verification section
+- Updated Phase 1 improvements and compliance metrics
+
+### v1.0 (2024-12-30)
+- Initial SSOT document
+- Consolidated club & event access rules
+- Defined canonical matrices (Appendix A)
