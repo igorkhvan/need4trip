@@ -424,13 +424,14 @@ export async function createEvent(
   };
   
   // ⚡ SSOT §5.1: IF club_id != null THEN user MUST be owner/admin in that club
+  // ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
   if (validated.clubId) {
     const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
     const role = await getUserClubRole(validated.clubId, currentUser.id);
     
-    if (!role || (role !== "owner" && role !== "admin")) {
+    if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
       throw new AuthError(
-        "Недостаточно прав для создания события в этом клубе. Требуется роль owner или admin.",
+        "Недостаточно прав для создания события в этом клубе. Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
         undefined,
         403
       );
@@ -695,12 +696,14 @@ export async function updateEvent(
   
   if (finalClubId) {
     // Club event: check club role
+    // ⚡ SSOT §5.1: Only owner/admin can update club events
+    // ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
     const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
     const role = await getUserClubRole(finalClubId, currentUser.id);
     
-    if (!role || (role !== "owner" && role !== "admin")) {
+    if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
       throw new AuthError(
-        "Недостаточно прав для изменения события клуба. Требуется роль owner или admin.",
+        "Недостаточно прав для изменения события клуба. Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
         undefined,
         403
       );
