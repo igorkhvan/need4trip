@@ -1,54 +1,60 @@
 # План Доработок — События Create/Edit (по результатам аудита)
 
 **Дата:** 2024-12-31  
-**Статус аудита:** ✅ ВЫСОКОЕ СООТВЕТСТВИЕ (95%)  
-**Источник:** `EVENTS_CREATE_EDIT_AUDIT_REPORT.md`  
+**Статус аудита:** ✅ ПОЛНОЕ СООТВЕТСТВИЕ (100%) — Phase 1 Complete  
+**Источник:** `EVENTS_CREATE_EDIT_AUDIT_REPORT.md` v1.1  
 
 ---
 
 ## 🎯 Executive Summary
 
-**Текущий статус:** Production-ready (0 критичных проблем)
+**Текущий статус:** ✅ Production-ready (0 критичных проблем, Phase 1 завершена)
 
-**Найдено проблем:**
+**Найдено проблем (initial audit):**
 - ❌ **Критичных:** 0
-- 🟡 **Средних:** 2 (code clarity + defense in depth)
+- 🟡 **Средних:** 2 (code clarity + defense in depth) — **ИСПРАВЛЕНО в Phase 1**
 - 🟢 **Минорных:** 0
 
+**Выполненные действия (Phase 1 — 2024-12-31):**
+1. ✅ Explicit pending checks добавлены (events.ts)
+2. ✅ DB trigger для club_id immutability создан и протестирован
+3. ✅ SSOT_DATABASE.md обновлён
+
 **Рекомендуемые действия:**
-1. ✅ **Опубликовать отчёт** → DONE
-2. 🟡 **Опционально: Улучшения кода** → Приоритет 1
-3. ✅ **Обязательно: Integration tests** → Приоритет 2
+1. ✅ **Phase 1: Code Improvements** → COMPLETE
+2. ⏳ **Phase 2: Integration Tests** → Следующий этап
+3. 🟡 **Phase 3: Documentation** → Опционально
 
 ---
 
 ## 📋 Действия
 
-### ✅ Действие 0: Публикация Отчёта (COMPLETED)
+### ✅ Действие 0: Публикация Отчёта (COMPLETED — 2024-12-31)
 
 **Статус:** ✅ DONE
 
 **Файлы:**
-- `docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md` — детальный отчёт
+- `docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md` — детальный отчёт (v1.1)
 - `docs/verification/EVENTS_CREATE_EDIT_ACTION_PLAN.md` — этот план
+
+**Git Commit:** `4b21ea9` — docs: Events Create/Edit SSOT compliance audit report
 
 ---
 
-### 🟡 Действие 1: Explicit Pending Role Checks (ОПЦИОНАЛЬНО)
+### ✅ Действие 1: Explicit Pending Role Checks (COMPLETED — 2024-12-31)
 
-**Приоритет:** 🟡 СРЕДНИЙ (code clarity, не блокирует production)
+**Приоритет:** ✅ ЗАВЕРШЕНО (Phase 1)
 
 **Проблема:**
-Проверка `pending` роли работает корректно, но не явно:
-```typescript
-// Текущий код (implicit)
-if (!role || (role !== "owner" && role !== "admin")) {
-  throw new AuthError("Недостаточно прав...");
-}
-```
+Проверка `pending` роли работала корректно, но не была явной.
 
 **Решение:**
-Добавить explicit проверку `pending` для self-documenting code:
+Добавлены explicit проверки `role === "pending"` для self-documenting code.
+
+**Файлы изменены:**
+- `src/lib/services/events.ts` (строки 427-438, 696-707)
+
+**Реализовано:**
 ```typescript
 // ✅ Explicit pending check
 if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
@@ -61,94 +67,84 @@ if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
 }
 ```
 
-**Файлы для изменения:**
-1. `src/lib/services/events.ts` (строки 431, 701)
-2. Другие места с `role !== "owner" && role !== "admin"` checks
+**Результат:**
+- ✅ Улучшена читаемость кода
+- ✅ Явное документирование SSOT §2 requirement
+- ✅ НЕ изменяет функциональность (логика уже была корректна)
 
-**Обоснование:**
-- Улучшает читаемость кода
-- Упрощает аудит и code review
-- Явно документирует SSOT §2 requirement
-- **НЕ** изменяет функциональность (логика уже корректна)
+**Effort:** ✅ 15 минут (выполнено)
 
-**Effort:** 🟢 LOW (15 минут)
-
-**Dependencies:** Нет
-
-**Testing:** Существующие integration tests должны продолжать проходить
+**Git Commit:** `6b323ce` — refactor: improve club access checks and add club_id immutability (Phase 1)
 
 ---
 
-### 🟡 Действие 2: DB Constraint для Club ID Immutability (ОПЦИОНАЛЬНО)
+### ✅ Действие 2: DB Constraint для Club ID Immutability (COMPLETED — 2024-12-31)
 
-**Приоритет:** 🟡 СРЕДНИЙ (defense in depth, не блокирует production)
+**Приоритет:** ✅ ЗАВЕРШЕНО (Phase 1)
 
 **Проблема:**
-`club_id` immutability защищена только на service layer:
-```typescript
-// events.ts:682-688
-if (validated.clubId !== undefined && validated.clubId !== existing.club_id) {
-  throw new ValidationError("Невозможно изменить принадлежность события к клубу...");
-}
-```
-
-Если service layer будет обойдён (прямой DB access, buggy code path), `club_id` можно изменить.
+`club_id` immutability защищена только на service layer. При bypass service layer возможно изменение club_id.
 
 **Решение:**
-Добавить DB-level trigger для immutability enforcement:
+Добавлен DB-level trigger для immutability enforcement.
 
-**Файл:** `supabase/migrations/20241231_enforce_club_id_immutability.sql`
+**Файлы созданы:**
+1. ✅ `supabase/migrations/20241231_enforce_club_id_immutability_v2.sql` (миграция)
+2. ✅ `supabase/migrations/20241231_test_club_id_immutability.sql` (тесты)
+3. ✅ `supabase/migrations/20241231_APPLY_INSTRUCTIONS_v2.md` (инструкция)
 
+**Trigger Logic (v2 — simplified):**
 ```sql
--- Function: Prevent club_id changes on UPDATE
 CREATE OR REPLACE FUNCTION prevent_club_id_change()
 RETURNS TRIGGER AS $$
 BEGIN
   IF OLD.club_id IS DISTINCT FROM NEW.club_id THEN
-    RAISE EXCEPTION 'club_id is immutable after event creation (SSOT §5.7)'
-      USING HINT = 'Create a new event if you need to change club association';
+    RAISE EXCEPTION 'club_id is immutable after event creation (SSOT §5.7)';
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger: Apply immutability check on every UPDATE
 CREATE TRIGGER events_prevent_club_id_change
   BEFORE UPDATE ON public.events
   FOR EACH ROW
   EXECUTE FUNCTION prevent_club_id_change();
-
--- Comment for documentation
-COMMENT ON TRIGGER events_prevent_club_id_change ON public.events IS 
-'SSOT §5.7: Prevents club_id changes after event creation (immutability enforcement)';
 ```
-
-**Обоснование:**
-- Defense in depth (многослойная защита)
-- БД — последний рубеж защиты от data corruption
-- Гарантирует immutability даже при buggy code
-- Соответствует принципу "fail fast" (ошибка на уровне БД)
-
-**Effort:** 🟢 LOW (20 минут: написать миграцию + применить + тест)
-
-**Dependencies:** Нет
 
 **Testing:**
-1. Создать событие (personal)
-2. Попробовать изменить `club_id` через UPDATE → должна быть ошибка
-3. Создать событие (club)
-4. Попробовать изменить `club_id` на другой клуб → должна быть ошибка
+- ✅ Test 1: Cannot change club_id from NULL to value
+- ✅ Test 2: Cannot change club_id from one value to another
+- ✅ Test 3: Cannot clear club_id (value → NULL)
+- ✅ Test 4: Can update other fields while club_id stays unchanged
 
-**Rollback plan:**
-```sql
--- Если что-то пойдёт не так, откатить:
-DROP TRIGGER IF EXISTS events_prevent_club_id_change ON public.events;
-DROP FUNCTION IF EXISTS prevent_club_id_change();
-```
+**Результат:**
+- ✅ Defense in depth (service layer + DB constraint)
+- ✅ БД — последний рубеж защиты
+- ✅ Гарантирует immutability даже при buggy code
+
+**Effort:** ✅ 30 минут (выполнено: миграция + fix v2 + тесты)
+
+**Git Commits:**
+- `6b323ce` — refactor: improve club access checks (Phase 1)
+- `d3adf69` — fix: simplify club_id immutability trigger logic (v2)
 
 ---
 
-### ✅ Действие 3: Integration Tests для SSOT Appendix A (ОБЯЗАТЕЛЬНО)
+### ✅ Действие 2.1: Обновить SSOT_DATABASE.md (COMPLETED — 2024-12-31)
+
+**Приоритет:** ✅ ЗАВЕРШЕНО
+
+**Обновлено:**
+1. ✅ Triggers section: Добавлен #7 "Prevent club_id changes"
+2. ✅ Functions: Добавлена `prevent_club_id_change()`
+3. ✅ Migration History: +3 миграции (81 → 84)
+4. ✅ Last updated: 2024-12-31
+
+**Git Commit:** `8bdc8bd` — docs: update SSOT_DATABASE with club_id immutability trigger
+
+---
+
+### ⏳ Действие 3: Integration Tests для SSOT Appendix A (СЛЕДУЮЩИЙ ЭТАП — Phase 2)
 
 **Приоритет:** ✅ ВЫСОКИЙ (quality assurance для production)
 
@@ -270,17 +266,24 @@ export async function createClubSubscription(
 
 ## 📊 Roadmap
 
-### Phase 1: Код-ревью (ОПЦИОНАЛЬНО, 1 час)
+### ✅ Phase 1: Code Improvements (COMPLETED — 2024-12-31, 1 час)
 
-- [ ] Действие 1: Explicit pending checks (`src/lib/services/events.ts`) — 15 мин
-- [ ] Действие 2: DB immutability trigger (миграция + тест) — 20 мин
-- [ ] Code review + testing — 25 мин
+- [x] Действие 1: Explicit pending checks (`src/lib/services/events.ts`) — 15 мин
+- [x] Действие 2: DB immutability trigger (миграция v2 + fix + тесты) — 30 мин
+- [x] Действие 2.1: Update SSOT_DATABASE.md — 10 мин
+- [x] Code review + testing + commits — 15 мин
 
-**Результат:** Code clarity улучшен, defense in depth усилен
+**Результат:** ✅ Code clarity улучшен, defense in depth усилен, SSOT compliance = 100%
+
+**Git Commits:**
+- `4b21ea9` — docs: Events Create/Edit SSOT compliance audit report
+- `6b323ce` — refactor: improve club access checks and add club_id immutability (Phase 1)
+- `d3adf69` — fix: simplify club_id immutability trigger logic (v2)
+- `8bdc8bd` — docs: update SSOT_DATABASE with club_id immutability trigger
 
 ---
 
-### Phase 2: Integration Tests (ОБЯЗАТЕЛЬНО, 6 часов)
+### ⏳ Phase 2: Integration Tests (СЛЕДУЮЩИЙ ЭТАП, 6 часов)
 
 - [ ] Действие 3.1: Создать test helpers (clubs, members, subscriptions) — 1 час
 - [ ] Действие 3.2: Написать тесты QA-54 to QA-61 (UI visibility, role checks) — 2 часа
@@ -292,69 +295,74 @@ export async function createClubSubscription(
 
 ---
 
-### Phase 3: Документация (ОПЦИОНАЛЬНО, 1 час)
+### 🟡 Phase 3: Документация (ОПЦИОНАЛЬНО, 30 минут)
 
-- [ ] Обновить `docs/ssot/SSOT_TESTING.md` с новыми тестами (QA-54 to QA-69)
-- [ ] Обновить `docs/ssot/SSOT_DATABASE.md` (если добавлен immutability trigger)
-- [ ] Commit + push
+- [x] Обновить `docs/ssot/SSOT_DATABASE.md` с immutability trigger — ✅ DONE
+- [ ] Обновить `docs/ssot/SSOT_TESTING.md` с новыми тестами (QA-54 to QA-69) — после Phase 2
+- [x] Commit + push — ✅ DONE (8bdc8bd)
 
-**Результат:** SSOT документация синхронизирована с кодом
+**Результат:** ✅ SSOT_DATABASE синхронизирован, SSOT_TESTING — ждёт Phase 2
 
 ---
 
 ## 🎯 Definition of Done
 
-**Phase 1 (опционально):**
-- [ ] Explicit pending checks добавлены в `events.ts`
-- [ ] DB trigger для club_id immutability создан и протестирован
-- [ ] `npm run build` проходит успешно
-- [ ] Commit: `refactor: improve club access checks (SSOT audit)` 
+**✅ Phase 1 (опционально) — COMPLETED:**
+- [x] Explicit pending checks добавлены в `events.ts`
+- [x] DB trigger для club_id immutability создан и протестирован
+- [x] `npm run build` проходит успешно
+- [x] SSOT_DATABASE.md обновлён
+- [x] Commits: `6b323ce`, `d3adf69`, `8bdc8bd`
 
-**Phase 2 (обязательно):**
+**⏳ Phase 2 (обязательно) — TODO:**
 - [ ] 16 integration tests написаны и проходят (`QA-54` to `QA-69`)
 - [ ] Test coverage для SSOT Appendix A = 100%
 - [ ] `npm test -- events.clubs.access` < 30 секунд
 - [ ] CI pipeline зелёный
 - [ ] Commit: `test: add SSOT Appendix A integration tests (QA-54 to QA-69)`
 
-**Phase 3 (опционально):**
-- [ ] `SSOT_TESTING.md` обновлён с новыми тестами
-- [ ] `SSOT_DATABASE.md` обновлён (если был trigger)
-- [ ] Commit: `docs: sync SSOT with events audit findings`
+**🟡 Phase 3 (опционально) — PARTIAL:**
+- [x] `SSOT_DATABASE.md` обновлён с trigger — ✅ DONE
+- [ ] `SSOT_TESTING.md` обновлён с новыми тестами — после Phase 2
+- [x] Commit: `docs: update SSOT_DATABASE with club_id immutability trigger` — ✅ DONE
 
 ---
 
 ## 📝 Notes
 
 ### Зависимости между действиями:
-- Действие 1 и 2 — независимые (можно делать параллельно)
-- Действие 3 — зависит от Действия 1+2 (если они выполнены, тесты должны их проверить)
+- ✅ Действие 1 и 2 — независимые, выполнены параллельно (Phase 1 complete)
+- ⏳ Действие 3 — зависит от Действия 1+2, ждёт Phase 2
 
 ### Риски:
-- **LOW:** Все изменения опциональны для production (0 критичных проблем)
-- **LOW:** Тесты могут занять больше времени (если нужны доработки helpers)
+- **✅ ELIMINATED:** Все изменения Phase 1 реализованы и протестированы
+- **LOW:** Тесты Phase 2 могут занять больше времени (если нужны доработки helpers)
 
 ### Альтернативы:
-- **Option A:** Сделать только Phase 2 (integration tests), пропустить Phase 1 (code clarity)
-  - Pros: Меньше изменений в production code, только QA
-  - Cons: Code остаётся implicit (но функционально корректен)
-- **Option B:** Сделать всё (Phase 1 + 2 + 3)
+- ~~**Option A:** Сделать только Phase 2 (integration tests), пропустить Phase 1~~
+  - ❌ Устарело — Phase 1 завершена
+- **Option B:** Сделать всё (Phase 1 + 2 + 3) — ✅ В ПРОЦЕССЕ
   - Pros: Максимальное качество кода + тестирование
-  - Cons: 8 часов работы
+  - Cons: ~8 часов работы (Phase 1: 1 час ✅, Phase 2: 6 часов ⏳, Phase 3: 30 мин частично ✅)
 
-**Рекомендация:** Option B (полная доработка) для long-term maintainability.
+**Рекомендация:** Option B (полная доработка) для long-term maintainability — Phase 1 complete, Phase 2 next.
 
 ---
 
 ## ✅ Sign-off
 
 **Аудит проведён:** 2024-12-31  
-**Отчёт подготовлен:** `EVENTS_CREATE_EDIT_AUDIT_REPORT.md`  
-**План утверждён:** ✅ READY FOR IMPLEMENTATION  
+**Отчёт подготовлен:** `EVENTS_CREATE_EDIT_AUDIT_REPORT.md` v1.1  
+**План утверждён:** ✅ READY FOR PHASE 2  
+
+**Phase 1 Status:** ✅ COMPLETE (2024-12-31)
+- Code improvements: explicit pending checks + DB immutability trigger
+- SSOT compliance: 95% → 100%
+- Git commits: 4 (audit report + code + fixes + docs)
 
 **Next Steps:**
-1. Review этого плана с командой
-2. Approve Phase 1 (опционально) или skip
-3. Execute Phase 2 (обязательно)
-4. Update SSOT documents
+1. ✅ ~~Review Phase 1 plan~~ → DONE
+2. ✅ ~~Execute Phase 1~~ → DONE
+3. ⏳ Execute Phase 2 (integration tests QA-54 to QA-69) → СЛЕДУЮЩИЙ ЭТАП
+4. 🟡 Update SSOT_TESTING.md → После Phase 2
 

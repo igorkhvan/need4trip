@@ -1,8 +1,8 @@
 # Аудит Создания/Редактирования Событий — Отчёт Соответствия SSOT
 
 **Дата:** 2024-12-31  
-**Версия:** 1.0  
-**Статус:** КРИТИЧНЫЙ АУДИТ  
+**Версия:** 1.1 (Updated after Phase 1 completion)  
+**Статус:** ✅ ПОЛНОЕ СООТВЕТСТВИЕ  
 **SSOT Reference:** `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md` v1.0  
 
 ---
@@ -15,14 +15,19 @@
 - ✅ Frontend (EventForm, EventClubSection, create-event-client.tsx)
 - ✅ Backend API (POST /api/events, PUT /api/events/[id])
 - ✅ Services (events.ts, accessControl.ts)
-- ✅ Database (events table, club_members table, RLS policies)
-- ✅ Migrations (20241230_remove_organizer_role, 20241230_fix_rls_owner_only_members)
+- ✅ Database (events table, club_members table, RLS policies, triggers)
+- ✅ Migrations (20241230_remove_organizer_role, 20241230_fix_rls_owner_only_members, 20241231_enforce_club_id_immutability_v2)
 
-**Общий статус:** ✅ ВЫСОКОЕ СООТВЕТСТВИЕ (95%)
+**Общий статус:** ✅ **ПОЛНОЕ СООТВЕТСТВИЕ (100%)** — Phase 1 Complete
+
+**Phase 1 Improvements (2024-12-31):**
+- ✅ **Explicit pending checks** добавлены в events.ts (createEvent, updateEvent)
+- ✅ **DB trigger** для club_id immutability создан и протестирован
+- ✅ **SSOT_DATABASE.md** обновлён с новым trigger'ом
 
 **Критичные находки:**
-- 🟡 **1 средний риск**: Отсутствие явной проверки `pending` роли в некоторых local checks
-- 🟢 **0 критичных проблем**
+- ✅ **0 средних рисков** (все улучшения из Phase 1 реализованы)
+- ✅ **0 критичных проблем**
 
 ---
 
@@ -224,26 +229,50 @@ export const clubRoleSchema = z.enum(["owner", "admin", "member", "pending"]);
 
 **Вердикт:** ✅ `organizer` удалён на уровне DB constraint. `pending` явно исключается из проверок.
 
-#### 🟡 ВНИМАНИЕ: Проверка `pending` роли
+#### ✅ UPDATED: Explicit Pending Checks (Phase 1 — 2024-12-31)
 
-**Потенциальный риск:** В некоторых местах проверка `pending` не явная (полагается на `!= owner && != admin`).
+**Реализовано:** Explicit проверки `pending` роли добавлены в critical paths.
 
-**Пример (events.ts:431):**
+**Backend (events.ts:427-438, updated):**
 ```typescript
-if (!role || (role !== "owner" && role !== "admin")) {
-  throw new AuthError(...); // Это отклонит pending, но не явно
+// ⚡ SSOT §5.1: IF club_id != null THEN user MUST be owner/admin in that club
+// ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
+if (validated.clubId) {
+  const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
+  const role = await getUserClubRole(validated.clubId, currentUser.id);
+  
+  if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
+    throw new AuthError(
+      "Недостаточно прав для создания события в этом клубе. Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
+      undefined,
+      403
+    );
+  }
 }
 ```
 
-**Рекомендация:**
+**Backend (events.ts:696-707, updated):**
 ```typescript
-// ✅ Explicit pending check (self-documenting)
-if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
-  throw new AuthError("Недостаточно прав. Роль 'pending' не предоставляет права на создание событий.");
+if (finalClubId) {
+  // Club event: check club role
+  // ⚡ SSOT §5.1: Only owner/admin can update club events
+  // ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
+  const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
+  const role = await getUserClubRole(finalClubId, currentUser.id);
+  
+  if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
+    throw new AuthError(
+      "Недостаточно прав для изменения события клуба. Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
+      undefined,
+      403
+    );
+  }
 }
 ```
 
-**Приоритет:** 🟡 СРЕДНИЙ (логика работает корректно, но код менее явный)
+**Вердикт:** ✅ УЛУЧШЕНО — Explicit pending checks делают код self-documenting.
+
+**Приоритет:** ✅ ЗАВЕРШЕНО (Phase 1 — 2024-12-31)
 
 ---
 
@@ -786,7 +815,7 @@ if (!checked) {
 
 ## 🔍 Дополнительные Находки
 
-### 1. 🟡 Clubness Immutability (§5.7)
+### 1. ✅ Clubness Immutability (§5.7) — IMPROVED (Phase 1)
 
 **SSOT §5.7:** "Club ID immutable after creation"
 
@@ -800,16 +829,15 @@ if (validated.clubId !== undefined && validated.clubId !== existing.club_id) {
 }
 ```
 
-**Вердикт:** ✅ Backend защита есть.
-
-**Рекомендация:** Добавить DB constraint для дополнительной защиты:
+**Database (20241231_enforce_club_id_immutability_v2.sql) — NEW:**
 ```sql
--- Prevent club_id changes after creation (defense in depth)
+-- Function: Prevent club_id changes on UPDATE
 CREATE OR REPLACE FUNCTION prevent_club_id_change()
 RETURNS TRIGGER AS $$
 BEGIN
   IF OLD.club_id IS DISTINCT FROM NEW.club_id THEN
-    RAISE EXCEPTION 'club_id is immutable after event creation (SSOT §5.7)';
+    RAISE EXCEPTION 'club_id is immutable after event creation (SSOT §5.7)'
+      USING HINT = 'club_id must be set at creation time and cannot be changed';
   END IF;
   RETURN NEW;
 END;
@@ -821,37 +849,38 @@ CREATE TRIGGER events_prevent_club_id_change
   EXECUTE FUNCTION prevent_club_id_change();
 ```
 
-**Приоритет:** 🟡 СРЕДНИЙ (логика работает, но DB-level constraint даст defense in depth)
+**Testing (20241231_test_club_id_immutability.sql):**
+- ✅ Test 1: Cannot change club_id from NULL to value
+- ✅ Test 2: Cannot change club_id from one value to another
+- ✅ Test 3: Cannot clear club_id (value → NULL)
+- ✅ Test 4: Can update other fields while club_id stays unchanged
+
+**Вердикт:** ✅ ПОЛНОСТЬЮ РЕАЛИЗОВАНО — Defense in depth (service layer + DB constraint)
+
+**Приоритет:** ✅ ЗАВЕРШЕНО (Phase 1 — 2024-12-31)
 
 ---
 
-### 2. ✅ Pending Role Handling
+### 2. ✅ Pending Role Handling — IMPROVED (Phase 1)
 
 **SSOT §2:** "`pending` has NO elevated permissions"
 
-**Current Implementation:**
-```typescript
-// events.ts:431
-if (!role || (role !== "owner" && role !== "admin")) {
-  throw new AuthError(...); // Implicitly rejects pending
-}
-```
-
-**Проблема:** Код работает корректно, но не явно self-documenting.
-
-**Рекомендация:**
+**Updated Implementation (Phase 1):**
 ```typescript
 // ✅ Explicit pending rejection (better readability + auditability)
 if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
   throw new AuthError(
-    "Недостаточно прав. Роль 'pending' не предоставляет права на создание событий в клубе.",
+    "Недостаточно прав для создания/изменения события в клубе. " +
+    "Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
     undefined,
     403
   );
 }
 ```
 
-**Приоритет:** 🟡 СРЕДНИЙ (code clarity, не функциональная проблема)
+**Вердикт:** ✅ УЛУЧШЕНО — Self-documenting code, явная проверка pending
+
+**Приоритет:** ✅ ЗАВЕРШЕНО (Phase 1 — 2024-12-31)
 
 ---
 
@@ -894,7 +923,7 @@ if (mode === "edit" && clubId) {
 | §1.3 Paid Modes (No Mixing) | ✅ | ✅ | N/A | ✅ PASS |
 | §2 Roles (owner/admin/member/pending) | ✅ | ✅ | ✅ | ✅ PASS |
 | §2 NO organizer | ✅ | ✅ | ✅ | ✅ PASS |
-| §2 pending = NO permissions | ⚠️ | ⚠️ | ✅ | 🟡 MINOR |
+| §2 pending = NO permissions | ✅ | ✅ | ✅ | ✅ PASS |
 | §4.1 Checkbox Visibility | ✅ | N/A | N/A | ✅ PASS |
 | §4.2 Single Dropdown | ✅ | N/A | N/A | ✅ PASS |
 | §4.3 Validation | ✅ | ✅ | N/A | ✅ PASS |
@@ -904,7 +933,7 @@ if (mode === "edit" && clubId) {
 | §5.4 Club Paid (Subscription) | N/A | ✅ | N/A | ✅ PASS |
 | §5.4 Owner-Only Paid Publish | N/A | ✅ | N/A | ✅ PASS |
 | §5.5 Club Free (Owner+Admin) | N/A | ✅ | N/A | ✅ PASS |
-| §5.7 Club ID Immutability | ✅ | ✅ | ⚠️ | 🟡 MINOR |
+| §5.7 Club ID Immutability | ✅ | ✅ | ✅ | ✅ PASS |
 | §6.2 Member Management (Owner-Only) | N/A | N/A | ✅ | ✅ PASS |
 | Appendix A1 UI Scenarios | ✅ | ✅ | N/A | ✅ PASS |
 | Appendix A2 Role Leakage | N/A | ✅ | N/A | ✅ PASS |
@@ -913,93 +942,81 @@ if (mode === "edit" && clubId) {
 | Appendix A5 Member CRUD | N/A | N/A | ✅ | ✅ PASS |
 | Appendix A6 Organizer Removal | ✅ | ✅ | ✅ | ✅ PASS |
 
-**Итого:**
-- ✅ **PASS**: 24/26 (92%)
-- 🟡 **MINOR**: 2/26 (8%) — не блокируют функциональность
+**Итого (Updated after Phase 1):**
+- ✅ **PASS**: 26/26 (100%) ⚡ IMPROVED
+- 🟡 **MINOR**: 0/26 (0%) — все улучшения реализованы
 - ❌ **FAIL**: 0/26 (0%)
 
 ---
 
 ## 🎯 Рекомендации по Доработкам
 
-### Приоритет 1: ОПЦИОНАЛЬНО (Code Clarity)
+### ✅ Приоритет 1: ЗАВЕРШЕНО (Phase 1 — 2024-12-31)
 
-#### 1.1 Explicit Pending Check
+#### 1.1 Explicit Pending Check — ✅ DONE
 
 **Файл:** `src/lib/services/events.ts`  
-**Строки:** 431, 701
+**Строки:** 427-438, 696-707
 
-**Текущий код:**
+**Реализовано:**
 ```typescript
-if (!role || (role !== "owner" && role !== "admin")) {
-  throw new AuthError("Недостаточно прав...", undefined, 403);
-}
-```
-
-**Рекомендуемый код:**
-```typescript
-// ⚡ SSOT §2: pending role has NO elevated permissions
+// ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
 if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
   throw new AuthError(
-    "Недостаточно прав для создания/изменения события в клубе. Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
+    "Недостаточно прав для создания/изменения события в клубе. " +
+    "Требуется роль owner или admin. Роль 'pending' не предоставляет прав.",
     undefined,
     403
   );
 }
 ```
 
-**Обоснование:** Explicit is better than implicit. Код самодокументируется и упрощает аудит.
+**Результат:** ✅ Explicit is better than implicit. Код теперь self-documenting.
+
+**Git Commit:** `6b323ce` — refactor: improve club access checks and add club_id immutability (Phase 1)
 
 ---
 
-#### 1.2 DB Constraint for Club ID Immutability
+#### 1.2 DB Constraint for Club ID Immutability — ✅ DONE
 
-**Файл:** Новая миграция `supabase/migrations/20241231_enforce_club_id_immutability.sql`
+**Файл:** `supabase/migrations/20241231_enforce_club_id_immutability_v2.sql`
 
-**Код:**
+**Реализовано:**
 ```sql
--- ============================================================================
--- Migration: Enforce club_id immutability via DB trigger
--- Date: 2024-12-31
--- Purpose: SSOT §5.7 — Club ID is immutable after event creation
---          Defense in depth: prevent club_id changes even if service layer bypassed
--- ============================================================================
-
--- Function: Prevent club_id changes on UPDATE
+-- Function: Prevent club_id changes on UPDATE (simplified logic)
 CREATE OR REPLACE FUNCTION prevent_club_id_change()
 RETURNS TRIGGER AS $$
 BEGIN
   IF OLD.club_id IS DISTINCT FROM NEW.club_id THEN
     RAISE EXCEPTION 'club_id is immutable after event creation (SSOT §5.7)'
-      USING HINT = 'Create a new event if you need to change club association';
+      USING HINT = 'club_id must be set at creation time and cannot be changed';
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger: Apply immutability check on every UPDATE
 CREATE TRIGGER events_prevent_club_id_change
   BEFORE UPDATE ON public.events
   FOR EACH ROW
   EXECUTE FUNCTION prevent_club_id_change();
-
--- Comment for documentation
-COMMENT ON TRIGGER events_prevent_club_id_change ON public.events IS 
-'SSOT §5.7: Prevents club_id changes after event creation (immutability enforcement)';
-
--- Verification
-DO $$
-BEGIN
-  RAISE NOTICE 'club_id immutability trigger created successfully';
-  RAISE NOTICE 'SSOT §5.7: club_id is now immutable at DB level';
-END $$;
 ```
 
-**Обоснование:** Defense in depth. Даже если service layer будет обойдён, БД защитит от изменения `club_id`.
+**Testing:**
+- ✅ Test 1: Cannot change club_id from NULL to value
+- ✅ Test 2: Cannot change club_id from one value to another
+- ✅ Test 3: Cannot clear club_id (value → NULL)
+- ✅ Test 4: Can update other fields while club_id stays unchanged
+
+**Результат:** ✅ Defense in depth. DB-level enforcement работает корректно.
+
+**Git Commits:**
+- `6b323ce` — refactor: improve club access checks (Phase 1)
+- `d3adf69` — fix: simplify club_id immutability trigger logic (v2)
+- `8bdc8bd` — docs: update SSOT_DATABASE with club_id immutability trigger
 
 ---
 
-### Приоритет 2: ТЕСТИРОВАНИЕ
+### Приоритет 2: ТЕСТИРОВАНИЕ (Следующий этап — Phase 2)
 
 #### 2.1 Integration Tests для SSOT Appendix A
 
@@ -1055,39 +1072,43 @@ describe('SSOT Appendix A: Event Create/Edit Access Control', () => {
 
 ## ✅ Заключение
 
-### Общий вердикт: ✅ ВЫСОКОЕ СООТВЕТСТВИЕ (95%)
+### Общий вердикт: ✅ ПОЛНОЕ СООТВЕТСТВИЕ (100%) — Phase 1 Complete
 
-**Сильные стороны:**
+**Сильные стороны (Updated after Phase 1):**
 1. ✅ **Полная реализация club/personal separation** — no mixing гарантирован на 3 уровнях
 2. ✅ **Role-based access control** — owner/admin/member/pending корректно обрабатываются
 3. ✅ **Organizer removal** — миграция завершена, constraint работает
 4. ✅ **Owner-only member management** — RLS policies соответствуют SSOT §6.2
 5. ✅ **Owner-only paid club events** — enforcement на backend (accessControl.ts:345-358)
-6. ✅ **Club ID immutability** — защита на service layer
+6. ✅ **Club ID immutability** — защита на service layer + DB trigger ⚡ NEW
+7. ✅ **Explicit pending checks** — self-documenting code ⚡ NEW
 
-**Слабые стороны:**
-1. 🟡 **Pending role checks** — работают корректно, но не явно (minor code clarity issue)
-2. 🟡 **Club ID immutability** — нет DB-level constraint (есть только service layer)
+**Улучшения Phase 1 (2024-12-31):**
+1. ✅ Explicit pending checks в events.ts (createEvent, updateEvent)
+2. ✅ DB trigger для club_id immutability (20241231_enforce_club_id_immutability_v2.sql)
+3. ✅ Comprehensive testing (4/4 tests passed)
+4. ✅ SSOT_DATABASE.md обновлён
 
 **Рекомендации:**
-- Приоритет 1 (опционально): Explicit pending checks + DB immutability trigger
-- Приоритет 2 (обязательно): Integration tests для SSOT Appendix A scenarios
+- ✅ Приоритет 1 (опционально): Explicit pending checks + DB immutability trigger — **ЗАВЕРШЕНО**
+- ⏳ Приоритет 2 (обязательно): Integration tests для SSOT Appendix A scenarios — **СЛЕДУЮЩИЙ ЭТАП**
 
 **Статус для Production:** ✅ ГОТОВО  
-Текущая реализация безопасна и соответствует SSOT. Рекомендации улучшают code quality и defense in depth, но НЕ блокируют production deployment.
+Phase 1 улучшения реализованы. Текущая реализация полностью соответствует SSOT с defense in depth на всех уровнях.
 
 ---
 
-## 📊 Metrics
+## 📊 Metrics (Updated after Phase 1)
 
 - **Lines of code audited:** ~3500
 - **Files checked:** 12
 - **SSOT sections verified:** 9 major + Appendix A (14 test cases)
-- **Compliance rate:** 95%
+- **Compliance rate:** 100% ⚡ IMPROVED (was 95%)
 - **Critical issues:** 0
-- **Medium issues:** 2
+- **Medium issues:** 0 ⚡ IMPROVED (was 2)
 - **Minor issues:** 0
 
 **Audit completed:** 2024-12-31  
-**Next review:** После integration tests (QA-54 to QA-70)
+**Phase 1 completed:** 2024-12-31  
+**Next review:** После integration tests (QA-54 to QA-69) — Phase 2
 
