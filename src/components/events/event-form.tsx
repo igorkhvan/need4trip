@@ -102,6 +102,7 @@ export type EventFormProps = {
   isBusy?: boolean;
   busyLabel?: string;
   actionPhase?: ActionPhase;
+  externalError?: string; // Error from controller
 };
 
 function buildEmptyField(order: number): EventCustomFieldSchema {
@@ -131,6 +132,7 @@ export function EventForm({
   isBusy: externalIsBusy,
   busyLabel: externalBusyLabel,
   actionPhase,
+  externalError,
 }: EventFormProps) {
   const router = useRouter();
   
@@ -186,6 +188,13 @@ export function EventForm({
   
   // ⚡ NEW: Use external busy state if provided, otherwise internal
   const isSubmitting = externalIsBusy ?? false;
+  
+  // ⚡ NEW: Show external error from controller if present
+  useEffect(() => {
+    if (externalError) {
+      setErrorMessage(externalError);
+    }
+  }, [externalError]);
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),

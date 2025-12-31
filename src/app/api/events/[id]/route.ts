@@ -44,31 +44,47 @@ export async function PUT(request: NextRequest, { params }: Params) {
     
     // ⚡ NEW: Wrap with idempotency if key provided
     if (idempotencyKey && isValidIdempotencyKey(idempotencyKey)) {
-      return withIdempotency(
-        {
-          userId: currentUser.id,
-          route: `PUT /api/events/${id}`,
-          key: idempotencyKey,
-        },
-        async () => {
-          // Extract confirm_credit from query params
-          const url = new URL(request.url);
-          const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+      try {
+        return await withIdempotency(
+          {
+            userId: currentUser.id,
+            route: `PUT /api/events/${id}`,
+            key: idempotencyKey,
+          },
+          async () => {
+            // Extract confirm_credit from query params
+            const url = new URL(request.url);
+            const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+            
+            const payload = await request.json();
+            const updated = await updateEvent(id, payload, currentUser, confirmCredit);
+            
+            // Revalidate pages that display this event
+            revalidatePath(`/events/${id}`);        // Event detail page
+            revalidatePath(`/events/${id}/edit`);   // Event edit page
+            revalidatePath("/events");              // Events list page
+            
+            return {
+              status: 200,
+              body: { success: true, data: { event: updated } },
+            };
+          }
+        );
+      } catch (err: any) {
+        // Handle CreditConfirmationRequiredError (409)
+        if (err.name === "CreditConfirmationRequiredError") {
+          const error = err.payload;
+          error.error.cta.href = `/api/events/${id}?confirm_credit=1`;
           
-          const payload = await request.json();
-          const updated = await updateEvent(id, payload, currentUser, confirmCredit);
-          
-          // Revalidate pages that display this event
-          revalidatePath(`/events/${id}`);        // Event detail page
-          revalidatePath(`/events/${id}/edit`);   // Event edit page
-          revalidatePath("/events");              // Events list page
-          
-          return {
-            status: 200,
-            body: { success: true, data: { event: updated } },
-          };
+          return new Response(JSON.stringify(error), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
         }
-      );
+        
+        // All other errors (500, 402, etc.)
+        return respondError(err);
+      }
     }
     
     // Fallback: no idempotency (shouldn't happen with new UI)

@@ -92,26 +92,43 @@ export async function POST(request: NextRequest) {
     
     // ⚡ NEW: Wrap with idempotency if key provided
     if (idempotencyKey && isValidIdempotencyKey(idempotencyKey)) {
-      return withIdempotency(
-        {
-          userId: currentUser.id,
-          route: 'POST /api/events',
-          key: idempotencyKey,
-        },
-        async () => {
-          // Extract confirm_credit from query params
+      try {
+        return await withIdempotency(
+          {
+            userId: currentUser.id,
+            route: 'POST /api/events',
+            key: idempotencyKey,
+          },
+          async () => {
+            // Extract confirm_credit from query params
+            const url = new URL(request.url);
+            const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+            
+            const payload = await request.json();
+            const event = await createEvent(payload, currentUser, confirmCredit);
+            
+            return {
+              status: 201,
+              body: { success: true, data: { event } },
+            };
+          }
+        );
+      } catch (err: any) {
+        // Handle CreditConfirmationRequiredError (409)
+        if (err.name === "CreditConfirmationRequiredError") {
           const url = new URL(request.url);
-          const confirmCredit = url.searchParams.get("confirm_credit") === "1";
+          const error = err.payload;
+          error.error.cta.href = `${url.pathname}?confirm_credit=1`;
           
-          const payload = await request.json();
-          const event = await createEvent(payload, currentUser, confirmCredit);
-          
-          return {
-            status: 201,
-            body: { success: true, data: { event } },
-          };
+          return new Response(JSON.stringify(error), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
         }
-      );
+        
+        // All other errors (500, 402, etc.)
+        return respondError(err);
+      }
     }
     
     // Fallback: no idempotency (shouldn't happen with new UI)
@@ -123,9 +140,8 @@ export async function POST(request: NextRequest) {
     
     return respondJSON({ event }, undefined, 201);
   } catch (err: any) {
-    // Handle CreditConfirmationRequiredError (409)
+    // Handle CreditConfirmationRequiredError (409) for fallback path
     if (err.name === "CreditConfirmationRequiredError") {
-      // Set correct CTA href for create flow
       const url = new URL(request.url);
       const error = err.payload;
       error.error.cta.href = `${url.pathname}?confirm_credit=1`;

@@ -184,14 +184,14 @@ export function CreateEventPageClient({
         
         if (paywallError) {
           showPaywall(paywallError);
-          return;
+          throw new Error('Paywall required'); // ⚡ THROW instead of return
         }
       }
       
       // Handle other errors
       if (!res.ok) {
         await handleApiError(res);
-        return;
+        throw new Error(`Request failed with status ${res.status}`); // ⚡ THROW instead of return
       }
       
       // ✅ Success - mark as redirecting BEFORE navigation
@@ -270,6 +270,7 @@ export function CreateEventPageClient({
         isBusy={controller.isBusy}
         busyLabel={controller.busyLabel}
         actionPhase={controller.phase}
+        externalError={controller.state.lastError}
       />
       
       {/* Paywall Modal */}
