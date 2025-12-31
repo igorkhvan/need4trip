@@ -1,7 +1,7 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-31 (Added club_id immutability trigger + recent migrations) ⚡  
+> Последнее обновление: 2024-12-31 (Added idempotency_keys table, club_id immutability trigger, updated migration history to 87 files) ⚡  
 > PostgreSQL + Supabase
 
 ---
@@ -34,12 +34,12 @@
 
 ### Статистика:
 
-- **Core Tables**: 6 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands)
+- **Core Tables**: 7 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands, idempotency_keys) ⚡
 - **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans) ⚡
 - **Club & Billing**: 7 (clubs, club_members, club_cities, club_subscriptions, billing_transactions, billing_products, billing_credits) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
 - **User Extensions**: 1 (user_cars)
-- **Итого**: 23 таблицы ⚡
+- **Итого**: 24 таблицы ⚡
 
 ---
 
@@ -367,6 +367,56 @@ CREATE TABLE public.user_cars (
 **Связи**:
 - → `users` (user_id)
 - → `car_brands` (car_brand_id)
+
+---
+
+### 8. `idempotency_keys`
+
+**Назначение**: Отслеживание idempotency keys для предотвращения дублирования запросов (например, double-click при создании события)
+
+```sql
+CREATE TABLE public.idempotency_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Scope: user + route + key (unique per attempt)
+  user_id UUID NOT NULL,
+  route TEXT NOT NULL,  -- e.g., "POST /api/events"
+  key TEXT NOT NULL,    -- Client-provided idempotency key (UUID)
+  
+  -- Status tracking
+  status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed', 'failed')),
+  
+  -- Stored response (for replay on duplicate requests)
+  response_status INT,       -- HTTP status code (e.g., 201, 400)
+  response_body JSONB,       -- Full response body
+  
+  -- Timestamps
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  
+  -- Unique constraint: one key per (user, route, key) triplet
+  CONSTRAINT unique_idempotency_key UNIQUE (user_id, route, key)
+);
+```
+
+**Indexes**:
+- `idempotency_keys_pkey` (PRIMARY KEY on id)
+- `unique_idempotency_key` (UNIQUE on user_id, route, key)
+- `idx_idempotency_keys_lookup` (on user_id, route, key) — fast lookup
+- `idx_idempotency_keys_created_at` (on created_at) — cleanup of old keys
+- `idx_idempotency_keys_status` (on status) — status queries
+
+**Notes**:
+- ⚡ **Purpose**: Prevent duplicate requests from double-clicks, network retries, etc.
+- ⚡ **TTL**: Keys auto-expire after 24 hours (cleanup via scheduled job)
+- ⚡ **Replay**: If duplicate request arrives while status='in_progress', returns 409 Conflict
+- ⚡ **Replay**: If duplicate request arrives after status='completed', returns stored response
+- ⚡ **SSOT Reference**: docs/ssot/SSOT_ARCHITECTURE.md § Idempotency Standard
+
+**RLS**: TBD (service role only for now)
+
+**Связи**:
+- → `users` (user_id) — implicit FK (no formal constraint for flexibility)
 
 ---
 
@@ -1149,9 +1199,12 @@ CREATE INDEX idx_event_participants_user_event
 | 2024-12-26 | `cleanup_currency_columns` | ⚡ Удалены deprecated columns (price_kzt, price_monthly_kzt) |
 | 2024-12-30 | `remove_organizer_role` | 🔥 Удалена роль `organizer` из club_members (SSOT §2) |
 | 2024-12-30 | `fix_rls_owner_only_members` | 🔒 RLS: ТОЛЬКО owner может управлять members (SSOT §6.2) |
-| 2024-12-31 | `enforce_club_id_immutability_v2` | 🔒 DB trigger: club_id immutability (SSOT §5.7) |
+| 2024-12-31 | `enforce_club_id_immutability` | 🔒 DB trigger v1: club_id immutability (superseded by v2) |
+| 2024-12-31 | `enforce_club_id_immutability_v2` | 🔒 DB trigger v2: club_id immutability (SSOT §5.7) — ACTIVE |
+| 2024-12-31 | `test_club_id_immutability` | ✅ SQL test suite: club_id immutability verification |
+| 2024-12-31 | `add_idempotency_keys` | ⚡ Таблица `idempotency_keys` (prevent duplicate requests) |
 
-**Всего миграций**: 84 timestamped файлов ⚡
+**Всего миграций**: 87 timestamped файлов ⚡
 
 **Расположение**: `/supabase/migrations/`
 
