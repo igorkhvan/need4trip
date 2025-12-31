@@ -1,8 +1,14 @@
-# SSOT_CLUBS_EVENTS_ACCESS — Compliance Report
+# Clubs & Events Access — Verification Report
+
+> **⚠️ NOTE**: This document is a **verification snapshot** against the authoritative SSOT  
+> (`/docs/SSOT_CLUBS_EVENTS_ACCESS.md`) and is **NOT** a source of truth itself.  
+> It records compliance status as of the verification date and should NOT be used to infer rules.
+
+---
 
 **Verification Date**: 2025-12-31  
 **SSOT Version**: 1.0 (Last Updated: 2025-12-30)  
-**Compliance Document Version**: 1.3  
+**Verification Document Version**: 1.3  
 **Status**: ✅ **FULL COMPLIANCE VERIFIED**
 
 ---
@@ -16,7 +22,7 @@ This document verifies that the Need4Trip codebase is in FULL compliance with th
 All critical rules defined in the SSOT have been implemented and enforced.
 
 **Implementation Status**:
-All SSOT requirements have been verified as implemented in the codebase. This compliance report validates implementation against authoritative SSOT rules without additional claims.
+All SSOT requirements have been verified as implemented in the codebase. This verification report validates implementation against authoritative SSOT rules without additional claims.
 
 ---
 
@@ -351,18 +357,25 @@ grep -ri "organizer" src/lib src/components src/app --exclude-dir=node_modules
 
 ### Checklist
 
-- [x] 1) No contradictions inside the compliance doc
+- [x] 1) No contradictions inside the verification doc
 - [x] 2) No claims beyond SSOT
 - [x] 3) Every "ENFORCED/IMPLEMENTED" item has concrete evidence (file + function/component)
 - [x] 4) The conclusion status matches the rule-level statuses (no mismatch)
 - [x] 5) Dates updated to 2025-12-30 (current date)
-- [x] 6) Document version incremented (1.1 → 1.2)
+- [x] 6) Document version incremented (1.1 → 1.2 → 1.3)
 - [x] 7) All line number references verified against actual code files
 - [x] 8) No stale evidence references (e.g., old file paths removed)
 - [x] 9) Roles match SSOT exactly: owner, admin, member, pending (no extras)
 - [x] 10) "pending" role explicitly recognized as NO permissions per SSOT §2:70-88
 
-### Changes Made in v1.2
+### Changes Made in v1.3 (2025-12-31)
+
+- Removed production/deployment claims (TASK A: compliance doc hygiene)
+- Replaced with verification-scoped language only
+- Updated verification date to 2025-12-31
+- All statements now limited to "verified against SSOT" + evidence references
+
+### Changes Made in v1.2 (2025-12-30)
 
 1. **Date Normalization**: Updated all dates from 2024-12-30 to 2025-12-30 (current date)
 2. **Document Version**: Incremented from 1.1 to 1.2
@@ -376,14 +389,14 @@ grep -ri "organizer" src/lib src/components src/app --exclude-dir=node_modules
 ### Diff Summary
 
 - **Dates**: 2024-12-30 → 2025-12-30 (all references)
-- **Version**: 1.1 → 1.2
+- **Version**: 1.1 → 1.2 → 1.3
 - **Content**: Removed historical implementation notes, retained only verification status
 - **Evidence**: All file references and line numbers verified against current codebase
 - **Scope**: No claims beyond SSOT authoritative rules
 
 ### Conclusion
 
-This compliance document (v1.2) accurately reflects the current state of Need4Trip codebase implementation against SSOT_CLUBS_EVENTS_ACCESS.md (v1.0, 2025-12-30). All critical rules are implemented and enforced. No contradictions found. No claims beyond SSOT scope.
+This verification document (v1.3) accurately reflects the current state of Need4Trip codebase implementation against SSOT_CLUBS_EVENTS_ACCESS.md (v1.0, 2025-12-30). All critical rules are implemented and enforced. No contradictions found. No claims beyond SSOT scope.
 
 **Verification Result**: ✅ **FULL COMPLIANCE CONFIRMED**
 
@@ -417,14 +430,6 @@ The Need4Trip codebase is in **COMPLETE** compliance with **SSOT_CLUBS_EVENTS_AC
 
 **Document Version**: 1.3  
 **Last Updated**: 2025-12-31  
-**Changes in 1.3**:
-- Removed production/deployment claims (TASK A: compliance doc hygiene)
-- Replaced with verification-scoped language only
-- Updated verification date to 2025-12-31
-- All statements now limited to "verified against SSOT" + evidence references
-
-**Changes in 1.2** (2025-12-30):
-- Updated dates, added self-verification section
-- Updated evidence references, removed historical notes
 
 **Signed Off**: AI Assistant (Compliance Verification — No Claims Beyond SSOT)
+
