@@ -148,7 +148,7 @@ export async function getCreditByTransactionId(
 export async function consumeCredit(
   userId: string,
   creditCode: CreditCode,
-  eventId: string
+  eventId: string | null
 ): Promise<BillingCredit> {
   const db = getAdminDb();
 
@@ -173,7 +173,7 @@ export async function consumeCredit(
     .from("billing_credits")
     .update({
       status: "consumed" as CreditStatus,
-      consumed_event_id: eventId,
+      consumed_event_id: eventId, // Can be NULL for new events (will be updated after creation)
       consumed_at: new Date().toISOString(),
     })
     .eq("id", availableCredit.id)

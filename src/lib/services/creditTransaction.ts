@@ -39,7 +39,7 @@ export interface CreditTransactionResult {
  * @param operation Async operation to execute (e.g., save event)
  * @returns Transaction result
  */
-export async function executeWithCreditTransaction<T>(
+export async function executeWithCreditTransaction<T extends { id: string }>(
   userId: string,
   creditCode: "EVENT_UPGRADE_500",
   eventId: string | undefined,
@@ -48,10 +48,10 @@ export async function executeWithCreditTransaction<T>(
   let consumedCreditId: string | undefined;
   
   try {
-    // Step 1: Consume credit (mark as consumed)
+    // Step 1: Consume credit (mark as consumed with NULL eventId for new events)
     log.info("[CreditTransaction] Consuming credit", { userId, creditCode, eventId });
     
-    const credit = await consumeCredit(userId, creditCode, eventId ?? "pending");
+    const credit = await consumeCredit(userId, creditCode, eventId ?? null);
     consumedCreditId = credit.id;
     
     log.info("[CreditTransaction] Credit consumed", { 
@@ -66,12 +66,21 @@ export async function executeWithCreditTransaction<T>(
     
     const result = await operation();
     
-    log.info("[CreditTransaction] Operation succeeded", { eventId });
+    log.info("[CreditTransaction] Operation succeeded", { eventId: result.id });
+    
+    // Step 3: Update credit with actual eventId if it was NULL
+    if (!eventId && result.id) {
+      await updateCreditEventId(consumedCreditId, result.id);
+      log.info("[CreditTransaction] Credit updated with eventId", { 
+        creditId: consumedCreditId, 
+        eventId: result.id 
+      });
+    }
     
     return result;
     
   } catch (operationError: any) {
-    // Step 3: Operation failed → rollback credit
+    // Step 4: Operation failed → rollback credit
     log.error("[CreditTransaction] Operation failed, attempting rollback", { 
       error: operationError.message,
       creditId: consumedCreditId,
@@ -105,6 +114,28 @@ export async function executeWithCreditTransaction<T>(
     
     // Re-throw original operation error
     throw operationError;
+  }
+}
+
+/**
+ * Update credit with actual eventId after event creation
+ * 
+ * @param creditId Credit ID
+ * @param eventId Event ID
+ */
+async function updateCreditEventId(creditId: string, eventId: string): Promise<void> {
+  const db = getAdminDb();
+  
+  const { error } = await db
+    .from("billing_credits")
+    .update({
+      consumed_event_id: eventId,
+    })
+    .eq("id", creditId);
+  
+  if (error) {
+    log.error("Failed to update credit with eventId", { error, creditId, eventId });
+    // Don't throw - credit is already consumed, this is just linking
   }
 }
 
