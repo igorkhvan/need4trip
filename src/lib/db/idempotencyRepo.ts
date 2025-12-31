@@ -57,26 +57,22 @@ export async function getIdempotencyKey(
 ): Promise<IdempotencyKey | null> {
   const db = getAdminDb();
   
-  // ⚠️ TODO: Uncomment after migration applied (20241231_add_idempotency_keys.sql)
-  // const { data, error } = await db
-  //   .from('idempotency_keys')
-  //   .select('*')
-  //   .eq('user_id', userId)
-  //   .eq('route', route)
-  //   .eq('key', key)
-  //   .maybeSingle();
+  const { data, error } = await (db as any)
+    .from('idempotency_keys')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('route', route)
+    .eq('key', key)
+    .maybeSingle();
   
-  // if (error) {
-  //   log.error('Failed to get idempotency key', { error, userId, route, key });
-  //   throw new Error(`Failed to get idempotency key: ${error.message}`);
-  // }
+  if (error) {
+    log.error('Failed to get idempotency key', { error, userId, route, key });
+    throw new Error(`Failed to get idempotency key: ${error.message}`);
+  }
   
-  // if (!data) return null;
+  if (!data) return null;
   
-  // return mapDbToIdempotencyKey(data as DbIdempotencyKey);
-  
-  // Temporary stub
-  return null;
+  return mapDbToIdempotencyKey(data);
 }
 
 /**
@@ -95,40 +91,29 @@ export async function createInProgressKey(
 ): Promise<IdempotencyKey> {
   const db = getAdminDb();
   
-  // ⚠️ TODO: Uncomment after migration applied (20241231_add_idempotency_keys.sql)
-  // const { data, error } = await db
-  //   .from('idempotency_keys')
-  //   .insert({
-  //     user_id: userId,
-  //     route,
-  //     key,
-  //     status: 'in_progress',
-  //     created_at: new Date().toISOString(),
-  //   })
-  //   .select('*')
-  //   .single();
+  const { data, error } = await (db as any)
+    .from('idempotency_keys')
+    .insert({
+      user_id: userId,
+      route,
+      key,
+      status: 'in_progress',
+      created_at: new Date().toISOString(),
+    })
+    .select('*')
+    .single();
   
-  // if (error) {
-  //   // Unique constraint violation (23505) means key already exists
-  //   if (error.code === '23505') {
-  //     throw new Error('IDEMPOTENCY_KEY_EXISTS');
-  //   }
+  if (error) {
+    // Unique constraint violation (23505) means key already exists
+    if (error.code === '23505') {
+      throw new Error('IDEMPOTENCY_KEY_EXISTS');
+    }
     
-  //   log.error('Failed to create idempotency key', { error, userId, route, key });
-  //   throw new Error(`Failed to create idempotency key: ${error.message}`);
-  // }
+    log.error('Failed to create idempotency key', { error, userId, route, key });
+    throw new Error(`Failed to create idempotency key: ${error.message}`);
+  }
   
-  // return mapDbToIdempotencyKey(data as DbIdempotencyKey);
-  
-  // Temporary stub
-  return {
-    id: crypto.randomUUID(),
-    userId,
-    route,
-    key,
-    status: 'in_progress',
-    createdAt: new Date().toISOString(),
-  };
+  return mapDbToIdempotencyKey(data);
 }
 
 /**
@@ -149,26 +134,22 @@ export async function completeIdempotencyKey(
 ): Promise<void> {
   const db = getAdminDb();
   
-  // ⚠️ TODO: Uncomment after migration applied (20241231_add_idempotency_keys.sql)
-  // const { error } = await db
-  //   .from('idempotency_keys')
-  //   .update({
-  //     status: 'completed',
-  //     response_status: responseStatus,
-  //     response_body: responseBody,
-  //     completed_at: new Date().toISOString(),
-  //   })
-  //   .eq('user_id', userId)
-  //   .eq('route', route)
-  //   .eq('key', key);
+  const { error } = await (db as any)
+    .from('idempotency_keys')
+    .update({
+      status: 'completed',
+      response_status: responseStatus,
+      response_body: responseBody,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+    .eq('route', route)
+    .eq('key', key);
   
-  // if (error) {
-  //   log.error('Failed to complete idempotency key', { error, userId, route, key });
-  //   throw new Error(`Failed to complete idempotency key: ${error.message}`);
-  // }
-  
-  // Temporary stub
-  log.info('Idempotency key completed (stub)', { userId, route, key, responseStatus });
+  if (error) {
+    log.error('Failed to complete idempotency key', { error, userId, route, key });
+    throw new Error(`Failed to complete idempotency key: ${error.message}`);
+  }
 }
 
 /**
@@ -189,33 +170,29 @@ export async function failIdempotencyKey(
 ): Promise<void> {
   const db = getAdminDb();
   
-  // ⚠️ TODO: Uncomment after migration applied (20241231_add_idempotency_keys.sql)
-  // const { error } = await db
-  //   .from('idempotency_keys')
-  //   .update({
-  //     status: 'failed',
-  //     response_status: responseStatus || null,
-  //     response_body: responseBody || null,
-  //     completed_at: new Date().toISOString(),
-  //   })
-  //   .eq('user_id', userId)
-  //   .eq('route', route)
-  //   .eq('key', key);
+  const { error } = await (db as any)
+    .from('idempotency_keys')
+    .update({
+      status: 'failed',
+      response_status: responseStatus || null,
+      response_body: responseBody || null,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+    .eq('route', route)
+    .eq('key', key);
   
-  // if (error) {
-  //   log.error('Failed to mark idempotency key as failed', { error, userId, route, key });
-  //   // Don't throw — this is cleanup, not critical
-  // }
-  
-  // Temporary stub
-  log.info('Idempotency key failed (stub)', { userId, route, key, responseStatus });
+  if (error) {
+    log.error('Failed to mark idempotency key as failed', { error, userId, route, key });
+    // Don't throw — this is cleanup, not critical
+  }
 }
 
 // ============================================================================
 // Mappers
 // ============================================================================
 
-function mapDbToIdempotencyKey(db: DbIdempotencyKey): IdempotencyKey {
+function mapDbToIdempotencyKey(db: any): IdempotencyKey {
   return {
     id: db.id,
     userId: db.user_id,

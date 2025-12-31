@@ -274,7 +274,7 @@ export function useActionController<TConfirmPayload = any>(
   }, []);
   
   const start = useCallback(async (actionName: string, fn: () => Promise<void>) => {
-    const correlationId = uuidv4();
+    const correlationId = crypto.randomUUID();
     
     setState({
       phase: 'running',
