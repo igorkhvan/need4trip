@@ -158,6 +158,7 @@ export function EventForm({
   const [vehicleTypes, setVehicleTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [rules, setRules] = useState<string>(initialValues?.rules ?? "");
   const [clubId, setClubId] = useState<string | null>(initialValues?.clubId ?? null);
+  const [isClubEventMode, setIsClubEventMode] = useState<boolean>(Boolean(initialValues?.clubId)); // UI state for checkbox
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
   const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? null);
@@ -306,6 +307,10 @@ export function EventForm({
     }
     if (!cityId) {
       issues.cityId = "Выберите город";
+    }
+    // Club event validation: if checkbox ON, clubId is required
+    if (isClubEventMode && !clubId) {
+      issues.clubId = "Выберите клуб";
     }
     sortedFields.forEach((field, idx) => {
       if (!field.label.trim()) {
@@ -532,6 +537,8 @@ export function EventForm({
               <EventClubSection
                 clubId={clubId}
                 onClubIdChange={setClubId}
+                isClubEventMode={isClubEventMode}
+                onIsClubEventModeChange={setIsClubEventMode}
                 manageableClubs={manageableClubs}
                 fieldError={fieldErrors.clubId}
                 clearFieldError={() => {

@@ -10,9 +10,10 @@
  * Design: Follows DESIGN_SYSTEM.md Card pattern with shadcn/ui components
  * 
  * Architecture:
- * - UI state: isClubEventMode (controls checkbox display)
+ * - UI state: isClubEventMode (controls checkbox, managed by parent form)
  * - Data state: clubId (source of truth for API payload, SSOT §1.2)
  * - When checkbox ON + multiple clubs → isClubEventMode=true, clubId=null (user must choose)
+ * - Validation: clubId is required when isClubEventMode=true (validated in parent)
  */
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { FormField } from "@/components/ui/form-field";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 interface ClubOption {
   id: string;
@@ -37,6 +38,8 @@ interface EventClubSectionProps {
   // Form values
   clubId: string | null;
   onClubIdChange: (clubId: string | null) => void;
+  isClubEventMode: boolean;
+  onIsClubEventModeChange: (value: boolean) => void;
   
   // External data
   manageableClubs: ClubOption[];
@@ -53,23 +56,14 @@ interface EventClubSectionProps {
 export function EventClubSection({
   clubId,
   onClubIdChange,
+  isClubEventMode,
+  onIsClubEventModeChange,
   manageableClubs,
   fieldError,
   clearFieldError,
   disabled,
   mode = "create",
 }: EventClubSectionProps) {
-  // UI state: controls checkbox (independent from clubId to allow "checkbox ON but club not selected yet")
-  // SSOT §1.2: clubId is source of truth for DATA, isClubEventMode is UI state
-  const [isClubEventMode, setIsClubEventMode] = useState<boolean>(Boolean(clubId));
-  
-  // Sync UI state with clubId on mount (for edit mode or pre-filled clubId)
-  useEffect(() => {
-    if (clubId) {
-      setIsClubEventMode(true);
-    }
-  }, []); // Only on mount
-  
   // SSOT §4.2: Auto-select if exactly one manageable club (create mode only)
   useEffect(() => {
     if (mode === "create" && manageableClubs.length === 1 && isClubEventMode && !clubId) {
@@ -117,7 +111,7 @@ export function EventClubSection({
           checked={isClubEventMode}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             const checked = e.target.checked;
-            setIsClubEventMode(checked);
+            onIsClubEventModeChange(checked);
             
             if (checked) {
               // Turning ON: auto-select if single club, else leave clubId=null (dropdown will require selection)
