@@ -315,7 +315,7 @@ export function useActionController<TConfirmPayload = any>(
     setState(prev => ({
       ...prev,
       phase: 'awaiting_confirmation',
-      isBusy: true, // Still busy (confirmation modal open)
+      isBusy: true, // Keep busy (confirmation modal open, form should remain disabled)
       confirmationPayload: payload,
     }));
   }, []);

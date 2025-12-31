@@ -276,11 +276,14 @@ export function CreateEventPageClient({
       {PaywallModalComponent}
       
       {/* ⚡ NEW: Credit Confirmation Modal (controlled by ActionController) */}
-      {(controller.phase === 'awaiting_confirmation' || controller.phase === 'running_confirmed') && controller.state.confirmationPayload && (
+      {(controller.phase === 'awaiting_confirmation' 
+        || controller.phase === 'running_confirmed'
+        || controller.phase === 'redirecting') 
+        && controller.state.confirmationPayload && (
         <CreditConfirmationModal
           open={true}
           onOpenChange={(open) => {
-            // Allow close only if awaiting_confirmation (not during running_confirmed)
+            // Allow close only if awaiting_confirmation (not during running_confirmed or redirecting)
             if (!open && controller.phase === 'awaiting_confirmation') {
               controller.reset();
             }
@@ -290,7 +293,7 @@ export function CreateEventPageClient({
           requestedParticipants={controller.state.confirmationPayload.requestedParticipants || 0}
           onConfirm={handleConfirmCredit}
           onCancel={() => controller.reset()}
-          isLoading={controller.phase === 'running_confirmed'}
+          isLoading={controller.phase === 'running_confirmed' || controller.phase === 'redirecting'}
         />
       )}
     </div>
