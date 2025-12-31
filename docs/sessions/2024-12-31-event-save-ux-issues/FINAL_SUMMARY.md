@@ -235,7 +235,8 @@ GROUP BY route;
 - `docs/sessions/2024-12-31-event-save-ux-issues/ANALYSIS.md` — Root cause analysis
 - `docs/sessions/2024-12-31-event-save-ux-issues/IMPLEMENTATION_PROGRESS.md` — Status report
 - `docs/sessions/2024-12-31-event-save-ux-issues/IDEMPOTENCY_ACTIVATED.md` — Activation guide
-- `docs/sessions/2024-12-31-event-save-ux-issues/COMPLETE.md` — This file
+- `docs/sessions/2024-12-31-event-save-ux-issues/UNIFIED_TRANSACTION_PATTERNS.md` — ✅ Architecture standard
+- `docs/sessions/2024-12-31-event-save-ux-issues/FINAL_SUMMARY.md` — This file
 
 **SSOT Updates:** ⏸️ Optional (Part 6)
 - Recommended: Add § ActionController Standard to `SSOT_ARCHITECTURE.md`
