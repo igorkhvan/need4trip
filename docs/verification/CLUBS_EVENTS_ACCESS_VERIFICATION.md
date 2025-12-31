@@ -1,14 +1,14 @@
 # Clubs & Events Access — Verification Report
 
 > **⚠️ NOTE**: This document is a **verification snapshot** against the authoritative SSOT  
-> (`/docs/SSOT_CLUBS_EVENTS_ACCESS.md`) and is **NOT** a source of truth itself.  
+> (`/docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md`) and is **NOT** a source of truth itself.  
 > It records compliance status as of the verification date and should NOT be used to infer rules.
 
 ---
 
-**Verification Date**: 2025-12-31  
+**Verification Date**: 2024-12-30 (Updated after isClubEvent elimination)  
 **SSOT Version**: 1.0 (Last Updated: 2025-12-30)  
-**Verification Document Version**: 1.4  
+**Verification Document Version**: 1.5  
 **Status**: ✅ **FULL COMPLIANCE VERIFIED**
 
 ---
@@ -17,12 +17,17 @@
 
 This document verifies that the Need4Trip codebase is in FULL compliance with the authoritative SSOT:
 
-**`/docs/SSOT_CLUBS_EVENTS_ACCESS.md`** (Version 1.0, Last Updated: 2025-12-30)
+**`/docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md`** (Version 1.0, Last Updated: 2025-12-30)
 
 All critical rules defined in the SSOT have been implemented and enforced.
 
 **Implementation Status**:
 All SSOT requirements have been verified as implemented in the codebase. This verification report validates implementation against authoritative SSOT rules without additional claims.
+
+**Latest Changes (2024-12-30):**
+- ✅ Eliminated `isClubEvent` from API contract (SSOT §1.2)
+- ✅ Backend enforces clubId-only contract with explicit rejection
+- ✅ All write operations rely on trigger-maintained `is_club_event` column
 
 ---
 
@@ -35,16 +40,36 @@ All SSOT requirements have been verified as implemented in the codebase. This ve
 || Role evaluated per club | `getUserClubRole(clubId, userId)` in `src/lib/db/clubMemberRepo.ts` | ✅ |
 || No global club role | All checks use `(clubId, userId)` pair | ✅ |
 
-### §1.2 Event Clubness
+### §1.2 Event Clubness (CRITICAL — Updated 2024-12-30)
 
 || Rule | Implementation | Status |
 ||------|---------------|--------|
 || `club_id IS NOT NULL` = club event | DB trigger syncs `is_club_event` (migration 20241208) | ✅ |
 || `club_id` is source of truth | Backend checks `validated.clubId`, not `isClubEvent` boolean | ✅ |
+|| API does NOT accept `isClubEvent` | Zod schemas reject `isClubEvent` in payload (explicit validation) | ✅ NEW |
+|| Repo does NOT write `is_club_event` | Trigger-maintained (createEvent/updateEvent do NOT set is_club_event) | ✅ NEW |
 
-**Evidence**:
-- `src/lib/services/events.ts:427-438` (createEvent club authorization)
-- `src/lib/services/events.ts:697-707` (updateEvent club authorization)
+**Evidence (Updated 2024-12-30)**:
+- `src/lib/types/event.ts:212-242` — EventCreateInput/EventUpdateInput: NO isClubEvent field
+- `src/lib/types/event.ts:233-240` — eventCreateSchema: explicit rejection of isClubEvent in payload
+- `src/lib/types/event.ts:271-277` — eventUpdateSchema: explicit rejection of isClubEvent in payload
+- `src/lib/services/events.ts:404-424` — createEvent: uses ONLY `validated.clubId` (no isClubEvent)
+- `src/lib/services/events.ts:654-675` — updateEvent: uses ONLY `validated.clubId` (no isClubEvent)
+- `src/lib/db/eventRepo.ts:168-195` — createEvent: does NOT write `is_club_event` (trigger handles it)
+- `src/lib/db/eventRepo.ts:215-259` — updateEvent: does NOT write `is_club_event` (trigger handles it)
+- `supabase/migrations/20241212_alter_events_club_and_visibility.sql` — trigger `sync_event_club_flag()`
+
+**Verification Commands:**
+```bash
+grep -r "isClubEvent" src/lib/types/event.ts | grep -v "^Binary" | grep -v comment
+# Result: ONLY in Event interface (response field), NOT in input types ✅
+
+grep -r "is_club_event.*payload" src/lib/db/eventRepo.ts
+# Result: 0 matches (no writes to is_club_event) ✅
+
+grep -r "isClubEvent.*parsed" src/lib/services/events.ts
+# Result: 0 matches (no протаскивание from input) ✅
+```
 
 ### §1.3 Paid Modes (No Mixing)
 

@@ -170,7 +170,7 @@ export interface EventCreateInput {
   vehicleTypeRequirement: VehicleTypeRequirement;
   allowedBrandIds: string[];
   rules?: string | null;
-  isClubEvent: boolean;
+  // ⚡ REMOVED isClubEvent: clubId is SSOT (§1.2)
   clubId?: string | null;
   isPaid: boolean;
   price?: number | null;
@@ -196,7 +196,7 @@ export interface EventUpdateInput {
   vehicleTypeRequirement?: VehicleTypeRequirement;
   allowedBrandIds?: string[];
   rules?: string | null;
-  isClubEvent?: boolean;
+  // ⚡ REMOVED isClubEvent: clubId is SSOT (§1.2), immutable after creation
   clubId?: string | null;
   isPaid?: boolean;
   price?: number | null;
@@ -224,19 +224,29 @@ export const eventCreateSchema = z
     vehicleTypeRequirement: vehicleTypeRequirementSchema.default("any"),
     allowedBrandIds: z.array(z.string().uuid()).default([]),
     rules: z.string().trim().max(10000).optional().nullable(),
-    isClubEvent: z.boolean().default(false),
+    // ⚡ REMOVED isClubEvent: clubId is SSOT (§1.2), explicit rejection below
     clubId: z.string().uuid().nullable().optional(), // ID клуба-организатора
     isPaid: z.boolean().default(false),
     price: z.number().finite().nonnegative().nullable().optional(),
     currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
     allowAnonymousRegistration: z.boolean().default(true), // NEW: Allow guests to register
   })
-  .superRefine((val, ctx) => {
+  .passthrough() // Allow unknown keys for explicit rejection check
+  .superRefine((val: any, ctx) => {
     if (val.dateTime <= date5MinutesAgo()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "dateTime must be in the future",
         path: ["dateTime"],
+      });
+    }
+    
+    // ⚡ EXPLICIT REJECTION: isClubEvent is deprecated (SSOT §1.2)
+    if ('isClubEvent' in val) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "isClubEvent is deprecated. Use clubId to specify club context. clubId=null for personal events, clubId=<uuid> for club events.",
+        path: ["isClubEvent"],
       });
     }
   });
@@ -255,13 +265,24 @@ const eventUpdateBaseSchema = z.object({
   vehicleTypeRequirement: vehicleTypeRequirementSchema.optional(),
   allowedBrandIds: z.array(z.string().uuid()).optional(),
   rules: z.string().trim().max(10000).optional().nullable(),
-  isClubEvent: z.boolean().optional(),
+  // ⚡ REMOVED isClubEvent: clubId is SSOT (§1.2), explicit rejection below
   clubId: z.string().uuid().nullable().optional(),
   isPaid: z.boolean().optional(),
   price: z.number().finite().nonnegative().nullable().optional(),
   currencyCode: z.string().length(3).toUpperCase().nullable().optional(), // ISO 4217 code (normalized)
   allowAnonymousRegistration: z.boolean().optional(), // NEW: Allow guests to register
   registrationManuallyClosed: z.boolean().optional(), // NEW: Owner manually closed registration
+})
+.passthrough() // Allow unknown keys for explicit rejection check
+.superRefine((val: any, ctx) => {
+  // ⚡ EXPLICIT REJECTION: isClubEvent is deprecated (SSOT §1.2)
+  if ('isClubEvent' in val) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "isClubEvent is deprecated. Use clubId to specify club context.",
+      path: ["isClubEvent"],
+    });
+  }
 });
 
 // Note: Валидация dateTime перенесена в updateEvent сервис,

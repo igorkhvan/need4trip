@@ -187,7 +187,8 @@ export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
     visibility: payload.visibility,
     vehicle_type_requirement: payload.vehicleTypeRequirement,
     rules: payload.rules,
-    is_club_event: payload.isClubEvent,
+    // ⚡ REMOVED is_club_event: trigger sync_event_club_flag() sets it automatically based on club_id
+    club_id: payload.clubId ?? null, // SSOT §1.2: clubId is source of truth
     is_paid: payload.isPaid,
     price: payload.price,
     currency_code: payload.currencyCode,
@@ -245,7 +246,8 @@ export async function updateEvent(
       ? { vehicle_type_requirement: payload.vehicleTypeRequirement }
       : {}),
     ...(payload.rules !== undefined ? { rules: payload.rules } : {}),
-    ...(payload.isClubEvent !== undefined ? { is_club_event: payload.isClubEvent } : {}),
+    // ⚡ REMOVED is_club_event: trigger-maintained (SSOT §1.2), do NOT write explicitly
+    // club_id immutability enforced in service layer (updateEvent), NOT written here
     ...(payload.isPaid !== undefined ? { is_paid: payload.isPaid } : {}),
     ...(payload.price !== undefined ? { price: payload.price } : {}),
     ...(payload.currencyCode !== undefined ? { currency_code: payload.currencyCode } : {}),

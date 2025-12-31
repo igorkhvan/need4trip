@@ -415,7 +415,7 @@ export async function createEvent(
     vehicleTypeRequirement: parsed.vehicleTypeRequirement ?? "any",
     allowedBrandIds: parsed.allowedBrandIds ?? [],
     rules: parsed.rules ?? null,
-    isClubEvent: parsed.isClubEvent ?? false,
+    // ⚡ REMOVED isClubEvent: clubId is SSOT (§1.2)
     clubId: parsed.clubId ?? null,
     isPaid: parsed.isPaid ?? false,
     price: parsed.price ?? null,
@@ -665,7 +665,7 @@ export async function updateEvent(
     vehicleTypeRequirement: parsed.vehicleTypeRequirement !== undefined ? parsed.vehicleTypeRequirement : undefined,
     allowedBrandIds: parsed.allowedBrandIds !== undefined ? parsed.allowedBrandIds : undefined,
     rules: parsed.rules !== undefined ? parsed.rules : undefined,
-    isClubEvent: parsed.isClubEvent !== undefined ? parsed.isClubEvent : undefined,
+    // ⚡ REMOVED isClubEvent: clubId is SSOT (§1.2), immutable after creation
     clubId: parsed.clubId !== undefined ? parsed.clubId : undefined,
     isPaid: parsed.isPaid !== undefined ? parsed.isPaid : undefined,
     price: parsed.price !== undefined ? parsed.price : undefined,
