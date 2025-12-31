@@ -14,6 +14,7 @@ import { getEventWithVisibility, hydrateEvent } from "@/lib/services/events";
 import { getPlanById } from "@/lib/db/planRepo";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
 import { getUserClubs } from "@/lib/services/clubs";
+import { getEffectiveEventEntitlements } from "@/lib/services/eventEntitlements";
 import { EditEventPageClient } from "./edit-event-client";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 
@@ -76,13 +77,18 @@ export default async function EditEventPage({ params }: PageProps) {
       allowCsvExport: plan.allowCsvExport,
     };
   } else {
-    // Regular event → load FREE plan
-    const freePlan = await getPlanById("free");
+    // ⚡ NEW: Personal event → use effective entitlements (accounts for consumed credits)
+    const entitlements = await getEffectiveEventEntitlements({
+      userId: currentUser.id,
+      eventId: event.id,
+      clubId: event.clubId,
+    });
+    
     planLimits = {
-      maxMembers: freePlan.maxMembers,
-      maxEventParticipants: freePlan.maxEventParticipants,
-      allowPaidEvents: freePlan.allowPaidEvents,
-      allowCsvExport: freePlan.allowCsvExport,
+      maxMembers: null, // Personal events don't have member limits
+      maxEventParticipants: entitlements.maxEventParticipants, // 15 or 500 if credit applied
+      allowPaidEvents: false, // Personal events cannot be paid (SSOT §1.3)
+      allowCsvExport: false, // Personal events don't support CSV export
     };
   }
   

@@ -387,10 +387,15 @@ export async function enforceEventPublish(params: {
   // PERSONAL EVENTS BRANCH
   // ============================================================================
   
-  // Load limits from database
-  const freePlan = await getPlanById("free");
-  const freeLimit = freePlan.maxEventParticipants ?? 15;
+  // ⚡ NEW: Use effective entitlements (SSOT for limits)
+  const { getEffectiveEventEntitlements } = await import("@/lib/services/eventEntitlements");
+  const entitlements = await getEffectiveEventEntitlements({
+    userId,
+    eventId: eventId || undefined,
+    clubId: null,
+  });
   
+  // Load product info for paywall options
   const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
   const oneOffProduct = await getProductByCode("EVENT_UPGRADE_500");
   
@@ -402,6 +407,8 @@ export async function enforceEventPublish(params: {
   const oneOffLimit = oneOffProduct.constraints.max_participants ?? 500;
   const oneOffPrice = oneOffProduct.price;
   const oneOffCurrency = oneOffProduct.currencyCode;
+  
+  const freePlan = await getPlanById("free");
 
   // Check paid events (personal events cannot be paid)
   if (isPaid && !freePlan.allowPaidEvents) {
@@ -419,8 +426,50 @@ export async function enforceEventPublish(params: {
     });
   }
 
+  // ⚡ CRITICAL FIX #3: Check effective entitlements FIRST
+  // If event already has consumed credit (entitlements.paidMode === 'personal_credit'),
+  // allow edit up to 500 WITHOUT requiring new credit confirmation
+  if (entitlements.paidMode === 'personal_credit') {
+    // Event already upgraded with credit
+    if (maxParticipants === null || maxParticipants <= entitlements.maxEventParticipants) {
+      log.info("Event already has consumed credit, allowing edit within limit", {
+        userId,
+        eventId,
+        maxParticipants,
+        effectiveLimit: entitlements.maxEventParticipants,
+      });
+      return; // ✅ Allow edit without new credit
+    }
+    
+    // Exceeds even the upgraded limit
+    if (maxParticipants > entitlements.maxEventParticipants) {
+      throw new PaywallError({
+        message: `Событие на ${maxParticipants} участников превышает лимит апгрейда (${entitlements.maxEventParticipants})`,
+        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
+        currentPlanId: "free",
+        meta: {
+          requestedParticipants: maxParticipants,
+          upgradeLimit: entitlements.maxEventParticipants,
+        },
+        options: [
+          {
+            type: "CLUB_ACCESS",
+            recommendedPlanId: "club_500",
+          },
+        ],
+      });
+    }
+  }
+  
+  // ⚡ Guard: Prevent double credit consumption for same event
+  if (confirmCredit && eventId && entitlements.creditApplied) {
+    throw new ValidationError(
+      "Событие уже использует апгрейд. Повторное подтверждение не требуется."
+    );
+  }
+
   // Decision 1: Within free limits
-  if (maxParticipants === null || maxParticipants <= freeLimit) {
+  if (maxParticipants === null || maxParticipants <= entitlements.maxEventParticipants) {
     // Allow without credit consumption
     return;
   }
@@ -455,7 +504,7 @@ export async function enforceEventPublish(params: {
       currentPlanId: "free",
       meta: {
         requestedParticipants: maxParticipants,
-        freeLimit,
+        freeLimit: entitlements.maxEventParticipants,
       },
       options: [
         {

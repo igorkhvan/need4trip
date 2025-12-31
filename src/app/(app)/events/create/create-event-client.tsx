@@ -7,6 +7,9 @@
  * - userCityId (for pre-filling city)
  * 
  * SSOT §4: Implements checkbox + single dropdown for club selection
+ * 
+ * ⚡ NEW: Uses ActionController for race-condition-free async operations
+ * SSOT: docs/ssot/SSOT_ARCHITECTURE.md § ActionController Standard
  */
 
 "use client";
@@ -17,8 +20,9 @@ import { useRouter } from "next/navigation";
 import { handleApiError } from "@/lib/utils/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
-import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
+import { CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useActionController } from "@/lib/ui/actionController";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 
 // Динамический импорт формы события для code splitting
@@ -49,9 +53,15 @@ export function CreateEventPageClient({
   const router = useRouter();
   const { user } = useAuth();
   const { showPaywall, PaywallModalComponent } = usePaywall();
-  const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
   const { execute } = useProtectedAction(isAuthenticated);
-  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  
+  // ⚡ NEW: ActionController for race-condition-free operations
+  const controller = useActionController<{
+    payload: Record<string, unknown>;
+    creditCode?: string;
+    eventId?: string;
+    requestedParticipants?: number;
+  }>();
   
   // Protect page access
   useEffect(() => {
@@ -66,76 +76,137 @@ export function CreateEventPageClient({
     );
   }, [isAuthenticated, execute]);
   
-  const handleSubmit = async (payload: Record<string, unknown>, retryWithCredit = false) => {
+  const handleSubmit = async (payload: Record<string, unknown>) => {
     // DEFENSIVE: Prevent credit retry for club events (SSOT §1.3 No Mixing)
-    // Even if a bug triggers 409 for club event, do not retry with confirm_credit=1
     const clubId = payload.clubId as string | null;
-    if (retryWithCredit && clubId) {
-      console.error("[BUG] Attempted credit retry for club event — blocked by client guard");
-      throw new Error("Кредиты не могут быть использованы для клубных событий");
-    }
     
-    const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
-    
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload), // clubId already in payload from EventForm
-    });
-    
-    // Handle 409 CREDIT_CONFIRMATION_REQUIRED
-    if (res.status === 409) {
-      const error409 = await res.json();
-      const meta = error409.error?.meta;
+    await controller.start("create_event", async () => {
+      // Build request URL and headers
+      const url = "/api/events";
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       
-      // DEFENSIVE: Do not show credit confirmation for club events
-      const clubId = payload.clubId as string | null;
-      if (meta && !clubId) {
-        setPendingPayload(payload); // Save payload for retry (no modification needed)
-        showConfirmation({
-          creditCode: meta.creditCode,
-          eventId: meta.eventId,
-          requestedParticipants: meta.requestedParticipants,
-        });
+      // ⚡ NEW: Add Idempotency-Key header (prevents duplicates)
+      if (controller.correlationId) {
+        headers["Idempotency-Key"] = controller.correlationId;
+      }
+      
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+      
+      // Handle 409 CREDIT_CONFIRMATION_REQUIRED
+      if (res.status === 409) {
+        const error409 = await res.json();
+        const meta = error409.error?.meta;
+        
+        // DEFENSIVE: Do not show credit confirmation for club events
+        if (meta && !clubId) {
+          // ⚡ NEW: Store payload in controller and await confirmation
+          controller.awaitConfirmation({
+            payload,
+            creditCode: meta.creditCode,
+            eventId: meta.eventId,
+            requestedParticipants: meta.requestedParticipants,
+          });
+          return;
+        }
+        
+        // If 409 for club event, treat as error
+        if (meta && clubId) {
+          console.error("[BUG] Backend returned 409 for club event");
+          throw new Error("Ошибка биллинга. Клубные события не используют кредиты.");
+        }
+      }
+      
+      // Handle 402 PAYWALL
+      if (res.status === 402) {
+        const errorData = await res.json();
+        const paywallError = errorData.error?.details || errorData.error;
+        
+        if (paywallError) {
+          showPaywall(paywallError);
+          return;
+        }
+      }
+      
+      // Handle other errors
+      if (!res.ok) {
+        await handleApiError(res);
         return;
       }
       
-      // If 409 for club event, treat as error (should never happen per backend)
-      if (meta && clubId) {
-        console.error("[BUG] Backend returned 409 for club event — this should not happen");
-        throw new Error("Ошибка биллинга. Клубные события не используют кредиты.");
-      }
-    }
-    
-    // Handle 402 PAYWALL
-    if (res.status === 402) {
-      const errorData = await res.json();
-      const paywallError = errorData.error?.details || errorData.error;
+      // ✅ Success - mark as redirecting BEFORE navigation
+      const response = await res.json();
+      const createdEvent = response.data?.event || response.event;
       
-      if (paywallError) {
-        showPaywall(paywallError);
-        return;
+      controller.setRedirecting();
+      
+      if (createdEvent?.id) {
+        router.push(`/events/${createdEvent.id}`);
+      } else {
+        console.error('[CreateEvent] No event.id in response:', response);
+        router.push('/events');
       }
-    }
-    
-    // Handle other errors
-    if (!res.ok) {
-      await handleApiError(res);
-      return;
-    }
-    
-    // Success - redirect to created event page
-    const response = await res.json();
-    const createdEvent = response.data?.event || response.event;
-    
-    if (createdEvent?.id) {
-      router.push(`/events/${createdEvent.id}`);
-    } else {
-      // Fallback если нет id (не должно случиться, но на всякий случай)
-      console.error('[CreateEvent] No event.id in response:', response);
-      router.push('/events');
       router.refresh();
-    }
+    });
+  };
+  
+  // ⚡ NEW: Handle credit confirmation
+  const handleConfirmCredit = async () => {
+    await controller.confirm(async (stored) => {
+      const { payload, creditCode } = stored;
+      
+      // Build confirmed request
+      const url = "/api/events?confirm_credit=1";
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
+      // ⚡ CRITICAL: Reuse SAME Idempotency-Key for retry
+      if (controller.correlationId) {
+        headers["Idempotency-Key"] = controller.correlationId;
+      }
+      
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+      
+      // Handle 402 PAYWALL (fallback if credit was consumed by another request)
+      if (res.status === 402) {
+        const errorData = await res.json();
+        const paywallError = errorData.error?.details || errorData.error;
+        
+        if (paywallError) {
+          showPaywall(paywallError);
+          return;
+        }
+      }
+      
+      // Handle other errors
+      if (!res.ok) {
+        await handleApiError(res);
+        return;
+      }
+      
+      // ✅ Success - mark as redirecting BEFORE navigation
+      const response = await res.json();
+      const createdEvent = response.data?.event || response.event;
+      
+      controller.setRedirecting();
+      
+      if (createdEvent?.id) {
+        router.push(`/events/${createdEvent.id}`);
+      } else {
+        router.push('/events');
+      }
+      router.refresh();
+    });
   };
   
   // Show nothing while auth check happens
@@ -195,26 +266,31 @@ export function CreateEventPageClient({
         initialValues={{
           cityId: initialCityId || "",
         }}
+        // ⚡ NEW: Pass ActionController state
+        isBusy={controller.isBusy}
+        busyLabel={controller.busyLabel}
+        actionPhase={controller.phase}
       />
       
       {/* Paywall Modal */}
       {PaywallModalComponent}
       
-      {/* Credit Confirmation Modal */}
-      {modalState.open && modalState.creditCode && (
+      {/* ⚡ NEW: Credit Confirmation Modal (controlled by ActionController) */}
+      {controller.phase === 'awaiting_confirmation' && controller.state.confirmationPayload && (
         <CreditConfirmationModal
-          open={modalState.open}
-          onOpenChange={hideConfirmation}
-          creditCode={modalState.creditCode}
-          eventId={modalState.eventId!}
-          requestedParticipants={modalState.requestedParticipants!}
-          onConfirm={async () => {
-            if (pendingPayload) {
-              hideConfirmation();
-              await handleSubmit(pendingPayload, true); // Retry with confirm_credit=1
+          open={true}
+          onOpenChange={() => {
+            // Allow close only if not running_confirmed
+            if (controller.phase === 'awaiting_confirmation') {
+              controller.reset();
             }
           }}
-          onCancel={hideConfirmation}
+          creditCode={controller.state.confirmationPayload.creditCode as any}
+          eventId={controller.state.confirmationPayload.eventId || ''}
+          requestedParticipants={controller.state.confirmationPayload.requestedParticipants || 0}
+          onConfirm={handleConfirmCredit}
+          onCancel={() => controller.reset()}
+          isLoading={controller.phase === 'running_confirmed'}
         />
       )}
     </div>

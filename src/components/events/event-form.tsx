@@ -54,6 +54,8 @@ const FIELD_TYPE_OPTIONS: { value: EventCustomFieldType; label: string }[] = [
 
 type Mode = "create" | "edit";
 
+import type { ActionPhase } from "@/lib/ui/actionController";
+
 export type EventFormValues = {
   title: string;
   description: string;
@@ -96,6 +98,10 @@ export type EventFormProps = {
     allowPaidEvents: boolean;
     allowCsvExport: boolean;
   } | null; // Plan limits (from SSR or API)
+  // ⚡ NEW: ActionController integration props
+  isBusy?: boolean;
+  busyLabel?: string;
+  actionPhase?: ActionPhase;
 };
 
 function buildEmptyField(order: number): EventCustomFieldSchema {
@@ -121,6 +127,10 @@ export function EventForm({
   headerDescription,
   manageableClubs = [],
   planLimits: planLimitsProp,
+  // ⚡ NEW: ActionController props
+  isBusy: externalIsBusy,
+  busyLabel: externalBusyLabel,
+  actionPhase,
 }: EventFormProps) {
   const router = useRouter();
   
@@ -167,11 +177,15 @@ export function EventForm({
   const [allowAnonymousRegistration, setAllowAnonymousRegistration] = useState<boolean>(initialValues?.allowAnonymousRegistration ?? true); // NEW
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // ⚡ REMOVED: local isSubmitting (replaced by ActionController)
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingRules, setIsGeneratingRules] = useState(false);
   const [showAiConfirmDialog, setShowAiConfirmDialog] = useState(false);
   const [showRequiredFieldsDialog, setShowRequiredFieldsDialog] = useState(false);
   const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]);
+  
+  // ⚡ NEW: Use external busy state if provided, otherwise internal
+  const isSubmitting = externalIsBusy ?? false;
 
   const sortedFields = useMemo(
     () => [...customFields].sort((a, b) => a.order - b.order),
@@ -450,7 +464,8 @@ export function EventForm({
       
       return;
     }
-    setIsSubmitting(true);
+    // ⚡ REMOVED: setIsSubmitting (now controlled by parent ActionController)
+    // setIsSubmitting(true);
     setErrorMessage(null);
     setFieldErrors({});
 
@@ -476,15 +491,14 @@ export function EventForm({
 
     try {
       await onSubmit(payload);
-      // Редирект и обновление страницы делает родительский компонент (после onSubmit)
-      // Не делаем здесь, чтобы избежать конфликтов и дать родителю контроль
+      // Parent component handles redirect and state management
     } catch (err: any) {
-      // Paywall errors are handled by parent component (create-event-client/edit-event-client)
-      // If we reach here, just show generic error
+      // Paywall errors are handled by parent component
+      // If we reach here, show generic error
       setErrorMessage(getErrorMessage(err, "Не удалось сохранить событие. Попробуйте ещё раз."));
-    } finally {
-      setIsSubmitting(false);
     }
+    // ⚡ REMOVED: finally block that reset isSubmitting
+    // Parent ActionController manages state until redirect
   };
 
   const hasLockedFields = lockedFieldIds.length > 0;
@@ -784,7 +798,7 @@ export function EventForm({
             onConfirm={() => router.push(backHref)}
           />
           <Button type="submit" disabled={isSubmitting || isGeneratingRules || disabled} className="px-5">
-            {isSubmitting ? "Сохраняем..." : submitLabel}
+            {externalBusyLabel || (isSubmitting ? "Сохраняем..." : submitLabel)}
           </Button>
         </div>
       </form>
