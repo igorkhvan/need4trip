@@ -130,6 +130,7 @@ export function EditEventPageClient({
           allowedBrandIds: event.allowedBrands?.map((b) => b.id) ?? [],
           rules: event.rules ?? "",
           clubId: event.clubId ?? null, // clubId instead of isClubEvent
+          clubName: event.club?.name, // Club name for read-only display
           isPaid: event.isPaid,
           price: event.price ? String(event.price) : "",
           currencyCode: event.currencyCode ?? null,

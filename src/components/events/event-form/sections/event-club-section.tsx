@@ -38,6 +38,7 @@ interface EventClubSectionProps {
   // Form values
   clubId: string | null;
   onClubIdChange: (clubId: string | null) => void;
+  clubName?: string; // Club name for read-only display in edit mode
   isClubEventMode: boolean;
   onIsClubEventModeChange: (value: boolean) => void;
   
@@ -56,6 +57,7 @@ interface EventClubSectionProps {
 export function EventClubSection({
   clubId,
   onClubIdChange,
+  clubName,
   isClubEventMode,
   onIsClubEventModeChange,
   manageableClubs,
@@ -73,7 +75,9 @@ export function EventClubSection({
   
   // Edit mode: show read-only club info
   if (mode === "edit" && clubId) {
+    // Try to find club in manageable clubs, fallback to clubName prop
     const selectedClub = manageableClubs.find((c) => c.id === clubId);
+    const displayName = selectedClub?.name || clubName || "Клуб не найден";
     
     return (
       <div className="space-y-3">
@@ -87,11 +91,9 @@ export function EventClubSection({
             <p className="text-sm font-medium text-[var(--color-text)]">
               Событие создано от клуба
             </p>
-            {selectedClub && (
-              <p className="mt-1 text-base font-semibold text-[var(--color-primary)]">
-                {selectedClub.name}
-              </p>
-            )}
+            <p className="mt-1 text-base font-semibold text-[var(--color-primary)]">
+              {displayName}
+            </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Принадлежность к клубу нельзя изменить после создания события
             </p>

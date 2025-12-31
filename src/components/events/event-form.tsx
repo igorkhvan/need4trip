@@ -68,6 +68,7 @@ export type EventFormValues = {
   allowedBrandIds: string[];
   rules: string;
   clubId: string | null; // SSOT §1.2: clubId is source of truth (NOT isClubEvent)
+  clubName?: string; // Club name for read-only display in edit mode
   isPaid: boolean;
   price: string;
   currencyCode: string | null; // ISO 4217 code
@@ -158,6 +159,7 @@ export function EventForm({
   const [vehicleTypes, setVehicleTypes] = useState<Array<{ value: string; label: string }>>([]);
   const [rules, setRules] = useState<string>(initialValues?.rules ?? "");
   const [clubId, setClubId] = useState<string | null>(initialValues?.clubId ?? null);
+  const [clubName] = useState<string | undefined>(initialValues?.clubName); // Read-only for edit mode
   const [isClubEventMode, setIsClubEventMode] = useState<boolean>(Boolean(initialValues?.clubId)); // UI state for checkbox
   const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
@@ -516,8 +518,10 @@ export function EventForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-        {/* Section 0: Club Selection (SSOT §4) - shown only if user has manageable clubs */}
-        {manageableClubs.length > 0 && (
+        {/* Section 0: Club Selection (SSOT §4)
+            - Create mode: shown only if user has manageable clubs
+            - Edit mode: shown if has manageable clubs OR event is club event (to show read-only club info) */}
+        {(manageableClubs.length > 0 || (mode === "edit" && clubId)) && (
           <Card className="border border-[#E5E7EB] shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -537,6 +541,7 @@ export function EventForm({
               <EventClubSection
                 clubId={clubId}
                 onClubIdChange={setClubId}
+                clubName={clubName}
                 isClubEventMode={isClubEventMode}
                 onIsClubEventModeChange={setIsClubEventMode}
                 manageableClubs={manageableClubs}
