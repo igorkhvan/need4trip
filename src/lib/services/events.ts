@@ -679,11 +679,19 @@ export async function updateEvent(
     throw new NotFoundError("Event not found");
   }
   
+  // ⚡ SSOT §1.2: clubId is source of truth and IMMUTABLE after creation
+  // Reject any attempt to change club context (security: prevent unauthorized club transfer)
+  if (validated.clubId !== undefined && validated.clubId !== existing.club_id) {
+    throw new ValidationError(
+      "Невозможно изменить принадлежность события к клубу после создания. Клуб события является источником истины и не может быть изменён."
+    );
+  }
+  
   // ⚡ SSOT §5.1 & §5.2: Authorization check
   // IF club_id != null THEN user MUST be owner/admin in that club
   // IF club_id == null THEN only event creator can update
   
-  const finalClubId = validated.clubId !== undefined ? validated.clubId : existing.club_id;
+  const finalClubId = existing.club_id; // Always use existing club_id (immutable)
   
   if (finalClubId) {
     // Club event: check club role

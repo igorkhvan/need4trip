@@ -9,7 +9,7 @@
  * Updated: 2024-12-30 - Added owner-only check for paid club events (SSOT §5.4)
  */
 
-import { PaywallError, AuthError } from "@/lib/errors";
+import { PaywallError, AuthError, ValidationError } from "@/lib/errors";
 import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { 
   getPlanById,
@@ -293,6 +293,14 @@ export async function enforceEventPublish(params: {
   // CLUB EVENTS BRANCH
   // ============================================================================
   if (clubId !== null) {
+    // ⚡ SSOT Appendix A4.2: Reject credit params for club events
+    // Club events use subscription-based access exclusively (no personal credits)
+    if (confirmCredit) {
+      throw new ValidationError(
+        "Кредиты не применимы к клубным событиям. Клубные события используют подписку клуба."
+      );
+    }
+    
     // Get subscription status
     const subscription = await getClubSubscription(clubId);
     const plan = subscription ? await getPlanById(subscription.planId) : await getPlanById("free");
