@@ -8,7 +8,7 @@
 
 **Verification Date**: 2025-12-31  
 **SSOT Version**: 1.0 (Last Updated: 2025-12-30)  
-**Verification Document Version**: 1.3  
+**Verification Document Version**: 1.4  
 **Status**: ✅ **FULL COMPLIANCE VERIFIED**
 
 ---
@@ -121,6 +121,31 @@ The UI implements EXACTLY the SSOT §4 requirements:
 - `src/components/events/event-form/sections/event-club-section.tsx` (Checkbox + Dropdown component)
 
 **Backend Safety**: Even if UI bypassed, backend enforces authorization (SSOT §5.1).
+
+### Architectural Decision: DB vs UI State
+
+**Decision Context**: Minimal scope refactoring (2024-12-30) focused on UI compliance without breaking changes.
+
+|| Layer | `is_club_event` | `clubId` | Rationale |
+||-------|-----------------|----------|-----------|
+|| **Database** | ✅ Stays (denormalized/derived) | ✅ Source of truth | Used by DB triggers, RLS policies. No schema changes. |
+|| **Backend Service** | ⚠️ Exists but unused for decisions | ✅ Used for all authorization logic | Backend checks `validated.clubId`, not boolean flag |
+|| **UI State** | ❌ NOT in state | ✅ `clubId: string \| null` only | Single source of truth in form |
+|| **UI Display** | ✅ Computed: `Boolean(clubId)` | ✅ Direct usage | Display logic derives from `clubId` |
+
+**Implementation**:
+- **Create mode**: `clubId` in `EventFormValues`, passed directly to API
+- **Edit mode**: `clubId` read-only (disabled state), cannot be changed after creation
+- **Validation**: Backend enforces `clubId` + role checks (SSOT §5.1)
+- **No breaking changes**: Backend service layer NOT refactored (out of scope)
+
+**Evidence**:
+- UI state: `src/components/events/event-form.tsx` — `clubId: string | null` in form state
+- Computed display: `src/components/events/event-form/sections/event-club-section.tsx` — `const isClubEvent = Boolean(clubId)`
+- Backend logic: `src/lib/services/events.ts:427-438` — checks `validated.clubId`, not `isClubEvent`
+- DB trigger: `supabase/migrations/20241208_sync_is_club_event_trigger.sql` — syncs derived field
+
+**Compliance**: ✅ SSOT §1.2 satisfied (`club_id` is canonical, `is_club_event` is derived/cache)
 
 ---
 
@@ -362,11 +387,22 @@ grep -ri "organizer" src/lib src/components src/app --exclude-dir=node_modules
 - [x] 3) Every "ENFORCED/IMPLEMENTED" item has concrete evidence (file + function/component)
 - [x] 4) The conclusion status matches the rule-level statuses (no mismatch)
 - [x] 5) Dates updated to 2025-12-30 (current date)
-- [x] 6) Document version incremented (1.1 → 1.2 → 1.3)
+- [x] 6) Document version incremented (1.1 → 1.2 → 1.3 → 1.4)
 - [x] 7) All line number references verified against actual code files
 - [x] 8) No stale evidence references (e.g., old file paths removed)
 - [x] 9) Roles match SSOT exactly: owner, admin, member, pending (no extras)
 - [x] 10) "pending" role explicitly recognized as NO permissions per SSOT §2:70-88
+- [x] 11) Architectural decision (DB vs UI State) explicitly documented with rationale
+
+### Changes Made in v1.4 (2025-12-31)
+
+- **Added § "Architectural Decision: DB vs UI State"** (after §5)
+  - Documents decision: `club_id` canonical, `is_club_event` derived/cache
+  - DB layer: keeps denormalized field (no breaking changes)
+  - Backend: uses `clubId` for authorization logic
+  - UI: ONLY `clubId: string | null` in state, computed `isClubEvent`
+  - Minimal scope approach (no mass refactoring)
+- Fixes issue: architectural decision was mentioned but not explicitly documented
 
 ### Changes Made in v1.3 (2025-12-31)
 
@@ -389,14 +425,17 @@ grep -ri "organizer" src/lib src/components src/app --exclude-dir=node_modules
 ### Diff Summary
 
 - **Dates**: 2024-12-30 → 2025-12-30 (all references)
-- **Version**: 1.1 → 1.2 → 1.3
+- **Version**: 1.1 → 1.2 → 1.3 → 1.4
+- **v1.4 Addition**: Architectural Decision section (DB vs UI State)
 - **Content**: Removed historical implementation notes, retained only verification status
 - **Evidence**: All file references and line numbers verified against current codebase
 - **Scope**: No claims beyond SSOT authoritative rules
 
 ### Conclusion
 
-This verification document (v1.3) accurately reflects the current state of Need4Trip codebase implementation against SSOT_CLUBS_EVENTS_ACCESS.md (v1.0, 2025-12-30). All critical rules are implemented and enforced. No contradictions found. No claims beyond SSOT scope.
+This verification document (v1.4) accurately reflects the current state of Need4Trip codebase implementation against SSOT_CLUBS_EVENTS_ACCESS.md (v1.0, 2025-12-30). All critical rules are implemented and enforced. No contradictions found. No claims beyond SSOT scope.
+
+**v1.4 Update**: Added explicit documentation of architectural decision (DB vs UI State) — clarifies minimal scope approach where `club_id` is canonical source of truth, `is_club_event` is derived/cache field kept for DB layer compatibility.
 
 **Verification Result**: ✅ **FULL COMPLIANCE CONFIRMED**
 
@@ -428,7 +467,7 @@ The Need4Trip codebase is in **COMPLETE** compliance with **SSOT_CLUBS_EVENTS_AC
 
 ---
 
-**Document Version**: 1.3  
+**Document Version**: 1.4  
 **Last Updated**: 2025-12-31  
 
 **Signed Off**: AI Assistant (Compliance Verification — No Claims Beyond SSOT)
