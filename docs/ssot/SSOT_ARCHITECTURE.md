@@ -2,7 +2,7 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2024-12-31  
-**Version:** 3.1  
+**Version:** 3.2  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
@@ -23,8 +23,9 @@
 12. [Naming & Project Structure](#naming--project-structure)
 13. [Client-Side Data Fetching](#client-side-data-fetching)
 14. [Performance Optimizations](#performance-optimizations)
-15. [Error Handling & Validation](#error-handling--validation)
-16. [Change Process & Definition of Done](#change-process--definition-of-done)
+15. [Form State Management & Async Actions](#form-state-management--async-actions) ⚡ NEW
+16. [Error Handling & Validation](#error-handling--validation)
+17. [Change Process & Definition of Done](#change-process--definition-of-done)
 
 ---
 
@@ -236,6 +237,9 @@ need4trip/
 | **Credit Badge UI** | `components/billing/credit-badge.tsx` | `components/auth/auth-provider` | Manual credit display | Badge reads from AuthContext (0 API calls) ⚡ |
 | **Billing Products** | `lib/db/billingProductsRepo.ts` | `lib/db/client` | Hardcoded prices | **SSOT from billing_products table** |
 | **Credit Confirmation** | `components/billing/CreditConfirmationModal.tsx` | `lib/types/billing` | Manual 409 handling | Modal + `useCreditConfirmation` hook |
+| **Form State Management** | `lib/ui/actionController.ts` | None (infrastructure) | Manual phase management, race conditions | ⚡ Universal async action orchestration (§15) |
+| **Idempotency** | `lib/services/withIdempotency.ts` | `lib/db/idempotencyRepo` | Duplicate request handling | Backend wrapper for POST/PUT/DELETE ⚡ |
+| **Effective Entitlements** | `lib/services/eventEntitlements.ts` | `lib/db/billingCreditsRepo`, `lib/db/clubSubscriptionRepo` | Hardcoded limits in UI | Canonical limits computation (accounts for consumed credits) ⚡ |
 
 ### Critical Dependencies Graph
 
@@ -1595,7 +1599,160 @@ const [clubs, subscriptions] = await Promise.all([
 
 ---
 
-## 15. Error Handling & Validation
+## 15. Form State Management & Async Actions
+
+### ActionController Pattern (Canonical)
+
+**Purpose:** Universal mechanism for orchestrating async side-effect actions (create/update/delete) with complex confirmation flows.
+
+**Implementation:** `src/lib/ui/actionController.ts`
+
+**Problem Solved:**
+- Race conditions (double-submit, save button clickable during redirect)
+- Missing loading states during confirmation flows
+- Lack of idempotency for network retries
+- Complex state transitions (awaiting confirmation → running → redirecting)
+
+**Phase Model:**
+
+```typescript
+type Phase = 
+  | "idle"                    // Initial state, ready for action
+  | "running"                 // Action executing (first attempt)
+  | "awaiting_confirmation"   // Waiting for user confirmation (e.g., credit modal)
+  | "running_confirmed"       // Action executing after confirmation
+  | "redirecting"             // Success, navigating away
+  | "error";                  // Failed
+```
+
+**Usage Pattern:**
+
+```typescript
+import { useActionController } from "@/lib/ui/actionController";
+
+function MyForm() {
+  const controller = useActionController();
+  
+  const handleSubmit = async (data) => {
+    controller.start(); // Phase: idle → running
+    
+    try {
+      const res = await fetch('/api/resource', {
+        method: 'POST',
+        headers: {
+          'Idempotency-Key': controller.correlationId, // ⚡ Idempotency
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (res.status === 409) {
+        // Credit confirmation required
+        controller.awaitConfirmation(); // Phase: running → awaiting_confirmation
+        showConfirmModal({
+          onConfirm: () => handleConfirmed(data), // User confirmed
+        });
+        return;
+      }
+      
+      const result = await res.json();
+      controller.setRedirecting(); // Phase: running → redirecting
+      router.push(`/resource/${result.id}`); // UI stays disabled
+    } catch (err) {
+      controller.setError(err); // Phase: → error
+    }
+  };
+  
+  const handleConfirmed = async (data) => {
+    controller.confirm(); // Phase: awaiting_confirmation → running_confirmed
+    
+    try {
+      const res = await fetch('/api/resource?confirm=1', {
+        headers: {
+          'Idempotency-Key': controller.correlationId, // ⚡ SAME KEY
+        },
+        body: JSON.stringify(data),
+      });
+      
+      const result = await res.json();
+      controller.setRedirecting(); // Phase: running_confirmed → redirecting
+      router.push(`/resource/${result.id}`);
+    } catch (err) {
+      controller.setError(err);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
+      <button disabled={controller.isBusy}> {/* Disabled during all phases except idle/error */}
+        {controller.phase === "redirecting" ? "Redirecting..." : "Save"}
+      </button>
+      
+      {controller.phase === "awaiting_confirmation" && (
+        <ConfirmModal onConfirm={() => handleConfirmed(data)} />
+      )}
+      
+      {controller.phase === "running_confirmed" && (
+        <ConfirmModal loading={true} /> {/* Modal stays open with loading */}
+      )}
+    </form>
+  );
+}
+```
+
+**Key Properties:**
+
+```typescript
+controller.phase            // Current phase (see Phase type above)
+controller.correlationId    // UUID for this action attempt (for Idempotency-Key)
+controller.isBusy          // true if phase ∈ {running, awaiting_confirmation, running_confirmed, redirecting}
+controller.error           // Error message if phase === "error"
+```
+
+**Rules:**
+
+1. **MUST use `controller.isBusy` to disable form/button** — prevents race conditions
+2. **MUST use same `correlationId` for retries** — enables backend idempotency
+3. **MUST transition to `redirecting` before navigation** — keeps UI disabled during redirect
+4. **Modal MUST stay open during `running_confirmed`** — shows loading state after confirmation
+
+**Backend Integration (Idempotency):**
+
+```typescript
+// API route
+import { withIdempotency } from "@/lib/services/withIdempotency";
+
+export async function POST(request: Request) {
+  return withIdempotency(request, async (req, user) => {
+    // Business logic here
+    const result = await createResource(data, user);
+    return respondSuccess({ result }, undefined, 201);
+  });
+}
+```
+
+**Idempotency Behavior:**
+- Same `Idempotency-Key` → replay stored response (no duplicate action)
+- Concurrent requests → 409 REQUEST_IN_PROGRESS
+- Failed requests → allow retry with same key
+
+**When to Use:**
+- ✅ Create/Update/Delete operations with confirmation flows
+- ✅ Any async action that requires credit/payment confirmation
+- ✅ Export/download operations with long processing
+- ❌ Simple GET requests (no side effects)
+- ❌ Real-time data fetching (use SWR/TanStack Query instead)
+
+**Migration:** `supabase/migrations/20241231_add_idempotency_keys.sql`
+
+**Related:**
+- Idempotency service: `src/lib/services/withIdempotency.ts`
+- Idempotency repo: `src/lib/db/idempotencyRepo.ts`
+- Session document: `docs/sessions/2024-12-31-event-save-ux-issues/FINAL_SUMMARY.md`
+
+---
+
+## 16. Error Handling & Validation
 
 ### Client-Side Errors
 
@@ -1655,7 +1812,7 @@ if (!parsed.success) {
 
 ---
 
-## 16. Change Process & Definition of Done
+## 17. Change Process & Definition of Done
 
 ### Making Architectural Changes
 
@@ -1746,6 +1903,7 @@ module.exports = {
 | 2024-12-27 | 2.4 | Self-consistency consolidation pass: unified visibility definitions, clarified event_user_access role, explicit caching rules, canonical mapper location, runtime boundaries |
 | 2024-12-28 | 2.8 | Added Vehicle Type Hydration; Removed /api/events/stats endpoint (duplicated meta.total); Updated § 10 with future stats guidance |
 | 2024-12-31 | 3.1 | **Phase 1 Code Improvements:** Explicit pending checks (events.ts), DB trigger for club_id immutability (20241231_enforce_club_id_immutability_v2.sql). Compliance: 95% → 100%. See SSOT_CLUBS_EVENTS_ACCESS.md §2, §5.6 for implementation details. Audit: docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md v1.1 |
+| 2024-12-31 | 3.2 | **NEW § 15: Form State Management & Async Actions** — ActionController pattern (canonical mechanism for async actions with confirmation flows), phase model, idempotency integration, race condition prevention. Session: docs/sessions/2024-12-31-event-save-ux-issues/. Fixes 3 UX issues (double-submit, missing loading, incorrect limits). |
 
 ---
 
