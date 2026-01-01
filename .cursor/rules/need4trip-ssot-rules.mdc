@@ -4,23 +4,29 @@ alwaysApply: true
 
 # Need4Trip - SSOT Rules (Single Source of Truth)
 
-**Last Updated:** 30 декабря 2024  
+**Last Updated:** 1 января 2026  
 **Status:** Production Ready ✅
 
 ---
 
 ## 🎯 ГЛАВНЫЙ ПРИНЦИП
 
-> **ТОЛЬКО файлы с префиксом SSOT_ в папке docs/ssot/ являются источниками истины:**
-> 1. `docs/ssot/SSOT_ARCHITECTURE.md` — архитектура, паттерны, ownership map
-> 2. `docs/ssot/SSOT_DATABASE.md` — структура БД, таблицы, индексы, RLS
-> 3. `docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md` — биллинг, тарифы, лимиты
-> 4. `docs/ssot/SSOT_TESTING.md` — тестирование, тест-кейсы, результаты
-> 5. `docs/ssot/SSOT_DESIGN_SYSTEM.md` — UI/UX, модалки, цвета, компоненты
-> 6. `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md` — club & event access rules
-> 7. `docs/ssot/SSOT_API.md` — API endpoints, auth, rate limits
+> **ВСЕ файлы `SSOT_*.md` в папке `docs/ssot/` являются источниками истины:**
 >
-> **Правило**: Если файл НЕ в `docs/ssot/` с префиксом `SSOT_`, он НЕ является источником истины.
+> | # | Файл | Область |
+> |---|------|---------|
+> | 1 | `SSOT_ARCHITECTURE.md` | архитектура, паттерны, ownership map |
+> | 2 | `SSOT_DATABASE.md` | структура БД, таблицы, индексы, RLS |
+> | 3 | `SSOT_BILLING_SYSTEM_ANALYSIS.md` | биллинг, тарифы, лимиты |
+> | 4 | `SSOT_TESTING.md` | тестирование, тест-кейсы, результаты |
+> | 5 | `SSOT_DESIGN_SYSTEM.md` | UI/UX, модалки, цвета, компоненты |
+> | 6 | `SSOT_CLUBS_EVENTS_ACCESS.md` | club & event access rules |
+> | 7 | `SSOT_API.md` | API endpoints, auth, rate limits |
+> | 8 | `SSOT_CLUBS_DOMAIN.md` | clubs domain model, cities, management |
+>
+> **ИСКЛЮЧЕНИЕ:** Файлы в `docs/ssot/archive/` — это NON-NORMATIVE архивные документы (история, примеры кода). Они НЕ являются источниками истины.
+>
+> **Правило**: SSOT = любой `SSOT_*.md` в `docs/ssot/` (кроме `archive/`)
 
 ---
 
@@ -46,6 +52,7 @@ alwaysApply: true
 - SSOT_TESTING.md → `need4trip-ssot-rules.mdc` (секция TESTING)
 - SSOT_DESIGN_SYSTEM.md → `need4trip-ssot-rules.mdc` (секция DESIGN)
 - SSOT_CLUBS_EVENTS_ACCESS.md → `need4trip-ssot-rules.mdc` (секция CLUBS_EVENTS)
+- SSOT_CLUBS_DOMAIN.md → `need4trip-ssot-rules.mdc` (секция CLUBS_DOMAIN)
 - SSOT_API.md → `need4trip-ssot-rules.mdc` (секция API)
 
 **Причина:** Rules файлы видны пользователю, Memory — только AI. Синхронизация = консистентность.
@@ -63,6 +70,7 @@ alwaysApply: true
    - Тестирование → читай `docs/ssot/SSOT_TESTING.md`
    - UI/UX/дизайн → читай `docs/ssot/SSOT_DESIGN_SYSTEM.md`
    - Club/Event access → читай `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md`
+   - Clubs domain (города, управление) → читай `docs/ssot/SSOT_CLUBS_DOMAIN.md`
    - API endpoints → читай `docs/ssot/SSOT_API.md`
 
 2. **Изучи SSOT:**
@@ -284,6 +292,23 @@ npm run test:e2e           # E2E Playwright tests
 - Club selection: Section 0 in EventForm
 
 **Правило:** Читай SSOT_CLUBS_EVENTS_ACCESS.md для любых изменений в club/event access.
+
+---
+
+## 🏢 SSOT_CLUBS_DOMAIN.md
+
+**Что содержит:**
+- Clubs domain model (сущности, связи)
+- City assignments (multi-city clubs)
+- Club management operations
+- Membership lifecycle
+
+**Ключевые правила:**
+- Club может быть привязан к нескольким городам
+- Club owner — единственный с billing authority
+- Membership states: owner, admin, member, pending
+
+**Правило:** Читай SSOT_CLUBS_DOMAIN.md для любых изменений в clubs domain.
 
 ---
 
