@@ -1,11 +1,20 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.2 ⚡  
-> **Дата:** 26 декабря 2024  
-> **Статус:** Production (v5.2 - Credit UI Integration)
+> **Версия:** 5.3 ⚡  
+> **Дата:** 1 января 2026  
+> **Статус:** Production (v5.3 - SSOT v5+ Alignment)
 
 ---
+
+## 🆕 Что нового в v5.3
+
+**1 January 2026:**
+- ✅ **Marked v4.x sections as NON-NORMATIVE** - Clear separation of historical vs current architecture
+- ✅ **Updated API Endpoints section** - Removed `/api/events/:id/publish`, added POST/PUT enforcement
+- ✅ **Updated 409 response contract** - Removed publish endpoint reference from CTA
+- ✅ **Updated Migration section** - Now covers v3 → v4 → v5 path
+- ✅ **Updated TOC** - Reflects v5+ normative structure
 
 ## 🆕 Что нового в v5.2
 
@@ -34,25 +43,31 @@
 - ✅ **Removed published_at** - события сразу live (no drafts)
 - ✅ **Credit flow integrated** - 409/402 обрабатываются в POST/PUT
 
-## 🆕 Что нового в v4.1
+## 📜 Implementation History: v4.x (NON-NORMATIVE)
+
+> **⚠️ HISTORICAL — NOT CURRENT ARCHITECTURE**  
+> The following v4.x sections describe the **previous** implementation that included a separate publish endpoint.  
+> **v5+ is the current production model** — see "Event Save Enforcement (v5)" section for normative behavior.  
+> v5+ has NO separate publish step; enforcement happens at save-time (POST/PUT).
+
+### Что было в v4.1 (DEPRECATED)
 
 **26 December 2024:**
-- ✅ **Publish endpoint integrated** - create/edit flows call `/api/events/:id/publish`
-- ✅ **409 handling** - CreditConfirmationModal fully integrated
+- ~~Publish endpoint integrated~~ — **REMOVED in v5.0**
+- ✅ **409 handling** - CreditConfirmationModal fully integrated (still valid, different trigger point)
 - ✅ **Frontend complete** - all v4 features now working end-to-end
-- ✅ **TypeScript ✅ Build ✅** - production ready
 
-## 🆕 Что нового в v4.0
+### Что было в v4.0 (DEPRECATED)
 
-**Major Changes:**
+**Major Changes (still valid in v5+):**
 - ✅ **billing_products** table - SSOT для pricing (NO HARDCODE!)
 - ✅ **Unified purchase API** - `/api/billing/purchase-intent` (one-off + clubs)
 - ✅ **One-off credits** - EVENT_UPGRADE_500 (perpetual, 1000 KZT)
-- ✅ **Publish enforcement** - reads constraints from DB dynamically
+- ~~**Publish enforcement** - reads constraints from DB dynamically~~ — **Moved to save-time in v5+**
 - ✅ **Kaspi stub mode** - ready for real integration
 - ✅ **Status polling** - `/api/billing/transactions/status`
 
-**Breaking Changes:**
+**Breaking Changes (v3→v4, still relevant):**
 - ❌ Deleted `/api/billing/credits/purchase` → use `/api/billing/purchase-intent`
 - ❌ Deleted `/api/billing/credits/confirm` → use `/api/dev/billing/settle` (DEV)
 
@@ -61,16 +76,16 @@
 ## 📋 Содержание
 
 1. [Обзор системы](#обзор-системы)
-2. [V4 Architecture](#v4-architecture) ⚡
-3. [Database Schema v4](#database-schema-v4) ⚡
-4. [Тарифные планы](#тарифные-планы)
-5. [One-off Credits (NEW)](#one-off-credits-new) ⚡⚡
-6. [Unified Purchase Flow (NEW)](#unified-purchase-flow-new) ⚡⚡
-7. [Event Save Enforcement](#event-save-enforcement) ⚡
-8. [Paywall Modal](#paywall-modal)
-9. [API Endpoints v4](#api-endpoints-v4) ⚡
-10. [Ключевые файлы](#ключевые-файлы)
-11. [Migration от v3 to v4](#migration-от-v3-to-v4) ⚡
+2. [Database Schema](#database-schema) ⚡
+3. [Тарифные планы](#тарифные-планы)
+4. [One-off Credits](#one-off-credits) ⚡⚡
+5. [Unified Purchase Flow](#unified-purchase-flow) ⚡⚡
+6. [Event Save Enforcement (v5) — NORMATIVE](#event-save-enforcement-v5) ⚡⚡ **CURRENT**
+7. [Paywall Modal](#paywall-modal)
+8. [API Endpoints (v5+ Current)](#api-endpoints-v5-current) ⚡
+9. [Ключевые файлы](#ключевые-файлы)
+10. [Implementation History: v4.x (NON-NORMATIVE)](#implementation-history-v4x-non-normative) 📜
+11. [Migration History: v3 → v4 → v5 (NON-NORMATIVE)](#migration-history-v3--v4--v5-non-normative) 📜
 
 ---
 
@@ -2856,9 +2871,12 @@ Step 2: Personal events
 
 ---
 
-## ⚡ API Endpoints v4
+## ⚡ API Endpoints (v5+ Current)
 
-### New Endpoints
+> **Note:** The `/api/events/:id/publish` endpoint was **REMOVED in v5.0**.  
+> Enforcement now happens at save-time via POST/PUT `/api/events` with `?confirm_credit=1`.
+
+### Active Endpoints (v5+)
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
@@ -2866,7 +2884,14 @@ Step 2: Personal events
 | POST | `/api/billing/purchase-intent` | Unified purchase (one-off + clubs) |
 | GET | `/api/billing/transactions/status` | Poll transaction status |
 | POST | `/api/dev/billing/settle` | DEV: manual settlement (stub) |
-| POST | `/api/events/:id/publish` | Publish with enforcement |
+| POST | `/api/events` | Create event (enforcement at save-time) |
+| PUT | `/api/events/:id` | Update event (enforcement at save-time) |
+
+### Removed Endpoints (v5+)
+
+| Method | Endpoint | Status |
+|--------|----------|--------|
+| POST | `/api/events/:id/publish` | **REMOVED** — enforcement moved to save-time |
 
 ### Deleted Endpoints (v3)
 
@@ -2899,7 +2924,7 @@ Step 2: Personal events
 }
 ```
 
-**409 CREDIT_CONFIRMATION_REQUIRED:**
+**409 CREDIT_CONFIRMATION_REQUIRED (v5+):**
 ```json
 {
   "success": false,
@@ -2913,17 +2938,22 @@ Step 2: Personal events
     },
     "cta": {
       "type": "CONFIRM_CONSUME_CREDIT",
-      "href": "/api/events/:id/publish?confirm_credit=1"
+      "action": "Retry with ?confirm_credit=1 query parameter"
     }
   }
 }
 ```
+> **v5+ Note:** The `cta.href` field previously pointed to `/api/events/:id/publish?confirm_credit=1`.  
+> In v5+, retry the same POST/PUT endpoint with `?confirm_credit=1` appended.
 
 ---
 
-## Migration от v3 to v4
+## 📜 Migration History: v3 → v4 → v5 (NON-NORMATIVE)
 
-### Database
+> **⚠️ HISTORICAL REFERENCE**  
+> This section documents the migration path. Current production is v5+.
+
+### v3 → v4 Migration (Database)
 
 **Миграции:**
 ```sql
@@ -2931,22 +2961,27 @@ Step 2: Personal events
 20241226_add_billing_credits_fk.sql      -- FK integrity
 ```
 
-**After migration:**
-```bash
-npx supabase gen types typescript > src/lib/db/types.ts
-```
-
-### Backend
+### v4 → v5 Migration (Architecture)
 
 **Changes:**
-- `enforcePublish()` - reads from billing_products (no hardcode)
-- New repo: `billingProductsRepo.ts`
-- Unified API: `purchase-intent/route.ts`
-- Status polling: `transactions/status/route.ts`
+- `enforcePublish()` → `enforceEventPublish()` called in createEvent()/updateEvent()
+- **REMOVED:** `/api/events/:id/publish` endpoint
+- **REMOVED:** `published_at` field from events table
+- Enforcement moved from publish-time to save-time
 
-**Deleted:**
+### Backend (v5+ current)
+
+**Changes:**
+- `enforceEventPublish()` - reads from billing_products (no hardcode)
+- Enforcement in `createEvent()` and `updateEvent()` services
+- No separate publish step
+
+**Deleted (v3→v4):**
 - `src/app/api/billing/credits/purchase/route.ts`
 - `src/app/api/billing/credits/confirm/route.ts`
+
+**Deleted (v4→v5):**
+- `src/app/api/events/[id]/publish/route.ts`
 
 ### Frontend
 

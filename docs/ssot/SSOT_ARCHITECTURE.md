@@ -2,12 +2,16 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 3.3  
+**Version:** 3.4  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v5+ Alignment)
+- **Updated §19 Consistency Checklist** — Changed "publish-only" consumption to "save-time (v5+)" consumption. Rationale: v5+ has no separate publish step.
+- **Version bump to 3.4** — Reflects v5+ alignment work.
 
 ### 2026-01-01 (Polish Pass)
 - **Fixed THIS DOCUMENT path references** — Updated `docs/ARCHITECTURE.md` → `docs/ssot/SSOT_ARCHITECTURE.md`. Rationale: Path accuracy.
@@ -1978,10 +1982,10 @@ This section defines the authoritative scope of each SSOT document and rules for
 - [ ] `available` → `consumed_event_id IS NULL AND consumed_at IS NULL`
 - [ ] `consumed` → `consumed_event_id IS NOT NULL AND consumed_at IS NOT NULL`
 
-### Consumption Timing
-- [ ] Credits consumed ONLY at publish (not create/update)
+### Consumption Timing (v5+ — No Separate Publish Step)
+- [ ] Credits consumed at save-time (POST/PUT), not at separate publish step
 - [ ] Credits require persisted eventId at consumption time
-- [ ] `confirm_credit` parameter meaningful only at publish
+- [ ] `confirm_credit` parameter meaningful only for personal events at save-time
 
 ### Club vs Personal Rules
 - [ ] Club events (club_id ≠ NULL) NEVER consume personal credits

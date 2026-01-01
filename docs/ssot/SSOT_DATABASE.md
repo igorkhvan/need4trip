@@ -8,6 +8,10 @@
 
 ## Change Log (SSOT)
 
+### 2026-01-01 (v5+ Alignment)
+- **Updated §8.1 credit consumption triggers** — Changed "event publish" to "event save" to reflect v5+ model (no separate publish step).
+- **Updated §8.2 cross-reference** — Reflects v5+ save-time consumption semantics.
+
 ### 2026-01-01 (Polish Pass)
 - **Replaced §8.2 with DB-centric rules only** — Removed duplicated timing rules; now contains only DB invariants + cross-reference to SSOT_CLUBS_EVENTS_ACCESS.md §10. Rationale: No rule duplication across SSOTs.
 - **Added role='pending' semantics note** — Near club_members.role CHECK constraint. Rationale: Prevent interpretation drift.
@@ -953,7 +957,7 @@ This section defines the ONLY valid states and transitions for `billing_credits.
 
 | Status | Meaning |
 |--------|---------|
-| `available` | Credit is unused and ready to be consumed at publish time |
+| `available` | Credit is unused and ready to be consumed at save-time (v5+) |
 | `consumed` | Credit has been consumed and is permanently bound to a specific event |
 
 No other statuses exist. Do NOT introduce new statuses without explicit SSOT amendment.
@@ -975,11 +979,11 @@ ALTER TABLE billing_credits ADD CONSTRAINT chk_billing_credits_consumed_state CH
 );
 ```
 
-#### Allowed Transitions
+#### Allowed Transitions (v5+ — No Separate Publish Step)
 
 | From | To | Trigger | Notes |
 |------|-----|---------|-------|
-| `available` | `consumed` | Successful event publish with `confirm_credit=1` | Credit bound to eventId at this moment |
+| `available` | `consumed` | Successful event save (POST/PUT) with `confirm_credit=1` | Credit bound to eventId at this moment |
 
 #### Disallowed States (MUST trigger constraint violation)
 
@@ -1012,8 +1016,8 @@ Transition `consumed` → `available` is NOT currently supported. If rollback se
 
 #### Cross-Reference (Canonical Timing/Usage Rules)
 
-For canonical timing/usage rules (publish-only consumption, `confirm_credit` semantics, club-vs-personal rules, free limits), see:
-**SSOT_CLUBS_EVENTS_ACCESS.md §10 "Billing Credits – Access/Usage Rules"**
+For canonical timing/usage rules (save-time consumption (v5+), `confirm_credit` semantics, club-vs-personal rules, free limits), see:
+**SSOT_CLUBS_EVENTS_ACCESS.md §10 "Billing Credits – Access/Usage Rules (v5+)"**
 
 That section is authoritative for business logic; this section covers only DB invariants.
 

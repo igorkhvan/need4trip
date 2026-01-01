@@ -1,6 +1,6 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.2  
+**Version:** 1.3  
 **Last Updated:** 2026-01-01  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
@@ -22,6 +22,13 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v5+ Alignment)
+- **Updated all "publish" references to "save" (v5+)** — §5.3, §5.4, §5.5, §9, §10. Rationale: v5+ has no separate publish step; enforcement at save-time.
+- **Added v5+ notes to affected sections** — Clarified that billing enforcement happens at save-time (POST/PUT).
+- **Updated §10 "Billing Credits – Access/Usage Rules"** — Changed consumption timing from "publish only" to "save-time (v5+)".
+- **Updated §1.3** — Credit consumption timing now reflects v5+ model.
+- **Version bump to 1.3** — Reflects v5+ alignment work.
 
 ### 2026-01-01 (Polish Pass)
 - **Removed HTTP status codes from §10.1** — Replaced "rejected (422 or 403)" with status-agnostic "MUST be rejected" + cross-reference. Rationale: Decouple RBAC SSOT from API contracts.
@@ -64,7 +71,7 @@ There are exactly two paid modes:
 A) Personal paid (one-off):
 - Event has `club_id = NULL`
 - Paid capability is determined by user-owned `billing_credits`
-- Credit is consumed at publish and bound to the event (consumed_event_id)
+- Credit is consumed at save-time (v5+) and bound to the event (consumed_event_id)
 
 B) Club paid (subscription):
 - Event has `club_id != NULL`
@@ -169,28 +176,34 @@ THEN:
 - only event owner (created_by_user_id == currentUser.id) can update/delete
 ELSE -> 403
 
-### 5.3 Publish — Personal Paid via Credit
+### 5.3 Save — Personal Paid via Credit (v5+)
 IF event has `club_id = NULL` AND `is_paid = true`
 THEN:
 - require user has an AVAILABLE credit of required type
-- require explicit confirmation (confirm_credit=1) when applicable
+- require explicit confirmation (confirm_credit=1) at save-time (POST/PUT)
 - consume credit transactionally and bind it to event (consumed_event_id)
 ELSE -> paywall / error
 
-### 5.4 Publish — Club Paid via Subscription (No Credits)
+> **v5+ Note:** There is no separate "publish" endpoint. Enforcement happens at save-time.
+
+### 5.4 Save — Club Paid via Subscription (No Credits) (v5+)
 IF event has `club_id = X` AND `is_paid = true`
 THEN:
 - require club X has subscription in status {active, pending, grace}
 - require plan allows paid events (canonical flag planAllowsPaidEvents)
 - credits MUST NOT be used or accepted in this flow
 
-DEFAULT PUBLISH PERMISSION:
-- ONLY role=owner in club X may publish paid club events.
-- admin may create/update events but may not publish paid club events.
+DEFAULT SAVE PERMISSION (v5+):
+- ONLY role=owner in club X may save paid club events.
+- admin may create/update free events but may not save paid club events.
 
-### 5.5 Publish — Club Free
+> **v5+ Note:** There is no separate "publish" endpoint. Enforcement happens at save-time.
+
+### 5.5 Save — Club Free (v5+)
 IF event has `club_id = X` AND `is_paid = false`
-THEN role in {owner, admin} may publish.
+THEN role in {owner, admin} may save.
+
+> **v5+ Note:** There is no separate "publish" endpoint. Enforcement happens at save-time.
 
 ### 5.6 Club ID immutability enforcement
 Club ID (`club_id`) determines event clubness and MUST be immutable after event creation.
@@ -267,27 +280,27 @@ Any implementation change MUST ensure:
 3) Exactly one club dropdown, shown only when club checkbox is ON
 4) Club selection validation is enforced in backend
 5) No personal credits used for club-paid events
-6) Paid club publish is owner-only (default policy)
+6) Paid club save is owner-only (default policy, v5+: no separate publish)
 7) Documentation (SSOT) updated in same commit as code/schema changes
-8) Billing credits consumed ONLY at publish, bound to persisted eventId (see §10)
+8) Billing credits consumed at save-time (v5+), bound to persisted eventId (see §10)
 
 ---
 
-## 10. Billing Credits – Access/Usage Rules
+## 10. Billing Credits – Access/Usage Rules (v5+)
 
-**Status:** LOCKED / Production-aligned
+**Status:** LOCKED / Production-aligned (v5+ — No Separate Publish Step)
 
 This section defines WHEN and HOW billing credits are consumed. This text is consistent with SSOT_DATABASE.md § 8.2 "Billing – Consumption Timing & Binding".
 
-### 10.1 Canonical Rules
+### 10.1 Canonical Rules (v5+ — Save-Time Enforcement)
 
-1. **Consumption happens at PUBLISH only**
-   - Credits are NEVER consumed at event creation or update
-   - Credits are ONLY consumed when POST `/api/events/:id/publish` (or equivalent action) is called
-   - The `confirm_credit=1` (or equivalent confirmation parameter) is ONLY meaningful at publish time
+1. **Consumption happens at SAVE-TIME only (v5+)**
+   - Credits are consumed during event save (POST/PUT) with `confirm_credit=1`
+   - There is NO separate publish endpoint or step in v5+
+   - The `confirm_credit=1` parameter is meaningful ONLY for personal events at save-time
 
 2. **Consumption requires a persisted eventId**
-   - It is explicitly DISALLOWED to consume a credit without a real, persisted event ID
+   - The event is persisted as part of the save operation
    - The credit's `consumed_event_id` MUST be set to the actual event UUID at consumption time
    - Consuming a credit for a "future" or "hypothetical" event is FORBIDDEN
 
@@ -295,7 +308,7 @@ This section defines WHEN and HOW billing credits are consumed. This text is con
    - If `event.club_id IS NOT NULL`, the event is a club event
    - Club events use club subscription capabilities, NOT personal credits
    - Any attempt to consume a personal credit for a club event MUST be rejected
-   - (Exact HTTP status mapping: see SSOT_API.md and SSOT_ARCHITECTURE.md §16 error taxonomy)
+   - (Exact HTTP status mapping: see SSOT_API.md §6.2 and SSOT_ARCHITECTURE.md §16 error taxonomy)
 
 4. **Free limits do not consume credits**
    - If an event is within free limits (e.g., maxParticipants <= 15 for personal events), no credit is consumed
@@ -310,7 +323,7 @@ This section defines WHEN and HOW billing credits are consumed. This text is con
 | Context | Credit Consumption | Governing Authority |
 |---------|-------------------|---------------------|
 | Personal event (club_id=NULL), within free limits | ❌ NOT consumed | Free tier rules |
-| Personal event (club_id=NULL), exceeds free limits | ✅ Consumed at publish | User's billing_credits |
+| Personal event (club_id=NULL), exceeds free limits | ✅ Consumed at save-time (v5+) | User's billing_credits |
 | Club event (club_id≠NULL), any size | ❌ NEVER consumed | Club subscription |
 
 ### 10.3 Cross-Reference
