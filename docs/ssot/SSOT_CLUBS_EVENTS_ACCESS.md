@@ -23,6 +23,10 @@ Related SSOTs:
 
 ## Change Log (SSOT)
 
+### 2026-01-01 (Polish Pass)
+- **Removed HTTP status codes from §10.1** — Replaced "rejected (422 or 403)" with status-agnostic "MUST be rejected" + cross-reference. Rationale: Decouple RBAC SSOT from API contracts.
+- **Marked Implementation History section as NON-NORMATIVE** — Added disclaimer block. Rationale: Clear separation of normative vs historical content.
+
 ### 2026-01-01
 - **Added "Billing Credits – Access/Usage Rules" section (§10)** — Canonical consumption timing rules. Rationale: Cross-SSOT consistency with SSOT_DATABASE.md.
 - **Updated Related SSOTs paths** — Corrected to use SSOT_ prefix for all references. Rationale: Path accuracy.
@@ -290,7 +294,8 @@ This section defines WHEN and HOW billing credits are consumed. This text is con
 3. **Club events MUST NOT consume personal credits**
    - If `event.club_id IS NOT NULL`, the event is a club event
    - Club events use club subscription capabilities, NOT personal credits
-   - Any attempt to consume a personal credit for a club event MUST be rejected (422 or 403)
+   - Any attempt to consume a personal credit for a club event MUST be rejected
+   - (Exact HTTP status mapping: see SSOT_API.md and SSOT_ARCHITECTURE.md §16 error taxonomy)
 
 4. **Free limits do not consume credits**
    - If an event is within free limits (e.g., maxParticipants <= 15 for personal events), no credit is consumed
@@ -472,6 +477,8 @@ Then:
 ---
 
 ## Implementation History & Verification
+
+> **NON-NORMATIVE / Historical:** This section is informational and not authoritative for rules. It documents implementation history, file paths, test results, and migration references for audit purposes. Do not rely on this section for normative SSOT rules — see numbered sections above.
 
 ### Phase 1 Code Improvements (2024-12-31)
 

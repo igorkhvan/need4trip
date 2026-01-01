@@ -9,6 +9,10 @@
 
 ## Change Log (SSOT)
 
+### 2026-01-01 (Polish Pass)
+- **Fixed THIS DOCUMENT path references** — Updated `docs/ARCHITECTURE.md` → `docs/ssot/SSOT_ARCHITECTURE.md`. Rationale: Path accuracy.
+- **Clarified "Out of scope" section** — Added note that implementation reference paths are included for operational clarity. Rationale: Truthful scope statement.
+
 ### 2026-01-01
 - **Added "SSOT Governance and Precedence" section (§18)** — Defines which SSOT governs which concerns, conflict resolution rules. Rationale: Clear precedence for SSOT conflicts.
 - **Added "SSOT Consistency Checklist" section (§19)** — Compact reviewer checklist for SSOT alignment. Rationale: Operational verification tool.
@@ -62,6 +66,8 @@ This document defines **THE ONLY** architectural rules for Need4Trip. Any other 
 - Feature specifications (see `/docs/features/`)
 - UI design guidelines (see `/docs/design/`)
 - Deployment procedures (see `/docs/guides/`)
+
+**Note:** Key implementation reference paths (e.g., canonical file locations, ownership map entries) are included for operational clarity and enforcement of architecture rules.
 
 ### Related SSOT Documents
 
@@ -213,7 +219,8 @@ need4trip/
 │   └── middleware.ts         # Next.js middleware
 │
 ├── docs/                     # Documentation
-│   ├── ARCHITECTURE.md       # ← THIS DOCUMENT (SSOT)
+│   ├── ssot/
+│   │   └── SSOT_ARCHITECTURE.md  # ← THIS DOCUMENT (SSOT)
 │   ├── architecture/         # Supporting architecture docs
 │   ├── billing/              # Billing system docs
 │   ├── design/               # Design system
@@ -1837,7 +1844,7 @@ if (!parsed.success) {
 
 **When you need to change architecture:**
 
-1. **Update THIS document first** (docs/ARCHITECTURE.md)
+1. **Update THIS document first** (docs/ssot/SSOT_ARCHITECTURE.md)
 2. **Get review** (if team > 1 person)
 3. **Implement changes**
 4. **Update related docs** (mark as "See ARCHITECTURE.md")

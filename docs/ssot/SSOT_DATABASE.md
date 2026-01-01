@@ -8,6 +8,10 @@
 
 ## Change Log (SSOT)
 
+### 2026-01-01 (Polish Pass)
+- **Replaced §8.2 with DB-centric rules only** — Removed duplicated timing rules; now contains only DB invariants + cross-reference to SSOT_CLUBS_EVENTS_ACCESS.md §10. Rationale: No rule duplication across SSOTs.
+- **Added role='pending' semantics note** — Near club_members.role CHECK constraint. Rationale: Prevent interpretation drift.
+
 ### 2026-01-01
 - **Added "Billing Credits State Machine" section** — Explicit statuses (available/consumed), invariants, allowed transitions, disallowed states. Rationale: Production alignment with `chk_billing_credits_consumed_state` constraint.
 - **Added "Billing – Consumption Timing & Binding" section** — Canonical rules for when/how credits are consumed. Rationale: Cross-SSOT consistency with SSOT_CLUBS_EVENTS_ACCESS.md.
@@ -661,6 +665,8 @@ CREATE TABLE public.club_members (
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'pending')),
   -- Note: 'organizer' role was removed in migration 20241230_remove_organizer_role
   -- Canonical roles per SSOT_CLUBS_EVENTS_ACCESS.md §2: owner, admin, member, pending
+  -- DB allows role='pending' for invitation state; authorization treats 'pending' as non-member 
+  -- (no elevated permissions). Canonical semantics: SSOT_CLUBS_EVENTS_ACCESS.md §2.
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
   CONSTRAINT club_members_unique UNIQUE (club_id, user_id)
@@ -994,45 +1000,22 @@ Transition `consumed` → `available` is NOT currently supported. If rollback se
 
 ---
 
-### 8.2 Billing – Consumption Timing & Binding
+### 8.2 Billing – Consumption Timing (DB Perspective)
 
-**Status:** LOCKED / Production-aligned
+**Status:** LOCKED / DB-centric rules only
 
-This section defines WHEN and HOW billing credits are consumed. This text MUST be consistent with SSOT_CLUBS_EVENTS_ACCESS.md "Billing Credits – Access/Usage Rules" section.
+#### DB-Level Constraints
 
-#### Canonical Rules
+- When status transitions to `'consumed'`, DB requires `consumed_event_id` and `consumed_at` to be non-null (enforced by `chk_billing_credits_consumed_state`).
+- Consuming without a persisted eventId is disallowed by the data model — the FK on `consumed_event_id` requires a valid `events.id`.
+- The binding (`consumed_event_id`) is immutable after being set — no UPDATE allowed on this field once non-null.
 
-1. **Consumption happens at PUBLISH only**
-   - Credits are NEVER consumed at event creation or update
-   - Credits are ONLY consumed when POST `/api/events/:id/publish` (or equivalent action) is called
-   - The `confirm_credit=1` (or equivalent confirmation parameter) is ONLY meaningful at publish time
+#### Cross-Reference (Canonical Timing/Usage Rules)
 
-2. **Consumption requires a persisted eventId**
-   - It is explicitly DISALLOWED to consume a credit without a real, persisted event ID
-   - The credit's `consumed_event_id` MUST be set to the actual event UUID at consumption time
-   - Consuming a credit for a "future" or "hypothetical" event is FORBIDDEN
+For canonical timing/usage rules (publish-only consumption, `confirm_credit` semantics, club-vs-personal rules, free limits), see:
+**SSOT_CLUBS_EVENTS_ACCESS.md §10 "Billing Credits – Access/Usage Rules"**
 
-3. **Club events MUST NOT consume personal credits**
-   - If `event.club_id IS NOT NULL`, the event is a club event
-   - Club events use club subscription capabilities, NOT personal credits
-   - Any attempt to consume a personal credit for a club event MUST be rejected (422 or 403)
-
-4. **Free limits do not consume credits**
-   - If an event is within free limits (e.g., maxParticipants <= 15 for personal events), no credit is consumed
-   - Credits are ONLY consumed when the event exceeds free limits AND requires paid capability
-
-5. **Binding is permanent**
-   - Once `consumed_event_id` is set, it MUST NOT be changed
-   - The credit-to-event binding is immutable (audit requirement)
-
-#### Error Conditions
-
-| Condition | Expected Error | Notes |
-|-----------|---------------|-------|
-| No available credit | 402 PaywallError | Redirect to purchase |
-| Missing `confirm_credit` when required | 409 CreditConfirmationRequired | UI shows confirmation modal |
-| Attempt to use credit for club event | 422 ValidationError | Personal credits cannot be used for club events |
-| Event not persisted (no ID) | 500 InternalError | Implementation bug — should never reach this state |
+That section is authoritative for business logic; this section covers only DB invariants.
 
 ---
 
