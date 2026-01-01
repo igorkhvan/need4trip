@@ -1,6 +1,6 @@
 # Need4Trip — Design System (SSOT)
 
-**Версия:** 1.4  
+**Версия:** 1.5  
 **Дата обновления:** 1 января 2026  
 **Статус:** Production Ready ✅
 
@@ -1447,10 +1447,99 @@ The following UI patterns are FORBIDDEN and MUST NOT be implemented:
 | Topic | SSOT Location |
 |-------|---------------|
 | Full invariants & scenario table | SSOT_ARCHITECTURE.md § 26 |
+| UI Behavior Rules (Explicit vs Implicit Abort) | SSOT_ARCHITECTURE.md § 26.4 |
 | Transaction state rules | SSOT_BILLING_SYSTEM_ANALYSIS.md § Aborted Purchase Attempts |
 | ActionController phases | SSOT_ARCHITECTURE.md § 15 |
 | Error surfaces (for actual errors) | This document § Error States & Messaging |
 | Toast usage policy | This document § Error Taxonomy → UI Pattern Mapping |
+
+---
+
+### Neutral Informational Hint (Implicit Abort Only)
+
+**Status:** CANONICAL (v1.5)
+
+**SSOT Authority:** SSOT_ARCHITECTURE.md § 26.4 defines when this pattern is used. This section defines the UI implementation details.
+
+**Purpose:** Reassure user after non-explicit interruption (network drop, tab close, browser crash) — NOT after explicit user cancellation.
+
+#### When to Use
+
+| Scenario | Show Hint |
+|----------|-----------|
+| User returns to form after tab was closed during payment | ✅ On next save attempt (OPTIONAL) |
+| User returns after network dropped mid-flow | ✅ On next save attempt (OPTIONAL) |
+| User explicitly cancelled paywall | ❌ NEVER |
+| User clicked Cancel button | ❌ NEVER |
+| User pressed ESC on modal | ❌ NEVER |
+| Fresh page load with no prior interrupted state | ❌ NEVER |
+
+#### Component Specification
+
+**Component Name:** `InlineInfoBanner` (neutral informational variant)
+
+**Location:** Inside existing context (above form, inside card) — NOT modal, NOT toast, NOT blocking overlay
+
+**Visual Specification:**
+
+```tsx
+// ✅ CORRECT Implementation
+<div className={cn(
+  "p-3 rounded-lg mb-4",
+  "bg-[var(--color-info-bg)]",        // Blue background, NOT danger/warning
+  "border border-[var(--color-info-border)]"
+)}>
+  <div className="flex items-center gap-3">
+    <Info className="w-5 h-5 text-[var(--color-info)]" />  // Info icon, NOT AlertTriangle/XCircle
+    <p className="text-sm text-[var(--color-info)]">
+      {message}
+    </p>
+  </div>
+</div>
+```
+
+**Tone:** Calm, neutral, non-blaming — NOT alarming, NOT apologetic
+
+**Copy Intent (RU):**
+> "Действие не было завершено. Вы можете попробовать снова."
+
+**Copy Intent (EN):**
+> "The action was not completed. You can try again."
+
+#### Behavior Rules (MUST)
+
+| Rule | Description |
+|------|-------------|
+| **NOT an error** | Uses informational styling (`--color-info-bg`), NOT danger/warning colors |
+| **NOT a toast** | Inline banner inside context, NOT floating toast notification |
+| **NOT persistent** | Shown only once per interaction cycle; dismissed after user action |
+| **NOT blocking** | Does not prevent user from interacting with form |
+| **NOT automatic** | Shown ONLY on next user action (save/submit), NOT on page load |
+| **OPTIONAL** | Detection of implicit interruption is UX enhancement, not requirement |
+
+#### Forbidden Variations
+
+| Forbidden | Reason |
+|-----------|--------|
+| Red/warning background | Implies error; interruption is neutral |
+| AlertTriangle or XCircle icon | Implies failure; use Info icon |
+| "Error" or "Failed" in copy | Not a failure; just incomplete |
+| Toast notification | Disappears, creates anxiety |
+| Modal/dialog | Blocking, implies critical issue |
+| "Payment was interrupted" | Too specific; may not be payment |
+| Auto-dismiss after timeout | User may not have time to read |
+| Sound notification | Alarming, not appropriate |
+
+#### Implementation Note
+
+Detection of implicit interruption (vs explicit cancellation) is complex and may require:
+- Session state tracking (was user in payment flow?)
+- Browser visibility API (was tab closed?)
+- Network state monitoring
+
+**Many implementations choose to simply re-run enforcement on next save without hint.** This is acceptable. The hint is a UX enhancement to reduce user confusion, not a requirement.
+
+If implemented, the hint MUST follow these rules exactly. Partial implementation (e.g., showing hint on explicit cancel) is WORSE than no hint.
 
 ---
 
@@ -1685,6 +1774,18 @@ export default function Loading() {
 ---
 
 ## 🔄 ИСТОРИЯ ИЗМЕНЕНИЙ
+
+### v1.5 — 1 января 2026
+
+**Добавлено:**
+- ✅ **Neutral Informational Hint (Implicit Abort Only)** — новый канонический паттерн для implicit interruptions:
+  - Компонент: `InlineInfoBanner` (informational variant)
+  - Когда использовать: ТОЛЬКО implicit interruption (network drop, tab close), НИКОГДА для explicit cancel
+  - Визуал: `--color-info-bg` (синий), Info icon, нейтральный тон
+  - Поведение: NOT error, NOT toast, NOT blocking, NOT persistent
+  - Copy intent (RU): "Действие не было завершено. Вы можете попробовать снова."
+  - Forbidden variations: красный/warning фон, AlertTriangle, "Error/Failed" в тексте
+- ✅ Updated Cross-References — добавлен SSOT_ARCHITECTURE.md § 26.4
 
 ### v1.4 — 1 января 2026
 

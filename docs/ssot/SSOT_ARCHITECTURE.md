@@ -2,12 +2,22 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 4.3  
+**Version:** 4.4  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v4.4 — Explicit vs Implicit Abort Finalization)
+- **Added § 26.4: UI Behavior Rules (Explicit vs Implicit Abort)** — Final deterministic rules:
+  - Explicit cancellation (X, ESC, Cancel button) → silent return to context (NO UI message)
+  - Implicit interruption (network drop, tab close) → neutral informational hint on NEXT user action
+  - Hint is NOT error, NOT toast, NOT blocking, NOT persistent; uses `--color-info-bg`
+  - §26.4.3 Forbidden Patterns (UI) — comprehensive list of prohibited behaviors
+- **Updated § 26.1 Definitions** — Added "Explicit cancellation" and "Implicit interruption" terms
+- **Updated § 25.10 Compliance Checklist** — Extended with explicit/implicit abort UX items
+- **Cross-references** — SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint (Implicit Abort Only)
 
 ### 2026-01-01 (v4.3 — Aborted / Incomplete Actions)
 - **Added § 26: Aborted / Incomplete Actions (Canonical System Behavior)** — Deterministic rules for handling:
@@ -2896,17 +2906,33 @@ grep -r "error\.message\|err\.message" src/components/
 grep -r "toast.*error\|showError" src/components/
 ```
 
-### 25.10 Aborted / Incomplete Actions Compliance (v4.3)
+### 25.10 Aborted / Incomplete Actions Compliance (v4.4)
 
 **Reference:** § 26 (Aborted / Incomplete Actions)
 
+**Core Invariants:**
 - [ ] Pending transactions do NOT change domain state or grant entitlements
 - [ ] UI does NOT display "awaiting payment" as a persistent domain state
-- [ ] User-cancelled paywall does NOT trigger error UI (returns to context silently)
-- [ ] Paywall may reappear on next enforcement without limit
 - [ ] Payment success does NOT imply action success — UI waits for backend confirmation
 - [ ] No "countdown" or "TTL timer" shown in UI for pending transactions
 - [ ] Retry after interruption re-triggers enforcement (no cached "was paying" state)
+
+**Explicit vs Implicit Abort UX:**
+- [ ] Explicit user cancellation (X, ESC, Cancel button) triggers NO UI message — silent return to context
+- [ ] Implicit interruption (network drop, tab close) MAY show neutral informational hint on NEXT user action
+- [ ] Hint is NOT an error, NOT a toast, NOT blocking, NOT persistent
+- [ ] Hint uses informational intent (`--color-info-bg`), NOT danger/warning
+- [ ] No optimistic or "awaiting-payment" domain states exist
+
+**Paywall Behavior:**
+- [ ] User-cancelled paywall does NOT trigger error UI (returns to context silently)
+- [ ] Paywall may reappear on next enforcement without limit
+- [ ] Form data preserved when paywall closes
+
+**Forbidden Patterns:**
+- [ ] No "Payment cancelled" toast on user cancel
+- [ ] No "Resume payment" button or localStorage-based payment state
+- [ ] No indefinite "Payment processing..." blocking state
 
 ---
 
@@ -2931,6 +2957,8 @@ This section defines deterministic behavior for all scenarios where user actions
 | **Failed transaction** | Payment provider rejected (insufficient funds, declined, timeout) |
 | **Domain state** | Persisted business data: events, billing_credits, club_subscriptions |
 | **UI state** | Ephemeral component state: loading flags, modal visibility, form data |
+| **Explicit cancellation** | User-initiated action to stop the flow: clicking X/Cancel button, pressing ESC, clicking outside modal. User made a conscious choice to cancel. |
+| **Implicit interruption** | Non-explicit interruption: network drop, browser/tab close, redirect failure, app crash. User did NOT consciously cancel — flow was interrupted externally. |
 
 ---
 
@@ -2968,9 +2996,86 @@ Each row defines the ONLY correct behavior for the scenario. No alternatives.
 
 ---
 
-### 26.4 Responsibilities Split
+### 26.4 UI Behavior Rules (Explicit vs Implicit Abort)
 
-#### 26.4.1 Backend Responsibilities
+**Status:** CANONICAL (v4.4)
+
+This section defines the ONLY correct UI behavior for explicit cancellations vs implicit interruptions.
+
+#### 26.4.1 Explicit Cancellation → NO UI Message
+
+**Definition:** User consciously cancels the flow (X button, ESC, "Cancel" button, click outside modal).
+
+**MANDATORY Behavior:**
+- UI MUST return to previous context silently
+- NO toast, NO alert, NO banner, NO error message
+- Form data MUST be preserved
+- User can retry immediately or adjust input
+
+**Rationale:** User made a choice. Respecting that choice means no feedback implying error or failure.
+
+**Examples:**
+| User Action | UI Response |
+|-------------|-------------|
+| Clicks X on PaywallModal | Modal closes. Form visible. Silent. |
+| Presses ESC on CreditConfirmationModal | Modal closes. Form visible. Silent. |
+| Clicks "Cancel" in any modal | Modal closes. Context preserved. Silent. |
+| Clicks outside modal (if dismissible) | Modal closes. Silent. |
+| Browser back from external payment page | Return to app context. Silent. |
+
+#### 26.4.2 Implicit Interruption → Neutral Informational Hint
+
+**Definition:** Flow interrupted non-explicitly (network drop, tab close, redirect failure, browser crash).
+
+**MANDATORY Behavior:**
+- On NEXT user interaction (save/submit), UI MAY show a **neutral informational hint**
+- Hint is NOT an error, NOT a toast, NOT blocking, NOT persistent
+- Hint uses `--color-info-bg` (informational intent), NOT danger/warning
+- Hint is shown ONLY ONCE per interaction cycle
+- Hint does NOT auto-appear — triggered by user action (save/submit)
+- Hint does NOT imply failure or error — neutral tone
+
+**Copy Intent (RU reference):**
+> "Действие не было завершено. Вы можете попробовать снова."
+
+**Copy Intent (EN reference):**
+> "The action was not completed. You can try again."
+
+**Hint Surface:** Inline informational banner inside existing context (e.g., above form, inside card).
+
+**Component:** `InlineInfoBanner` (see SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint)
+
+**When to Show:**
+| Scenario | Show Hint |
+|----------|-----------|
+| User returns to form after tab was closed during payment | ✅ On next save attempt |
+| User returns after network dropped mid-flow | ✅ On next save attempt |
+| User explicitly cancelled paywall | ❌ Never |
+| User clicked Cancel button | ❌ Never |
+| Fresh page load with no prior interrupted state | ❌ Never |
+
+**Implementation Note:** Detection of implicit interruption is OPTIONAL. Many implementations choose to simply re-run enforcement on next save without hint. The hint is a UX enhancement, not a requirement. If implemented, it MUST follow these rules.
+
+#### 26.4.3 Forbidden Patterns (UI)
+
+The following UI behaviors are STRICTLY FORBIDDEN:
+
+| Pattern | Why Forbidden |
+|---------|---------------|
+| Toast "Payment cancelled" on explicit cancel | User cancel is not error |
+| Alert "Your payment was interrupted" on page load | Creates anxiety, no action needed |
+| "Payment processing, please wait..." as indefinite state | Blocks UI; may never resolve |
+| Countdown timer "Payment expires in X:XX" | TTL is backend concern |
+| "Resume payment" button with stored transaction ID | Each action is independent |
+| Warning banner on paywall close | User cancel is neutral |
+| Error styling for cancelled/aborted flows | Cancellation is not failure |
+| localStorage-based "interrupted payment" detection | Creates stale state issues |
+
+---
+
+### 26.5 Responsibilities Split
+
+#### 26.5.1 Backend Responsibilities
 
 | Responsibility | Implementation |
 |----------------|----------------|
@@ -2981,7 +3086,7 @@ Each row defines the ONLY correct behavior for the scenario. No alternatives.
 | **Payment webhook handling** | Webhook from provider → mark transaction `completed` → issue credit. Client polls or gets state on next request. |
 | **Compensating transactions** | If credit consumed but event save fails → rollback credit (or delete event). CRITICAL log for manual review. |
 
-#### 26.4.2 Frontend Responsibilities
+#### 26.5.2 Frontend Responsibilities
 
 | Responsibility | Implementation |
 |----------------|----------------|
@@ -2995,9 +3100,9 @@ Each row defines the ONLY correct behavior for the scenario. No alternatives.
 
 ---
 
-### 26.5 Implementation Notes
+### 26.6 Implementation Notes
 
-#### 26.5.1 Paywall Close Handler
+#### 26.6.1 Paywall Close Handler
 
 ```typescript
 // ✅ CORRECT: Silent close, no error
@@ -3016,7 +3121,7 @@ Each row defines the ONLY correct behavior for the scenario. No alternatives.
 />
 ```
 
-#### 26.5.2 Form Data Preservation
+#### 26.6.2 Form Data Preservation
 
 ```typescript
 // ✅ CORRECT: Form data preserved after paywall close
@@ -3035,7 +3140,7 @@ const handleSubmit = async () => {
 };
 ```
 
-#### 26.5.3 No "Resume Payment" State
+#### 26.6.3 No "Resume Payment" State
 
 ```typescript
 // ❌ WRONG: Storing payment state for later
@@ -3047,16 +3152,19 @@ localStorage.setItem('pendingPayment', JSON.stringify({ eventId, transactionId }
 
 ---
 
-### 26.6 Cross-References
+### 26.7 Cross-References
 
 | Topic | SSOT Location |
 |-------|---------------|
 | Transaction states (pending/completed/failed) | SSOT_BILLING_SYSTEM_ANALYSIS.md § Database Schema |
 | Credit consumption timing | SSOT_CLUBS_EVENTS_ACCESS.md § 10 |
 | Compensating transactions | SSOT_BILLING_SYSTEM_ANALYSIS.md § Credit Consumption (v5.1) |
+| Aborted purchase attempts (billing-specific) | SSOT_BILLING_SYSTEM_ANALYSIS.md § Aborted Purchase Attempts |
 | Idempotency implementation | § 21 (this document) |
 | ActionController phases | § 15 (this document) |
 | Error UI patterns (NOT for user-cancel) | SSOT_DESIGN_SYSTEM.md § Error States |
+| Neutral Informational Hint (implicit abort) | SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint |
+| Aborted user-initiated flows (UI patterns) | SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows |
 | PaywallModal component | SSOT_BILLING_SYSTEM_ANALYSIS.md § Paywall Modal |
 
 ---
@@ -3079,6 +3187,7 @@ localStorage.setItem('pendingPayment', JSON.stringify({ eventId, transactionId }
 | 2026-01-01 | 4.1 | **Error & Loading UX Completeness:** Added §22.5-22.8 (UI Error Surface Model, Loading Taxonomy, Loading Decision Matrix, Retry UX Policy). Updated §23.1 (errors inside layout). Extended §25 (error/loading compliance). Clarified toast policy (success/info only). |
 | 2026-01-01 | 4.2 | **System Errors Handling:** Added §20.7 (System Errors & Low-Level Failures) — DB/infra/internal error handling, backend mapping responsibility, observability boundary. Cross-ref: SSOT_DESIGN_SYSTEM.md v1.3 (System Errors UI Rules, Canonical Error Intents, FORBIDDEN UI BEHAVIOR). |
 | 2026-01-01 | 4.3 | **Aborted / Incomplete Actions:** Added §26 (Aborted / Incomplete Actions — Canonical System Behavior) — deterministic rules for pending transactions (NO-OP), user-cancelled payments (NOT error), payment success ≠ action success, paywall may reappear unlimited times, scenario table with 8 canonical outcomes, UI/backend responsibilities split. Updated §25.10 (compliance checklist). Cross-ref: SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_CLUBS_EVENTS_ACCESS.md, SSOT_DESIGN_SYSTEM.md. |
+| 2026-01-01 | 4.4 | **Explicit vs Implicit Abort Finalization:** Added §26.4 (UI Behavior Rules — Explicit vs Implicit Abort). Added explicit/implicit cancellation definitions to §26.1. Explicit cancellation → silent return (no UI message). Implicit interruption → neutral informational hint on next user action (not error, not toast, not persistent). Updated §25.10 compliance checklist with explicit/implicit abort UX items. Added §26.4.3 Forbidden Patterns (UI). Cross-ref: SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint. |
 
 ---
 

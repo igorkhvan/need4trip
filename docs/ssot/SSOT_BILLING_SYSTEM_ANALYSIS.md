@@ -1,11 +1,20 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.4 ⚡  
+> **Версия:** 5.5 ⚡  
 > **Дата:** 1 января 2026  
-> **Статус:** Production (v5.4 - Aborted Actions Compliance)
+> **Статус:** Production (v5.5 - Aborted Actions Finalization)
 
 ---
+
+## 🆕 Что нового в v5.5
+
+**1 January 2026:**
+- ✅ **Finalized "Aborted Purchase Attempts" section** - Updated to v5.4, aligned with SSOT_ARCHITECTURE.md § 26.4
+- ✅ **Added explicit/implicit cancellation rules** - Clear separation of user-initiated vs non-explicit interruptions
+- ✅ **Added "Completed payment ≠ auto-applied" rule** - Payment does NOT auto-bind to events
+- ✅ **Added "No pending-based UX assumptions" rule** - UI must not display awaiting/processing states
+- ✅ **Updated cross-references** - Added § 26.4 (UI Behavior Rules), Neutral Informational Hint
 
 ## 🆕 Что нового в v5.4
 
@@ -2643,14 +2652,15 @@ if (shouldUseCredit) {
 
 ### Aborted Purchase Attempts (Non-Completion)
 
-**Status:** CANONICAL (v5.3)
+**Status:** CANONICAL (v5.4)
 
 **SSOT Authority:** SSOT_ARCHITECTURE.md § 26 is the primary source of truth for aborted/incomplete action behavior. This section provides billing-specific clarifications without duplicating rules.
 
 **Reference:** See SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions (Canonical System Behavior)" for:
-- Full definitions (incomplete action, aborted flow, pending/cancelled/failed transaction)
+- Full definitions (incomplete action, aborted flow, pending/cancelled/failed transaction, **explicit cancellation, implicit interruption**)
 - 8 canonical invariants (INV-1 through INV-8)
 - Scenario table with deterministic outcomes
+- **§ 26.4 UI Behavior Rules** — explicit vs implicit abort handling
 - UI/Backend responsibilities split
 
 #### Billing-Specific Rules (Non-Duplicative)
@@ -2662,6 +2672,9 @@ if (shouldUseCredit) {
 | **Transaction logs ≠ entitlement** | `billing_transactions` is an audit trail. Access checks read from `billing_credits` and `club_subscriptions`, NOT from transactions. |
 | **No TTL timers in UI** | Frontend MUST NOT display "payment expires in X minutes". TTL enforcement is backend-only (see `billing_policy.pending_ttl_minutes`). |
 | **Payment completed but action failed** | If payment completed (transaction `status='completed'`) but event save failed, credit remains `status='available'` and user can retry. Credit is NOT lost. |
+| **Explicit/implicit cancellation = no credit consumed** | User closing paywall (explicit) or network drop (implicit) do NOT consume credits. Credit consumption requires completed transaction AND successful domain action binding. |
+| **Completed payment ≠ auto-applied entitlement** | Payment completion creates credit with `status='available'`. Credit is NOT automatically bound to any event. User must explicitly save event with `confirm_credit=1` for binding. |
+| **No pending-based UX assumptions** | UI MUST NOT display "payment pending", "awaiting confirmation", or any state that implies user should wait. Each interaction is independent. |
 
 #### Transaction State → Entitlement Mapping
 
@@ -2677,6 +2690,8 @@ if (shouldUseCredit) {
 | Topic | Location |
 |-------|----------|
 | Invariants & scenario table | SSOT_ARCHITECTURE.md § 26 |
+| Explicit vs implicit abort UI rules | SSOT_ARCHITECTURE.md § 26.4 |
+| Neutral informational hint (implicit abort) | SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint |
 | Compensating transactions | This document § Credit Consumption (v5.1) |
 | UI behavior on user cancel | SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows |
 | Credit consumption timing | SSOT_CLUBS_EVENTS_ACCESS.md § 10 |

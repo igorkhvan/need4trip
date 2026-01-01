@@ -1,6 +1,6 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.4  
+**Version:** 1.5  
 **Last Updated:** 2026-01-01  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
@@ -22,6 +22,10 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v1.5 — Explicit vs Implicit Abort Cross-Reference)
+- **Added §10.3 cross-reference to SSOT_ARCHITECTURE.md § 26.4** — UI Behavior Rules (Explicit vs Implicit Abort)
+- **Version bump to 1.5** — Aligned with SSOT_ARCHITECTURE.md v4.4
 
 ### 2026-01-01 (v1.4 — Aborted Flows Cross-Reference)
 - **Added §10.1 Rule #6: Aborted/incomplete attempts** — Explicit rule that interrupted `confirm_credit=1` requests do NOT consume credit unless backend completed transaction
@@ -345,6 +349,9 @@ For database-level invariants (state machine, CHECK constraint `chk_billing_cred
 
 For aborted/incomplete action handling (user cancel, network interruption, payment not completed), see:
 **SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions (Canonical System Behavior)"**
+
+For explicit vs implicit abort UI rules (explicit cancellation = silent return; implicit interruption = neutral hint), see:
+**SSOT_ARCHITECTURE.md § 26.4 "UI Behavior Rules (Explicit vs Implicit Abort)"**
 
 ---
 
