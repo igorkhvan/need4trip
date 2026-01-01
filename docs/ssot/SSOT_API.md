@@ -1,9 +1,18 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.2.0  
-**Last Updated:** 28 декабря 2024  
+**Version:** 1.2.1  
+**Last Updated:** 1 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
+
+---
+
+## Change Log (SSOT)
+
+### 1.2.1 (2026-01-01)
+- **Removed deprecated `organizer` role** — Replaced with canonical roles (`owner`, `admin`, `member`, `pending`) per SSOT_CLUBS_EVENTS_ACCESS.md §2.
+- **Updated SSOT reference paths** — Changed `/docs/ARCHITECTURE.md` and `/docs/BILLING_SYSTEM_ANALYSIS.md` to `/docs/ssot/SSOT_*.md` format.
+- **Updated CreditConfirmationRequiredError description** — Aligned with publish-on-save semantics (v5+). Added cross-reference to SSOT_CLUBS_EVENTS_ACCESS.md §10.
 
 ---
 
@@ -155,8 +164,10 @@ Development: http://localhost:3000
 
 1. **Authentication:** Middleware verifies JWT
 2. **Ownership:** Route handler checks `currentUser.id === resource.created_by_user_id`
-3. **Role-based:** Club membership roles (`owner`, `organizer`, `member`)
+3. **Role-based:** Club membership roles (`owner`, `admin`, `member`, `pending`)
 4. **Visibility:** Events have `visibility` field (`public`, `unlisted`, `restricted`)
+
+Canonical club roles and permissions are defined in SSOT_CLUBS_EVENTS_ACCESS.md §2; this section is descriptive.
 
 ### 3.2 Event Visibility Rules
 
@@ -166,15 +177,18 @@ Development: http://localhost:3000
 | `unlisted` | Anyone with link (including anonymous) | N/A |
 | `restricted` | Authenticated users | Auto-grant on first view |
 
-**SSOT:** `/docs/ARCHITECTURE.md § 9` (Events Domain Policies)
+**SSOT:** `/docs/ssot/SSOT_ARCHITECTURE.md § 9` (Events Domain Policies)
 
 ### 3.3 Club Roles
 
 | Role | Permissions |
 |------|-------------|
 | `owner` | Full control (edit, delete, manage members, billing) |
-| `organizer` | Manage members, export, create events |
+| `admin` | Create/manage club events (free), manage club content; cannot manage members; cannot publish paid club events (default policy) |
 | `member` | View, participate in events |
+| `pending` | No elevated permissions (same as non-member/guest) |
+
+See SSOT_CLUBS_EVENTS_ACCESS.md §2 for normative rules.
 
 ---
 
@@ -225,7 +239,7 @@ Development: http://localhost:3000
 
 ### 5.1 Billing System Architecture
 
-- **SSOT:** `/docs/BILLING_SYSTEM_ANALYSIS.md`
+- **SSOT:** `/docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md`
 - **Plans:** FREE, CLUB_50, CLUB_500, CLUB_UNLIMITED (DB: `club_plans`)
 - **Products:** EVENT_UPGRADE_500 (one-off credit) (DB: `billing_products`)
 - **Enforcement:** `enforceClubAction()` in `/lib/services/accessControl.ts`
@@ -279,8 +293,10 @@ Development: http://localhost:3000
 ### 6.2 Special Errors
 
 **CreditConfirmationRequiredError (409):**
-- Triggered when creating/updating personal event 16-500 participants
-- Requires `?confirm_credit=1` to consume one-off credit
+- Triggered during POST/PUT when saving a personal paid event would require consuming a one-off credit
+- Requires explicit `confirm_credit=1` query parameter to consume one credit
+- `confirm_credit` param is meaningful only for personal events (`club_id` must be `NULL`); for club events it is ignored
+- Normative credit usage rules: SSOT_CLUBS_EVENTS_ACCESS.md §10 + SSOT_DATABASE.md §8.1 (billing_credits state machine)
 
 **PaywallError (402):**
 - Triggered by `enforceClubAction()` when plan limits exceeded
@@ -1520,7 +1536,7 @@ Get list of club members with roles, user details.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or organizer only  
+**Authorization:** Owner or admin only  
 
 **Purpose:**  
 Add member to club with specified role.
@@ -1533,7 +1549,7 @@ Add member to club with specified role.
   ```typescript
   {
     userId: string; // UUID
-    role: "member" | "organizer" | "owner";
+    role: "member" | "admin" | "owner";
   }
   ```
 - **Idempotency:** No (creates new membership, duplicate throws Conflict)
@@ -1557,7 +1573,7 @@ Add member to club with specified role.
 |--------|-----------|-------|
 | 400 | Missing fields | userId, role required |
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner/organizer | Authorization check |
+| 403 | Not owner/admin | Authorization check |
 | 404 | Club not found | Invalid UUID |
 | 409 | Already member | Duplicate membership |
 
@@ -1586,10 +1602,10 @@ Add member to club with specified role.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or organizer only  
+**Authorization:** Owner or admin only  
 
 **Purpose:**  
-Change member role (member → organizer, etc).
+Change member role (member → admin, etc).
 
 **Request:**
 
@@ -1598,7 +1614,7 @@ Change member role (member → organizer, etc).
 - **Body schema:**
   ```typescript
   {
-    role: "member" | "organizer" | "owner";
+    role: "member" | "admin" | "owner";
   }
   ```
 - **Idempotency:** Yes (update role)
@@ -1622,7 +1638,7 @@ Change member role (member → organizer, etc).
 |--------|-----------|-------|
 | 400 | Missing role | Required field |
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner/organizer | Authorization check |
+| 403 | Not owner/admin | Authorization check |
 | 404 | Club or member not found | Invalid UUID |
 
 **Security & Abuse:**
@@ -1650,7 +1666,7 @@ Change member role (member → organizer, etc).
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or organizer (or self if member)  
+**Authorization:** Owner or admin (or self if member)  
 
 **Purpose:**  
 Remove member from club.
@@ -1676,7 +1692,7 @@ Remove member from club.
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner/organizer/self | Authorization check |
+| 403 | Not owner/admin/self | Authorization check |
 | 404 | Club or member not found | Invalid UUID |
 
 **Security & Abuse:**
@@ -1772,7 +1788,7 @@ Get club's current plan and limits (for frontend form validation).
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or organizer only + CSV export plan feature  
+**Authorization:** Owner or admin only + CSV export plan feature  
 
 **Purpose:**  
 Export club members to CSV file (requires plan with `allowCsvExport`).
@@ -1796,7 +1812,7 @@ Export club members to CSV file (requires plan with `allowCsvExport`).
 |--------|-----------|-------|
 | 401 | Not authenticated | Middleware blocks |
 | 402 | Plan limit (no CSV export) | PaywallError: CLUB_EXPORT_PARTICIPANTS_CSV |
-| 403 | Not owner/organizer | Authorization check |
+| 403 | Not owner/admin | Authorization check |
 | 404 | Club not found | Invalid UUID |
 
 **Security & Abuse:**
@@ -1883,7 +1899,7 @@ List events with filters, search, pagination. Server-side rendering.
 
 - Route handler: `/src/app/api/events/route.ts`
 - Key functions: `listVisibleEventsForUserPaginated()`
-- SSOT: `docs/ARCHITECTURE.md § 10` (Events Listing, Pagination, and Stats)
+- SSOT: `/docs/ssot/SSOT_ARCHITECTURE.md § 10` (Events Listing, Pagination, and Stats)
 
 ---
 
