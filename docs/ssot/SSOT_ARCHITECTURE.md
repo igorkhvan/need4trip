@@ -2,80 +2,28 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 4.4  
+**Version:** 4.5  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
 
-## Change Log (SSOT)
+## Change Log (Recent)
 
-### 2026-01-01 (v4.4 — Explicit vs Implicit Abort Finalization)
-- **Added § 26.4: UI Behavior Rules (Explicit vs Implicit Abort)** — Final deterministic rules:
-  - Explicit cancellation (X, ESC, Cancel button) → silent return to context (NO UI message)
-  - Implicit interruption (network drop, tab close) → neutral informational hint on NEXT user action
-  - Hint is NOT error, NOT toast, NOT blocking, NOT persistent; uses `--color-info-bg`
-  - §26.4.3 Forbidden Patterns (UI) — comprehensive list of prohibited behaviors
-- **Updated § 26.1 Definitions** — Added "Explicit cancellation" and "Implicit interruption" terms
-- **Updated § 25.10 Compliance Checklist** — Extended with explicit/implicit abort UX items
-- **Cross-references** — SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint (Implicit Abort Only)
+> **Full history:** See [Document History](#document-history) at the end of this document.
 
-### 2026-01-01 (v4.3 — Aborted / Incomplete Actions)
-- **Added § 26: Aborted / Incomplete Actions (Canonical System Behavior)** — Deterministic rules for handling:
-  - Pending transactions = NO-OP (no domain/UI state change)
-  - User-cancelled payments (close paywall, abort payment) = NOT an error
-  - TTL/expiration is backend concern; UI has no timers or "awaiting" states
-  - Payment success ≠ action success (UI must await backend confirmation)
-  - Paywall may reappear unlimited times until constraints satisfied
-  - Scenario table: all abort/incomplete flows with deterministic outcomes
-  - UI/Backend responsibilities split
-- **Updated § 25: Operational Compliance Checklist** — Added aborted flows compliance items
-- **Cross-references** — SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_DESIGN_SYSTEM.md
+### v4.5 (2026-01-01) — Cleanup / Archival / Dedup
+- Compressed Change Log (moved full history to Document History table)
+- No normative changes
 
-### 2026-01-01 (v4.2 — System Errors Handling)
-- **Added § 20.7: System Errors & Low-Level Failures** — Explicit rules for DB/infra/internal error handling:
-  - Frontend behavior determined ONLY by mapped error class (status + code), never raw message
-  - `error.details` ignored for 500 errors (whitelisted: 402, 409, 422 only)
-  - No technical wording (constraint, SQL, SQLSTATE) in user-facing UI
-  - Backend Mapping Responsibility (SSOT Requirement) — expected backend mappings for low-level errors
-  - Observability vs. UI boundary — logging allowed, UI must use intent-based copy
-- **Cross-references** — SSOT_DESIGN_SYSTEM.md § System Errors, Canonical Error Message Intents, FORBIDDEN UI BEHAVIOR
+### v4.4 — Explicit vs Implicit Abort Finalization
+- Added § 26.4: UI Behavior Rules (Explicit vs Implicit Abort)
+- Explicit cancellation → silent return; Implicit interruption → neutral hint
+- Updated § 25.10 compliance checklist
 
-### 2026-01-01 (v4.1 — Error & Loading UX Completeness)
-- **Added § 22.5: UI Error Surface Model** — Canonical mapping from error taxonomy to UI surfaces (page/section/inline/field/modal)
-- **Added § 22.6: Loading Taxonomy** — All loading variants (initial/refetch/pagination/navigation/mutation/optimistic/idempotency/confirmation)
-- **Added § 22.7: Loading Decision Matrix** — Scenario → UI instrument mapping (Skeleton/Spinner/LoadingBar/disabled CTA)
-- **Added § 22.8: Retry UX Policy** — Manual retry rules, automatic retry boundaries
-- **Updated § 23.1** — Changed "Error page" → "PageErrorState inside layout"; clarified maintenance page as future exception
-- **Updated § 25: Operational Compliance Checklist** — Added error surface, toast policy, loading instrumentation checks
-- **Clarified toast usage** — Toast allowed ONLY for success/info, NEVER for errors
-- **Cross-references** — Added links to SSOT_DESIGN_SYSTEM.md for UI pattern implementations
-
-### 2026-01-01 (v4.0 — Operational Completeness)
-- **Added § 20: API Error Envelope & Client Mapping** — Unified error taxonomy, canonical response format, client-side mapping rules
-- **Added § 21: Idempotency & Retry Policy** — `Idempotency-Key` header rules, backend wrapper, retry semantics
-- **Added § 22: UI State Model** — Canonical states (loading/error/empty/success), Next.js boundaries
-- **Added § 23: Failure Modes & Degradation Rules** — Graceful degradation, retry policies, circuit breaker patterns
-- **Added § 24: Observability Minimum** — Structured logging, error tracking, metrics
-- **Added § 25: Operational Compliance Checklist** — Extended checklist for operational completeness
-- **Updated § 4 Ownership Map** — Added canonical response/error modules
-- **Migration Map** — Identified duplicates for elimination (see § 25)
-- **Version bump to 4.0** — Operational completeness milestone
-
-### 2026-01-01 (v5+ Alignment)
-- **Updated §19 Consistency Checklist** — Changed "publish-only" consumption to "save-time (v5+)" consumption. Rationale: v5+ has no separate publish step.
-- **Version bump to 3.4** — Reflects v5+ alignment work.
-
-### 2026-01-01 (Polish Pass)
-- **Fixed THIS DOCUMENT path references** — Updated `docs/ARCHITECTURE.md` → `docs/ssot/SSOT_ARCHITECTURE.md`. Rationale: Path accuracy.
-- **Clarified "Out of scope" section** — Added note that implementation reference paths are included for operational clarity. Rationale: Truthful scope statement.
-
-### 2026-01-01
-- **Added "SSOT Governance and Precedence" section (§18)** — Defines which SSOT governs which concerns, conflict resolution rules. Rationale: Clear precedence for SSOT conflicts.
-- **Added "SSOT Consistency Checklist" section (§19)** — Compact reviewer checklist for SSOT alignment. Rationale: Operational verification tool.
-- **Fixed RBAC example in §8 Pattern 3** — Replaced deprecated "organizers" with canonical "owner/admin" roles. Rationale: Terminology hygiene per SSOT_CLUBS_EVENTS_ACCESS.md §2.
-- **Updated Related SSOT paths** — Corrected to `/docs/ssot/SSOT_*.md` format. Rationale: Path accuracy.
-- **Cross-referenced billing credits state machine** — Points to SSOT_DATABASE.md §8.1 for invariants. Rationale: Single source for DB constraints.
-- **Version bump to 3.3** — Reflects SSOT consistency work.
+### v4.3 — Aborted / Incomplete Actions
+- Added § 26: Aborted / Incomplete Actions (Canonical System Behavior)
+- Deterministic rules: pending = NO-OP, cancelled ≠ error, payment success ≠ action success
+- UI/Backend responsibilities split
 
 ---
 
@@ -3188,6 +3136,7 @@ localStorage.setItem('pendingPayment', JSON.stringify({ eventId, transactionId }
 | 2026-01-01 | 4.2 | **System Errors Handling:** Added §20.7 (System Errors & Low-Level Failures) — DB/infra/internal error handling, backend mapping responsibility, observability boundary. Cross-ref: SSOT_DESIGN_SYSTEM.md v1.3 (System Errors UI Rules, Canonical Error Intents, FORBIDDEN UI BEHAVIOR). |
 | 2026-01-01 | 4.3 | **Aborted / Incomplete Actions:** Added §26 (Aborted / Incomplete Actions — Canonical System Behavior) — deterministic rules for pending transactions (NO-OP), user-cancelled payments (NOT error), payment success ≠ action success, paywall may reappear unlimited times, scenario table with 8 canonical outcomes, UI/backend responsibilities split. Updated §25.10 (compliance checklist). Cross-ref: SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_CLUBS_EVENTS_ACCESS.md, SSOT_DESIGN_SYSTEM.md. |
 | 2026-01-01 | 4.4 | **Explicit vs Implicit Abort Finalization:** Added §26.4 (UI Behavior Rules — Explicit vs Implicit Abort). Added explicit/implicit cancellation definitions to §26.1. Explicit cancellation → silent return (no UI message). Implicit interruption → neutral informational hint on next user action (not error, not toast, not persistent). Updated §25.10 compliance checklist with explicit/implicit abort UX items. Added §26.4.3 Forbidden Patterns (UI). Cross-ref: SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint. |
+| 2026-01-01 | 4.5 | **Cleanup / Archival / Dedup:** Compressed Change Log (moved full history to Document History table). No normative changes. |
 
 ---
 

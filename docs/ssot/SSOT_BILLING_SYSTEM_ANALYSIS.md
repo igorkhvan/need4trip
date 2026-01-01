@@ -1,108 +1,50 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.5 ⚡  
+> **Версия:** 5.6  
 > **Дата:** 1 января 2026  
-> **Статус:** Production (v5.5 - Aborted Actions Finalization)
+> **Статус:** Production (v5.6 - SSOT Cleanup)
 
 ---
 
-## 🆕 Что нового в v5.5
+## 🆕 Changelog
 
-**1 January 2026:**
-- ✅ **Finalized "Aborted Purchase Attempts" section** - Updated to v5.4, aligned with SSOT_ARCHITECTURE.md § 26.4
-- ✅ **Added explicit/implicit cancellation rules** - Clear separation of user-initiated vs non-explicit interruptions
-- ✅ **Added "Completed payment ≠ auto-applied" rule** - Payment does NOT auto-bind to events
-- ✅ **Added "No pending-based UX assumptions" rule** - UI must not display awaiting/processing states
-- ✅ **Updated cross-references** - Added § 26.4 (UI Behavior Rules), Neutral Informational Hint
+**v5.6 (1 January 2026) — SSOT Cleanup:**
+- 📦 Archived NON-NORMATIVE history → `docs/ssot/archive/SSOT_BILLING_HISTORY.md`
+- ✂️ Compressed "Aborted Purchase Attempts" — billing-specific rules only
+- 🔗 Deduplicated — removed v4.x inline history, added cross-references
 
-## 🆕 Что нового в v5.4
+**v5.5 (1 January 2026):** Aborted actions finalization, explicit/implicit cancellation rules  
+**v5.0–v5.4:** Save-time enforcement, credit consumption, UI integration  
+**v4.x:** Historical (see archive)
 
-**1 January 2026:**
-- ✅ **Added "Aborted Purchase Attempts" section** - Billing-specific rules for non-completed transactions
-- ✅ **Cross-reference to SSOT_ARCHITECTURE.md § 26** - Canonical source for aborted/incomplete actions
-- ✅ **Transaction State → Entitlement Mapping** - Explicit table showing when credits are issued
-- ✅ **No TTL timers in UI rule** - Frontend must not display countdown for pending transactions
+> **Full changelog:** `docs/ssot/archive/SSOT_BILLING_HISTORY.md`
 
-## 🆕 Что нового в v5.3
+---
 
-**1 January 2026:**
-- ✅ **Marked v4.x sections as NON-NORMATIVE** - Clear separation of historical vs current architecture
-- ✅ **Updated API Endpoints section** - Removed `/api/events/:id/publish`, added POST/PUT enforcement
-- ✅ **Updated 409 response contract** - Removed publish endpoint reference from CTA
-- ✅ **Updated Migration section** - Now covers v3 → v4 → v5 path
-- ✅ **Updated TOC** - Reflects v5+ normative structure
+## 📜 Historical / Archived
 
-## 🆕 Что нового в v5.2
-
-**26 December 2024:**
-- ✅ **Credit badge in header** - Zap icon ⚡ with count (desktop + mobile)
-- ✅ **AuthContext integration** - credits count loaded with user (0 extra API calls)
-- ✅ **Profile credits section** - available + consumed history
-- ✅ **Event create banner** - contextual credit info
-- ✅ **Dropdown details** - click badge → info + CTA
-- ✅ **Improved invalidation** - router.refresh() instead of window.reload()
-
-## 🆕 Что нового в v5.1
-
-**26 December 2024:**
-- ✅ **Compensating transactions** - credit + event save wrapped in transaction
-- ✅ **Rollback on failure** - credit returned if event save fails
-- ✅ **Retry-safe** - users can retry without losing credits
-- ✅ **Observable** - CRITICAL logs for manual intervention
-
-## 🆕 Что нового в v5.0
-
-**26 December 2024:**
-- ✅ **Unified enforcement** - `enforceEventPublish()` в create/update
-- ✅ **No separate publish step** - события публикуются сразу при сохранении
-- ✅ **Removed publish endpoint** - `/api/events/:id/publish` удалён
-- ✅ **Removed published_at** - события сразу live (no drafts)
-- ✅ **Credit flow integrated** - 409/402 обрабатываются в POST/PUT
-
-## 📜 Implementation History: v4.x (NON-NORMATIVE)
-
-> **⚠️ HISTORICAL — NOT CURRENT ARCHITECTURE**  
-> The following v4.x sections describe the **previous** implementation that included a separate publish endpoint.  
-> **v5+ is the current production model** — see "Event Save Enforcement (v5)" section for normative behavior.  
-> v5+ has NO separate publish step; enforcement happens at save-time (POST/PUT).
-
-### Что было в v4.1 (DEPRECATED)
-
-**26 December 2024:**
-- ~~Publish endpoint integrated~~ — **REMOVED in v5.0**
-- ✅ **409 handling** - CreditConfirmationModal fully integrated (still valid, different trigger point)
-- ✅ **Frontend complete** - all v4 features now working end-to-end
-
-### Что было в v4.0 (DEPRECATED)
-
-**Major Changes (still valid in v5+):**
-- ✅ **billing_products** table - SSOT для pricing (NO HARDCODE!)
-- ✅ **Unified purchase API** - `/api/billing/purchase-intent` (one-off + clubs)
-- ✅ **One-off credits** - EVENT_UPGRADE_500 (perpetual, 1000 KZT)
-- ~~**Publish enforcement** - reads constraints from DB dynamically~~ — **Moved to save-time in v5+**
-- ✅ **Kaspi stub mode** - ready for real integration
-- ✅ **Status polling** - `/api/billing/transactions/status`
-
-**Breaking Changes (v3→v4, still relevant):**
-- ❌ Deleted `/api/billing/credits/purchase` → use `/api/billing/purchase-intent`
-- ❌ Deleted `/api/billing/credits/confirm` → use `/api/dev/billing/settle` (DEV)
+> **NON-NORMATIVE implementation history** (v3.x, v4.x, migration paths) has been archived.  
+> See: **`docs/ssot/archive/SSOT_BILLING_HISTORY.md`**  
+> 
+> **Current normative behavior:** v5+ (save-time enforcement, no separate publish step).
 
 ---
 
 ## 📋 Содержание
 
 1. [Обзор системы](#обзор-системы)
-2. [Database Schema](#database-schema) ⚡
-3. [Тарифные планы](#тарифные-планы)
-4. [One-off Credits](#one-off-credits) ⚡⚡
-5. [Unified Purchase Flow](#unified-purchase-flow) ⚡⚡
-6. [Event Save Enforcement (v5) — NORMATIVE](#event-save-enforcement-v5) ⚡⚡ **CURRENT**
-7. [Paywall Modal](#paywall-modal)
-8. [API Endpoints (v5+ Current)](#api-endpoints-v5-current) ⚡
-9. [Ключевые файлы](#ключевые-файлы)
-10. [Implementation History: v4.x (NON-NORMATIVE)](#implementation-history-v4x-non-normative) 📜
-11. [Migration History: v3 → v4 → v5 (NON-NORMATIVE)](#migration-history-v3--v4--v5-non-normative) 📜
+2. [База данных](#-база-данных)
+3. [Тарифные планы](#-тарифные-планы)
+4. [Система enforcement](#-система-enforcement)
+5. [One-off Credits](#-one-off-credits)
+6. [Unified Purchase Flow](#-unified-purchase-flow)
+7. [Event Save Enforcement (v5)](#-event-save-enforcement-v5) — **NORMATIVE**
+8. [Aborted Purchase Attempts](#aborted-purchase-attempts)
+9. [API Endpoints (v5+)](#-api-endpoints-v5-current)
+10. [Ключевые файлы](#-ключевые-файлы)
+
+> **Historical sections (v4.x, migrations):** See `docs/ssot/archive/SSOT_BILLING_HISTORY.md`
 
 ---
 
@@ -2698,245 +2640,6 @@ if (shouldUseCredit) {
 
 ---
 
-## 📜 Frontend Integration History: v4.x (NON-NORMATIVE)
-
-> **⚠️ HISTORICAL — NOT CURRENT IMPLEMENTATION**  
-> The following v4.x frontend examples describe the **previous** implementation that used a separate publish endpoint.  
-> **v5+ is the current production model** — see "Event Save Enforcement (v5)" section for normative behavior.  
-> v5+ has NO separate publish step; enforcement happens at save-time (POST/PUT).  
-> These examples are preserved for historical reference only.
-
-### v4.x Frontend Flow (DEPRECATED)
-
-The v4.x model used a two-step process: create event → publish event. This has been replaced with save-time enforcement in v5+.
-
-### v4.x Algorithm (DEPRECATED — NO LONGER USED)
-
-> **⚠️ HISTORICAL:** This algorithm describes the v4.x `enforcePublish()` function that was called from `/api/events/:id/publish`.  
-> In v5+, enforcement is performed by `enforceEventPublish()` called directly in `createEvent()` and `updateEvent()` services.  
-> The `published_at` field was removed in v5+.
-
-**v4.x Backend Implementation** (`src/lib/services/accessControl.ts` — REMOVED in v5+):
-
-```typescript
-export async function enforcePublish(params: {
-  eventId: string;
-  userId: string;
-  confirmCredit?: boolean;
-}): Promise<{
-  allowed: boolean;
-  willConsumeCredit?: boolean;
-  requiresCreditConfirmation?: boolean;
-  creditCode?: CreditCode;
-}> {
-  const db = getAdminDb();
-  
-  // Step 0: Load event
-  const event = await db.from('events').select('*').eq('id', eventId).single();
-  if (!event.data) throw new NotFoundError('Event not found');
-  
-  // Step 0.1: Idempotency check
-  if (event.data.published_at) {
-    return { allowed: true }; // Already published
-  }
-  
-  // Step 1: Club events (existing enforcement)
-  if (event.data.club_id) {
-    await enforceClubAction({
-      clubId: event.data.club_id,
-      action: 'CREATE_EVENT_WITH_PARTICIPANTS',
-      context: { eventParticipantsCount: event.data.max_participants }
-    });
-    return { allowed: true };
-  }
-  
-  // Step 2: Personal events
-  const freePlan = await clubPlanRepo.getPlanById('free');
-  const oneOffProduct = await billingProductsRepo.getBillingProductByCode('EVENT_UPGRADE_500');
-  
-  if (!freePlan || !oneOffProduct) {
-    throw new InternalError('Billing configuration missing');
-  }
-  
-  // Step 2.1: Within free limits
-  if (event.data.max_participants <= freePlan.max_event_participants) {
-    return { allowed: true }; // Free-eligible, no credit needed
-  }
-  
-  // Step 2.2: Exceeds one-off limit → Club required
-  const maxOneOff = oneOffProduct.constraints.max_participants;
-  if (event.data.max_participants > maxOneOff) {
-    throw new PaywallError({
-      message: 'Event requires club access',
-      reason: 'CLUB_REQUIRED_FOR_LARGE_EVENT',
-      meta: { 
-        requestedParticipants: event.data.max_participants,
-        oneOffLimit: maxOneOff
-      },
-      options: [{
-        type: 'CLUB_ACCESS',
-        recommended_plan_id: 'club_50'
-      }]
-    });
-  }
-  
-  // Step 2.3: Within one-off range → Check credit
-  const credit = await billingCreditsRepo.findAvailableCredit(
-    params.userId,
-    'EVENT_UPGRADE_500'
-  );
-  
-  // Step 2.3.1: No credit available → Paywall
-  if (!credit) {
-    throw new PaywallError({
-      message: 'Publish requires payment',
-      reason: 'PUBLISH_REQUIRES_PAYMENT',
-      meta: {
-        requestedParticipants: event.data.max_participants,
-        freeLimit: freePlan.max_event_participants
-      },
-      options: [
-        {
-          type: 'ONE_OFF_CREDIT',
-          product_code: 'EVENT_UPGRADE_500',
-          price: oneOffProduct.price,
-          currency_code: oneOffProduct.currency_code,
-          provider: 'kaspi'
-        },
-        {
-          type: 'CLUB_ACCESS',
-          recommended_plan_id: 'club_50'
-        }
-      ]
-    });
-  }
-  
-  // Step 2.3.2: Credit available, but not confirmed → 409
-  if (!params.confirmCredit) {
-    throw new ConflictError('Credit confirmation required', {
-      code: 'CREDIT_CONFIRMATION_REQUIRED',
-      reason: 'EVENT_UPGRADE_WILL_BE_CONSUMED',
-      meta: {
-        eventId: params.eventId,
-        creditCode: credit.credit_code,
-        requestedParticipants: event.data.max_participants
-      },
-      cta: {
-        type: 'CONFIRM_CONSUME_CREDIT',
-        href: `/api/events/${params.eventId}/publish?confirm_credit=1`
-      }
-    });
-  }
-  
-  // Step 2.3.3: Confirmed → Consume credit atomically
-  await billingCreditsRepo.consumeCredit(credit.id, params.eventId);
-  
-  return { 
-    allowed: true,
-    willConsumeCredit: true,
-    creditCode: credit.credit_code
-  };
-}
-```
-
-**v4.x API Route** (`src/app/api/events/[id]/publish/route.ts` — **REMOVED in v5+**):
-
-```typescript
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return respondError(new UnauthorizedError());
-  }
-  
-  const { searchParams } = new URL(request.url);
-  const confirmCredit = searchParams.get('confirm_credit') === '1';
-  
-  try {
-    const decision = await enforcePublish({
-      eventId: params.id,
-      userId: currentUser.id,
-      confirmCredit
-    });
-    
-    // Publish event
-    const db = getAdminDb();
-    await db
-      .from('events')
-      .update({ published_at: new Date().toISOString() })
-      .eq('id', params.id);
-    
-    return respondSuccess({ published: true });
-    
-  } catch (error) {
-    return respondError(error);
-  }
-}
-```
-
-### v4.x API Contract (DEPRECATED — ENDPOINT REMOVED)
-
-> **⚠️ HISTORICAL:** This endpoint was removed in v5+. See "API Endpoints (v5+ Current)" section for current contracts.
-
-```typescript
-// DEPRECATED: POST /api/events/:id/publish?confirm_credit=0|1 — REMOVED in v5+
-
-Step 0: Idempotency
-  if (event.published_at IS NOT NULL) → 200 OK
-
-Step 1: Club events
-  if (event.club_id IS NOT NULL) {
-    enforceClubAction() // existing club billing
-    → publish or 402 PAYWALL (ONLY club access option)
-  }
-
-Step 2: Personal events
-  load freePlan = club_plans(id='free')
-  load oneOffProduct = billing_products(code='EVENT_UPGRADE_500')
-  
-  if (max_participants <= freePlan.max_event_participants) {
-    → Publish immediately (NO credit consumption!) ✅
-  }
-  
-  if (max_participants > oneOffProduct.constraints.max_participants) {
-    → 402 PAYWALL (reason: CLUB_REQUIRED_FOR_LARGE_EVENT)
-       options: [CLUB_ACCESS only]
-  }
-  
-  // Exceeds free, within oneoff limit
-  credit = findAvailableCredit(user_id, 'EVENT_UPGRADE_500')
-  
-  if (!credit) {
-    → 402 PAYWALL (reason: PUBLISH_REQUIRES_PAYMENT)
-       options: [ONE_OFF_CREDIT, CLUB_ACCESS]
-  }
-  
-  if (credit && !confirm_credit) {
-    → 409 CREDIT_CONFIRMATION_REQUIRED
-       meta: { will consume credit }
-       cta: { confirm: /publish?confirm_credit=1 }
-  }
-  
-  if (credit && confirm_credit) {
-    ATOMIC:
-      - Lock credit FOR UPDATE
-      - Mark consumed (status, consumed_event_id, consumed_at)
-      - Set event.published_at
-    → 200 OK
-  }
-```
-
-### v4.x Critical Rules (Still Valid in v5+, Updated Context)
-
-1. **Free events NEVER consume credits** — даже если credit available ✅
-2. **Credit consumed only after confirmation** — 409 → user confirms → consume ✅ (now at save-time, not publish)
-3. **One credit per event** — idempotent (re-save doesn't consume again) ✅
-4. **Atomic transaction** — credit + event save in single DB transaction ✅ (no separate publish step)
-
----
-
 ## ⚡ API Endpoints (v5+ Current)
 
 > **Note:** The `/api/events/:id/publish` endpoint was **REMOVED in v5.0**.  
@@ -3015,66 +2718,7 @@ Step 2: Personal events
 
 ---
 
-## 📜 Migration History: v3 → v4 → v5 (NON-NORMATIVE)
+**END OF DOCUMENT**
 
-> **⚠️ HISTORICAL REFERENCE**  
-> This section documents the migration path. Current production is v5+.
-
-### v3 → v4 Migration (Database)
-
-**Миграции:**
-```sql
-20241226_create_billing_products.sql     -- SSOT таблица
-20241226_add_billing_credits_fk.sql      -- FK integrity
-```
-
-### v4 → v5 Migration (Architecture)
-
-**Changes:**
-- `enforcePublish()` → `enforceEventPublish()` called in createEvent()/updateEvent()
-- **REMOVED:** `/api/events/:id/publish` endpoint
-- **REMOVED:** `published_at` field from events table
-- Enforcement moved from publish-time to save-time
-
-### Backend (v5+ current)
-
-**Changes:**
-- `enforceEventPublish()` - reads from billing_products (no hardcode)
-- Enforcement in `createEvent()` and `updateEvent()` services
-- No separate publish step
-
-**Deleted (v3→v4):**
-- `src/app/api/billing/credits/purchase/route.ts`
-- `src/app/api/billing/credits/confirm/route.ts`
-
-**Deleted (v4→v5):**
-- `src/app/api/events/[id]/publish/route.ts`
-
-### Frontend
-
-**✅ COMPLETED (26 Dec 2024):**
-- ✅ Integrated publish endpoint in create flow (`create-event-client.tsx`)
-- ✅ Integrated publish endpoint in edit flow (`edit-event-client.tsx`)
-- ✅ Added 409 CREDIT_CONFIRMATION_REQUIRED handling
-- ✅ CreditConfirmationModal integration
-- ✅ Confirm flow with `?confirm_credit=1`
-- ✅ PaywallModal updated (v4 - purchase-intent + polling)
-
-**Files Updated:**
-- `src/app/(app)/events/create/create-event-client.tsx`
-- `src/app/(app)/events/[id]/edit/edit-event-client.tsx`
-- `src/components/billing/PaywallModal.tsx` (v4)
-- `src/components/billing/CreditConfirmationModal.tsx` (integrated)
-
-### Testing
-
-**Integration tests required:**
-- Publish within free → no credit consumed ✅
-- Publish with credit → 409 → confirm → consumed ✅
-- Concurrency (2 confirms) → only one succeeds ✅
-- Idempotent publish ✅
-
----
-
-**END OF V4 UPDATES**
+*For historical implementation details (v3.x, v4.x, migrations), see `docs/ssot/archive/SSOT_BILLING_HISTORY.md`*
 

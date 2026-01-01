@@ -1,6 +1,6 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.5  
+**Version:** 1.6  
 **Last Updated:** 2026-01-01  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
@@ -22,6 +22,11 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v1.6 — SSOT Cleanup)
+- **Compressed §10.1 Rule #6** — Removed duplicated abort/incomplete flow details, kept RBAC-specific application + cross-reference to SSOT_ARCHITECTURE.md § 26
+- **Updated A4.5** — Shortened to reference canonical source
+- **No normative changes** — Only structural cleanup and deduplication
 
 ### 2026-01-01 (v1.5 — Explicit vs Implicit Abort Cross-Reference)
 - **Added §10.3 cross-reference to SSOT_ARCHITECTURE.md § 26.4** — UI Behavior Rules (Explicit vs Implicit Abort)
