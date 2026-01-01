@@ -757,7 +757,7 @@ export function usePaywall() {
 }
 ```
 
-**Usage:**
+**Usage (v5+ — save-time enforcement):**
 
 ```typescript
 import { usePaywall } from "@/components/billing/PaywallModal";
@@ -765,7 +765,8 @@ import { usePaywall } from "@/components/billing/PaywallModal";
 const { showPaywall, PaywallModalComponent } = usePaywall();
 
 try {
-  await fetch('/api/events/:id/publish');
+  // v5+: enforcement happens at save-time (POST/PUT), no separate publish step
+  await fetch('/api/events', { method: 'POST', body: JSON.stringify(payload) });
 } catch (err) {
   if (err.response?.status === 402) {
     showPaywall(err.response.data.error.details);
@@ -863,7 +864,7 @@ export function CreditConfirmationModal({
             disabled={isLoading}
             className="flex-1 bg-orange-600 hover:bg-orange-700"
           >
-            {isLoading ? 'Публикация...' : 'Подтвердить и опубликовать'}
+            {isLoading ? 'Сохранение...' : 'Подтвердить и сохранить'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -927,7 +928,8 @@ return (
         requestedParticipants={modalState.requestedParticipants!}
         onConfirm={async () => {
           hideConfirmation();
-          await handlePublish(pendingEventId, true); // ?confirm_credit=1
+          // v5+: Retry save with confirm_credit=1
+          await handleSave(pendingPayload, true); // ?confirm_credit=1
         }}
         onCancel={hideConfirmation}
       />
@@ -1141,11 +1143,10 @@ src/app/api/
 │       └── route.ts                — GET /api/clubs/:id/export (CSV)
 │
 └── events/
-    ├── route.ts                    — GET, POST /api/events
+    ├── route.ts                    — GET, POST /api/events (v5+: enforcement at save-time)
     └── [id]/
-        ├── route.ts                — GET, PUT /api/events/:id
-        └── publish/ (v4 NEW) ⚡
-            └── route.ts            — POST /api/events/:id/publish
+        └── route.ts                — GET, PUT /api/events/:id (v5+: enforcement at save-time)
+        # NOTE: publish/ directory was REMOVED in v5+ (enforcement moved to POST/PUT)
 ```
 
 #### Errors & Response Handling
@@ -2602,88 +2603,26 @@ if (shouldUseCredit) {
    - User can retry (will see "No available credit" if first succeeded)
 
 ---
-      return;
-    }
-    
-    // Handle other errors
-    if (!publishRes.ok) {
-      await handleApiError(publishRes);
-      return;
-    }
-    
-    // Success - redirect
-    router.push('/events');
-    router.refresh();
-  };
 
-  // Create handler
-  const handleSubmit = async (payload: Record<string, unknown>) => {
-    // 1. Create event (draft)
-    const res = await fetch("/api/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    
-    if (!res.ok) {
-      if (res.status === 402) {
-        const errorData = await res.json();
-        showPaywall(errorData.error?.details || errorData.error);
-        return;
-      }
-      await handleApiError(res);
-      return;
-    }
-    
-    // 2. Get event ID and call publish
-    const data = await res.json();
-    const eventId = data.event?.id;
-    
-    if (eventId) {
-      await handlePublish(eventId); // Enforcement happens here
-    }
-  };
+## 📜 Frontend Integration History: v4.x (NON-NORMATIVE)
 
-  return (
-    <>
-      <EventForm onSubmit={handleSubmit} ... />
-      
-      {/* Paywall Modal (402) */}
-      {PaywallModalComponent}
-      
-      {/* Credit Confirmation Modal (409) */}
-      {modalState.open && modalState.creditCode && (
-        <CreditConfirmationModal
-          open={modalState.open}
-          onOpenChange={hideConfirmation}
-          creditCode={modalState.creditCode}
-          eventId={modalState.eventId!}
-          requestedParticipants={modalState.requestedParticipants!}
-          onConfirm={async () => {
-            if (pendingEventId) {
-              hideConfirmation();
-              await handlePublish(pendingEventId, true); // confirm_credit=1
-            }
-          }}
-          onCancel={hideConfirmation}
-        />
-      )}
-    </>
-  );
-}
-```
+> **⚠️ HISTORICAL — NOT CURRENT IMPLEMENTATION**  
+> The following v4.x frontend examples describe the **previous** implementation that used a separate publish endpoint.  
+> **v5+ is the current production model** — see "Event Save Enforcement (v5)" section for normative behavior.  
+> v5+ has NO separate publish step; enforcement happens at save-time (POST/PUT).  
+> These examples are preserved for historical reference only.
 
-**Same pattern for edit flow** (`edit-event-client.tsx`) - call `handlePublish(event.id)` after successful `PUT /api/events/:id`.
+### v4.x Frontend Flow (DEPRECATED)
 
-**CreditConfirmationModal:**
-- ⚠️ Warning: "Это действие нельзя отменить"
-- 📋 Details: credit type, participant count
-- ✅ Confirm button: "Подтвердить и опубликовать"
-- ❌ Cancel button: "Отмена"
+The v4.x model used a two-step process: create event → publish event. This has been replaced with save-time enforcement in v5+.
 
-### Algorithm (STRICT Decision Tree)
+### v4.x Algorithm (DEPRECATED — NO LONGER USED)
 
-**Backend Implementation** (`src/lib/services/accessControl.ts`):
+> **⚠️ HISTORICAL:** This algorithm describes the v4.x `enforcePublish()` function that was called from `/api/events/:id/publish`.  
+> In v5+, enforcement is performed by `enforceEventPublish()` called directly in `createEvent()` and `updateEvent()` services.  
+> The `published_at` field was removed in v5+.
+
+**v4.x Backend Implementation** (`src/lib/services/accessControl.ts` — REMOVED in v5+):
 
 ```typescript
 export async function enforcePublish(params: {
@@ -2806,7 +2745,7 @@ export async function enforcePublish(params: {
 }
 ```
 
-**API Route** (`src/app/api/events/[id]/publish/route.ts`):
+**v4.x API Route** (`src/app/api/events/[id]/publish/route.ts` — **REMOVED in v5+**):
 
 ```typescript
 export async function POST(
@@ -2843,10 +2782,12 @@ export async function POST(
 }
 ```
 
-### API Contract
+### v4.x API Contract (DEPRECATED — ENDPOINT REMOVED)
+
+> **⚠️ HISTORICAL:** This endpoint was removed in v5+. See "API Endpoints (v5+ Current)" section for current contracts.
 
 ```typescript
-POST /api/events/:id/publish?confirm_credit=0|1
+// DEPRECATED: POST /api/events/:id/publish?confirm_credit=0|1 — REMOVED in v5+
 
 Step 0: Idempotency
   if (event.published_at IS NOT NULL) → 200 OK
@@ -2893,12 +2834,12 @@ Step 2: Personal events
   }
 ```
 
-### Critical Rules
+### v4.x Critical Rules (Still Valid in v5+, Updated Context)
 
-1. **Free events NEVER consume credits** - даже если credit available
-2. **Credit consumed only after confirmation** - 409 → user confirms → consume
-3. **One credit per event** - idempotent (re-publish doesn't consume again)
-4. **Atomic transaction** - credit + publish in single DB transaction
+1. **Free events NEVER consume credits** — даже если credit available ✅
+2. **Credit consumed only after confirmation** — 409 → user confirms → consume ✅ (now at save-time, not publish)
+3. **One credit per event** — idempotent (re-save doesn't consume again) ✅
+4. **Atomic transaction** — credit + event save in single DB transaction ✅ (no separate publish step)
 
 ---
 

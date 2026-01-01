@@ -6,12 +6,12 @@
 - Club roles & permissions
 - Club selection rules for events
 - Paid modes (personal credit vs club subscription)
-- Publish enforcement & validation
+- Save-time enforcement & validation (v5+ — no separate publish step)
 - Billing credits access/usage rules
 
 This SSOT must be read and followed for any changes in:
 - Clubs (memberships, roles, club page management)
-- Events create/update/publish flows
+- Event save flows (POST/PUT with save-time enforcement)
 - Billing enforcement for paid events
 
 Related SSOTs:
