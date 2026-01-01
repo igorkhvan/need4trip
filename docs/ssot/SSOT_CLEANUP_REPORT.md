@@ -156,5 +156,59 @@ No new normative requirements, IF–THEN rules, forbidden patterns, or responsib
 
 ---
 
-**Cleanup completed successfully. No normative changes. All SSOTs remain consistent.**
+## Post-Cleanup Validation (v2)
+
+**Date:** 2026-01-01  
+**Scope:** UI implementation removal + SSOT-Linter Checklist
+
+### Changes Made
+
+#### Part A — UI Implementation Removed from SSOT
+
+1. **Created:** `docs/billing/legacy/PaywallModal_v4.md`
+   - Contains full PaywallModal.tsx v4 implementation (~180 lines)
+   - Contains full CreditConfirmationModal.tsx implementation (~120 lines)
+   - Contains usePaywall and useCreditConfirmation hooks
+   - Marked as NON-NORMATIVE / REFERENCE ONLY
+
+2. **Modified:** `docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md` (v5.6 → v5.7)
+   - ✂️ Removed ~370 lines of React/TypeScript code
+   - ✅ Preserved normative rules (when paywall shows, error contracts)
+   - 🔗 Added reference to legacy file
+   - 📝 Updated changelog
+
+#### Part B — SSOT-Linter Checklist Added
+
+1. **Modified:** `docs/ssot/SSOT_ARCHITECTURE.md` (v4.5 → v4.6)
+   - ✅ Added § 27: SSOT-Linter Checklist (Mandatory for all PRs)
+   - Content rules (L1-L8): No framework code, no UI implementation, must use cross-references
+   - Structural rules (S1-S4): File locations, archive paths, section references
+   - PR verification checklist
+   - Violation handling procedure
+
+### Validation Results
+
+| Check | Result |
+|-------|--------|
+| No React/TS code in SSOT_BILLING_SYSTEM_ANALYSIS.md | ✅ PASS |
+| No duplicated norms across SSOTs | ✅ PASS |
+| Legacy code isolated in docs/billing/legacy/ | ✅ PASS |
+| SSOT governance preserved (versioning, changelog) | ✅ PASS |
+| SSOT-Linter Checklist active | ✅ PASS |
+| Cross-references valid | ✅ PASS |
+
+### Future Guardrails
+
+The SSOT-Linter Checklist (SSOT_ARCHITECTURE.md § 27) now provides permanent protection against:
+
+- ❌ UI/TS/React code leaking into SSOT documents
+- ❌ Duplicated normative rules across SSOTs
+- ❌ Legacy flows in normative documents
+- ❌ Unversioned/untracked SSOT changes
+
+All future PRs modifying SSOT documents MUST verify against § 27 checklist.
+
+---
+
+**Post-Cleanup completed successfully. UI implementation isolated. SSOT-Linter Checklist active.**
 

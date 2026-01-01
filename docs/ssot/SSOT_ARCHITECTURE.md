@@ -2,7 +2,7 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 4.5  
+**Version:** 4.6  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
@@ -10,6 +10,12 @@
 ## Change Log (Recent)
 
 > **Full history:** See [Document History](#document-history) at the end of this document.
+
+### v4.6 (2026-01-01) — SSOT-Linter Checklist
+- Added § 27: SSOT-Linter Checklist (Mandatory for all PRs)
+- Defines content/structural rules for SSOT documents
+- Prevents framework-specific code in SSOT
+- Requires archiving removed content
 
 ### v4.5 (2026-01-01) — Cleanup / Archival / Dedup
 - Compressed Change Log (moved full history to Document History table)
@@ -59,6 +65,7 @@
 24. [Observability Minimum](#observability-minimum) ⚡ (v4.0)
 25. [Operational Compliance Checklist](#operational-compliance-checklist) ⚡ (v4.0, extended v4.3)
 26. [Aborted / Incomplete Actions](#aborted--incomplete-actions) ⚡ NEW (v4.3)
+27. [SSOT-Linter Checklist](#ssot-linter-checklist-mandatory-for-all-prs) ⚡ NEW (v4.6)
 
 ---
 
@@ -3117,6 +3124,76 @@ localStorage.setItem('pendingPayment', JSON.stringify({ eventId, transactionId }
 
 ---
 
+## 27. SSOT-Linter Checklist (Mandatory for all PRs)
+
+**Status:** CANONICAL (v4.6)
+
+This checklist MUST be verified before merging any PR that modifies SSOT documents.
+
+### Content Rules
+
+| # | Rule | Status |
+|---|------|--------|
+| **L1** | ❌ SSOT MUST NOT contain framework-specific code (React, TypeScript, hooks, polling, intervals) | ENFORCE |
+| **L2** | ❌ SSOT MUST NOT describe "how to implement UI" — only "what behavior is required" | ENFORCE |
+| **L3** | ✅ SSOT MUST describe system behavior, invariants, contracts, forbidden patterns | ENFORCE |
+| **L4** | ❌ Legacy flows, historical implementations MUST live in `/docs/**/legacy/` or `/docs/ssot/archive/` | ENFORCE |
+| **L5** | ✅ Exactly ONE canonical SSOT per rule — no duplicated IF–THEN rules across SSOTs | ENFORCE |
+| **L6** | ❌ No duplicated normative content — use cross-references instead | ENFORCE |
+| **L7** | ✅ All SSOT changes MUST include version bump + changelog entry | ENFORCE |
+| **L8** | ✅ Any removed content MUST be archived (not silently deleted) OR explicitly marked as obsolete | ENFORCE |
+
+### Structural Rules
+
+| # | Rule | Status |
+|---|------|--------|
+| **S1** | SSOT files MUST be in `/docs/ssot/` with `SSOT_` prefix | ENFORCE |
+| **S2** | Archive files MUST be in `/docs/ssot/archive/` or `/docs/**/legacy/` | ENFORCE |
+| **S3** | Cross-references MUST use section numbers (e.g., "See § 26") | ENFORCE |
+| **S4** | Implementation examples in SSOT MUST be minimal (≤10 lines) and illustrative, not copy-paste ready | ENFORCE |
+
+### What IS Allowed in SSOT
+
+- Contract definitions (error structures, API envelopes, status codes)
+- Behavioral rules (IF condition THEN outcome)
+- Invariants (MUST / MUST NOT statements)
+- Cross-references to other SSOTs
+- Minimal pseudo-code or type signatures
+- Decision tables with deterministic outcomes
+
+### What is NOT Allowed in SSOT
+
+- Full React component implementations
+- Hook implementations (useState, useEffect, custom hooks)
+- CSS/Tailwind styling details (see SSOT_DESIGN_SYSTEM.md for UI patterns)
+- Polling/interval logic
+- API fetch implementations
+- UI state management code
+- Historical migration procedures (archive them)
+
+### PR Verification
+
+Before merging PR with SSOT changes:
+
+```markdown
+- [ ] No React/TypeScript code blocks > 10 lines
+- [ ] No hook implementations (useState, useEffect)
+- [ ] No framework-specific imports
+- [ ] Version bumped in document header
+- [ ] Changelog entry added
+- [ ] No duplicated rules (cross-reference instead)
+- [ ] Removed content archived (not deleted)
+```
+
+### Violation Handling
+
+If SSOT contains implementation code:
+1. Extract code to `/docs/**/legacy/` or actual source file
+2. Replace with behavioral description or cross-reference
+3. Bump version with "Removed implementation from SSOT" changelog
+
+---
+
 ## Document History
 
 | Date | Version | Change |
@@ -3137,6 +3214,7 @@ localStorage.setItem('pendingPayment', JSON.stringify({ eventId, transactionId }
 | 2026-01-01 | 4.3 | **Aborted / Incomplete Actions:** Added §26 (Aborted / Incomplete Actions — Canonical System Behavior) — deterministic rules for pending transactions (NO-OP), user-cancelled payments (NOT error), payment success ≠ action success, paywall may reappear unlimited times, scenario table with 8 canonical outcomes, UI/backend responsibilities split. Updated §25.10 (compliance checklist). Cross-ref: SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_CLUBS_EVENTS_ACCESS.md, SSOT_DESIGN_SYSTEM.md. |
 | 2026-01-01 | 4.4 | **Explicit vs Implicit Abort Finalization:** Added §26.4 (UI Behavior Rules — Explicit vs Implicit Abort). Added explicit/implicit cancellation definitions to §26.1. Explicit cancellation → silent return (no UI message). Implicit interruption → neutral informational hint on next user action (not error, not toast, not persistent). Updated §25.10 compliance checklist with explicit/implicit abort UX items. Added §26.4.3 Forbidden Patterns (UI). Cross-ref: SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint. |
 | 2026-01-01 | 4.5 | **Cleanup / Archival / Dedup:** Compressed Change Log (moved full history to Document History table). No normative changes. |
+| 2026-01-01 | 4.6 | **SSOT-Linter Checklist:** Added § 27 (SSOT-Linter Checklist — Mandatory for all PRs). Defines content/structural rules: no framework-specific code (React/TS), no hook implementations, legacy in archive only, version bump required, cross-references over duplication. PR verification checklist. Violation handling procedure. |
 
 ---
 

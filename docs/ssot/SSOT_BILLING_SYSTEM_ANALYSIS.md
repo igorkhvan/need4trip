@@ -1,13 +1,18 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.6  
+> **Версия:** 5.7  
 > **Дата:** 1 января 2026  
-> **Статус:** Production (v5.6 - SSOT Cleanup)
+> **Статус:** Production (v5.7 - UI Implementation Removed)
 
 ---
 
 ## 🆕 Changelog
+
+**v5.7 (1 January 2026) — UI Implementation Removed from SSOT:**
+- ✂️ Removed React/TypeScript code (PaywallModal, CreditConfirmationModal) from SSOT
+- 📦 Moved UI implementation to legacy reference: `docs/billing/legacy/PaywallModal_v4.md`
+- ✅ Preserved normative rules: when paywall shows, error contracts, UI behavior principles
 
 **v5.6 (1 January 2026) — SSOT Cleanup:**
 - 📦 Archived NON-NORMATIVE history → `docs/ssot/archive/SSOT_BILLING_HISTORY.md`
@@ -519,383 +524,34 @@ export const PAYWALL_REASONS = [
 
 ---
 
-## 🚧 Paywall Modal (v4)
+## 🚧 Paywall UI Behavior (Normative Rules)
 
-### PaywallModal.tsx (v4 - Purchase Intent + Polling)
+> **Implementation Reference:** `docs/billing/legacy/PaywallModal_v4.md` — contains historical v4 code.  
+> **Current Implementation:** `src/components/billing/PaywallModal.tsx`, `src/components/billing/CreditConfirmationModal.tsx`
 
-**Статус:** ✅ Updated for v4 (26 Dec 2024)
+### PaywallModal — When Shown
 
-**Файл:** `src/components/billing/PaywallModal.tsx`
+| Trigger | HTTP Status | UI Action |
+|---------|-------------|-----------|
+| Limit exceeded (participants, members) | 402 | Show PaywallModal with options |
+| Paid feature not allowed on plan | 402 | Show PaywallModal with upgrade CTA |
+| Credit confirmation required | 409 | Show CreditConfirmationModal |
 
-**Features:**
-- ✅ Multiple payment options (ONE_OFF + CLUB)
-- ✅ Unified `/api/billing/purchase-intent` API
-- ✅ Transaction status polling
-- ✅ Visual feedback (loading states)
-- ✅ Error handling
+### UI Rules (Normative)
 
-**Full Implementation:**
+1. **UI DOES NOT decide limits** — Frontend only displays modal and reacts to backend errors
+2. **Backend is SSOT** — All enforcement via `enforceClubAction()` / `enforceEventPublish()`
+3. **PaywallError structure** — See PaywallError section below for contract
+4. **No countdown timers** — TTL is backend concern, UI has no authority over time limits
+5. **User cancel ≠ error** — Closing paywall silently returns to form (see SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows)
 
-```typescript
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import type { PaywallError } from "@/lib/types/billing";
+### CreditConfirmationModal — Purpose
 
-interface PaywallModalProps {
-  open: boolean;
-  onClose: () => void;
-  error: PaywallError; // 402 response payload
-}
+Shown when 409 `CREDIT_CONFIRMATION_REQUIRED` is received. User must explicitly confirm credit consumption before event save completes.
 
-export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [transactionId, setTransactionId] = useState<string | null>(null);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  
-  // Handle purchase intent
-  const handlePurchase = async (productCode: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/billing/purchase-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_code: productCode })
-      });
-      
-      if (!res.ok) throw new Error('Purchase failed');
-      
-      const data = await res.json();
-      setTransactionId(data.data.transaction_id);
-      setPaymentUrl(data.data.payment_details.invoice_url);
-      
-      // Start polling for status
-      startPolling(data.data.transaction_id);
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-    }
-  };
-  
-  // Poll transaction status
-  const startPolling = (txId: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/billing/transactions/status?transaction_id=${txId}`);
-        const data = await res.json();
-        
-        if (data.data.status === 'completed') {
-          clearInterval(interval);
-          setLoading(false);
-          onClose();
-          window.location.reload(); // Refresh to show new credit
-        }
-        
-        if (data.data.status === 'failed') {
-          clearInterval(interval);
-          setLoading(false);
-          alert('Payment failed');
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }, 3000); // Poll every 3 seconds
-    
-    // Cleanup after 5 minutes
-    setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
-  };
-  
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {error.reason === 'PUBLISH_REQUIRES_PAYMENT' 
-              ? 'Превышен лимит бесплатного плана'
-              : 'Требуется обновление плана'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Current situation */}
-          <div className="bg-amber-50 p-4 rounded-lg">
-            <p className="text-sm text-amber-900">
-              {error.message}
-            </p>
-            {error.meta && (
-              <p className="text-xs text-amber-700 mt-2">
-                Запрошено: {error.meta.requestedParticipants} участников
-                {error.meta.freeLimit && ` / Лимит: ${error.meta.freeLimit}`}
-              </p>
-            )}
-          </div>
-          
-          {/* Payment options */}
-          {error.options && error.options.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="font-medium">Варианты оплаты:</h3>
-              
-              {error.options.map((option, idx) => (
-                <div key={idx} className="border p-4 rounded-lg">
-                  {option.type === 'ONE_OFF_CREDIT' && (
-                    <>
-                      <h4 className="font-semibold">Разовый кредит</h4>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Одноразовое событие до 500 участников
-                      </p>
-                      <p className="font-bold text-lg mb-3">
-                        {option.price} {option.currency_code === 'KZT' ? '₸' : option.currency_code}
-                      </p>
-                      <Button
-                        onClick={() => handlePurchase(option.product_code)}
-                        disabled={loading}
-                        className="w-full"
-                      >
-                        {loading ? 'Обработка...' : 'Купить'}
-                      </Button>
-                    </>
-                  )}
-                  
-                  {option.type === 'CLUB_ACCESS' && (
-                    <>
-                      <h4 className="font-semibold">Клубный доступ</h4>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Неограниченные события + members
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={() => window.location.href = '/pricing'}
-                        className="w-full"
-                      >
-                        Посмотреть тарифы
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {/* Payment in progress */}
-          {paymentUrl && (
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-900 mb-2">
-                Платёж создан. Оплатите по ссылке:
-              </p>
-              <a 
-                href={paymentUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-              >
-                Открыть Kaspi
-              </a>
-              <p className="text-xs text-blue-700 mt-2">
-                После оплаты страница обновится автоматически
-              </p>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Hook for easy usage
-export function usePaywall() {
-  const [paywallError, setPaywallError] = useState<PaywallError | null>(null);
-  
-  const showPaywall = (error: PaywallError) => setPaywallError(error);
-  const hidePaywall = () => setPaywallError(null);
-  
-  const PaywallModalComponent = paywallError ? (
-    <PaywallModal open={!!paywallError} onClose={hidePaywall} error={paywallError} />
-  ) : null;
-  
-  return { showPaywall, hidePaywall, PaywallModalComponent };
-}
-```
-
-**Usage (v5+ — save-time enforcement):**
-
-```typescript
-import { usePaywall } from "@/components/billing/PaywallModal";
-
-const { showPaywall, PaywallModalComponent } = usePaywall();
-
-try {
-  // v5+: enforcement happens at save-time (POST/PUT), no separate publish step
-  await fetch('/api/events', { method: 'POST', body: JSON.stringify(payload) });
-} catch (err) {
-  if (err.response?.status === 402) {
-    showPaywall(err.response.data.error.details);
-  }
-}
-
-return <>{PaywallModalComponent}</>;
-```
-
-### CreditConfirmationModal.tsx (v4)
-
-**Файл:** `src/components/billing/CreditConfirmationModal.tsx`
-
-**Purpose:** Показывается при 409 CREDIT_CONFIRMATION_REQUIRED
-
-**Full Implementation:**
-
-```typescript
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, CreditCard } from "lucide-react";
-import type { CreditCode } from "@/lib/types/billing";
-
-interface CreditConfirmationModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  creditCode: CreditCode;
-  eventId: string;
-  requestedParticipants: number;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-}
-
-export function CreditConfirmationModal({
-  open,
-  onOpenChange,
-  creditCode,
-  requestedParticipants,
-  onConfirm,
-  onCancel,
-  isLoading = false,
-}: CreditConfirmationModalProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-full">
-              <CreditCard className="w-5 h-5 text-orange-600" />
-            </div>
-            <DialogTitle>Подтвердите использование кредита</DialogTitle>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Warning */}
-          <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-amber-900">
-                Это действие нельзя отменить
-              </p>
-              <p className="text-amber-700 mt-1">
-                После подтверждения кредит будет привязан к этому событию
-                и станет недоступен для других событий.
-              </p>
-            </div>
-          </div>
-
-          {/* Details */}
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Кредит:</span>
-              <span className="font-medium">{creditCode}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Участников:</span>
-              <span className="font-medium">{requestedParticipants}</span>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            Отмена
-          </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="flex-1 bg-orange-600 hover:bg-orange-700"
-          >
-            {isLoading ? 'Сохранение...' : 'Подтвердить и сохранить'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Hook for easy usage
-export function useCreditConfirmation() {
-  const [modalState, setModalState] = useState<{
-    open: boolean;
-    creditCode?: CreditCode;
-    eventId?: string;
-    requestedParticipants?: number;
-  }>({ open: false });
-
-  const showConfirmation = (data: {
-    creditCode: CreditCode;
-    eventId: string;
-    requestedParticipants: number;
-  }) => {
-    setModalState({ open: true, ...data });
-  };
-
-  const hideConfirmation = () => {
-    setModalState({ open: false });
-  };
-
-  return { modalState, showConfirmation, hideConfirmation };
-}
-```
-
-**Usage:**
-
-```typescript
-import { useCreditConfirmation, CreditConfirmationModal } from "@/components/billing/CreditConfirmationModal";
-
-const { showConfirmation, hideConfirmation, modalState } = useCreditConfirmation();
-const [pendingEventId, setPendingEventId] = useState<string | null>(null);
-
-// When 409 received
-if (publishRes.status === 409) {
-  const error409 = await publishRes.json();
-  setPendingEventId(eventId);
-  showConfirmation({
-    creditCode: error409.error.meta.creditCode,
-    eventId: error409.error.meta.eventId,
-    requestedParticipants: error409.error.meta.requestedParticipants
-  });
-}
-
-// Render modal
-return (
-  <>
-    {modalState.open && modalState.creditCode && (
-      <CreditConfirmationModal
-        open={modalState.open}
-        onOpenChange={hideConfirmation}
-        creditCode={modalState.creditCode}
-        eventId={modalState.eventId!}
-        requestedParticipants={modalState.requestedParticipants!}
-        onConfirm={async () => {
-          hideConfirmation();
-          // v5+: Retry save with confirm_credit=1
-          await handleSave(pendingPayload, true); // ?confirm_credit=1
-        }}
-        onCancel={hideConfirmation}
-      />
-    )}
-  </>
-);
-```
+**Behavior:**
+- On confirm: Retry save with `?confirm_credit=1`
+- On cancel: Return to form, no credit consumed
 
 ---
 
