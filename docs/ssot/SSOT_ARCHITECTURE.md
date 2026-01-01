@@ -2,12 +2,24 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 4.2  
+**Version:** 4.3  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v4.3 — Aborted / Incomplete Actions)
+- **Added § 26: Aborted / Incomplete Actions (Canonical System Behavior)** — Deterministic rules for handling:
+  - Pending transactions = NO-OP (no domain/UI state change)
+  - User-cancelled payments (close paywall, abort payment) = NOT an error
+  - TTL/expiration is backend concern; UI has no timers or "awaiting" states
+  - Payment success ≠ action success (UI must await backend confirmation)
+  - Paywall may reappear unlimited times until constraints satisfied
+  - Scenario table: all abort/incomplete flows with deterministic outcomes
+  - UI/Backend responsibilities split
+- **Updated § 25: Operational Compliance Checklist** — Added aborted flows compliance items
+- **Cross-references** — SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_DESIGN_SYSTEM.md
 
 ### 2026-01-01 (v4.2 — System Errors Handling)
 - **Added § 20.7: System Errors & Low-Level Failures** — Explicit rules for DB/infra/internal error handling:
@@ -87,7 +99,8 @@
     - 22.8 [Retry UX Policy](#228-retry-ux-policy) ⚡ NEW (v4.1)
 23. [Failure Modes & Degradation Rules](#failure-modes--degradation-rules) ⚡ (v4.0, updated v4.1)
 24. [Observability Minimum](#observability-minimum) ⚡ (v4.0)
-25. [Operational Compliance Checklist](#operational-compliance-checklist) ⚡ (v4.0, extended v4.2)
+25. [Operational Compliance Checklist](#operational-compliance-checklist) ⚡ (v4.0, extended v4.3)
+26. [Aborted / Incomplete Actions](#aborted--incomplete-actions) ⚡ NEW (v4.3)
 
 ---
 
@@ -2883,6 +2896,169 @@ grep -r "error\.message\|err\.message" src/components/
 grep -r "toast.*error\|showError" src/components/
 ```
 
+### 25.10 Aborted / Incomplete Actions Compliance (v4.3)
+
+**Reference:** § 26 (Aborted / Incomplete Actions)
+
+- [ ] Pending transactions do NOT change domain state or grant entitlements
+- [ ] UI does NOT display "awaiting payment" as a persistent domain state
+- [ ] User-cancelled paywall does NOT trigger error UI (returns to context silently)
+- [ ] Paywall may reappear on next enforcement without limit
+- [ ] Payment success does NOT imply action success — UI waits for backend confirmation
+- [ ] No "countdown" or "TTL timer" shown in UI for pending transactions
+- [ ] Retry after interruption re-triggers enforcement (no cached "was paying" state)
+
+---
+
+## 26. Aborted / Incomplete Actions (Canonical System Behavior)
+
+**Status:** CANONICAL (v4.3)
+
+This section defines deterministic behavior for all scenarios where user actions are NOT completed: user closes paywall, payment cancelled, network interruption, tab closed, etc.
+
+**SSOT Authority:** This section is the ONLY source of truth for aborted/incomplete action behavior. SSOT_BILLING_SYSTEM_ANALYSIS.md and SSOT_DESIGN_SYSTEM.md reference this section; they do NOT define alternative rules.
+
+---
+
+### 26.1 Definitions
+
+| Term | Definition |
+|------|------------|
+| **Incomplete action** | Any domain operation (create event, consume credit, upgrade plan) that did not receive backend success confirmation |
+| **Aborted flow** | User-initiated cancellation: closing paywall modal, pressing browser back, clicking cancel in payment UI |
+| **Pending transaction** | `billing_transactions` record with `status = 'pending'` — payment initiated but not confirmed |
+| **Cancelled transaction** | User explicitly cancelled at payment provider (Kaspi, etc.) |
+| **Failed transaction** | Payment provider rejected (insufficient funds, declined, timeout) |
+| **Domain state** | Persisted business data: events, billing_credits, club_subscriptions |
+| **UI state** | Ephemeral component state: loading flags, modal visibility, form data |
+
+---
+
+### 26.2 Invariants (MUST)
+
+**These rules are non-negotiable. Any implementation that violates them is incorrect.**
+
+| ID | Invariant | Rationale |
+|----|-----------|-----------|
+| **INV-1** | **Pending transaction = NO-OP for domain and UI** — A `pending` transaction MUST NOT change domain access, limits, or entitlements. UI MUST NOT display "credit purchased" or "upgraded" while transaction is pending. | Eventual consistency: only `completed` transactions affect domain. |
+| **INV-2** | **No optimistic entitlement** — UI MUST NOT grant access to features based on "payment started" or "payment pending". Access is granted ONLY after backend confirms domain change. | Prevents inconsistent states where user "has" something they didn't pay for. |
+| **INV-3** | **UI bases decisions on backend enforcement outcomes only** — Frontend MUST NOT store or infer domain state from local variables. Each save/action triggers fresh enforcement check. | Single source of truth for constraints. |
+| **INV-4** | **Payment success ≠ action success** — Even if payment completed, the domain action (event save, credit bind) may fail. UI MUST NOT assume success until backend returns success response. | Compensating transaction may fail; payment may succeed but constraint violated. |
+| **INV-5** | **Idempotent-safe retry (manual) where allowed** — User may retry the same action after interruption. System MUST handle retry safely (idempotency key or state check). | Network failures and tab closes are normal; user expects to retry. |
+| **INV-6** | **TTL/expiration is backend concern** — Frontend MUST NOT display countdowns, timers, or "expires in" for pending transactions. Backend handles TTL expiration. | UI simplicity; backend is authoritative for time-based cleanup. |
+| **INV-7** | **User cancel is NOT an error** — User closing paywall, clicking cancel, or navigating away MUST NOT trigger error UI (toast, alert, error banner). | User has right to change mind; this is normal flow, not failure. |
+| **INV-8** | **Paywall may reappear unlimited times** — Each enforcement check may trigger paywall. There is NO limit on paywall display frequency. | Until constraints are satisfied, paywall is the correct response. |
+
+---
+
+### 26.3 Scenario Table (Canonical Outcomes)
+
+Each row defines the ONLY correct behavior for the scenario. No alternatives.
+
+| # | Trigger | User Action | Backend State | UI Outcome | Next Attempt Behavior |
+|---|---------|-------------|---------------|------------|----------------------|
+| **S1** | Exceeds limit → Paywall shown | User closes paywall (X button, ESC, click outside) | No change (no transaction created) | Return to form/context. NO error shown. Form data preserved. | Next save → enforcement → paywall again if still exceeding |
+| **S2** | User starts payment (clicks "Pay" in Paywall) | User cancels at provider (Kaspi cancel, browser back from payment page) | Transaction may be `pending` or `cancelled` depending on provider | Return to context. NO error shown. Paywall closed. | Next save → enforcement → paywall (if still exceeding). Pending tx expires via backend TTL. |
+| **S3** | User starts payment | Network drops / tab closed during payment | Transaction may be `pending` (if created before drop) | N/A (user left). On return: no special state shown. | User returns, retries action → fresh enforcement → paywall if needed. If payment completed in background, user has entitlement on refresh. |
+| **S4** | Payment pending (created earlier) | User retries save later | Pending transaction exists in DB (may have expired) | Normal enforcement: if pending expired or limits still exceeded → paywall. If user has new completed credit → proceed. | Standard enforcement flow. No "resume" or "continue payment" UI. |
+| **S5** | Payment completed | Save/action fails (domain constraint, DB error) | Payment `completed` but credit NOT consumed (or event NOT saved) | Error shown via PageErrorState/SectionErrorState (NOT toast). Credit remains `available` if not consumed. | User retries → enforcement passes (has credit) → retry save. Credit consumed on success. |
+| **S6** | User clicks Save twice quickly (double-submit) | Concurrent requests | Idempotency: second request returns same response or 409 IN_PROGRESS | First click proceeds, second is de-duplicated. No double-creation. | Automatic via idempotency key. User sees single result. |
+| **S7** | `confirm_credit=1` started but request interrupted (tab close, network) | Client-side abort | If request reached server: may have consumed credit + saved event. If not: nothing happened. | On return: user checks event list / profile credits. | If action completed → event exists, credit consumed. If not → retry triggers fresh flow (paywall if no credit, confirm if credit exists). |
+| **S8** | Payment polling in progress | User closes modal before polling completes | Polling stops. Transaction may complete in background. | Modal closes. No error. | On next page load / action: if payment completed, user has entitlement. If not, enforcement triggers paywall. |
+
+---
+
+### 26.4 Responsibilities Split
+
+#### 26.4.1 Backend Responsibilities
+
+| Responsibility | Implementation |
+|----------------|----------------|
+| **Transaction TTL enforcement** | Cron job / scheduled task marks `pending` → `expired` after `billing_policy.pending_ttl_minutes` |
+| **Idempotency** | `withIdempotency()` wrapper stores response, returns cached response for duplicate keys |
+| **Atomicity boundaries** | `executeWithCreditTransaction()` ensures credit consumption + event save are atomic. Rollback on failure. |
+| **Final authority on domain state** | All enforcement checks read from DB. No client-supplied "I already paid" flags accepted. |
+| **Payment webhook handling** | Webhook from provider → mark transaction `completed` → issue credit. Client polls or gets state on next request. |
+| **Compensating transactions** | If credit consumed but event save fails → rollback credit (or delete event). CRITICAL log for manual review. |
+
+#### 26.4.2 Frontend Responsibilities
+
+| Responsibility | Implementation |
+|----------------|----------------|
+| **NEVER assume success** | UI waits for `respondSuccess()` / HTTP 2xx before showing success state |
+| **NEVER store "awaiting payment" as domain state** | No local storage of "purchase in progress". Each action is independent. |
+| **Re-run enforcement on next save** | Even if user "just closed paywall", next save triggers fresh `enforceEventPublish()` |
+| **Preserve form data on paywall close** | User closes paywall → form data remains → user can adjust (e.g., reduce participants) or retry |
+| **Silent return on user cancel** | `onClose` of PaywallModal does NOT call error handler or show toast |
+| **Reset UI state on navigation** | If user navigates away during flow, all pending UI state (modals, loading) is discarded |
+| **Use ActionController for phase management** | `controller.phase` tracks UI state; reset to `idle` on cancel or navigation |
+
+---
+
+### 26.5 Implementation Notes
+
+#### 26.5.1 Paywall Close Handler
+
+```typescript
+// ✅ CORRECT: Silent close, no error
+<PaywallModal
+  open={showPaywall}
+  onClose={() => setShowPaywall(false)}  // Just close, no error
+  error={paywallError}
+/>
+
+// ❌ WRONG: Treating close as error
+<PaywallModal
+  onClose={() => {
+    setShowPaywall(false);
+    showToast({ type: 'error', message: 'Payment cancelled' });  // FORBIDDEN
+  }}
+/>
+```
+
+#### 26.5.2 Form Data Preservation
+
+```typescript
+// ✅ CORRECT: Form data preserved after paywall close
+const handleSubmit = async () => {
+  try {
+    await saveEvent(formData);
+  } catch (err) {
+    if (err.status === 402) {
+      setPaywallError(err.details);
+      setShowPaywall(true);
+      // formData is NOT cleared — user can retry or adjust
+      return;
+    }
+    // Other errors...
+  }
+};
+```
+
+#### 26.5.3 No "Resume Payment" State
+
+```typescript
+// ❌ WRONG: Storing payment state for later
+localStorage.setItem('pendingPayment', JSON.stringify({ eventId, transactionId }));
+
+// ✅ CORRECT: Each action is independent
+// On page load, just render form. User clicks save → fresh enforcement.
+```
+
+---
+
+### 26.6 Cross-References
+
+| Topic | SSOT Location |
+|-------|---------------|
+| Transaction states (pending/completed/failed) | SSOT_BILLING_SYSTEM_ANALYSIS.md § Database Schema |
+| Credit consumption timing | SSOT_CLUBS_EVENTS_ACCESS.md § 10 |
+| Compensating transactions | SSOT_BILLING_SYSTEM_ANALYSIS.md § Credit Consumption (v5.1) |
+| Idempotency implementation | § 21 (this document) |
+| ActionController phases | § 15 (this document) |
+| Error UI patterns (NOT for user-cancel) | SSOT_DESIGN_SYSTEM.md § Error States |
+| PaywallModal component | SSOT_BILLING_SYSTEM_ANALYSIS.md § Paywall Modal |
+
 ---
 
 ## Document History
@@ -2902,6 +3078,7 @@ grep -r "toast.*error\|showError" src/components/
 | 2026-01-01 | 4.0 | **Operational Completeness:** Added §20-25 (Error Envelope, Idempotency, UI State Model, Failure Modes, Observability, Compliance Checklist). Updated Ownership Map. Identified duplicate code for migration. |
 | 2026-01-01 | 4.1 | **Error & Loading UX Completeness:** Added §22.5-22.8 (UI Error Surface Model, Loading Taxonomy, Loading Decision Matrix, Retry UX Policy). Updated §23.1 (errors inside layout). Extended §25 (error/loading compliance). Clarified toast policy (success/info only). |
 | 2026-01-01 | 4.2 | **System Errors Handling:** Added §20.7 (System Errors & Low-Level Failures) — DB/infra/internal error handling, backend mapping responsibility, observability boundary. Cross-ref: SSOT_DESIGN_SYSTEM.md v1.3 (System Errors UI Rules, Canonical Error Intents, FORBIDDEN UI BEHAVIOR). |
+| 2026-01-01 | 4.3 | **Aborted / Incomplete Actions:** Added §26 (Aborted / Incomplete Actions — Canonical System Behavior) — deterministic rules for pending transactions (NO-OP), user-cancelled payments (NOT error), payment success ≠ action success, paywall may reappear unlimited times, scenario table with 8 canonical outcomes, UI/backend responsibilities split. Updated §25.10 (compliance checklist). Cross-ref: SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_CLUBS_EVENTS_ACCESS.md, SSOT_DESIGN_SYSTEM.md. |
 
 ---
 

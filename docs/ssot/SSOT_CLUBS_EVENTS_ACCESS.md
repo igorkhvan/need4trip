@@ -1,6 +1,6 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.3  
+**Version:** 1.4  
 **Last Updated:** 2026-01-01  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
@@ -22,6 +22,12 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v1.4 — Aborted Flows Cross-Reference)
+- **Added §10.1 Rule #6: Aborted/incomplete attempts** — Explicit rule that interrupted `confirm_credit=1` requests do NOT consume credit unless backend completed transaction
+- **Added §10.3 cross-reference to SSOT_ARCHITECTURE.md § 26** — Canonical source for aborted flow handling
+- **Added A4.5 edge case** — Credit-confirmed save interrupted scenario with deterministic outcomes
+- **Version bump to 1.4** — Aborted flows alignment
 
 ### 2026-01-01 (v5+ Alignment)
 - **Updated all "publish" references to "save" (v5+)** — §5.3, §5.4, §5.5, §9, §10. Rationale: v5+ has no separate publish step; enforcement at save-time.
@@ -318,6 +324,12 @@ This section defines WHEN and HOW billing credits are consumed. This text is con
    - Once `consumed_event_id` is set, it MUST NOT be changed
    - The credit-to-event binding is immutable (audit requirement)
 
+6. **Aborted/incomplete attempts do NOT consume credit**
+   - If `confirm_credit=1` request is interrupted (network drop, tab close, client abort), no credit is consumed unless backend completed the transaction
+   - Credit consumption is atomic with event persistence; partial completion is impossible
+   - User may retry after interruption; fresh enforcement determines if credit is needed
+   - **Reference:** SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions" for full behavior specification
+
 ### 10.2 Access Rules by Context
 
 | Context | Credit Consumption | Governing Authority |
@@ -330,6 +342,9 @@ This section defines WHEN and HOW billing credits are consumed. This text is con
 
 For database-level invariants (state machine, CHECK constraint `chk_billing_credits_consumed_state`), see:
 **SSOT_DATABASE.md § 8.1 "Billing Credits State Machine"**
+
+For aborted/incomplete action handling (user cancel, network interruption, payment not completed), see:
+**SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions (Canonical System Behavior)"**
 
 ---
 
@@ -445,6 +460,15 @@ Given: U is admin in A
 When: U publishes club event with is_paid=false
 Then:
 - ALLOW
+
+### A4.5 Credit-confirmed save interrupted (aborted flow)
+Given: U starts personal event save with confirm_credit=1
+And: Request is interrupted (network drop, tab close, client abort)
+Then:
+- If backend completed transaction before interrupt → credit consumed, event persisted
+- If backend did NOT complete transaction → NO credit consumed, NO event persisted
+- User can retry; fresh enforcement determines current state
+- **Reference:** SSOT_ARCHITECTURE.md § 26 for full aborted flow rules
 
 ---
 

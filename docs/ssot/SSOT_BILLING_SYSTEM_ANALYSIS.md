@@ -1,11 +1,19 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.3 ⚡  
+> **Версия:** 5.4 ⚡  
 > **Дата:** 1 января 2026  
-> **Статус:** Production (v5.3 - SSOT v5+ Alignment)
+> **Статус:** Production (v5.4 - Aborted Actions Compliance)
 
 ---
+
+## 🆕 Что нового в v5.4
+
+**1 January 2026:**
+- ✅ **Added "Aborted Purchase Attempts" section** - Billing-specific rules for non-completed transactions
+- ✅ **Cross-reference to SSOT_ARCHITECTURE.md § 26** - Canonical source for aborted/incomplete actions
+- ✅ **Transaction State → Entitlement Mapping** - Explicit table showing when credits are issued
+- ✅ **No TTL timers in UI rule** - Frontend must not display countdown for pending transactions
 
 ## 🆕 Что нового в v5.3
 
@@ -2630,6 +2638,48 @@ if (shouldUseCredit) {
    - User disconnects after event created but before credit consumed
    - Transaction will fail, event will be deleted
    - User can retry safely
+
+---
+
+### Aborted Purchase Attempts (Non-Completion)
+
+**Status:** CANONICAL (v5.3)
+
+**SSOT Authority:** SSOT_ARCHITECTURE.md § 26 is the primary source of truth for aborted/incomplete action behavior. This section provides billing-specific clarifications without duplicating rules.
+
+**Reference:** See SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions (Canonical System Behavior)" for:
+- Full definitions (incomplete action, aborted flow, pending/cancelled/failed transaction)
+- 8 canonical invariants (INV-1 through INV-8)
+- Scenario table with deterministic outcomes
+- UI/Backend responsibilities split
+
+#### Billing-Specific Rules (Non-Duplicative)
+
+| Rule | Description |
+|------|-------------|
+| **pending/cancelled/aborted = no credit consumed** | A `billing_credits` record is created with `status='available'` ONLY after transaction `status='completed'`. Pending/cancelled/failed transactions do NOT issue credits. |
+| **pending transaction ≠ entitlement** | `billing_transactions.status='pending'` does NOT grant access. Entitlement exists ONLY when credit `status='available'` (or club subscription `status='active'`). |
+| **Transaction logs ≠ entitlement** | `billing_transactions` is an audit trail. Access checks read from `billing_credits` and `club_subscriptions`, NOT from transactions. |
+| **No TTL timers in UI** | Frontend MUST NOT display "payment expires in X minutes". TTL enforcement is backend-only (see `billing_policy.pending_ttl_minutes`). |
+| **Payment completed but action failed** | If payment completed (transaction `status='completed'`) but event save failed, credit remains `status='available'` and user can retry. Credit is NOT lost. |
+
+#### Transaction State → Entitlement Mapping
+
+| Transaction Status | Credit Issued | Domain Access Granted |
+|-------------------|---------------|----------------------|
+| `pending` | ❌ NO | ❌ NO |
+| `completed` | ✅ YES (`status='available'`) | ✅ YES (after credit bound to action) |
+| `failed` | ❌ NO | ❌ NO |
+| `refunded` | ❌ Credit revoked if issued | ❌ NO (access may be revoked) |
+
+#### Implementation Cross-References
+
+| Topic | Location |
+|-------|----------|
+| Invariants & scenario table | SSOT_ARCHITECTURE.md § 26 |
+| Compensating transactions | This document § Credit Consumption (v5.1) |
+| UI behavior on user cancel | SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows |
+| Credit consumption timing | SSOT_CLUBS_EVENTS_ACCESS.md § 10 |
 
 ---
 

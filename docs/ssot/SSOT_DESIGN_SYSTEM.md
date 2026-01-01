@@ -1,6 +1,6 @@
 # Need4Trip — Design System (SSOT)
 
-**Версия:** 1.3  
+**Версия:** 1.4  
 **Дата обновления:** 1 января 2026  
 **Статус:** Production Ready ✅
 
@@ -1349,6 +1349,111 @@ The following patterns are **STRICTLY PROHIBITED** and constitute a compliance v
 
 ---
 
+### Aborted User-Initiated Flows
+
+**Status:** CANONICAL (v1.4)
+
+**SSOT Authority:** SSOT_ARCHITECTURE.md § 26 is the primary source of truth for aborted/incomplete action behavior. This section defines UI-specific patterns without duplicating architectural rules.
+
+**Reference:** See SSOT_ARCHITECTURE.md § 26 for full definitions, invariants, and scenario table.
+
+#### Core UI Principles for Aborted Flows
+
+| Principle | Description |
+|-----------|-------------|
+| **User cancel ≠ error** | User closing paywall, cancelling payment, or navigating away MUST NOT trigger error UI (toast, alert, error banner). |
+| **Silent return to context** | When user cancels, UI returns to previous state (form, page) without any notification. Form data is preserved. |
+| **No "Payment cancelled" toast** | Toast notifications are FORBIDDEN for user-initiated cancellations. Toast is ONLY for success/info. |
+| **No "Processing payment" blocking state** | UI MUST NOT display indefinite "Payment is processing..." mode without backend confirmation. |
+
+#### Canonical UI Behavior by Scenario
+
+| Scenario | User Action | UI Outcome | Forbidden |
+|----------|-------------|------------|-----------|
+| User closes PaywallModal (X, ESC, click outside) | Cancel | Modal closes. Form visible. No message. | ❌ Error toast/alert |
+| User clicks "Cancel" in CreditConfirmationModal | Cancel | Modal closes. Return to form. Data preserved. | ❌ Error toast/alert |
+| User navigates back from external payment page | Implicit cancel | On return: normal form state. No "interrupted" message. | ❌ "Payment was interrupted" banner |
+| User closes tab during payment polling | Leave | N/A (user left). On return: fresh state. | ❌ localStorage-based "resume payment" UI |
+| Network error during save (after paywall closed) | N/A | Error shown via PageErrorState/SectionErrorState. Retry allowed. | ❌ Toast for error |
+
+#### Allowed Neutral Messages (Non-Error)
+
+In specific cases, a neutral informational banner MAY be shown. These are NOT errors.
+
+| Scenario | Allowed | Component | Copy Intent |
+|----------|---------|-----------|-------------|
+| User returns after implicit network drop | ✅ Optional | InlineInfoBanner | "Предыдущее действие не было завершено. Попробуйте снова." |
+| Page reload during flow | ✅ Optional | None (fresh state) | N/A |
+
+**Note:** "InlineInfoBanner" uses `--color-info-bg` (blue), NOT `--color-danger-bg` or `--color-warning-bg`. It is NOT an error surface.
+
+#### What NOT to Build
+
+The following UI patterns are FORBIDDEN and MUST NOT be implemented:
+
+| Forbidden Pattern | Reason |
+|-------------------|--------|
+| "Payment is processing, please wait..." as persistent modal/overlay | Blocks UI indefinitely; backend may never confirm |
+| Countdown timer "Payment expires in X:XX" | TTL is backend concern; UI has no authority over time limits |
+| "Resume payment" button with stored transaction ID | Each action is independent; no cross-session payment state |
+| "Are you sure you want to cancel payment?" confirmation dialog | User cancel is allowed without friction |
+| Toast "Payment cancelled" on paywall close | User cancel is not an error |
+| Red/warning styling for cancelled flows | Cancellation is neutral, not failure |
+
+#### Implementation Examples
+
+**PaywallModal close handler:**
+
+```tsx
+// ✅ CORRECT: Silent close
+<PaywallModal
+  open={showPaywall}
+  onClose={() => setShowPaywall(false)}  // Just close, nothing else
+  error={paywallError}
+/>
+
+// ❌ WRONG: Error feedback on cancel
+<PaywallModal
+  onClose={() => {
+    setShowPaywall(false);
+    showToast({ type: 'warning', message: 'Оплата отменена' });  // FORBIDDEN
+  }}
+/>
+```
+
+**CreditConfirmationModal cancel:**
+
+```tsx
+// ✅ CORRECT: Cancel returns to form
+<CreditConfirmationModal
+  onCancel={() => {
+    controller.reset();  // Reset to idle
+    hideConfirmation();  // Close modal
+    // Form data preserved, no message shown
+  }}
+/>
+
+// ❌ WRONG: Cancel triggers error state
+<CreditConfirmationModal
+  onCancel={() => {
+    controller.setError('User cancelled');  // FORBIDDEN
+    hideConfirmation();
+  }}
+/>
+```
+
+#### Cross-References
+
+| Topic | SSOT Location |
+|-------|---------------|
+| Full invariants & scenario table | SSOT_ARCHITECTURE.md § 26 |
+| Transaction state rules | SSOT_BILLING_SYSTEM_ANALYSIS.md § Aborted Purchase Attempts |
+| ActionController phases | SSOT_ARCHITECTURE.md § 15 |
+| Error surfaces (for actual errors) | This document § Error States & Messaging |
+| Toast usage policy | This document § Error Taxonomy → UI Pattern Mapping |
+
+---
+
 ### Consistency Audit Results (2026-01-01)
 
 **Audit Date:** 1 января 2026  
@@ -1580,6 +1685,22 @@ export default function Loading() {
 ---
 
 ## 🔄 ИСТОРИЯ ИЗМЕНЕНИЙ
+
+### v1.4 — 1 января 2026
+
+**Добавлено:**
+- ✅ **Aborted User-Initiated Flows** — канонические UI правила для прерванных/отменённых действий:
+  - User cancel ≠ error (закрытие paywall не показывает ошибку)
+  - Silent return to context (форма сохраняется, нет уведомлений)
+  - No "Payment cancelled" toast (toast только для success/info)
+  - No countdown timers (TTL — backend concern)
+  - Canonical behavior table for all cancel scenarios
+  - Implementation examples (PaywallModal, CreditConfirmationModal)
+  - Forbidden patterns list (no "resume payment", no blocking "processing" state)
+
+**Cross-references added:**
+- SSOT_ARCHITECTURE.md § 26 (Aborted / Incomplete Actions)
+- SSOT_BILLING_SYSTEM_ANALYSIS.md § Aborted Purchase Attempts
 
 ### v1.3 — 1 января 2026
 
