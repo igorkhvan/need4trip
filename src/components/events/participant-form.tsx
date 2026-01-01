@@ -19,7 +19,7 @@ import { ParticipantRole } from "@/lib/types/participant";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useSaveScroll } from "@/hooks/use-scroll-save";
 import { getDefaultCustomFieldValue } from "@/lib/utils/customFields";
-import { handleApiError, getErrorMessage } from "@/lib/utils/errors";
+import { parseApiResponse } from "@/lib/types/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 import { formatEventPriceInline } from "@/lib/utils/eventFormatters";
@@ -208,9 +208,8 @@ export function ParticipantForm({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        await handleApiError(res);
-      }
+      // parseApiResponse throws ClientError if response is not ok
+      await parseApiResponse(res);
 
       if (mode === "create") {
         setDisplayName("");

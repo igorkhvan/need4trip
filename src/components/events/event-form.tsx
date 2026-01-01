@@ -34,7 +34,7 @@ import {
 import { EventLocationInput } from "@/lib/types/eventLocation";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import { getCategoryIcon } from "@/lib/utils/eventCategories";
-import { getErrorMessage } from "@/lib/utils/errors";
+import { getErrorMessage } from "@/lib/types/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import { Spinner } from "@/components/ui/spinner";
 // Section components

@@ -15,9 +15,10 @@
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { respondSuccess, respondError } from "@/lib/api/respond";
+import { respondSuccess, respondError } from "@/lib/api/response";
+import { ForbiddenError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
-import { createBillingCredit } from "@/lib/db/billingCreditsRepo"; // Fixed: correct export name
+import { createBillingCredit } from "@/lib/db/billingCreditsRepo";
 import { logger } from "@/lib/utils/logger";
 
 // ============================================================================
@@ -37,10 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     // DEV MODE CHECK (simple IP check or env var)
     if (process.env.NODE_ENV === "production") {
-      return respondError(403, {
-        code: "FORBIDDEN",
-        message: "This endpoint is only available in development",
-      });
+      throw new ForbiddenError("This endpoint is only available in development");
     }
 
     // 1. Parse request
@@ -48,11 +46,7 @@ export async function POST(req: NextRequest) {
     const parsed = settleSchema.safeParse(body);
 
     if (!parsed.success) {
-      return respondError(400, {
-        code: "INVALID_INPUT",
-        message: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      throw new ValidationError("Invalid request", parsed.error.flatten());
     }
 
     const { transaction_id, status } = parsed.data;
@@ -66,10 +60,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (fetchError || !transaction) {
-      return respondError(404, {
-        code: "TRANSACTION_NOT_FOUND",
-        message: "Transaction not found",
-      });
+      throw new NotFoundError("Transaction not found");
     }
 
     // 3. Update transaction status
@@ -80,10 +71,7 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       logger.error("Failed to update transaction status", { transaction_id, status, error: updateError });
-      return respondError(500, {
-        code: "UPDATE_FAILED",
-        message: "Failed to update transaction status",
-      });
+      throw new InternalError("Failed to update transaction status");
     }
 
     // 4. Settlement logic (same as webhook would do)
@@ -139,10 +127,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     logger.error("Settlement failed (DEV)", { error });
-    return respondError(500, {
-      code: "INTERNAL_ERROR",
-      message: "Failed to settle transaction",
-    });
+    return respondError(error, "Failed to settle transaction");
   }
 }
 

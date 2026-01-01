@@ -24,7 +24,7 @@
  */
 
 import { toast } from "@/components/ui/use-toast";
-import { getErrorMessage } from "./errors";
+import { getErrorMessage } from "@/lib/types/errors";
 
 // Re-export для единой точки импорта
 export { TOAST } from "./toastMessages";

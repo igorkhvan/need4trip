@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
 import { usePaywall } from "@/components/billing/paywall-modal";
 import { CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
-import { handleApiError } from "@/lib/utils/errors";
+import { ClientError } from "@/lib/types/errors";
 import { useActionController } from "@/lib/ui/actionController";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
 import type { Event } from "@/lib/types/event";
@@ -71,10 +71,12 @@ export function EditEventPageClient({
         body: JSON.stringify(payload),
       });
       
+      // Parse JSON once
+      const json = await res.json();
+      
       // Handle 409 CREDIT_CONFIRMATION_REQUIRED
       if (res.status === 409) {
-        const error409 = await res.json();
-        const meta = error409.error?.meta;
+        const meta = json.error?.meta || json.error?.details?.meta;
         
         if (meta) {
           // ⚡ NEW: Store payload in controller and await confirmation
@@ -86,12 +88,19 @@ export function EditEventPageClient({
           });
           return;
         }
+        
+        // Generic 409 error
+        throw new ClientError(
+          json.error?.message || "Conflict",
+          json.error?.code || "CONFLICT",
+          409,
+          json.error?.details
+        );
       }
       
       // Handle 402 PAYWALL
       if (res.status === 402) {
-        const errorData = await res.json();
-        const paywallError = errorData.error?.details || errorData.error;
+        const paywallError = json.error?.details || json.error;
         
         if (paywallError) {
           showPaywall(paywallError);
@@ -101,8 +110,12 @@ export function EditEventPageClient({
       
       // Handle other errors
       if (!res.ok) {
-        await handleApiError(res);
-        return;
+        throw new ClientError(
+          json.error?.message || `Request failed with status ${res.status}`,
+          json.error?.code || "REQUEST_FAILED",
+          res.status,
+          json.error?.details
+        );
       }
       
       // ✅ Success - mark as redirecting BEFORE navigation
@@ -134,21 +147,27 @@ export function EditEventPageClient({
         body: JSON.stringify(payload),
       });
       
+      // Parse JSON once
+      const json = await res.json();
+      
       // Handle 402 PAYWALL (fallback if credit was consumed by another request)
       if (res.status === 402) {
-        const errorData = await res.json();
-        const paywallError = errorData.error?.details || errorData.error;
+        const paywallError = json.error?.details || json.error;
         
         if (paywallError) {
           showPaywall(paywallError);
-          throw new Error('Paywall required'); // ⚡ THROW instead of return
+          throw new Error('Paywall required');
         }
       }
       
       // Handle other errors
       if (!res.ok) {
-        await handleApiError(res);
-        throw new Error(`Request failed with status ${res.status}`); // ⚡ THROW instead of return
+        throw new ClientError(
+          json.error?.message || `Request failed with status ${res.status}`,
+          json.error?.code || "REQUEST_FAILED",
+          res.status,
+          json.error?.details
+        );
       }
       
       // ✅ Success - mark as redirecting BEFORE navigation

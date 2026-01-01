@@ -2,12 +2,23 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 3.4  
+**Version:** 4.0  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v4.0 — Operational Completeness)
+- **Added § 20: API Error Envelope & Client Mapping** — Unified error taxonomy, canonical response format, client-side mapping rules
+- **Added § 21: Idempotency & Retry Policy** — `Idempotency-Key` header rules, backend wrapper, retry semantics
+- **Added § 22: UI State Model** — Canonical states (loading/error/empty/success), Next.js boundaries
+- **Added § 23: Failure Modes & Degradation Rules** — Graceful degradation, retry policies, circuit breaker patterns
+- **Added § 24: Observability Minimum** — Structured logging, error tracking, metrics
+- **Added § 25: Operational Compliance Checklist** — Extended checklist for operational completeness
+- **Updated § 4 Ownership Map** — Added canonical response/error modules
+- **Migration Map** — Identified duplicates for elimination (see § 25)
+- **Version bump to 4.0** — Operational completeness milestone
 
 ### 2026-01-01 (v5+ Alignment)
 - **Updated §19 Consistency Checklist** — Changed "publish-only" consumption to "save-time (v5+)" consumption. Rationale: v5+ has no separate publish step.
@@ -46,8 +57,14 @@
 15. [Form State Management & Async Actions](#form-state-management--async-actions)
 16. [Error Handling & Validation](#error-handling--validation)
 17. [Change Process & Definition of Done](#change-process--definition-of-done)
-18. [SSOT Governance and Precedence](#ssot-governance-and-precedence) ⚡ NEW
-19. [SSOT Consistency Checklist](#ssot-consistency-checklist) ⚡ NEW
+18. [SSOT Governance and Precedence](#ssot-governance-and-precedence)
+19. [SSOT Consistency Checklist](#ssot-consistency-checklist)
+20. [API Error Envelope & Client Mapping](#api-error-envelope--client-mapping) ⚡ NEW (v4.0)
+21. [Idempotency & Retry Policy](#idempotency--retry-policy) ⚡ NEW (v4.0)
+22. [UI State Model](#ui-state-model) ⚡ NEW (v4.0)
+23. [Failure Modes & Degradation Rules](#failure-modes--degradation-rules) ⚡ NEW (v4.0)
+24. [Observability Minimum](#observability-minimum) ⚡ NEW (v4.0)
+25. [Operational Compliance Checklist](#operational-compliance-checklist) ⚡ NEW (v4.0)
 
 ---
 
@@ -258,8 +275,10 @@ need4trip/
 | **Current User (Server)** | `lib/auth/currentUser.ts` | `lib/auth/jwt`, `lib/db/userRepo` | Multiple auth approaches | **SSOT for server auth** |
 | **Current User (Client)** | `components/auth/auth-provider.tsx` | React Context | Server-only functions | Client context only |
 | **Caching (Reference Data)** | `lib/cache/staticCache.ts` | None (infrastructure) | Multiple cache patterns | ✅ UNIFIED |
-| **Error Handling** | `lib/errors.ts` | None (base classes) | Untyped errors | Custom error classes |
-| **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | Standard format |
+| **Error Handling (Server)** | `lib/errors.ts` | None (base classes) | Untyped errors | AppError, PaywallError, etc. |
+| **Error Handling (Client)** | `lib/types/errors.ts` | None | Manual error parsing | ClientError, parseApiResponse() ⚡ |
+| **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | respondSuccess(), respondError() |
+| **Toast Notifications** | `lib/utils/toastHelpers.ts` | `components/ui/use-toast` | Direct toast calls | showError(), TOAST constants |
 | **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceEventPublish()` unified ⚡ |
 | **Credit Transactions** | `lib/services/creditTransaction.ts` | `lib/db/billingCreditsRepo` | Direct credit consumption | `executeWithCreditTransaction()` wrapper ⚡ |
 | **Credit Badge UI** | `components/billing/credit-badge.tsx` | `components/auth/auth-provider` | Manual credit display | Badge reads from AuthContext (0 API calls) ⚡ |
@@ -2010,6 +2029,543 @@ This section defines the authoritative scope of each SSOT document and rules for
 
 ---
 
+## 20. API Error Envelope & Client Mapping
+
+**Status:** CANONICAL (v4.0)
+
+This section defines the ONLY authoritative rules for API error handling across the entire application.
+
+### 20.1 Error Response Format (Server → Client)
+
+**ALL API routes MUST use `respondError()` from `lib/api/response.ts`:**
+
+```typescript
+// ✅ CANONICAL: lib/api/response.ts
+export function respondError(
+  error: AppError | Error | unknown,
+  fallbackMessage: string = "Internal Server Error"
+): NextResponse<ApiErrorResponse>
+```
+
+**Response Shape:**
+
+```typescript
+{
+  success: false,
+  error: {
+    code: string,       // Machine-readable error code (e.g., "PAYWALL", "UNAUTHORIZED")
+    message: string,    // Human-readable message
+    details?: unknown   // Additional context (PaywallError options, validation errors)
+  }
+}
+```
+
+### 20.2 Error Taxonomy (LOCKED)
+
+| HTTP Status | Error Class | `code` Value | Client Action |
+|-------------|------------|--------------|---------------|
+| 401 | `UnauthorizedError` | `UNAUTHORIZED` | Redirect to login or show auth modal |
+| 402 | `PaywallError` | `PAYWALL` | Show `PaywallModal` with `details` |
+| 403 | `ForbiddenError` | `FORBIDDEN` | Show error message, no retry |
+| 404 | `NotFoundError` | `NotFound` | Show 404 page or message |
+| 409 | `ConflictError` | `Conflict` | Show conflict message |
+| 409 | Special | `CREDIT_CONFIRMATION_REQUIRED` | Show `CreditConfirmationModal` |
+| 422 | `ValidationError` | `ValidationError` | Show field-level errors |
+| 429 | (middleware) | `RateLimited` | Show "too many requests" |
+| 500 | `InternalError` | `InternalError` | Show generic error, allow retry |
+
+### 20.3 Canonical Server-Side Error Classes
+
+**Location:** `lib/errors.ts` (SSOT)
+
+```typescript
+// Base error
+class AppError extends Error {
+  statusCode: number;
+  code: string;
+  details?: unknown;
+}
+
+// Specific errors
+class ValidationError extends AppError { statusCode: 400 }
+class UnauthorizedError extends AppError { statusCode: 401 }
+class PaywallError extends AppError { statusCode: 402 }
+class ForbiddenError extends AppError { statusCode: 403 }
+class NotFoundError extends AppError { statusCode: 404 }
+class ConflictError extends AppError { statusCode: 409 }
+class InternalError extends AppError { statusCode: 500 }
+```
+
+**PaywallError Special Structure:**
+
+```typescript
+class PaywallError extends AppError {
+  reason: string;           // "MAX_EVENT_PARTICIPANTS_EXCEEDED", etc.
+  currentPlanId?: string;
+  requiredPlanId?: string;
+  meta?: Record<string, unknown>;  // { requested: 100, limit: 50 }
+  options?: Array<{ type: "ONE_OFF_CREDIT" | "CLUB_ACCESS"; ... }>;
+  cta?: { type: "OPEN_PRICING"; href: "/pricing" };
+}
+```
+
+### 20.4 Client-Side Error Handling
+
+**Location:** `lib/types/errors.ts` (SSOT)
+
+```typescript
+// Parse API response and throw ClientError on failure
+const data = await parseApiResponse<T>(res);
+
+// ClientError has typed status checks
+if (err instanceof ClientError) {
+  if (err.isPaywallError()) showPaywall(err.details);
+  if (err.isConflictError()) handleConflict(err.details);
+  if (err.isAuthError()) redirectToLogin();
+}
+```
+
+**ClientError Methods:**
+
+| Method | Status | Use Case |
+|--------|--------|----------|
+| `isAuthError()` | 401 | Trigger auth modal or redirect |
+| `isPaywallError()` | 402 | Show `PaywallModal` |
+| `isForbiddenError()` | 403 | Show "access denied" |
+| `isConflictError()` | 409 | Handle conflicts (credit confirmation, duplicates) |
+| `isValidationError()` | 422 | Show field errors |
+
+### 20.5 409 Special Cases
+
+**CREDIT_CONFIRMATION_REQUIRED (Personal Paid Events):**
+
+```typescript
+// Server returns 409 with meta
+{
+  success: false,
+  error: {
+    code: "CREDIT_CONFIRMATION_REQUIRED",
+    message: "Credit consumption requires confirmation",
+    details: {
+      meta: {
+        creditCode: "EVENT_UPGRADE_500",
+        eventId: "uuid",
+        requestedParticipants: 100
+      }
+    }
+  }
+}
+
+// Client handles:
+if (res.status === 409) {
+  const error = await res.json();
+  const meta = error.error?.details?.meta;
+  if (meta?.creditCode) {
+    controller.awaitConfirmation({ ...meta, payload });
+    // Show CreditConfirmationModal
+  }
+}
+```
+
+### 20.6 Forbidden Patterns
+
+| Pattern | Problem | Use Instead |
+|---------|---------|-------------|
+| `res.json({ error: "..." })` | Non-standard format | `respondError(new AppError(...))` |
+| Manual status check `if (!res.ok)` | Duplicated logic | `parseApiResponse()` |
+| `throw new Error("message")` | No status code | `throw new AppError(...)` with code |
+| Direct `fetch` error handling | Inconsistent | Use canonical hooks with `ClientError` |
+
+---
+
+## 21. Idempotency & Retry Policy
+
+**Status:** CANONICAL (v4.0)
+
+This section defines idempotency rules for write operations to prevent duplicate actions.
+
+### 21.1 When Idempotency is Required
+
+| Operation Type | Idempotency Required | Reason |
+|----------------|---------------------|--------|
+| Create event | ✅ YES | Prevents duplicate events |
+| Update event | ✅ YES | Prevents conflicting updates |
+| Register participant | ✅ YES | Prevents double registration |
+| Purchase credit | ✅ YES | Prevents double charge |
+| Delete resource | ✅ YES | Safe retries on network failures |
+| GET requests | ❌ NO | Naturally idempotent |
+| List requests | ❌ NO | Read-only |
+
+### 21.2 Client-Side Implementation
+
+**Location:** `lib/ui/actionController.ts` (SSOT)
+
+```typescript
+const controller = useActionController();
+
+await controller.start("create_event", async () => {
+  const res = await fetch('/api/events', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': controller.correlationId, // ⚡ CRITICAL
+    },
+    body: JSON.stringify(payload),
+  });
+  // ...
+});
+```
+
+**Rules:**
+
+1. **MUST use same `correlationId` for retries** — enables backend idempotency
+2. **`correlationId` is generated per action attempt** — new ID only on fresh action
+3. **Confirmation retries MUST reuse same key** — `confirm_credit=1` uses original key
+
+### 21.3 Server-Side Implementation
+
+**Location:** `lib/services/withIdempotency.ts` (SSOT)
+
+```typescript
+import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from '@/lib/services/withIdempotency';
+
+export async function POST(request: Request) {
+  const idempotencyKey = extractIdempotencyKey(request);
+  
+  if (idempotencyKey && isValidIdempotencyKey(idempotencyKey)) {
+    return await withIdempotency(
+      { userId: currentUser.id, route: 'POST /api/events', key: idempotencyKey },
+      async () => {
+        // Business logic here
+        return respondSuccess({ event }, undefined, 201);
+      }
+    );
+  }
+  
+  // Fallback: execute without idempotency (backwards compat)
+  return await createEventLogic();
+}
+```
+
+**Database Table:** `idempotency_keys` (see SSOT_DATABASE.md)
+
+### 21.4 Idempotency Key Format
+
+```
+Idempotency-Key: <UUID v4>
+Example: Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
+```
+
+**Validation:** UUIDv4 format (36 chars, 8-4-4-4-12 hex pattern)
+
+### 21.5 Idempotency Behavior Matrix
+
+| Scenario | Server Response | Client Action |
+|----------|-----------------|---------------|
+| First request | Execute → store response | Proceed |
+| Duplicate (completed) | Return stored response | Proceed (same result) |
+| Duplicate (in-progress) | 409 REQUEST_IN_PROGRESS | Wait + retry |
+| Duplicate (failed) | Allow retry | Retry with same key |
+| Key expired (24h TTL) | Treat as new request | Execute fresh |
+
+### 21.6 Retry Policy
+
+**Client Retry Rules:**
+
+| Error Type | Retry | Delay | Max Attempts |
+|------------|-------|-------|--------------|
+| Network error | ✅ YES | Exponential (1s, 2s, 4s) | 3 |
+| 500 Internal | ✅ YES | Exponential | 3 |
+| 429 Rate Limited | ✅ YES | Use `Retry-After` header | 3 |
+| 409 In Progress | ✅ YES | 1s delay | 5 |
+| 4xx Client Error | ❌ NO | N/A | N/A |
+
+**Implementation:** Retry logic is NOT built into ActionController. Use manual retry or wrapper if needed.
+
+---
+
+## 22. UI State Model
+
+**Status:** CANONICAL (v4.0)
+
+This section defines canonical UI states and Next.js boundary usage.
+
+### 22.1 Canonical UI States
+
+Every data-driven UI MUST handle these states:
+
+| State | Trigger | UI |
+|-------|---------|-----|
+| `loading` | Initial fetch or refetch | Skeleton or Spinner |
+| `error` | API error (4xx, 5xx, network) | Error message + retry button |
+| `empty` | Success with empty data | Empty state illustration |
+| `success` | Success with data | Render data |
+
+### 22.2 Next.js Boundary Files
+
+**Available Boundaries:**
+
+| File | Purpose | Scope |
+|------|---------|-------|
+| `error.tsx` | Error boundary for segment | Catches render/fetch errors |
+| `loading.tsx` | Loading state for segment | Shows during async operations |
+| `not-found.tsx` | 404 page | `notFound()` calls |
+
+**Current State (Need4Trip):**
+
+| Boundary | Global | Segment-Level |
+|----------|--------|---------------|
+| `error.tsx` | ✅ `app/error.tsx` | ❌ Not used |
+| `loading.tsx` | ❌ **MISSING** | ❌ Not used |
+| `not-found.tsx` | ✅ `app/not-found.tsx` | ❌ Not used |
+
+**Recommendation:** Add global `app/loading.tsx` with branded spinner.
+
+### 22.3 Skeleton Components (SSOT)
+
+**Location:** `components/ui/skeletons/` (SSOT)
+
+```typescript
+// Available skeletons
+import {
+  EventCardSkeleton,
+  EventCardSkeletonGrid,
+  ClubCardSkeleton,
+  ClubCardSkeletonGrid,
+  ProfileSkeleton,
+  TableSkeleton,
+  FormSkeleton,
+} from "@/components/ui/skeletons";
+```
+
+**Usage Pattern:**
+
+```tsx
+function EventsPage() {
+  const { events, loading, error } = useEventsQuery(params);
+  
+  if (loading) return <EventCardSkeletonGrid count={12} />;
+  if (error) return <ErrorMessage message={error} />;
+  if (events.length === 0) return <EmptyState type="events" />;
+  
+  return <EventsGrid events={events} />;
+}
+```
+
+### 22.4 ActionController Phases (Forms)
+
+**For form submissions, use ActionController phases:**
+
+```typescript
+controller.phase === 'idle'                  // Ready
+controller.phase === 'running'               // Submitting
+controller.phase === 'awaiting_confirmation' // Modal open
+controller.phase === 'running_confirmed'     // Modal + loading
+controller.phase === 'redirecting'           // Success, navigating
+controller.phase === 'error'                 // Failed
+```
+
+### 22.5 UI State Decision Matrix
+
+| Context | Loading | Error | Empty | Success |
+|---------|---------|-------|-------|---------|
+| Page (Server) | `loading.tsx` or Suspense | `error.tsx` | Empty component | Render |
+| List (Client) | Skeleton grid | Error + retry | Empty state | Render |
+| Form (Client) | ActionController.isBusy | Toast + form | N/A | Redirect |
+| Modal (Client) | Spinner in modal | Toast | N/A | Close modal |
+
+---
+
+## 23. Failure Modes & Degradation Rules
+
+**Status:** CANONICAL (v4.0)
+
+This section defines graceful degradation strategies for failures.
+
+### 23.1 Failure Classification
+
+| Failure Type | Severity | User Impact | Strategy |
+|--------------|----------|-------------|----------|
+| Network error | Medium | Cannot load/save | Retry + offline message |
+| 401 Unauthorized | Low | Session expired | Auth modal or redirect |
+| 402 Paywall | Low | Feature gated | Show PaywallModal |
+| 403 Forbidden | Low | Permission denied | Error message |
+| 404 Not Found | Low | Resource missing | 404 page |
+| 429 Rate Limited | Medium | Throttled | Wait message + `Retry-After` |
+| 500 Server Error | High | System failure | Error page + retry |
+| Database down | Critical | Full outage | Maintenance page |
+
+### 23.2 Degradation Strategies
+
+**Reference Data (Currencies, Cities, Categories):**
+
+```typescript
+// StaticCache graceful degradation
+try {
+  return currenciesCache.getAll();
+} catch (err) {
+  // Keep old data on reload failure
+  return currenciesCache.getCachedData() || [];
+}
+```
+
+**User Data (Events, Profile):**
+
+```typescript
+// No cache, always fresh
+// On failure: show error + retry button
+if (error) {
+  return <ErrorMessage message={error} onRetry={reload} />;
+}
+```
+
+### 23.3 Timeout Policy
+
+| Operation | Timeout | Action on Timeout |
+|-----------|---------|-------------------|
+| API call | 30s (default fetch) | Show timeout error |
+| File upload | 60s | Show progress + timeout |
+| Polling | 30s interval, 5min total | Stop polling + message |
+
+### 23.4 Offline Handling
+
+**Current State:** No offline support (requires network)
+
+**Future:** Consider service worker for static assets caching.
+
+---
+
+## 24. Observability Minimum
+
+**Status:** CANONICAL (v4.0)
+
+This section defines minimum observability requirements.
+
+### 24.1 Structured Logging
+
+**Location:** `lib/utils/logger.ts` (SSOT)
+
+```typescript
+import { log } from "@/lib/utils/logger";
+
+// Levels
+log.debug("Debug message", { context });
+log.info("Info message", { context });
+log.warn("Warning message", { context });
+log.error("Error message", { error, context });
+```
+
+**Required Context for Errors:**
+
+```typescript
+log.error('[useClubData] Failed to load club', {
+  code: err.code,        // Error code
+  statusCode: err.statusCode,  // HTTP status
+  clubId,               // Resource ID
+  userId: currentUser?.id,  // Actor (if available)
+});
+```
+
+### 24.2 Error Tracking
+
+**Current State:** Console logging only
+
+**Recommended:** Integrate Sentry for production error tracking:
+
+```typescript
+// Future integration
+import * as Sentry from "@sentry/nextjs";
+
+Sentry.captureException(error, {
+  tags: { code: error.code },
+  extra: { context },
+});
+```
+
+### 24.3 API Request Logging
+
+**All API routes SHOULD log:**
+
+1. Request received (method, path, user)
+2. Request completed (status, duration)
+3. Errors (full context)
+
+### 24.4 Performance Metrics
+
+**Current State:** No metrics collection
+
+**Recommended Future:**
+- Response time histograms
+- Error rate by endpoint
+- Database query duration
+
+---
+
+## 25. Operational Compliance Checklist
+
+**Status:** CANONICAL (v4.0)
+
+Extended checklist for operational completeness review.
+
+### 25.1 API Route Compliance
+
+- [ ] Uses `respondSuccess()` / `respondError()` from `lib/api/response.ts`
+- [ ] Throws typed errors from `lib/errors.ts`
+- [ ] Has idempotency wrapper for POST/PUT/DELETE (if write operation)
+- [ ] Validates input with Zod schema
+- [ ] Logs errors with structured context
+
+### 25.2 Client Component Compliance
+
+- [ ] Uses `parseApiResponse()` from `lib/types/errors.ts`
+- [ ] Handles `ClientError` with typed checks
+- [ ] Shows PaywallModal for 402
+- [ ] Shows CreditConfirmationModal for 409 (if applicable)
+- [ ] Uses ActionController for form submissions
+- [ ] Has loading/error/empty states
+
+### 25.3 Form Submission Compliance
+
+- [ ] Uses `useActionController()` hook
+- [ ] Sends `Idempotency-Key` header for writes
+- [ ] Reuses same key for confirmation retries
+- [ ] Disables submit button via `controller.isBusy`
+- [ ] Calls `controller.setRedirecting()` before navigation
+
+### 25.4 Caching Compliance
+
+- [ ] Reference data uses `StaticCache` from `lib/cache/staticCache.ts`
+- [ ] API routes have correct `dynamic` / `revalidate` config
+- [ ] No in-process caching for user-specific data
+
+### 25.5 Duplicate Code Detection (Migration Map v4.0)
+
+**Files to Migrate and Remove:**
+
+| Duplicate File | Canonical Replacement | Usage Count | Action |
+|---------------|----------------------|-------------|--------|
+| `lib/api/respond.ts` | `lib/api/response.ts` | 4 files | Migrate → Delete |
+| `lib/utils/errors.ts` (`handleApiError`) | `lib/types/errors.ts` (`parseApiResponse`) | 3 files | Migrate → Delete |
+| `lib/utils/api-response.ts` | `lib/types/errors.ts` | 0 files | Delete immediately |
+
+**Verification Command:**
+
+```bash
+# Check for old imports
+grep -r "from ['\"]@/lib/api/respond['\"]" src/
+grep -r "from ['\"]@/lib/utils/errors['\"]" src/
+grep -r "handleApiError" src/
+```
+
+### 25.6 Next.js Boundaries
+
+- [ ] Global `app/error.tsx` exists ✅
+- [ ] Global `app/not-found.tsx` exists ✅
+- [ ] Global `app/loading.tsx` exists ❌ **TODO**
+- [ ] ErrorFallback component exists ✅
+
+---
+
 ## Document History
 
 | Date | Version | Change |
@@ -2023,6 +2579,8 @@ This section defines the authoritative scope of each SSOT document and rules for
 | 2024-12-31 | 3.1 | **Phase 1 Code Improvements:** Explicit pending checks (events.ts), DB trigger for club_id immutability (20241231_enforce_club_id_immutability_v2.sql). Compliance: 95% → 100%. See SSOT_CLUBS_EVENTS_ACCESS.md §2, §5.6 for implementation details. Audit: docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md v1.1 |
 | 2024-12-31 | 3.2 | **NEW § 15: Form State Management & Async Actions** — ActionController pattern (canonical mechanism for async actions with confirmation flows), phase model, idempotency integration, race condition prevention. Session: docs/sessions/2024-12-31-event-save-ux-issues/. Fixes 3 UX issues (double-submit, missing loading, incorrect limits). |
 | 2026-01-01 | 3.3 | **SSOT Consistency Work:** Added §18 (SSOT Governance), §19 (Consistency Checklist). Fixed RBAC example (removed deprecated "organizers"). Updated Related SSOT paths. Cross-referenced billing_credits state machine. |
+| 2026-01-01 | 3.4 | v5+ Alignment: Changed "publish-only" to "save-time (v5+)" consumption. |
+| 2026-01-01 | 4.0 | **Operational Completeness:** Added §20-25 (Error Envelope, Idempotency, UI State Model, Failure Modes, Observability, Compliance Checklist). Updated Ownership Map. Identified duplicate code for migration. |
 
 ---
 

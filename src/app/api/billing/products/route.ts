@@ -7,9 +7,8 @@
  * Returns: BillingProduct[] (at least EVENT_UPGRADE_500)
  */
 
-import { NextResponse } from "next/server";
 import { getActiveProducts } from "@/lib/db/billingProductsRepo";
-import { respondSuccess, respondError } from "@/lib/api/respond";
+import { respondSuccess, respondError } from "@/lib/api/response";
 import { logger } from "@/lib/utils/logger";
 
 export async function GET() {
@@ -18,13 +17,10 @@ export async function GET() {
 
     logger.info("Fetched active billing products", { count: products.length });
 
-    return respondSuccess(products);
+    return respondSuccess({ products });
   } catch (error) {
     logger.error("Failed to fetch billing products", { error });
-    return respondError(500, {
-      code: "INTERNAL_ERROR",
-      message: "Failed to fetch products",
-    });
+    return respondError(error, "Failed to fetch products");
   }
 }
 

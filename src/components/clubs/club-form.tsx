@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CityMultiSelect } from "@/components/ui/city-multi-select";
 import { FormField } from "@/components/ui/form-field";
-import { getErrorMessage } from "@/lib/utils/errors";
+import { getErrorMessage } from "@/lib/types/errors";
 import { scrollToFirstError } from "@/lib/utils/form-validation";
 import type { Club, ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
 import type { City } from "@/lib/types/city";

@@ -14,7 +14,8 @@
 
 import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { respondSuccess, respondError } from "@/lib/api/respond";
+import { respondSuccess, respondError } from "@/lib/api/response";
+import { UnauthorizedError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
 import { logger } from "@/lib/utils/logger";
 
@@ -23,10 +24,7 @@ export async function GET(req: NextRequest) {
     // 1. Authentication required (via middleware)
     const currentUser = await getCurrentUserFromMiddleware(req);
     if (!currentUser) {
-      return respondError(401, { 
-        code: "UNAUTHORIZED", 
-        message: "Authentication required" 
-      });
+      throw new UnauthorizedError("Authentication required");
     }
 
     // 2. Get query params
@@ -35,17 +33,14 @@ export async function GET(req: NextRequest) {
     const transactionReference = searchParams.get("transaction_reference");
 
     if (!transactionId && !transactionReference) {
-      return respondError(400, {
-        code: "MISSING_PARAMETER",
-        message: "Either transaction_id or transaction_reference is required",
-      });
+      throw new ValidationError("Either transaction_id or transaction_reference is required");
     }
 
     // 3. Query transaction
     const db = getAdminDb();
     let query = db
       .from("billing_transactions")
-      .select("id, status, product_code, amount, currency_code, created_at, updated_at"); // ⚡ Normalized
+      .select("id, status, product_code, amount, currency_code, created_at, updated_at");
 
     if (transactionId) {
       query = query.eq("id", transactionId);
@@ -57,17 +52,11 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       logger.error("Failed to fetch transaction status", { transactionId, transactionReference, error });
-      return respondError(500, {
-        code: "QUERY_FAILED",
-        message: "Failed to fetch transaction status",
-      });
+      throw new InternalError("Failed to fetch transaction status");
     }
 
     if (!transaction) {
-      return respondError(404, {
-        code: "TRANSACTION_NOT_FOUND",
-        message: "Transaction not found",
-      });
+      throw new NotFoundError("Transaction not found");
     }
 
     // 4. Authorization check (user must own the transaction)
@@ -94,10 +83,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     logger.error("Transaction status query failed", { error });
-    return respondError(500, {
-      code: "INTERNAL_ERROR",
-      message: "Failed to query transaction status",
-    });
+    return respondError(error, "Failed to query transaction status");
   }
 }
 

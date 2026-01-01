@@ -205,11 +205,30 @@ export async function parseApiResponseWithHandler<T>(
 // ============================================================================
 
 /**
- * Get user-friendly error message based on status code
+ * Get user-friendly error message from any error type
+ * 
+ * Handles multiple error formats:
+ * - ClientError instances: error.message with statusCode fallback
+ * - Error instances: error.message
+ * - String errors: direct value
+ * - API responses: error.error.message (middleware/route handlers)
+ * - Wrapped errors: error.details.message, error.error.message
+ * - Object messages: tries multiple paths to find readable message
+ * 
+ * @param error - Unknown error type to extract message from
+ * @param fallback - Default message if extraction fails
+ * @returns Human-readable error message
  */
-export function getErrorMessage(error: ClientError | Error): string {
+export function getErrorMessage(error: unknown, fallback = "Произошла ошибка"): string {
+  if (!error) return fallback;
+  
+  // Handle string errors
+  if (typeof error === "string") {
+    return error;
+  }
+  
+  // Handle ClientError instances
   if (error instanceof ClientError) {
-    // Return server message if available
     if (error.message) {
       return error.message;
     }
@@ -231,11 +250,42 @@ export function getErrorMessage(error: ClientError | Error): string {
       case 500:
         return 'Внутренняя ошибка сервера';
       default:
-        return 'Произошла ошибка';
+        return fallback;
     }
   }
-
-  return error.message || 'Неизвестная ошибка';
+  
+  // Handle Error instances
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+  
+  // Handle object errors (API responses, wrapped errors)
+  if (typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+    
+    // Priority 1: err.error.message (API response from middleware/routes)
+    if (err.error && typeof err.error === 'object') {
+      const errorObj = err.error as Record<string, unknown>;
+      if (errorObj.message && typeof errorObj.message === 'string') {
+        return errorObj.message;
+      }
+    }
+    
+    // Priority 2: err.message (direct message string)
+    if (err.message && typeof err.message === 'string') {
+      return err.message;
+    }
+    
+    // Priority 3: err.details.message (wrapped errors like InternalError)
+    if (err.details && typeof err.details === 'object') {
+      const detailsObj = err.details as Record<string, unknown>;
+      if (detailsObj.message && typeof detailsObj.message === 'string') {
+        return detailsObj.message;
+      }
+    }
+  }
+  
+  return fallback;
 }
 
 /**

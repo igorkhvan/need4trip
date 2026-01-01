@@ -17,7 +17,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { handleApiError } from "@/lib/utils/errors";
+import { ClientError } from "@/lib/types/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
 import { CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
@@ -98,10 +98,12 @@ export function CreateEventPageClient({
         body: JSON.stringify(payload),
       });
       
+      // Parse JSON once for all cases
+      const json = await res.json();
+      
       // Handle 409 CREDIT_CONFIRMATION_REQUIRED
       if (res.status === 409) {
-        const error409 = await res.json();
-        const meta = error409.error?.meta;
+        const meta = json.error?.meta || json.error?.details?.meta;
         
         // DEFENSIVE: Do not show credit confirmation for club events
         if (meta && !clubId) {
@@ -120,12 +122,19 @@ export function CreateEventPageClient({
           console.error("[BUG] Backend returned 409 for club event");
           throw new Error("Ошибка биллинга. Клубные события не используют кредиты.");
         }
+        
+        // Generic 409 error
+        throw new ClientError(
+          json.error?.message || "Conflict",
+          json.error?.code || "CONFLICT",
+          409,
+          json.error?.details
+        );
       }
       
       // Handle 402 PAYWALL
       if (res.status === 402) {
-        const errorData = await res.json();
-        const paywallError = errorData.error?.details || errorData.error;
+        const paywallError = json.error?.details || json.error;
         
         if (paywallError) {
           showPaywall(paywallError);
@@ -135,20 +144,23 @@ export function CreateEventPageClient({
       
       // Handle other errors
       if (!res.ok) {
-        await handleApiError(res);
-        return;
+        throw new ClientError(
+          json.error?.message || `Request failed with status ${res.status}`,
+          json.error?.code || "REQUEST_FAILED",
+          res.status,
+          json.error?.details
+        );
       }
       
       // ✅ Success - mark as redirecting BEFORE navigation
-      const response = await res.json();
-      const createdEvent = response.data?.event || response.event;
+      const createdEvent = json.data?.event || json.event;
       
       controller.setRedirecting();
       
       if (createdEvent?.id) {
         router.push(`/events/${createdEvent.id}`);
       } else {
-        console.error('[CreateEvent] No event.id in response:', response);
+        console.error('[CreateEvent] No event.id in response:', json);
         router.push('/events');
       }
       router.refresh();
@@ -177,26 +189,31 @@ export function CreateEventPageClient({
         body: JSON.stringify(payload),
       });
       
+      // Parse JSON once
+      const json = await res.json();
+      
       // Handle 402 PAYWALL (fallback if credit was consumed by another request)
       if (res.status === 402) {
-        const errorData = await res.json();
-        const paywallError = errorData.error?.details || errorData.error;
+        const paywallError = json.error?.details || json.error;
         
         if (paywallError) {
           showPaywall(paywallError);
-          throw new Error('Paywall required'); // ⚡ THROW instead of return
+          throw new Error('Paywall required');
         }
       }
       
       // Handle other errors
       if (!res.ok) {
-        await handleApiError(res);
-        throw new Error(`Request failed with status ${res.status}`); // ⚡ THROW instead of return
+        throw new ClientError(
+          json.error?.message || `Request failed with status ${res.status}`,
+          json.error?.code || "REQUEST_FAILED",
+          res.status,
+          json.error?.details
+        );
       }
       
       // ✅ Success - mark as redirecting BEFORE navigation
-      const response = await res.json();
-      const createdEvent = response.data?.event || response.event;
+      const createdEvent = json.data?.event || json.event;
       
       controller.setRedirecting();
       

@@ -13,13 +13,14 @@
  * Protected by middleware - requires valid JWT
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { respondSuccess, respondError } from "@/lib/api/respond";
+import { respondSuccess, respondError } from "@/lib/api/response";
+import { UnauthorizedError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
-import { getPlanById } from "@/lib/db/planRepo"; // Fixed: correct filename
+import { getPlanById } from "@/lib/db/planRepo";
 import { logger } from "@/lib/utils/logger";
 import type { ProductCode } from "@/lib/types/billing";
 
@@ -47,10 +48,7 @@ export async function POST(req: NextRequest) {
     // 1. Authentication required (via middleware)
     const currentUser = await getCurrentUserFromMiddleware(req);
     if (!currentUser) {
-      return respondError(401, { 
-        code: "UNAUTHORIZED", 
-        message: "Authentication required" 
-      });
+      throw new UnauthorizedError("Authentication required");
     }
 
     // 2. Parse request
@@ -58,11 +56,7 @@ export async function POST(req: NextRequest) {
     const parsed = purchaseIntentSchema.safeParse(body);
     
     if (!parsed.success) {
-      return respondError(400, {
-        code: "INVALID_INPUT",
-        message: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      throw new ValidationError("Invalid request", parsed.error.flatten());
     }
 
     const { product_code, quantity, context } = parsed.data;
@@ -72,14 +66,11 @@ export async function POST(req: NextRequest) {
     const isClub = product_code.startsWith("CLUB_");
 
     if (!isOneOff && !isClub) {
-      return respondError(400, {
-        code: "INVALID_PRODUCT_CODE",
-        message: `Unknown product code: ${product_code}`,
-      });
+      throw new ValidationError(`Unknown product code: ${product_code}`);
     }
 
     // 4. Load product details and calculate amount
-    let amount: number;           // ⚡ Normalized
+    let amount: number;
     let title: string;
 
     if (isOneOff) {
@@ -87,20 +78,14 @@ export async function POST(req: NextRequest) {
       const product = await getProductByCode(product_code);
       
       if (!product) {
-        return respondError(404, {
-          code: "PRODUCT_NOT_FOUND",
-          message: `Product ${product_code} not found`,
-        });
+        throw new NotFoundError(`Product ${product_code} not found`);
       }
 
       if (!product.isActive) {
-        return respondError(400, {
-          code: "PRODUCT_INACTIVE",
-          message: `Product ${product_code} is not available`,
-        });
+        throw new ValidationError(`Product ${product_code} is not available`);
       }
 
-      amount = product.price * quantity;       // ⚡ Normalized (was priceKzt)
+      amount = product.price * quantity;
       title = product.title;
 
     } else {
@@ -109,27 +94,21 @@ export async function POST(req: NextRequest) {
       const plan = await getPlanById(planId as any);
 
       if (!plan) {
-        return respondError(404, {
-          code: "PLAN_NOT_FOUND",
-          message: `Plan ${planId} not found`,
-        });
+        throw new NotFoundError(`Plan ${planId} not found`);
       }
 
-      amount = plan.priceMonthly;              // ⚡ Normalized (was priceMonthlyKzt)
+      amount = plan.priceMonthly;
       title = plan.title;
 
       // For clubs, quantity must be 1 (one month)
       if (quantity !== 1) {
-        return respondError(400, {
-          code: "INVALID_QUANTITY",
-          message: "Club subscriptions must have quantity=1",
-        });
+        throw new ValidationError("Club subscriptions must have quantity=1");
       }
     }
 
     // 5. Create billing_transaction (pending)
     const db = getAdminDb();
-    const transactionReference = generateTransactionReference(); // Stub
+    const transactionReference = generateTransactionReference();
 
     const { data: transaction, error: txError } = await db
       .from("billing_transactions")
@@ -138,21 +117,18 @@ export async function POST(req: NextRequest) {
         user_id: isOneOff ? currentUser.id : null,
         product_code: product_code as ProductCode,
         plan_id: isClub ? product_code.toLowerCase().replace("club_", "club_") : null,
-        amount: amount,               // ⚡ Normalized
-        currency_code: "KZT",         // ⚡ Normalized with FK
+        amount: amount,
+        currency_code: "KZT",
         status: "pending",
-        provider: "kaspi", // Fixed: use provider (not payment_method)
-        provider_payment_id: transactionReference, // Fixed: use provider_payment_id (not transaction_reference)
+        provider: "kaspi",
+        provider_payment_id: transactionReference,
       })
       .select()
       .single();
 
     if (txError || !transaction) {
       logger.error("Failed to create billing transaction", { error: txError });
-      return respondError(500, {
-        code: "TRANSACTION_FAILED",
-        message: "Failed to create transaction",
-      });
+      throw new InternalError("Failed to create transaction");
     }
 
     // 6. Generate Kaspi payment details (STUB)
@@ -179,10 +155,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     logger.error("Purchase intent failed", { error });
-    return respondError(500, {
-      code: "INTERNAL_ERROR",
-      message: "Failed to create purchase intent",
-    });
+    return respondError(error, "Failed to create purchase intent");
   }
 }
 
