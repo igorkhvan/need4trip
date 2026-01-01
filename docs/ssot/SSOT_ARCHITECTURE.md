@@ -2,12 +2,31 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-01  
-**Version:** 4.0  
+**Version:** 4.2  
 **This document is the ONLY authoritative source for architectural decisions.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v4.2 — System Errors Handling)
+- **Added § 20.7: System Errors & Low-Level Failures** — Explicit rules for DB/infra/internal error handling:
+  - Frontend behavior determined ONLY by mapped error class (status + code), never raw message
+  - `error.details` ignored for 500 errors (whitelisted: 402, 409, 422 only)
+  - No technical wording (constraint, SQL, SQLSTATE) in user-facing UI
+  - Backend Mapping Responsibility (SSOT Requirement) — expected backend mappings for low-level errors
+  - Observability vs. UI boundary — logging allowed, UI must use intent-based copy
+- **Cross-references** — SSOT_DESIGN_SYSTEM.md § System Errors, Canonical Error Message Intents, FORBIDDEN UI BEHAVIOR
+
+### 2026-01-01 (v4.1 — Error & Loading UX Completeness)
+- **Added § 22.5: UI Error Surface Model** — Canonical mapping from error taxonomy to UI surfaces (page/section/inline/field/modal)
+- **Added § 22.6: Loading Taxonomy** — All loading variants (initial/refetch/pagination/navigation/mutation/optimistic/idempotency/confirmation)
+- **Added § 22.7: Loading Decision Matrix** — Scenario → UI instrument mapping (Skeleton/Spinner/LoadingBar/disabled CTA)
+- **Added § 22.8: Retry UX Policy** — Manual retry rules, automatic retry boundaries
+- **Updated § 23.1** — Changed "Error page" → "PageErrorState inside layout"; clarified maintenance page as future exception
+- **Updated § 25: Operational Compliance Checklist** — Added error surface, toast policy, loading instrumentation checks
+- **Clarified toast usage** — Toast allowed ONLY for success/info, NEVER for errors
+- **Cross-references** — Added links to SSOT_DESIGN_SYSTEM.md for UI pattern implementations
 
 ### 2026-01-01 (v4.0 — Operational Completeness)
 - **Added § 20: API Error Envelope & Client Mapping** — Unified error taxonomy, canonical response format, client-side mapping rules
@@ -59,12 +78,16 @@
 17. [Change Process & Definition of Done](#change-process--definition-of-done)
 18. [SSOT Governance and Precedence](#ssot-governance-and-precedence)
 19. [SSOT Consistency Checklist](#ssot-consistency-checklist)
-20. [API Error Envelope & Client Mapping](#api-error-envelope--client-mapping) ⚡ NEW (v4.0)
-21. [Idempotency & Retry Policy](#idempotency--retry-policy) ⚡ NEW (v4.0)
-22. [UI State Model](#ui-state-model) ⚡ NEW (v4.0)
-23. [Failure Modes & Degradation Rules](#failure-modes--degradation-rules) ⚡ NEW (v4.0)
-24. [Observability Minimum](#observability-minimum) ⚡ NEW (v4.0)
-25. [Operational Compliance Checklist](#operational-compliance-checklist) ⚡ NEW (v4.0)
+20. [API Error Envelope & Client Mapping](#api-error-envelope--client-mapping) ⚡ (v4.0, extended v4.2)
+21. [Idempotency & Retry Policy](#idempotency--retry-policy) ⚡ (v4.0)
+22. [UI State Model](#ui-state-model) ⚡ (v4.0, expanded v4.1)
+    - 22.5 [UI Error Surface Model](#225-ui-error-surface-model) ⚡ NEW (v4.1)
+    - 22.6 [Loading Taxonomy](#226-loading-taxonomy) ⚡ NEW (v4.1)
+    - 22.7 [Loading Decision Matrix](#227-loading-decision-matrix) ⚡ NEW (v4.1)
+    - 22.8 [Retry UX Policy](#228-retry-ux-policy) ⚡ NEW (v4.1)
+23. [Failure Modes & Degradation Rules](#failure-modes--degradation-rules) ⚡ (v4.0, updated v4.1)
+24. [Observability Minimum](#observability-minimum) ⚡ (v4.0)
+25. [Operational Compliance Checklist](#operational-compliance-checklist) ⚡ (v4.0, extended v4.2)
 
 ---
 
@@ -278,7 +301,7 @@ need4trip/
 | **Error Handling (Server)** | `lib/errors.ts` | None (base classes) | Untyped errors | AppError, PaywallError, etc. |
 | **Error Handling (Client)** | `lib/types/errors.ts` | None | Manual error parsing | ClientError, parseApiResponse() ⚡ |
 | **API Responses** | `lib/api/response.ts` | `lib/errors` | Inconsistent responses | respondSuccess(), respondError() |
-| **Toast Notifications** | `lib/utils/toastHelpers.ts` | `components/ui/use-toast` | Direct toast calls | showError(), TOAST constants |
+| **Toast Notifications** | `lib/utils/toastHelpers.ts` | `components/ui/use-toast` | Direct toast calls, **toast for errors** | showSuccess(), showInfo() ONLY — **NEVER for API/domain errors** (see § 22.5) |
 | **Billing Enforcement** | `lib/services/accessControl.ts` | `lib/db/*Repo`, `lib/errors` | Frontend limit checks | `enforceEventPublish()` unified ⚡ |
 | **Credit Transactions** | `lib/services/creditTransaction.ts` | `lib/db/billingCreditsRepo` | Direct credit consumption | `executeWithCreditTransaction()` wrapper ⚡ |
 | **Credit Badge UI** | `components/billing/credit-badge.tsx` | `components/auth/auth-provider` | Manual credit display | Badge reads from AuthContext (0 API calls) ⚡ |
@@ -2031,7 +2054,7 @@ This section defines the authoritative scope of each SSOT document and rules for
 
 ## 20. API Error Envelope & Client Mapping
 
-**Status:** CANONICAL (v4.0)
+**Status:** CANONICAL (v4.2)
 
 This section defines the ONLY authoritative rules for API error handling across the entire application.
 
@@ -2175,6 +2198,72 @@ if (res.status === 409) {
 | Manual status check `if (!res.ok)` | Duplicated logic | `parseApiResponse()` |
 | `throw new Error("message")` | No status code | `throw new AppError(...)` with code |
 | Direct `fetch` error handling | Inconsistent | Use canonical hooks with `ClientError` |
+
+### 20.7 System Errors & Low-Level Failures (DB / Infra / Internal)
+
+**Status:** CANONICAL (v4.2)
+
+This subsection explicitly defines how system-level errors (database failures, infrastructure errors, unexpected exceptions) MUST be handled.
+
+#### 20.7.1 Core Principle
+
+> **Low-level errors (DB constraint violations, driver errors, internal exceptions) MUST NOT be exposed to the user verbatim.**
+
+Frontend behavior is determined ONLY by the **mapped error class** (`status` + `code`), NOT by raw error message text, SQLSTATE codes, or vendor-specific error strings.
+
+#### 20.7.2 Frontend Behavior Rules (LOCKED)
+
+| Rule | Description |
+|------|-------------|
+| **500 → GENERIC_INTERNAL_ERROR** | Any 500 Internal Server Error MUST be treated as `GENERIC_INTERNAL_ERROR` intent (see § 22.5). No differentiation by message content. |
+| **Ignore `error.details` for 500** | `error.details` field MUST be ignored by UI for 500 errors. Only whitelisted statuses (402, 409, 422) may use `details` for UI branching. |
+| **No technical strings in UI** | UI MUST NOT display any text containing: `constraint`, `database`, `SQL`, `SQLSTATE`, `index`, `foreign key`, `duplicate key`, `internal error code`. |
+| **Intent-based display only** | Error copy shown to user MUST come from Canonical Error Message Intents table (SSOT_DESIGN_SYSTEM.md § Error States), not from backend message. |
+
+#### 20.7.3 Backend Mapping Responsibility (SSOT Requirement)
+
+**Purpose:** This block documents expected backend behavior. Frontend behavior remains stable even if backend does not comply.
+
+| Low-Level Error Type | Expected Backend Mapping | HTTP Status | Error Code |
+|---------------------|--------------------------|-------------|------------|
+| Unique constraint violation | `ValidationError` | 422 | `ValidationError` |
+| Foreign key constraint violation | `ValidationError` or `NotFoundError` | 422 or 404 | `ValidationError` / `NotFound` |
+| Check constraint violation | `ValidationError` | 422 | `ValidationError` |
+| State/concurrent modification conflict | `ConflictError` | 409 | `Conflict` |
+| Deadlock / lock timeout | `InternalError` (retry-able) | 500 | `InternalError` |
+| DB connection failure | `InternalError` | 500 | `InternalError` |
+| Unmapped / unexpected exception | `InternalError` | 500 | `InternalError` |
+
+**CRITICAL:** If backend returns raw DB error without mapping, frontend MUST still treat it as 500 `InternalError` → `GENERIC_INTERNAL_ERROR` intent. No special handling.
+
+#### 20.7.4 Observability vs. UI Boundary
+
+| Layer | Allowed to access raw error | Purpose |
+|-------|----------------------------|---------|
+| Backend logging (structured) | ✅ YES | Debug, alerts, incident response |
+| Error tracking (Sentry) | ✅ YES | Stack traces, error grouping |
+| Frontend console (dev only) | ✅ YES | Development debugging |
+| User-facing UI | ❌ **NEVER** | Users see only intent-based copy |
+
+**Implementation:** `respondError()` in `lib/api/response.ts` SHOULD log full error details internally before returning sanitized response.
+
+#### 20.7.5 Example: Constraint Violation Flow
+
+```
+1. User submits duplicate email
+2. DB throws: "duplicate key value violates unique constraint 'users_email_key'"
+3. Backend catches, maps to: ValidationError(422, "Email already exists", { field: "email" })
+4. Frontend receives 422 → shows FormFieldError "Такое значение уже существует"
+5. User never sees "duplicate key", "constraint", or "users_email_key"
+```
+
+```
+1. User submits form
+2. DB throws unexpected error: "could not serialize access due to concurrent update"
+3. Backend fails to map (or intentionally returns 500)
+4. Frontend receives 500 → shows GENERIC_INTERNAL_ERROR: "Ошибка сервера. Попробуйте позже."
+5. User never sees serialization error details
+```
 
 ---
 
@@ -2365,20 +2454,185 @@ controller.phase === 'redirecting'           // Success, navigating
 controller.phase === 'error'                 // Failed
 ```
 
-### 22.5 UI State Decision Matrix
+### 22.5 UI Error Surface Model
 
-| Context | Loading | Error | Empty | Success |
-|---------|---------|-------|-------|---------|
-| Page (Server) | `loading.tsx` or Suspense | `error.tsx` | Empty component | Render |
-| List (Client) | Skeleton grid | Error + retry | Empty state | Render |
-| Form (Client) | ActionController.isBusy | Toast + form | N/A | Redirect |
-| Modal (Client) | Spinner in modal | Toast | N/A | Close modal |
+**Status:** CANONICAL (v4.1)
+
+This subsection defines the ONLY canonical mapping from error types (§ 20.2) to UI surfaces. 
+
+**Reference:** Visual patterns and copy intents → SSOT_DESIGN_SYSTEM.md § Error States & Messaging
+
+#### 22.5.1 Error Surface Taxonomy
+
+| Surface | Description | When to Use | Layout Slot |
+|---------|-------------|-------------|-------------|
+| **PageErrorState** | Full content-area error inside existing layout shell | Page-level fetch fails, route access denied | Main content area (inside layout wrapper) |
+| **SectionErrorState** | Error within a Card/section, siblings remain functional | Independent section fails (e.g., stats card fails, list loads) | Inside Card/section container |
+| **InlineErrorBanner** | Non-blocking banner above or within content | Warnings, rate limit notices, degraded functionality | Above affected content, within flow |
+| **FormFieldError** | Field-level validation error | Client or server validation fails for specific field | Beneath input field |
+| **FormSummaryError** | Aggregated validation errors or general form error | Multiple field errors, or form-level server error | Top of form, before first field |
+| **BlockingModalError** | Error inside existing modal (not separate modal) | Modal action fails, needs user decision before close | Inside modal body, above actions |
+
+**CRITICAL RULE:** Errors MUST render INSIDE existing layout. No "panic" full-page blank error screens. Even `app/error.tsx` MUST render the layout wrapper and show PageErrorState within content area.
+
+#### 22.5.2 Error Taxonomy → UI Surface Mapping (LOCKED)
+
+| HTTP Status | Error Code (§ 20.2) | UI Surface | UI Component | Retry Allowed | Notes |
+|-------------|---------------------|------------|--------------|---------------|-------|
+| 401 | `UNAUTHORIZED` | Special: Auth modal or redirect | `AuthModal` / `router.push('/login')` | N/A | Session-level, not error surface |
+| 402 | `PAYWALL` | Special: Dedicated modal | `PaywallModal` | N/A | Shows upgrade options |
+| 403 | `FORBIDDEN` | PageErrorState or SectionErrorState | `PageErrorState`/`SectionErrorState` | ❌ No | No retry—access won't change |
+| 404 | `NotFound` | PageErrorState | `PageErrorState` or Next.js `not-found.tsx` | ❌ No | Use "Go back" action |
+| 409 | `CREDIT_CONFIRMATION_REQUIRED` | Special: Dedicated modal | `CreditConfirmationModal` | N/A | User confirms to proceed |
+| 409 | `Conflict` / `REQUEST_IN_PROGRESS` | SectionErrorState or InlineErrorBanner | `InlineErrorBanner` | ✅ Yes (wait) | Retry after short delay |
+| 422 | `ValidationError` | FormFieldError + FormSummaryError | Field errors + summary | ❌ No (fix input) | User must correct input |
+| 429 | `RateLimited` | InlineErrorBanner | `InlineErrorBanner` | ✅ Yes (wait) | Show `Retry-After` if available |
+| 500 | `InternalError` | PageErrorState or SectionErrorState | `PageErrorState`/`SectionErrorState` | ✅ Yes | Manual retry button |
+| Network | (no code) | PageErrorState or SectionErrorState | `PageErrorState`/`SectionErrorState` | ✅ Yes | Manual retry button |
+| Timeout | (no code) | PageErrorState or SectionErrorState | `PageErrorState`/`SectionErrorState` | ✅ Yes | Manual retry button |
+
+#### 22.5.3 Toast Usage Policy (CRITICAL)
+
+| Scenario | Toast Allowed | Correct Approach |
+|----------|---------------|------------------|
+| **Success feedback** | ✅ YES | `showSuccess("Событие создано")` |
+| **Info notification** | ✅ YES | `showInfo("Данные обновлены в фоне")` |
+| **API error (4xx, 5xx)** | ❌ **NEVER** | Use PageErrorState / SectionErrorState / FormFieldError |
+| **Validation error** | ❌ **NEVER** | Use FormFieldError + FormSummaryError |
+| **Network error** | ❌ **NEVER** | Use PageErrorState / SectionErrorState |
+| **Paywall/Credit errors** | ❌ **NEVER** | Use PaywallModal / CreditConfirmationModal |
+
+**Rationale:** Toast disappears after 3-5 seconds. Error context is lost. User cannot retry from toast. Errors require persistent UI until resolved.
+
+#### 22.5.4 Decision Flow for Error Surface Selection
+
+```
+Error occurs
+    │
+    ├─ Is 401? → Show AuthModal or redirect to /login
+    │
+    ├─ Is 402 PAYWALL? → Show PaywallModal
+    │
+    ├─ Is 409 CREDIT_CONFIRMATION_REQUIRED? → Show CreditConfirmationModal
+    │
+    ├─ Is form validation (422)? → FormFieldError + FormSummaryError
+    │
+    ├─ Is section-scoped? (only one card/section affected)
+    │       → SectionErrorState inside that section
+    │
+    └─ Is page-scoped? (whole page content failed)
+            → PageErrorState inside layout wrapper
+```
+
+---
+
+### 22.6 Loading Taxonomy
+
+**Status:** CANONICAL (v4.1)
+
+This subsection enumerates ALL loading scenarios in Need4Trip with canonical UI treatment.
+
+#### 22.6.1 Loading Variant Definitions
+
+| Variant | Description | User Experience | Data Visibility |
+|---------|-------------|-----------------|-----------------|
+| **Initial Load** | First fetch, no data yet | Blocking — user waits | No data shown |
+| **Background Refetch** | Data shown, refresh in background | Non-blocking — stale data visible | Stale data visible |
+| **Pagination / Incremental** | Loading more items in list | Partial blocking — existing items visible | Partial data visible |
+| **Navigation Transition** | Route change in progress | Blocking — previous page visible briefly | Previous route visible |
+| **Mutation Submit** | Form/action submit in progress | Blocking — form disabled | Form data visible (frozen) |
+| **Optimistic Update** | UI updated before server confirms | Non-blocking — optimistic state shown | Optimistic data visible |
+| **Idempotency Wait (409)** | Server processing duplicate request | Blocking — wait for response | Form data visible (frozen) |
+| **Awaiting Confirmation** | ActionController waiting for user modal input | Semi-blocking — modal open | Form data visible |
+
+#### 22.6.2 Canonical Loading Indicators
+
+| Indicator | Component | Use Case | Blocking? |
+|-----------|-----------|----------|-----------|
+| **Skeleton** | `*Skeleton` components | Initial load, no data yet | Yes |
+| **LoadingBar** | `LoadingBar` | Background refetch (SWR) | No |
+| **Spinner in Button** | `<Spinner size="sm" />` inside Button | Mutation submit | Yes (button) |
+| **Inline Spinner** | `<Spinner />` at end of list | Pagination append | No |
+| **Disabled CTA** | `disabled={true}` on Button | Any busy state | Yes (CTA) |
+| **Progress Indicator** | Progress bar with % | File upload | Partial |
+
+---
+
+### 22.7 Loading Decision Matrix
+
+**Status:** CANONICAL (v4.1)
+
+**Rule:** Each scenario has exactly ONE canonical loading treatment. No alternatives.
+
+#### 22.7.1 Scenario → UI Instrument Mapping
+
+| Scenario | UI Instrument | Location | Blocking | Reference |
+|----------|---------------|----------|----------|-----------|
+| **Page initial load** | Skeleton layout (NEVER spinner-only blank) | Main content area | Yes | SSOT_DESIGN_SYSTEM.md § Loading Patterns |
+| **List initial load** | Skeleton grid (e.g., `EventCardSkeletonGrid`) | List container | Yes | § 22.3 |
+| **Background refetch** | LoadingBar (2-3px) | Top of container (inside Card/section) | No | SSOT_DESIGN_SYSTEM.md § LoadingBar |
+| **List pagination** | Skeleton row(s) appended at bottom | After last visible item | No | Append skeletons, not spinner |
+| **Button submit** | Spinner in button + `disabled` | Inside button | Yes (button) | § 22.4 |
+| **Form submit (full)** | Button spinner + form `disabled` | Button + all fields | Yes (form) | § 15 ActionController |
+| **Route navigation** | `app/loading.tsx` branded loader | Full page | Yes | § 22.2 |
+| **Modal action** | Spinner in modal footer button | Modal footer | Yes (modal) | SSOT_DESIGN_SYSTEM.md § Modals |
+| **Optimistic update** | No loading indicator (instant UI update) | Affected element | No | Rollback on error |
+| **Idempotency 409 wait** | Same as submit (spinner + disabled) | Button that initiated | Yes | § 21.5 |
+| **Awaiting confirmation** | Modal open, no spinner until confirmed | Modal visible | Semi (modal) | § 15 ActionController |
+
+#### 22.7.2 Forbidden Loading Patterns
+
+| Pattern | Problem | Correct Approach |
+|---------|---------|------------------|
+| Full-page spinner without skeleton | Bad UX, no layout hint | Use page skeleton with layout preserved |
+| Spinner alone for list load | No visual structure | Use skeleton grid |
+| LoadingBar for initial load | Stale data doesn't exist | Use skeleton |
+| Toast for "loading..." | Distracting, provides no context | Use skeleton/spinner in place |
+| Multiple loading indicators for same data | Confusing, flashing | One indicator per loading scope |
+| Skeleton during background refetch | Flashing, loses scroll position | Use LoadingBar |
+
+---
+
+### 22.8 Retry UX Policy
+
+**Status:** CANONICAL (v4.1)
+
+**Reference:** Retry timing from § 21.6
+
+#### 22.8.1 Retry Rules
+
+| Retry Type | When Used | User Action | Implementation |
+|------------|-----------|-------------|----------------|
+| **Manual Retry** | Default for all errors | User clicks "Повторить" button | `onRetry` callback in ErrorState component |
+| **Automatic Retry** | ONLY for 409 `REQUEST_IN_PROGRESS` | None (system waits) | 1s delay, max 5 attempts |
+| **No Retry** | 401, 403, 404, 422 | User navigates away or fixes input | No retry button shown |
+
+#### 22.8.2 Retry Button Placement
+
+| Error Surface | Retry Button Location | Button Text (RU) |
+|---------------|----------------------|------------------|
+| PageErrorState | Center of error content | "Попробовать снова" |
+| SectionErrorState | Bottom-right of section | "Повторить" |
+| InlineErrorBanner | Right side of banner (inline) | "Повторить" |
+| FormSummaryError | None (user corrects input) | N/A |
+
+#### 22.8.3 Retry Timing (from § 21.6)
+
+| Error Type | Auto Retry | Delay | Max Attempts |
+|------------|------------|-------|--------------|
+| Network error | ❌ Manual | N/A | User decides |
+| 500 Internal | ❌ Manual | N/A | User decides |
+| 429 Rate Limited | ❌ Manual | Show `Retry-After` | User waits |
+| 409 In Progress | ✅ Auto | 1s exponential | 5 |
+| 4xx Client Error | ❌ None | N/A | N/A |
+
+**Note:** Automatic retry is NOT implemented in ActionController (v4.0). Retry is always manual except for the 409 in-progress idempotency case where the backend wrapper handles it.
 
 ---
 
 ## 23. Failure Modes & Degradation Rules
 
-**Status:** CANONICAL (v4.0)
+**Status:** CANONICAL (v4.0, updated v4.1)
 
 This section defines graceful degradation strategies for failures.
 
@@ -2386,14 +2640,18 @@ This section defines graceful degradation strategies for failures.
 
 | Failure Type | Severity | User Impact | Strategy |
 |--------------|----------|-------------|----------|
-| Network error | Medium | Cannot load/save | Retry + offline message |
+| Network error | Medium | Cannot load/save | PageErrorState/SectionErrorState inside layout + manual retry |
 | 401 Unauthorized | Low | Session expired | Auth modal or redirect |
 | 402 Paywall | Low | Feature gated | Show PaywallModal |
-| 403 Forbidden | Low | Permission denied | Error message |
-| 404 Not Found | Low | Resource missing | 404 page |
-| 429 Rate Limited | Medium | Throttled | Wait message + `Retry-After` |
-| 500 Server Error | High | System failure | Error page + retry |
-| Database down | Critical | Full outage | Maintenance page |
+| 403 Forbidden | Low | Permission denied | PageErrorState inside layout, no retry |
+| 404 Not Found | Low | Resource missing | PageErrorState inside layout (or `not-found.tsx`), no retry |
+| 429 Rate Limited | Medium | Throttled | InlineErrorBanner + wait message + `Retry-After` |
+| 500 Server Error | High | System failure | PageErrorState inside layout + manual retry |
+| Database down | Critical | Full outage | *(Future)* Maintenance page — currently falls back to PageErrorState |
+
+**CRITICAL:** All errors render INSIDE existing layout wrapper. See § 22.5 for error surface taxonomy.
+
+**Maintenance Page Note:** Full-site maintenance page is a future exception for planned downtime or catastrophic outages. Default behavior is PageErrorState inside layout with retry.
 
 ### 23.2 Degradation Strategies
 
@@ -2561,8 +2819,69 @@ grep -r "handleApiError" src/
 
 - [ ] Global `app/error.tsx` exists ✅
 - [ ] Global `app/not-found.tsx` exists ✅
-- [ ] Global `app/loading.tsx` exists ❌ **TODO**
+- [ ] Global `app/loading.tsx` exists ❌ **TODO** — Should use branded skeleton/loader
+- [ ] `app/error.tsx` renders layout wrapper + PageErrorState (not blank page) ✅
 - [ ] ErrorFallback component exists ✅
+
+### 25.7 Error Surface Compliance (v4.1)
+
+- [ ] All API errors (4xx, 5xx) rendered via PageErrorState/SectionErrorState
+- [ ] **NO toast for errors** — only for success/info feedback
+- [ ] 401 errors trigger AuthModal or redirect, not error surface
+- [ ] 402 PAYWALL errors show PaywallModal with upgrade options
+- [ ] 409 CREDIT_CONFIRMATION_REQUIRED shows CreditConfirmationModal
+- [ ] 422 validation errors show FormFieldError + FormSummaryError
+- [ ] 403/404 errors show PageErrorState without retry button
+- [ ] 500/network/timeout errors show error surface with retry button
+- [ ] Error surfaces render INSIDE layout (no panic full-page blank screens)
+
+### 25.8 Loading Instrumentation Compliance (v4.1)
+
+- [ ] Initial page load uses skeleton layout (not spinner-only)
+- [ ] Initial list load uses skeleton grid (e.g., `EventCardSkeletonGrid`)
+- [ ] Background refetch uses LoadingBar (not skeleton)
+- [ ] List pagination appends skeleton rows (not inline spinner)
+- [ ] Button submit shows spinner inside button + disabled state
+- [ ] Form submit disables all fields + shows button spinner
+- [ ] Modal actions show spinner in footer button
+- [ ] **NO full-page spinner** without skeleton structure
+- [ ] **NO skeleton** for background refetch (use LoadingBar)
+- [ ] **NO multiple loading indicators** for same data scope
+- [ ] `app/loading.tsx` uses branded loader consistent with design system
+
+### 25.9 System Errors Compliance (v4.2)
+
+**Reference:** § 20.7 (System Errors & Low-Level Failures), SSOT_DESIGN_SYSTEM.md § System Errors
+
+#### Backend Compliance
+
+- [ ] DB constraint violations mapped to 422 ValidationError (not raw 500)
+- [ ] State/concurrent conflicts mapped to 409 Conflict
+- [ ] All unmapped errors return 500 InternalError with generic message
+- [ ] `respondError()` logs full error details internally before sanitizing response
+- [ ] Error messages do NOT contain: `constraint`, `SQL`, `SQLSTATE`, `database` (technical terms)
+
+#### Frontend Compliance
+
+- [ ] 500 errors treated as `GENERIC_INTERNAL_ERROR` — no message parsing
+- [ ] `error.details` ignored for 500 responses
+- [ ] Error copy comes from Canonical Error Message Intents (SSOT_DESIGN_SYSTEM.md), not `error.message`
+- [ ] **NO UI branching** based on raw error message text
+- [ ] **NO toast** for system errors — use PageErrorState/SectionErrorState
+- [ ] **NO special "DB error" screen** — same surface as other 500s
+
+#### Audit Commands
+
+```bash
+# Find forbidden terms in UI components
+grep -ri "database\|constraint\|SQL\|internal error" src/components/
+
+# Find raw error.message usage (potential violation)
+grep -r "error\.message\|err\.message" src/components/
+
+# Find toast usage for errors (should only be success/info)
+grep -r "toast.*error\|showError" src/components/
+```
 
 ---
 
@@ -2581,6 +2900,8 @@ grep -r "handleApiError" src/
 | 2026-01-01 | 3.3 | **SSOT Consistency Work:** Added §18 (SSOT Governance), §19 (Consistency Checklist). Fixed RBAC example (removed deprecated "organizers"). Updated Related SSOT paths. Cross-referenced billing_credits state machine. |
 | 2026-01-01 | 3.4 | v5+ Alignment: Changed "publish-only" to "save-time (v5+)" consumption. |
 | 2026-01-01 | 4.0 | **Operational Completeness:** Added §20-25 (Error Envelope, Idempotency, UI State Model, Failure Modes, Observability, Compliance Checklist). Updated Ownership Map. Identified duplicate code for migration. |
+| 2026-01-01 | 4.1 | **Error & Loading UX Completeness:** Added §22.5-22.8 (UI Error Surface Model, Loading Taxonomy, Loading Decision Matrix, Retry UX Policy). Updated §23.1 (errors inside layout). Extended §25 (error/loading compliance). Clarified toast policy (success/info only). |
+| 2026-01-01 | 4.2 | **System Errors Handling:** Added §20.7 (System Errors & Low-Level Failures) — DB/infra/internal error handling, backend mapping responsibility, observability boundary. Cross-ref: SSOT_DESIGN_SYSTEM.md v1.3 (System Errors UI Rules, Canonical Error Intents, FORBIDDEN UI BEHAVIOR). |
 
 ---
 

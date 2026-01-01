@@ -1,7 +1,7 @@
 # Need4Trip — Design System (SSOT)
 
-**Версия:** 1.1  
-**Дата обновления:** 27 декабря 2024  
+**Версия:** 1.3  
+**Дата обновления:** 1 января 2026  
 **Статус:** Production Ready ✅
 
 ---
@@ -936,19 +936,628 @@ useEffect(() => {
 
 ---
 
+## 🚨 ERROR STATES & MESSAGING (SSOT)
+
+**Статус:** CANONICAL (v1.2)
+
+**Ссылка:** Error taxonomy и surface mapping → `docs/ssot/SSOT_ARCHITECTURE.md` § 20.2 и § 22.5
+
+Этот раздел определяет КАНОНИЧЕСКИЕ UI паттерны для отображения ошибок.
+
+### Принципы отображения ошибок
+
+1. **Ошибки ВНУТРИ layout** — никаких "panic" full-page blank экранов
+2. **Toast НЕ для ошибок** — toast только для success/info
+3. **Retry только где уместно** — не для 401, 403, 404, 422
+4. **Persistent до разрешения** — ошибка видна пока не исправлена
+
+### PageErrorState — Ошибка уровня страницы
+
+**Когда использовать:**
+- Page-level fetch fail (500, network, timeout)
+- Route access denied (403)
+- Resource not found (404)
+
+**Где появляется:** Main content area, ВНУТРИ layout wrapper
+
+**Визуальная семантика:**
+- Danger color (`--color-danger`) для критических (500)
+- Warning color (`--color-warning`) для 403/404
+- Icon: AlertTriangle или XCircle
+
+**Действия:**
+- "Попробовать снова" — для 500, network, timeout
+- "Вернуться назад" — для 403, 404 (NO retry)
+
+**Структура:**
+
+```tsx
+// src/components/ui/page-error-state.tsx (recommended)
+interface PageErrorStateProps {
+  title: string;
+  message: string;
+  onRetry?: () => void;      // если undefined, кнопка retry не показывается
+  onBack?: () => void;       // опционально
+  variant?: 'error' | 'warning' | 'info';
+}
+
+<div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+  <Icon className="w-12 h-12 text-[var(--color-danger)] mb-4" />
+  <h2 className="heading-h2 mb-2">{title}</h2>
+  <p className="text-body-small text-[var(--color-text-muted)] mb-6 max-w-md">
+    {message}
+  </p>
+  <div className="flex gap-3">
+    {onBack && <Button variant="outline" onClick={onBack}>Назад</Button>}
+    {onRetry && <Button onClick={onRetry}>Попробовать снова</Button>}
+  </div>
+</div>
+```
+
+**Copy Intent (RU):**
+
+| Ситуация | Title | Message |
+|----------|-------|---------|
+| 500 Server Error | "Ошибка сервера" | "Не удалось загрузить данные. Попробуйте обновить страницу." |
+| Network Error | "Нет подключения" | "Проверьте интернет-соединение и попробуйте снова." |
+| Timeout | "Превышено время ожидания" | "Сервер не ответил вовремя. Попробуйте позже." |
+| 403 Forbidden | "Доступ запрещён" | "У вас нет прав для просмотра этой страницы." |
+| 404 Not Found | "Страница не найдена" | "Запрошенная страница не существует или была удалена." |
+
+---
+
+### SectionErrorState — Ошибка в секции/карточке
+
+**Когда использовать:**
+- Независимая секция/карточка не загрузилась (stats card, sidebar widget)
+- Остальной контент страницы работает
+
+**Где появляется:** Внутри Card/section container
+
+**Визуальная семантика:**
+- Меньший масштаб чем PageErrorState
+- Danger/warning background (`--color-danger-bg`)
+- Compact layout
+
+**Действия:**
+- "Повторить" — если уместно (500, network)
+- Нет кнопки — для 403, 422
+
+**Структура:**
+
+```tsx
+// src/components/ui/section-error-state.tsx (recommended)
+<div className="p-4 bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-lg">
+  <div className="flex items-start gap-3">
+    <AlertCircle className="w-5 h-5 text-[var(--color-danger)] mt-0.5" />
+    <div className="flex-1">
+      <p className="text-sm font-medium text-[var(--color-danger-text)]">
+        {message}
+      </p>
+      {onRetry && (
+        <Button variant="link" size="sm" onClick={onRetry} className="mt-2 p-0">
+          Повторить
+        </Button>
+      )}
+    </div>
+  </div>
+</div>
+```
+
+**Copy Intent (RU):**
+
+| Ситуация | Message |
+|----------|---------|
+| Stats load fail | "Не удалось загрузить статистику" |
+| Widget fail | "Ошибка загрузки данных" |
+| Partial load fail | "Некоторые данные недоступны" |
+
+---
+
+### InlineErrorBanner — Информационный баннер
+
+**Когда использовать:**
+- Non-blocking предупреждения
+- Rate limit notice (429)
+- Degraded functionality notice
+- Требуется действие пользователя
+
+**Где появляется:** Above affected content, within flow
+
+**Визуальная семантика:**
+- Warning color (`--color-warning-bg`) или Info color (`--color-info-bg`)
+- Full-width banner
+- Dismissible (опционально)
+
+**Действия:**
+- "Повторить" — для 429 после `Retry-After`
+- "Закрыть" — если dismissible
+
+**Структура:**
+
+```tsx
+// src/components/ui/inline-error-banner.tsx (recommended)
+<div className="p-3 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
+  <div className="flex items-center gap-3">
+    <AlertTriangle className="w-5 h-5 text-[var(--color-warning)]" />
+    <p className="flex-1 text-sm text-[var(--color-warning-text)]">
+      {message}
+    </p>
+    {onRetry && (
+      <Button variant="ghost" size="sm" onClick={onRetry}>
+        Повторить
+      </Button>
+    )}
+    {onDismiss && (
+      <Button variant="ghost" size="sm" onClick={onDismiss}>
+        <X className="w-4 h-4" />
+      </Button>
+    )}
+  </div>
+</div>
+```
+
+**Copy Intent (RU):**
+
+| Ситуация | Message |
+|----------|---------|
+| 429 Rate Limited | "Слишком много запросов. Подождите минуту и попробуйте снова." |
+| Degraded | "Некоторые функции временно недоступны." |
+| Conflict | "Кто-то уже редактирует эти данные." |
+
+---
+
+### FormFieldError — Ошибка поля формы
+
+**Когда использовать:**
+- Client-side validation fail
+- Server-side validation fail (422) для конкретного поля
+
+**Где появляется:** Beneath input field
+
+**Визуальная семантика:**
+- Danger color
+- Small text (12-13px)
+- Icon опционально
+
+**Структура:**
+
+```tsx
+// Integrated into form components
+<div className="space-y-2">
+  <Input className={error ? "border-[var(--color-danger)]" : ""} />
+  {error && (
+    <p className="text-xs text-[var(--color-danger)]">
+      {error}
+    </p>
+  )}
+</div>
+```
+
+**Copy Intent (RU):**
+
+| Ситуация | Message |
+|----------|---------|
+| Required empty | "Обязательное поле" |
+| Invalid email | "Введите корректный email" |
+| Too short | "Минимум {n} символов" |
+| Too long | "Максимум {n} символов" |
+| Invalid format | "Неверный формат" |
+| Unique constraint | "Такое значение уже существует" |
+
+---
+
+### FormSummaryError — Общая ошибка формы
+
+**Когда использовать:**
+- Multiple field errors (summary)
+- Form-level server error (не привязанная к полю)
+- General submission failure
+
+**Где появляется:** Top of form, before first field
+
+**Структура:**
+
+```tsx
+// Above form fields
+{formError && (
+  <div className="p-3 bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-lg mb-4">
+    <p className="text-sm text-[var(--color-danger-text)]">
+      {formError}
+    </p>
+  </div>
+)}
+```
+
+**Copy Intent (RU):**
+
+| Ситуация | Message |
+|----------|---------|
+| General submit fail | "Не удалось сохранить данные. Попробуйте позже." |
+| Multiple errors | "Пожалуйста, исправьте ошибки в форме" |
+| Server validation | "Проверьте введённые данные" |
+
+---
+
+### BlockingModalError — Ошибка внутри модалки
+
+**Когда использовать:**
+- Modal action fail
+- Needs user decision before modal close
+
+**Где появляется:** Inside modal body, above actions (DialogBody)
+
+**ВАЖНО:** Это НЕ отдельная модалка. Это ошибка ВНУТРИ существующей модалки.
+
+**Структура:**
+
+```tsx
+<DialogBody>
+  {error && (
+    <div className="p-3 bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-lg mb-4">
+      <p className="text-sm text-[var(--color-danger-text)]">{error}</p>
+    </div>
+  )}
+  {/* Rest of modal content */}
+</DialogBody>
+```
+
+---
+
+### EmptyState — Пустое состояние
+
+**Когда использовать:**
+- Successful fetch with zero results
+- New user with no data
+- Filtered list with no matches
+
+**Где появляется:** Main content area or section container
+
+**Визуальная семантика:**
+- Info/neutral color
+- Illustration or icon
+- Helpful message + action
+
+**Структура:**
+
+```tsx
+// src/components/ui/empty-state.tsx (recommended)
+interface EmptyStateProps {
+  icon?: React.ReactNode;
+  title: string;
+  message: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+<div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+  {icon && <div className="mb-4 text-[var(--color-text-light)]">{icon}</div>}
+  <h3 className="heading-h3 mb-2">{title}</h3>
+  <p className="text-body-small text-[var(--color-text-muted)] mb-6 max-w-sm">
+    {message}
+  </p>
+  {action && (
+    <Button onClick={action.onClick}>{action.label}</Button>
+  )}
+</div>
+```
+
+**Copy Intent (RU):**
+
+| Ситуация | Title | Message | Action |
+|----------|-------|---------|--------|
+| No events | "Нет событий" | "Создайте своё первое событие" | "Создать событие" |
+| No search results | "Ничего не найдено" | "Попробуйте изменить параметры поиска" | "Сбросить фильтры" |
+| No participants | "Пока нет участников" | "Поделитесь ссылкой на событие" | "Скопировать ссылку" |
+| No clubs | "Вы не состоите в клубах" | "Вступите в клуб или создайте свой" | "Найти клубы" |
+
+---
+
+### System Errors (Internal / DB / Infrastructure) — UI Rules
+
+**Status:** CANONICAL (v1.3)
+
+**Reference:** Backend mapping → `docs/ssot/SSOT_ARCHITECTURE.md` § 20.7
+
+Этот раздел определяет как системные ошибки (DB, инфраструктура, внутренние исключения) отображаются в UI.
+
+#### Core Principle
+
+> **System errors are displayed ONLY via canonical error state components. No dedicated "DB error" UI exists.**
+
+#### Canonical Error States for System Errors
+
+| Error Type | UI Component | Copy Intent |
+|------------|--------------|-------------|
+| 500 Internal Server Error | `PageErrorState` / `SectionErrorState` | `GENERIC_INTERNAL_ERROR` |
+| Database failure | `PageErrorState` / `SectionErrorState` | `GENERIC_INTERNAL_ERROR` |
+| Infrastructure failure | `PageErrorState` / `SectionErrorState` | `GENERIC_INTERNAL_ERROR` |
+| Network error | `PageErrorState` / `SectionErrorState` | `NETWORK_ERROR` |
+| Timeout | `PageErrorState` / `SectionErrorState` | `TIMEOUT_ERROR` |
+
+#### UI Behavior Rules (LOCKED)
+
+| Rule | Description |
+|------|-------------|
+| **Single error surface** | All system errors use the same PageErrorState or SectionErrorState. No special "DB error screen". |
+| **Intent-based copy** | Text comes from Canonical Error Message Intents table (below), NOT from backend message. |
+| **No technical details** | Never display constraint names, SQL errors, stack traces, or error codes. |
+| **Retry for all system errors** | PageErrorState/SectionErrorState MUST show "Попробовать снова" button for 500/network/timeout. |
+| **Scope determines surface** | Page-scoped failure → PageErrorState. Section-scoped → SectionErrorState. |
+
+#### Forbidden Technical Wording
+
+The following words/phrases MUST NEVER appear in user-facing error messages:
+
+- `database`, `база данных` (as error cause)
+- `constraint`, `ограничение` (technical)
+- `SQL`, `SQLSTATE`, `Postgres`, `Supabase`
+- `index`, `foreign key`, `primary key`
+- `internal error code`, `код ошибки`
+- `exception`, `stack trace`
+- `driver`, `connection pool`
+- `timeout` (as raw technical term — use user-friendly "время ожидания")
+
+**Allowed:** Generic, calming phrases like "Ошибка сервера", "Попробуйте позже", "Что-то пошло не так".
+
+---
+
+### Canonical Error Message Intents (SSOT)
+
+**Status:** CANONICAL (v1.3)
+
+This table defines the ONLY allowed error message intents for user-facing copy. Frontend MUST select intent based on error type, NOT based on raw backend message.
+
+| Intent ID | When Used | RU Title | RU Message | Allowed Action | Notes |
+|-----------|-----------|----------|------------|----------------|-------|
+| `GENERIC_INTERNAL_ERROR` | 500, DB errors, unhandled exceptions | "Ошибка сервера" | "Что-то пошло не так. Попробуйте позже." | Retry (manual) | **Default for ALL unmapped errors** |
+| `NETWORK_ERROR` | Fetch failed, no response | "Нет подключения" | "Проверьте интернет-соединение и попробуйте снова." | Retry (manual) | Includes DNS, SSL errors |
+| `TIMEOUT_ERROR` | Request timeout (gateway, server) | "Превышено время ожидания" | "Сервер не ответил вовремя. Попробуйте позже." | Retry (manual) | 504, client-side timeout |
+| `NOT_FOUND_ERROR` | 404, resource missing | "Страница не найдена" | "Запрошенная страница не существует или была удалена." | Back (no retry) | |
+| `FORBIDDEN_ERROR` | 403, access denied | "Доступ запрещён" | "У вас нет прав для просмотра этой страницы." | Back (no retry) | |
+| `RATE_LIMITED` | 429 | "Слишком много запросов" | "Подождите минуту и попробуйте снова." | Retry (wait) | Show `Retry-After` if available |
+| `VALIDATION_ERROR` | 422, field errors | "Проверьте данные" | "Пожалуйста, исправьте ошибки в форме." | Fix input (no retry) | Use FormFieldError for specific fields |
+| `CONFLICT_ERROR` | 409 (not credit-related) | "Конфликт данных" | "Кто-то уже изменил эти данные. Обновите страницу." | Refresh/Retry | |
+
+**CRITICAL:** 
+- `GENERIC_INTERNAL_ERROR` is used **regardless of internal cause** (DB constraint, service failure, null pointer, memory error).
+- Intent selection happens in UI code based on HTTP status, NOT based on `error.message` parsing.
+- If backend returns unrecognized status → default to `GENERIC_INTERNAL_ERROR`.
+
+---
+
+### FORBIDDEN UI BEHAVIOR (Error Handling)
+
+**Status:** CANONICAL (v1.3)
+
+The following patterns are **STRICTLY PROHIBITED** and constitute a compliance violation:
+
+| Forbidden Pattern | Problem | Correct Approach |
+|-------------------|---------|------------------|
+| **Displaying raw backend error messages** | Exposes internals, confusing UX | Use Canonical Error Message Intents |
+| **Showing DB/infrastructure terminology** | Technical jargon, user cannot act on it | Generic user-friendly copy only |
+| **Differentiating UI based on DB constraint names** | Coupling to implementation details | Map to 422 ValidationError on backend |
+| **Toast notifications for system errors** | Disappears, no context, no retry | Use PageErrorState/SectionErrorState |
+| **Parsing `error.message` for DB keywords** | Fragile, language-dependent | Use HTTP status + error code only |
+| **Special "database error" screen** | Exposes architecture, no user action | Same PageErrorState as other 500s |
+| **Showing SQLSTATE or error codes to user** | Meaningless to user | Log internally, show intent-based copy |
+| **Alert/confirm dialogs for API errors** | Blocks UI, poor UX | Use error surface in place |
+
+**Audit Checkpoint:** Search codebase for words: `database`, `constraint`, `SQL`, `internal error message` in UI strings. Any occurrence (except SSOT docs) is a violation.
+
+---
+
+### Consistency Audit Results (2026-01-01)
+
+**Audit Date:** 1 января 2026  
+**Status:** ⚠️ Technical Debt Identified
+
+#### Forbidden Terms in UI Strings
+
+✅ **PASS:** No occurrences of `database`, `constraint`, `SQL`, `internal error message` found in `src/components/`.
+
+#### Raw Error Message Exposure
+
+⚠️ **WARNING:** The following components show raw `error.message` to users, which MAY expose technical details if backend doesn't properly map errors:
+
+| Component | Location | Issue | Severity |
+|-----------|----------|-------|----------|
+| `event-form.tsx` | Line 440 | AI generation error fallback shows `error.message` | Medium |
+| `profile-page-client.tsx` | Lines 365-390, 463-486 | Vehicle CRUD shows `errorData.error.message` | Medium |
+| `auth-modal.tsx` | Line 158 | Telegram auth error shows `err.message` | Medium |
+| `error-boundary.tsx` | Lines 80, 133 | Error boundary shows raw `error.message` | Low (dev info) |
+| `event-danger-zone.tsx` | Line 56 | Toast with `err.message` | Medium |
+| `event-registration-control.tsx` | Line 73 | Toast with `err.message` | Medium |
+
+**Note:** These are NOT immediate violations if backend properly maps all errors to user-friendly messages (per § 20.7 Backend Mapping Responsibility). However, they represent technical debt and coupling to backend message format.
+
+**Recommended Fix (Future):** Replace `error.message` fallbacks with Canonical Error Message Intents based on HTTP status/error code. Example:
+
+```tsx
+// ❌ Current (fragile)
+setError(err instanceof Error ? err.message : "Произошла ошибка");
+
+// ✅ Recommended (intent-based)
+setError(getErrorIntent(err.status).message); // Uses GENERIC_INTERNAL_ERROR for 500
+```
+
+**Backend Compliance (2026-01-01):**
+- `src/app/api/auth/telegram/route.ts` returns messages containing "database" — these are NOT exposed to UI because frontend should use intent-based copy.
+- No other API routes found with technical DB terminology in error messages.
+
+---
+
+### Error Taxonomy → UI Pattern Mapping (Сводная таблица)
+
+**Reference:** `docs/ssot/SSOT_ARCHITECTURE.md` § 20.2 (Error Taxonomy — LOCKED)
+
+| HTTP | Code | UI Pattern | Component | Retry | RU Copy Intent |
+|------|------|------------|-----------|-------|----------------|
+| 401 | `UNAUTHORIZED` | AuthModal / redirect | `AuthModal` | N/A | "Войдите в аккаунт" |
+| 402 | `PAYWALL` | PaywallModal | `PaywallModal` | N/A | "Требуется подписка" |
+| 403 | `FORBIDDEN` | PageErrorState | `PageErrorState` | ❌ | "Доступ запрещён" |
+| 404 | `NotFound` | PageErrorState | `PageErrorState` / `not-found.tsx` | ❌ | "Страница не найдена" |
+| 409 | `CREDIT_CONFIRMATION_REQUIRED` | CreditConfirmationModal | `CreditConfirmationModal` | N/A | "Подтвердите списание кредита" |
+| 409 | `Conflict` / `REQUEST_IN_PROGRESS` | InlineErrorBanner | `InlineErrorBanner` | ✅ | "Запрос обрабатывается" |
+| 422 | `ValidationError` | FormFieldError + FormSummaryError | Field + Form errors | ❌ | "Проверьте введённые данные" |
+| 429 | `RateLimited` | InlineErrorBanner | `InlineErrorBanner` | ✅ (wait) | "Слишком много запросов" |
+| 500 | `InternalError` | PageErrorState / SectionErrorState | `PageErrorState` / `SectionErrorState` | ✅ | "Ошибка сервера" |
+| N/A | Network | PageErrorState / SectionErrorState | `PageErrorState` / `SectionErrorState` | ✅ | "Нет подключения" |
+| N/A | Timeout | PageErrorState / SectionErrorState | `PageErrorState` / `SectionErrorState` | ✅ | "Превышено время ожидания" |
+
+---
+
+## 📥 SCREEN LOADING PATTERNS (SSOT)
+
+**Статус:** CANONICAL (v1.2)
+
+**Ссылка:** Loading taxonomy и decision matrix → `docs/ssot/SSOT_ARCHITECTURE.md` § 22.6-22.7
+
+Этот раздел стандартизирует выбор UI инструментов для loading states.
+
+### Loading Scenarios → UI Instrument (Canonical)
+
+| Сценарий | UI Инструмент | Примечание |
+|----------|---------------|------------|
+| **Page initial load** | Skeleton layout | NEVER spinner-only blank |
+| **List initial load** | Skeleton grid (`*SkeletonGrid`) | Показывает структуру |
+| **Background refetch** | LoadingBar (2-3px) | Stale data visible |
+| **List pagination** | Skeleton rows append | NOT inline spinner |
+| **Button submit** | Spinner in button + disabled | Button-scoped |
+| **Form submit** | Button spinner + form disabled | Form-scoped |
+| **Route navigation** | `app/loading.tsx` | Branded loader |
+| **Modal action** | Spinner in modal footer button | Modal-scoped |
+| **Optimistic update** | No indicator | Instant UI update |
+
+### Skeleton Components (Inventory)
+
+**Location:** `src/components/ui/skeletons/`
+
+| Component | Use Case |
+|-----------|----------|
+| `EventCardSkeleton` | Single event card |
+| `EventCardSkeletonGrid` | Events list initial load |
+| `ClubCardSkeleton` | Single club card |
+| `ClubCardSkeletonGrid` | Clubs list initial load |
+| `ProfileSkeleton` | Profile page |
+| `TableSkeleton` | Data tables |
+| `FormSkeleton` | Form initial load |
+
+### LoadingBar (Background Refetch)
+
+**Component:** `src/components/ui/loading-bar.tsx`
+
+**Когда:** Данные уже показаны, обновление в фоне (SWR pattern)
+
+```tsx
+<div className="relative">
+  {refetching && <LoadingBar />}
+  <Content data={data} />
+</div>
+```
+
+**Характеристики:**
+- Height: 2-3px
+- Primary color с shimmer animation
+- Position: top of container (default)
+- Non-blocking (stale data visible)
+
+### Spinner in Button (Mutation Submit)
+
+**Когда:** Form/action submit в процессе
+
+```tsx
+<Button disabled={isSubmitting}>
+  {isSubmitting ? (
+    <>
+      <Spinner size="sm" className="mr-2" />
+      Сохранение...
+    </>
+  ) : (
+    'Сохранить'
+  )}
+</Button>
+```
+
+**Характеристики:**
+- Small spinner (16px)
+- Button disabled
+- Text изменяется на "Сохранение..." / "Загрузка..."
+
+### Route Navigation (`app/loading.tsx`)
+
+**Когда:** Route change (Next.js navigation)
+
+**Рекомендация:** Create branded loading component
+
+```tsx
+// app/loading.tsx (recommended)
+export default function Loading() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex flex-col items-center gap-4">
+        <Spinner size="lg" />
+        <p className="text-body-small text-[var(--color-text-muted)]">
+          Загрузка...
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🚫 FORBIDDEN PATTERNS (Error & Loading)
+
+| Pattern | Problem | Correct Approach |
+|---------|---------|------------------|
+| **Toast for API errors** | Disappears, context lost | PageErrorState / SectionErrorState |
+| **Toast for validation errors** | User can't see which field | FormFieldError + FormSummaryError |
+| **Full-page blank error** | Panic UX, no navigation | PageErrorState INSIDE layout |
+| **Full-page spinner** | No structure hint | Skeleton layout |
+| **Spinner for initial list load** | No visual structure | Skeleton grid |
+| **Skeleton for background refetch** | Flashing, loses scroll | LoadingBar |
+| **Multiple loading indicators** | Confusing | One indicator per scope |
+| **Error modal for API errors** | Blocks entire UI | Error surface in place |
+| **Retry for 403/404/422** | Access won't change / input error | No retry button |
+
+---
+
 ## ✅ CHECKLIST ПЕРЕД КОММИТОМ
 
 При изменении UI компонентов проверь:
 
+### Общие требования
 - [ ] Компонент следует паттерну из SSOT
 - [ ] Используются CSS variables для цветов
 - [ ] Адаптивность (mobile first)
 - [ ] Модалки используют DialogBody (если применимо)
 - [ ] Анимации без translateY конфликтов
 - [ ] Кнопки имеют правильные variants
+
+### Error Handling (CRITICAL)
+- [ ] **NO toast для ошибок** — только success/info
+- [ ] API ошибки показываются через PageErrorState / SectionErrorState
+- [ ] Validation ошибки через FormFieldError + FormSummaryError
+- [ ] 401 → AuthModal, 402 → PaywallModal, 409 credit → CreditConfirmationModal
+- [ ] Retry кнопка ТОЛЬКО для 500/network/timeout
+- [ ] Error render INSIDE layout (no blank panic screens)
+
+### Loading States (CRITICAL)
+- [ ] Initial load → Skeleton (NEVER spinner-only)
+- [ ] Background refetch → LoadingBar (NEVER skeleton)
+- [ ] Pagination → Skeleton rows append
+- [ ] Submit → Spinner in button + disabled
+- [ ] One loading indicator per scope
+
+### Build & Docs
 - [ ] TypeScript ✅
 - [ ] Build ✅
 - [ ] SSOT обновлён (если добавлен новый паттерн)
+- [ ] Cross-reference с SSOT_ARCHITECTURE.md (если error/loading изменения)
 
 ---
 
@@ -962,13 +1571,54 @@ useEffect(() => {
 
 ### Связанные SSOT
 
-- `docs/ARCHITECTURE.md` — архитектура, ownership
-- `docs/DATABASE.md` — структура БД
-- `docs/BILLING_SYSTEM_ANALYSIS.md` — биллинг
+- `docs/ssot/SSOT_ARCHITECTURE.md` — архитектура, ownership, UI State Model (§22), Error Taxonomy (§20.2)
+- `docs/ssot/SSOT_DATABASE.md` — структура БД
+- `docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md` — биллинг, PaywallError структура
+- `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md` — access rules, RBAC
+- `docs/ssot/SSOT_API.md` — API endpoints, error responses
 
 ---
 
 ## 🔄 ИСТОРИЯ ИЗМЕНЕНИЙ
+
+### v1.3 — 1 января 2026
+
+**Добавлено:**
+- ✅ **System Errors (Internal / DB / Infrastructure) — UI Rules** — правила отображения системных ошибок:
+  - Все системные ошибки используют PageErrorState/SectionErrorState (нет отдельного "DB error" UI)
+  - Forbidden Technical Wording — запрещённые технические термины в UI
+- ✅ **Canonical Error Message Intents (SSOT)** — таблица канонических интентов ошибок:
+  - GENERIC_INTERNAL_ERROR, NETWORK_ERROR, TIMEOUT_ERROR, NOT_FOUND_ERROR, FORBIDDEN_ERROR, RATE_LIMITED, VALIDATION_ERROR, CONFLICT_ERROR
+  - RU title/message для каждого интента
+  - Правила: интент выбирается по HTTP статусу, НЕ по тексту ошибки
+- ✅ **FORBIDDEN UI BEHAVIOR (Error Handling)** — запрещённые паттерны:
+  - Показ raw backend messages
+  - Toast для системных ошибок
+  - Parsing error.message для DB keywords
+  - Специальные "database error" экраны
+- ✅ Audit checkpoint для compliance проверки
+
+**Cross-references added:**
+- SSOT_ARCHITECTURE.md § 20.7 (System Errors & Low-Level Failures)
+
+### v1.2 — 1 января 2026
+
+**Добавлено:**
+- ✅ **ERROR STATES & MESSAGING (SSOT)** — канонические UI паттерны для ошибок:
+  - PageErrorState, SectionErrorState, InlineErrorBanner, FormFieldError, FormSummaryError, BlockingModalError, EmptyState
+  - Copy intent (RU) для каждого сценария
+  - Error Taxonomy → UI Pattern mapping table (все HTTP статусы)
+- ✅ **SCREEN LOADING PATTERNS (SSOT)** — стандартизированный выбор loading instruments:
+  - Scenario → UI Instrument canonical mapping
+  - Skeleton inventory, LoadingBar usage, Spinner patterns
+  - Route navigation (`app/loading.tsx`) рекомендации
+- ✅ **FORBIDDEN PATTERNS** — запрещённые паттерны error/loading
+- ✅ Updated CHECKLIST с error/loading compliance items
+- ✅ Updated References с canonical SSOT paths (`/docs/ssot/SSOT_*.md`)
+
+**Cross-references added:**
+- SSOT_ARCHITECTURE.md § 20.2 (Error Taxonomy — LOCKED)
+- SSOT_ARCHITECTURE.md § 22.5-22.8 (UI Error Surface Model, Loading Taxonomy)
 
 ### v1.1 — 27 декабря 2024
 
