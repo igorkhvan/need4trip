@@ -1,12 +1,13 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.1  
-**Last Updated:** 2024-12-31  
+**Version:** 1.2  
+**Last Updated:** 2026-01-01  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
 - Club selection rules for events
 - Paid modes (personal credit vs club subscription)
 - Publish enforcement & validation
+- Billing credits access/usage rules
 
 This SSOT must be read and followed for any changes in:
 - Clubs (memberships, roles, club page management)
@@ -14,9 +15,20 @@ This SSOT must be read and followed for any changes in:
 - Billing enforcement for paid events
 
 Related SSOTs:
-- ARCHITECTURE.md (layering, ownership map, service boundaries)
-- DATABASE.md (schema, constraints, RLS)
-- BILLING_SYSTEM_ANALYSIS.md (billing products, paywall rules)
+- SSOT_ARCHITECTURE.md (layering, ownership map, service boundaries, SSOT governance)
+- SSOT_DATABASE.md (schema, constraints, RLS, billing credits state machine)
+- SSOT_BILLING_SYSTEM_ANALYSIS.md (billing products, paywall rules)
+
+---
+
+## Change Log (SSOT)
+
+### 2026-01-01
+- **Added "Billing Credits – Access/Usage Rules" section (§10)** — Canonical consumption timing rules. Rationale: Cross-SSOT consistency with SSOT_DATABASE.md.
+- **Updated Related SSOTs paths** — Corrected to use SSOT_ prefix for all references. Rationale: Path accuracy.
+- **Clarified §1.3 credit consumption language** — Made explicit that consumption happens at publish only. Rationale: Precision.
+- **Added cross-reference to SSOT_DATABASE.md state machine** — For invariants and constraint details. Rationale: Single source for DB invariants.
+- **Version bump to 1.2** — Reflects SSOT consistency work.
 
 ---
 
@@ -253,6 +265,53 @@ Any implementation change MUST ensure:
 5) No personal credits used for club-paid events
 6) Paid club publish is owner-only (default policy)
 7) Documentation (SSOT) updated in same commit as code/schema changes
+8) Billing credits consumed ONLY at publish, bound to persisted eventId (see §10)
+
+---
+
+## 10. Billing Credits – Access/Usage Rules
+
+**Status:** LOCKED / Production-aligned
+
+This section defines WHEN and HOW billing credits are consumed. This text is consistent with SSOT_DATABASE.md § 8.2 "Billing – Consumption Timing & Binding".
+
+### 10.1 Canonical Rules
+
+1. **Consumption happens at PUBLISH only**
+   - Credits are NEVER consumed at event creation or update
+   - Credits are ONLY consumed when POST `/api/events/:id/publish` (or equivalent action) is called
+   - The `confirm_credit=1` (or equivalent confirmation parameter) is ONLY meaningful at publish time
+
+2. **Consumption requires a persisted eventId**
+   - It is explicitly DISALLOWED to consume a credit without a real, persisted event ID
+   - The credit's `consumed_event_id` MUST be set to the actual event UUID at consumption time
+   - Consuming a credit for a "future" or "hypothetical" event is FORBIDDEN
+
+3. **Club events MUST NOT consume personal credits**
+   - If `event.club_id IS NOT NULL`, the event is a club event
+   - Club events use club subscription capabilities, NOT personal credits
+   - Any attempt to consume a personal credit for a club event MUST be rejected (422 or 403)
+
+4. **Free limits do not consume credits**
+   - If an event is within free limits (e.g., maxParticipants <= 15 for personal events), no credit is consumed
+   - Credits are ONLY consumed when the event exceeds free limits AND requires paid capability
+
+5. **Binding is permanent**
+   - Once `consumed_event_id` is set, it MUST NOT be changed
+   - The credit-to-event binding is immutable (audit requirement)
+
+### 10.2 Access Rules by Context
+
+| Context | Credit Consumption | Governing Authority |
+|---------|-------------------|---------------------|
+| Personal event (club_id=NULL), within free limits | ❌ NOT consumed | Free tier rules |
+| Personal event (club_id=NULL), exceeds free limits | ✅ Consumed at publish | User's billing_credits |
+| Club event (club_id≠NULL), any size | ❌ NEVER consumed | Club subscription |
+
+### 10.3 Cross-Reference
+
+For database-level invariants (state machine, CHECK constraint `chk_billing_credits_consumed_state`), see:
+**SSOT_DATABASE.md § 8.1 "Billing Credits State Machine"**
 
 ---
 

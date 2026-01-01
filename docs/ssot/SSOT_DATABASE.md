@@ -1,8 +1,20 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2024-12-31 (Added idempotency_keys table, club_id immutability trigger, updated migration history to 87 files) ⚡  
+> Последнее обновление: 2026-01-01  
 > PostgreSQL + Supabase
+
+---
+
+## Change Log (SSOT)
+
+### 2026-01-01
+- **Added "Billing Credits State Machine" section** — Explicit statuses (available/consumed), invariants, allowed transitions, disallowed states. Rationale: Production alignment with `chk_billing_credits_consumed_state` constraint.
+- **Added "Billing – Consumption Timing & Binding" section** — Canonical rules for when/how credits are consumed. Rationale: Cross-SSOT consistency with SSOT_CLUBS_EVENTS_ACCESS.md.
+- **Documented CHECK constraint `chk_billing_credits_consumed_state`** — Production-enforced invariants now explicit in SSOT. Rationale: SSOT must match production reality.
+- **Updated billing_credits table notes** — Clarified consumed_event_id nullability rules. Rationale: Precision and testability.
+- **Fixed club_members role CHECK constraint** — Updated to canonical roles (owner/admin/member/pending), removed deprecated 'organizer'. Rationale: Alignment with SSOT_CLUBS_EVENTS_ACCESS.md §2 and migration 20241230.
+- **Added SSOT governance cross-reference** — Points to SSOT_ARCHITECTURE.md for precedence rules. Rationale: Conflict resolution clarity.
 
 ---
 
@@ -646,7 +658,9 @@ CREATE TABLE public.club_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'organizer', 'member')),
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'pending')),
+  -- Note: 'organizer' role was removed in migration 20241230_remove_organizer_role
+  -- Canonical roles per SSOT_CLUBS_EVENTS_ACCESS.md §2: owner, admin, member, pending
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
   CONSTRAINT club_members_unique UNIQUE (club_id, user_id)
@@ -917,8 +931,108 @@ CREATE TABLE public.billing_credits (
 
 **Связи**:
 - → `users` (user_id)
-- → `events` (consumed_event_id) [optional]
+- → `events` (consumed_event_id) [optional — see State Machine below]
 - → `billing_transactions` (source_transaction_id)
+
+---
+
+### 8.1 Billing Credits State Machine (Canonical)
+
+**Status:** LOCKED / Production-enforced  
+**Constraint Name:** `chk_billing_credits_consumed_state`
+
+This section defines the ONLY valid states and transitions for `billing_credits.status`.
+
+#### Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `available` | Credit is unused and ready to be consumed at publish time |
+| `consumed` | Credit has been consumed and is permanently bound to a specific event |
+
+No other statuses exist. Do NOT introduce new statuses without explicit SSOT amendment.
+
+#### Invariants (Production CHECK Constraint)
+
+The following invariants are enforced by `chk_billing_credits_consumed_state`:
+
+| Status | consumed_event_id | consumed_at | Invariant |
+|--------|-------------------|-------------|-----------|
+| `available` | MUST be NULL | MUST be NULL | Available credits are not bound to any event |
+| `consumed` | MUST NOT be NULL | MUST NOT be NULL | Consumed credits are bound to exactly one event with a timestamp |
+
+**SQL Constraint Definition:**
+```sql
+ALTER TABLE billing_credits ADD CONSTRAINT chk_billing_credits_consumed_state CHECK (
+  (status = 'available' AND consumed_event_id IS NULL AND consumed_at IS NULL) OR
+  (status = 'consumed' AND consumed_event_id IS NOT NULL AND consumed_at IS NOT NULL)
+);
+```
+
+#### Allowed Transitions
+
+| From | To | Trigger | Notes |
+|------|-----|---------|-------|
+| `available` | `consumed` | Successful event publish with `confirm_credit=1` | Credit bound to eventId at this moment |
+
+#### Disallowed States (MUST trigger constraint violation)
+
+| State | consumed_event_id | consumed_at | Why Disallowed |
+|-------|-------------------|-------------|----------------|
+| `consumed` | NULL | any | Consumed credit MUST reference the event it was used for |
+| `consumed` | any | NULL | Consumed credit MUST have consumption timestamp |
+| `available` | non-NULL | any | Available credit MUST NOT be bound to any event |
+| `available` | any | non-NULL | Available credit MUST NOT have consumption timestamp |
+
+#### Rollback Semantics
+
+**Status:** NOT ALLOWED / UNDEFINED
+
+Transition `consumed` → `available` is NOT currently supported. If rollback semantics are required in the future:
+- TODO: Define explicit rollback rules (e.g., event deletion, refund scenarios)
+- TODO: Update this SSOT and production constraint before implementation
+
+---
+
+### 8.2 Billing – Consumption Timing & Binding
+
+**Status:** LOCKED / Production-aligned
+
+This section defines WHEN and HOW billing credits are consumed. This text MUST be consistent with SSOT_CLUBS_EVENTS_ACCESS.md "Billing Credits – Access/Usage Rules" section.
+
+#### Canonical Rules
+
+1. **Consumption happens at PUBLISH only**
+   - Credits are NEVER consumed at event creation or update
+   - Credits are ONLY consumed when POST `/api/events/:id/publish` (or equivalent action) is called
+   - The `confirm_credit=1` (or equivalent confirmation parameter) is ONLY meaningful at publish time
+
+2. **Consumption requires a persisted eventId**
+   - It is explicitly DISALLOWED to consume a credit without a real, persisted event ID
+   - The credit's `consumed_event_id` MUST be set to the actual event UUID at consumption time
+   - Consuming a credit for a "future" or "hypothetical" event is FORBIDDEN
+
+3. **Club events MUST NOT consume personal credits**
+   - If `event.club_id IS NOT NULL`, the event is a club event
+   - Club events use club subscription capabilities, NOT personal credits
+   - Any attempt to consume a personal credit for a club event MUST be rejected (422 or 403)
+
+4. **Free limits do not consume credits**
+   - If an event is within free limits (e.g., maxParticipants <= 15 for personal events), no credit is consumed
+   - Credits are ONLY consumed when the event exceeds free limits AND requires paid capability
+
+5. **Binding is permanent**
+   - Once `consumed_event_id` is set, it MUST NOT be changed
+   - The credit-to-event binding is immutable (audit requirement)
+
+#### Error Conditions
+
+| Condition | Expected Error | Notes |
+|-----------|---------------|-------|
+| No available credit | 402 PaywallError | Redirect to purchase |
+| Missing `confirm_credit` when required | 409 CreditConfirmationRequired | UI shows confirmation modal |
+| Attempt to use credit for club event | 422 ValidationError | Personal credits cannot be used for club events |
+| Event not persisted (no ID) | 500 InternalError | Implementation bug — should never reach this state |
 
 ---
 

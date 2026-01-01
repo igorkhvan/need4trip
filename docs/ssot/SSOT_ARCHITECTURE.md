@@ -1,9 +1,21 @@
 # Need4Trip - Architecture (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Last Updated:** 2024-12-31  
-**Version:** 3.2  
+**Last Updated:** 2026-01-01  
+**Version:** 3.3  
 **This document is the ONLY authoritative source for architectural decisions.**
+
+---
+
+## Change Log (SSOT)
+
+### 2026-01-01
+- **Added "SSOT Governance and Precedence" section (§18)** — Defines which SSOT governs which concerns, conflict resolution rules. Rationale: Clear precedence for SSOT conflicts.
+- **Added "SSOT Consistency Checklist" section (§19)** — Compact reviewer checklist for SSOT alignment. Rationale: Operational verification tool.
+- **Fixed RBAC example in §8 Pattern 3** — Replaced deprecated "organizers" with canonical "owner/admin" roles. Rationale: Terminology hygiene per SSOT_CLUBS_EVENTS_ACCESS.md §2.
+- **Updated Related SSOT paths** — Corrected to `/docs/ssot/SSOT_*.md` format. Rationale: Path accuracy.
+- **Cross-referenced billing credits state machine** — Points to SSOT_DATABASE.md §8.1 for invariants. Rationale: Single source for DB constraints.
+- **Version bump to 3.3** — Reflects SSOT consistency work.
 
 ---
 
@@ -18,14 +30,16 @@
 7. [Caching Strategy](#caching-strategy)
 8. [Authentication & Authorization](#authentication--authorization)
 9. [Events Domain Policies](#events-domain-policies)
-10. [Events Listing and Pagination (SSOT)](#events-listing-and-pagination-ssot) ⚡
+10. [Events Listing and Pagination (SSOT)](#events-listing-and-pagination-ssot)
 11. [Type Safety Contracts](#type-safety-contracts)
 12. [Naming & Project Structure](#naming--project-structure)
 13. [Client-Side Data Fetching](#client-side-data-fetching)
 14. [Performance Optimizations](#performance-optimizations)
-15. [Form State Management & Async Actions](#form-state-management--async-actions) ⚡ NEW
+15. [Form State Management & Async Actions](#form-state-management--async-actions)
 16. [Error Handling & Validation](#error-handling--validation)
 17. [Change Process & Definition of Done](#change-process--definition-of-done)
+18. [SSOT Governance and Precedence](#ssot-governance-and-precedence) ⚡ NEW
+19. [SSOT Consistency Checklist](#ssot-consistency-checklist) ⚡ NEW
 
 ---
 
@@ -51,20 +65,23 @@ This document defines **THE ONLY** architectural rules for Need4Trip. Any other 
 
 ### Related SSOT Documents
 
-- **Database Schema:** `/docs/DATABASE.md` - **SSOT** для структуры БД, таблиц, индексов, RLS
-- **Billing System:** `/docs/BILLING_SYSTEM_ANALYSIS.md` - **SSOT** для биллинга, тарифов, лимитов
-- **Design System:** `/docs/design/design-system.md` - UI компоненты, стили
-- **Development Guides:** `/docs/development/` - Нотификации, кэширование, AI фичи
+- **Database Schema:** `/docs/ssot/SSOT_DATABASE.md` - **SSOT** для структуры БД, таблиц, индексов, RLS, billing credits state machine
+- **Clubs & Events Access:** `/docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md` - **SSOT** для RBAC, club roles, event access rules
+- **Billing System:** `/docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md` - **SSOT** для биллинга, тарифов, лимитов
+- **Design System:** `/docs/ssot/SSOT_DESIGN_SYSTEM.md` - UI компоненты, стили, модалки
+- **Testing:** `/docs/ssot/SSOT_TESTING.md` - Тесты, coverage, test execution results
+- **API:** `/docs/ssot/SSOT_API.md` - API endpoints, auth, rate limits
 
-**ПРАВИЛО:** Перед изменениями в БД или биллинге ВСЕГДА читай соответствующий SSOT. После изменений ВСЕГДА обновляй SSOT.
+**ПРАВИЛО:** Перед изменениями в БД, биллинге или RBAC ВСЕГДА читай соответствующий SSOT. После изменений ВСЕГДА обновляй SSOT.
 
 ### Принципы SSOT (Single Source of Truth)
 
-1. **3 главных SSOT:** ARCHITECTURE.md, DATABASE.md, BILLING_SYSTEM_ANALYSIS.md
+1. **7 SSOT документов:** SSOT_ARCHITECTURE.md, SSOT_DATABASE.md, SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_CLUBS_EVENTS_ACCESS.md, SSOT_DESIGN_SYSTEM.md, SSOT_TESTING.md, SSOT_API.md
 2. **Обновление:** При изменении кода ВСЕГДА обновляй SSOT в том же коммите
 3. **Архивация:** Временные документы (sessions, analysis) → удалять/архивировать
 4. **Версионирование:** SSOT имеют версии и даты обновления
 5. **Синхронизация:** Memory правила (.cursor) синхронизированы с SSOT файлами
+6. **Governance:** See § 18 for SSOT precedence and conflict resolution rules
 
 ---
 
@@ -774,8 +791,10 @@ export async function getEventWithVisibility(
 export async function exportClubParticipants(clubId: string, currentUser: CurrentUser) {
   const member = await getClubMember(clubId, currentUser.id);
   
-  if (!member || member.role === 'member') {
-    throw new AuthError("Only organizers can export data", undefined, 403);
+  // Canonical roles: owner, admin, member, pending (see SSOT_CLUBS_EVENTS_ACCESS.md §2)
+  // Export requires owner or admin role
+  if (!member || member.role === 'member' || member.role === 'pending') {
+    throw new AuthError("Only club owner or admin can export data", undefined, 403);
   }
   
   // Proceed with export
@@ -1892,6 +1911,94 @@ module.exports = {
 
 ---
 
+## 18. SSOT Governance and Precedence
+
+**Status:** LOCKED / Canonical
+
+This section defines the authoritative scope of each SSOT document and rules for resolving conflicts.
+
+### 18.1 SSOT Document Scopes
+
+| SSOT Document | Governs | Examples |
+|---------------|---------|----------|
+| **SSOT_DATABASE.md** | DB invariants, constraints, persistence rules, schema definitions | CHECK constraints, RLS policies, table schemas, billing_credits state machine |
+| **SSOT_CLUBS_EVENTS_ACCESS.md** | RBAC, access rules, business permission logic, club roles | Who can publish paid events, role definitions (owner/admin/member/pending), credit consumption rules |
+| **SSOT_ARCHITECTURE.md** | Coding patterns, layering, architectural conventions | Repository→Service→API pattern, caching strategy, runtime boundaries |
+| **SSOT_BILLING_SYSTEM_ANALYSIS.md** | Billing products, pricing, paywall rules, subscription logic | Plan limits, PaywallError structure, enforcement functions |
+| **SSOT_DESIGN_SYSTEM.md** | UI/UX patterns, component design, styling rules | Modal anatomy, color system, typography |
+| **SSOT_TESTING.md** | Test coverage, test execution, QA requirements | Test case inventory, integration test patterns |
+| **SSOT_API.md** | API contracts, endpoint behavior, rate limits | Request/response formats, authentication headers |
+
+### 18.2 Conflict Resolution Rules
+
+1. **Conflicts MUST be resolved by editing SSOT docs until consistent**
+   - Do NOT "interpret around" conflicts
+   - Do NOT implement code that contradicts any SSOT
+   - If contradiction exists, STOP and fix SSOT documents first
+
+2. **Scope-based precedence**
+   - For DB constraint questions: SSOT_DATABASE.md is authoritative
+   - For access control questions: SSOT_CLUBS_EVENTS_ACCESS.md is authoritative
+   - For coding pattern questions: SSOT_ARCHITECTURE.md is authoritative
+
+3. **Cross-reference, don't duplicate**
+   - When one SSOT needs to reference another's rules, use explicit cross-references
+   - Example: "See SSOT_DATABASE.md §8.1 for billing_credits state machine"
+   - Do NOT copy-paste rules between SSOTs (leads to drift)
+
+4. **New rules placement**
+   - Any new rule MUST be added to the correct SSOT based on scope (see table above)
+   - Cross-reference from other SSOTs if they need to be aware of the rule
+   - Example: Credit consumption timing is defined in both SSOT_DATABASE.md (invariants) and SSOT_CLUBS_EVENTS_ACCESS.md (access rules) but uses identical canonical text
+
+### 18.3 Amendment Process
+
+1. Identify which SSOT governs the topic
+2. Make changes to the correct SSOT
+3. Update cross-references in other SSOTs if needed
+4. Update version and Change Log in all modified SSOTs
+5. Commit all SSOT changes together with code changes
+
+---
+
+## 19. SSOT Consistency Checklist
+
+**Purpose:** Compact checklist for reviewers to verify SSOT alignment before merge.
+
+### Billing Credits Invariants
+- [ ] `chk_billing_credits_consumed_state` constraint documented in SSOT_DATABASE.md §8.1
+- [ ] Status values limited to: `available`, `consumed`
+- [ ] `available` → `consumed_event_id IS NULL AND consumed_at IS NULL`
+- [ ] `consumed` → `consumed_event_id IS NOT NULL AND consumed_at IS NOT NULL`
+
+### Consumption Timing
+- [ ] Credits consumed ONLY at publish (not create/update)
+- [ ] Credits require persisted eventId at consumption time
+- [ ] `confirm_credit` parameter meaningful only at publish
+
+### Club vs Personal Rules
+- [ ] Club events (club_id ≠ NULL) NEVER consume personal credits
+- [ ] Personal credits ONLY for personal events (club_id = NULL)
+- [ ] Free limits do not trigger credit consumption
+
+### Role Terminology
+- [ ] No deprecated roles in examples (e.g., no "organizer")
+- [ ] Canonical roles: owner, admin, member, pending
+- [ ] `pending` role has NO elevated permissions
+
+### SSOT Governance
+- [ ] Governance section present in SSOT_ARCHITECTURE.md §18
+- [ ] Each SSOT has clear scope definition
+- [ ] Cross-references use explicit section numbers
+- [ ] No duplicated rules across SSOTs (only cross-references)
+
+### Document Hygiene
+- [ ] Change Log present at top of each SSOT file
+- [ ] Version and date updated
+- [ ] Related SSOT paths use correct `/docs/ssot/SSOT_*.md` format
+
+---
+
 ## Document History
 
 | Date | Version | Change |
@@ -1904,6 +2011,7 @@ module.exports = {
 | 2024-12-28 | 2.8 | Added Vehicle Type Hydration; Removed /api/events/stats endpoint (duplicated meta.total); Updated § 10 with future stats guidance |
 | 2024-12-31 | 3.1 | **Phase 1 Code Improvements:** Explicit pending checks (events.ts), DB trigger for club_id immutability (20241231_enforce_club_id_immutability_v2.sql). Compliance: 95% → 100%. See SSOT_CLUBS_EVENTS_ACCESS.md §2, §5.6 for implementation details. Audit: docs/verification/EVENTS_CREATE_EDIT_AUDIT_REPORT.md v1.1 |
 | 2024-12-31 | 3.2 | **NEW § 15: Form State Management & Async Actions** — ActionController pattern (canonical mechanism for async actions with confirmation flows), phase model, idempotency integration, race condition prevention. Session: docs/sessions/2024-12-31-event-save-ux-issues/. Fixes 3 UX issues (double-submit, missing loading, incorrect limits). |
+| 2026-01-01 | 3.3 | **SSOT Consistency Work:** Added §18 (SSOT Governance), §19 (Consistency Checklist). Fixed RBAC example (removed deprecated "organizers"). Updated Related SSOT paths. Cross-referenced billing_credits state machine. |
 
 ---
 
