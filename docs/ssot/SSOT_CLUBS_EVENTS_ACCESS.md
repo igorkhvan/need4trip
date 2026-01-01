@@ -1,6 +1,6 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.6  
+**Version:** 1.7  
 **Last Updated:** 2026-01-01  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
@@ -22,6 +22,12 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-01 (v1.7 — SSOT-Linter Compliance)
+- **Clarified Appendix A intro** — Added explicit NON-NORMATIVE label for HTTP status codes (per SSOT_ARCHITECTURE.md § 27)
+- **Cross-reference added** — HTTP status codes moved to appendix-level disclaimer, not per-scenario
+- **No RBAC semantics changed** — Only placement/labeling clarified
+- **Version bump to 1.7** — SSOT-Linter compliance
 
 ### 2026-01-01 (v1.6 — SSOT Cleanup)
 - **Compressed §10.1 Rule #6** — Removed duplicated abort/incomplete flow details, kept RBAC-specific application + cross-reference to SSOT_ARCHITECTURE.md § 26
@@ -364,6 +370,8 @@ For explicit vs implicit abort UI rules (explicit cancellation = silent return; 
 
 This appendix defines MUST-PASS scenarios. Any implementation is considered invalid if any scenario behaves differently.
 
+> **Note on HTTP Status Codes:** Specific HTTP status codes mentioned below (403, 422) are NON-NORMATIVE examples. The normative requirement is the OUTCOME (rejected, denied, allowed), not the specific status code. For authoritative HTTP status mapping, see SSOT_API.md § 6.2 and SSOT_ARCHITECTURE.md § 20.
+
 ### A0. Notation
 - User U
 - Clubs: A, B, C
@@ -568,6 +576,11 @@ Then:
 ---
 
 ## Change Log
+
+### v1.7 (2026-01-01)
+- Clarified Appendix A: HTTP status codes are NON-NORMATIVE examples
+- Added disclaimer for HTTP status mapping cross-references
+- SSOT-Linter compliance (no RBAC changes)
 
 ### v1.1 (2024-12-31)
 - Added §5.6: Club ID immutability enforcement (implementation details)

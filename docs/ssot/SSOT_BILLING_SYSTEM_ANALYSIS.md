@@ -1,13 +1,20 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.7  
+> **Версия:** 5.8  
 > **Дата:** 1 января 2026  
-> **Статус:** Production (v5.7 - UI Implementation Removed)
+> **Статус:** Production (v5.8 - SSOT-Linter Compliant)
 
 ---
 
 ## 🆕 Changelog
+
+**v5.8 (1 January 2026) — SSOT-Linter Compliance:**
+- ✂️ Removed all framework-specific code blocks (>10 lines) per SSOT_ARCHITECTURE.md § 27
+- 📦 Archived implementation examples → `docs/ssot/archive/SSOT_BILLING_IMPLEMENTATION_EXAMPLES.md`
+- 🔗 Replaced "Aborted Purchase Attempts" section with cross-reference to SSOT_ARCHITECTURE.md § 26
+- ✅ No new behavioral rules introduced
+- 📝 Fixed metadata inconsistency (removed outdated footer)
 
 **v5.7 (1 January 2026) — UI Implementation Removed from SSOT:**
 - ✂️ Removed React/TypeScript code (PaywallModal, CreditConfirmationModal) from SSOT
@@ -32,6 +39,9 @@
 > **NON-NORMATIVE implementation history** (v3.x, v4.x, migration paths) has been archived.  
 > See: **`docs/ssot/archive/SSOT_BILLING_HISTORY.md`**  
 > 
+> **Implementation code examples** have been archived.  
+> See: **`docs/ssot/archive/SSOT_BILLING_IMPLEMENTATION_EXAMPLES.md`**
+>
 > **Current normative behavior:** v5+ (save-time enforcement, no separate publish step).
 
 ---
@@ -45,8 +55,8 @@
 5. [One-off Credits](#-one-off-credits)
 6. [Unified Purchase Flow](#-unified-purchase-flow)
 7. [Event Save Enforcement (v5)](#-event-save-enforcement-v5) — **NORMATIVE**
-8. [Aborted Purchase Attempts](#aborted-purchase-attempts)
-9. [API Endpoints (v5+)](#-api-endpoints-v5-current)
+8. [Aborted / Incomplete Actions](#aborted--incomplete-actions)
+9. [API Contracts (v5+)](#-api-contracts-v5-current)
 10. [Ключевые файлы](#-ключевые-файлы)
 
 > **Historical sections (v4.x, migrations):** See `docs/ssot/archive/SSOT_BILLING_HISTORY.md`
@@ -57,7 +67,7 @@
 
 ### Основные принципы
 
-Система биллинга Need4Trip построена на следующих принципах (согласно `docs/BILLING_AND_LIMITS.md`):
+Система биллинга Need4Trip построена на следующих принципах:
 
 1. **Frontend не решает лимиты и доступ** — фронт только показывает UI и реагирует на ошибки backend
 2. **Backend — единственный источник истины** — по доступу, лимитам, grace и paywall
@@ -87,71 +97,31 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                        DATABASE (Supabase)                       │
 ├─────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│ │  club_plans     │  │ billing_policy  │  │ billing_policy  │  │
-│ │                 │  │                 │  │    _actions     │  │
-│ │ - id            │  │ - id            │  │                 │  │
-│ │ - name          │  │ - grace_days    │  │ - status        │  │
-│ │ - price_monthly │  │ - pending_ttl   │  │ - action        │  │
-│ │ - currency_code │  │                 │  │ - is_allowed    │  │
-│ │ - max_members   │  │                 │  │                 │  │
-│ │ - allow_paid    │  │                 │  │                 │  │
-│ │ - allow_csv     │  │                 │  │                 │  │
-│ └─────────────────┘  └─────────────────┘  └─────────────────┘  │
-│                                                                  │
-│ ┌─────────────────┐  ┌─────────────────────────────────────┐   │
-│ │ club_           │  │ billing_transactions (audit)        │   │
-│ │  subscriptions  │  │                                     │   │
-│ │                 │  │ - id, club_id, user_id, plan_id     │   │
-│ │ - club_id       │  │ - product_code, provider            │   │
-│ │ - plan_id       │  │ - amount, currency_code             │   │
-│ │ - status        │  │ - status (pending/completed/failed) │   │
-│ │ - period_start  │  │ - period_start, period_end          │   │
-│ │ - period_end    │  │ - created_at, updated_at            │   │
-│ │ - grace_until   │  │                                     │   │
-│ └─────────────────┘  └─────────────────────────────────────┘   │
+│  club_plans → billing_policy → billing_policy_actions           │
+│  club_subscriptions → billing_transactions (audit)              │
+│  billing_products → billing_credits                             │
 └─────────────────────────────────────────────────────────────────┘
                               ↑ Query + Cache (5 min)
-                              │
 ┌─────────────────────────────────────────────────────────────────┐
 │                     BACKEND (Repository Layer)                   │
-├─────────────────────────────────────────────────────────────────┤
-│ planRepo.ts                 → getPlanById(), listPublicPlans()   │
-│ clubSubscriptionRepo.ts     → getClubSubscription(), upsert...   │
-│ billingPolicyRepo.ts        → isActionAllowed(), getPolicyMap()  │
-│ billingTransactionsRepo.ts  → createPending(), markPaid()        │
+│  planRepo.ts, billingProductsRepo.ts, billingCreditsRepo.ts     │
+│  clubSubscriptionRepo.ts, billingPolicyRepo.ts                  │
 └─────────────────────────────────────────────────────────────────┘
                               ↑
-                              │
 ┌─────────────────────────────────────────────────────────────────┐
 │                     BACKEND (Service Layer)                      │
-├─────────────────────────────────────────────────────────────────┤
-│ accessControl.ts            → enforceClubAction()                │
-│   ├─ enforceFreeLimit()     → проверка FREE плана из БД          │
-│   ├─ enforcePlanLimits()    → проверка лимитов плана             │
-│   └─ getClubCurrentPlan()   → получение текущего плана           │
+│  accessControl.ts → enforceClubAction(), enforceEventPublish()  │
 └─────────────────────────────────────────────────────────────────┘
                               ↑ throws PaywallError (402)
-                              │
 ┌─────────────────────────────────────────────────────────────────┐
 │                      API ROUTES (Next.js)                        │
-├─────────────────────────────────────────────────────────────────┤
-│ POST /api/events            → createEvent() → enforceClubAction │
-│ PUT  /api/events/[id]       → updateEvent() → enforceClubAction │
-│ GET  /api/clubs/[id]/export → enforceClubAction(CSV_EXPORT)     │
-│ GET  /api/plans             → listPublicPlans()                  │
-│ GET  /api/clubs/[id]/plan   → getClubCurrentPlan()               │
+│  POST/PUT /api/events → createEvent() / updateEvent()           │
+│  GET /api/clubs/[id]/export → enforceClubAction(CSV_EXPORT)     │
 └─────────────────────────────────────────────────────────────────┘
                               ↑ HTTP 402 + PaywallError JSON
-                              │
 ┌─────────────────────────────────────────────────────────────────┐
 │                     FRONTEND (React/Next.js)                     │
-├─────────────────────────────────────────────────────────────────┤
-│ PaywallModal (2 версии)     → показывает ограничения            │
-│ useClubPlan()               → загружает лимиты для UI           │
-│ usePaywall()                → hook для управления paywall modal │
-│ EventForm                   → валидация + usePaywall()           │
-│ PricingPage                 → отображает тарифы из /api/plans   │
+│  PaywallModal, CreditConfirmationModal, usePaywall()            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -165,178 +135,32 @@ graph TB
     D --> E{enforceClubAction}
     E --> F[Repository Layer]
     F --> G[(Database)]
-    G --> F
-    F --> E
-    E -->|Access OK| D
-    E -->|Access Denied| H[throw PaywallError]
-    H --> C
-    C --> I[respondError 402]
-    I --> B
-    B --> J[PaywallModal]
-    J --> K[Redirect to /pricing]
+    E -->|Access OK| H[Save Event]
+    E -->|Access Denied| I[throw PaywallError]
+    I --> J[respondError 402]
+    J --> B
+    B --> K[PaywallModal]
 ```
 
 ---
 
 ## 💾 База данных
 
-### Схема таблиц
+> **Authoritative schema:** See SSOT_DATABASE.md § 5-8 for complete table definitions.
 
-#### 1. `club_plans` — Тарифные планы
+### Схема таблиц (Summary)
 
-```sql
-CREATE TABLE public.club_plans (
-  id TEXT PRIMARY KEY,                          -- 'free' | 'club_50' | 'club_500' | 'club_unlimited'
-  name TEXT NOT NULL,
-  description TEXT,
-  
-  price_monthly NUMERIC(10,2) NOT NULL,         -- Normalized (generic amount)
-  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES currencies(code),  -- FK
-  
-  max_club_members INT NULL,                    -- NULL = безлимит
-  max_event_participants INT NULL,              -- NULL = безлимит
-  
-  allow_paid_events BOOLEAN NOT NULL DEFAULT FALSE,
-  allow_csv_export BOOLEAN NOT NULL DEFAULT FALSE,
-  
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `club_plans` | Тарифные планы | id, price_monthly, currency_code, max_event_participants, allow_paid_events |
+| `club_subscriptions` | Подписки клубов | club_id, plan_id, status, current_period_end, grace_until |
+| `billing_policy` | Глобальная политика | grace_period_days, pending_ttl_minutes |
+| `billing_policy_actions` | Разрешённые действия | policy_id, status, action, is_allowed |
+| `billing_transactions` | История платежей (audit) | club_id, user_id, product_code, status |
+| `billing_products` | One-off продукты | code, price, currency_code, constraints |
+| `billing_credits` | Entitlements | user_id, credit_code, status, consumed_event_id |
 
-CREATE INDEX idx_club_plans_price_monthly ON club_plans(price_monthly);
-CREATE INDEX idx_club_plans_currency_code ON club_plans(currency_code);
-```
-
-> **Schema alignment (2024-12-26):** `price_monthly_kzt` → `price_monthly` + `currency_code` FK.
-> See SSOT_DATABASE.md §6 for authoritative schema.
-
-**Миграции:**
-- `20241215_create_club_plans_v2.sql` — создание таблицы
-- `20241215_seed_club_plans.sql` — seed планов (Club 50, 500, Unlimited)
-- `20241216_add_free_plan.sql` — добавление FREE плана в БД
-
-#### 2. `club_subscriptions` — Подписки клубов
-
-```sql
-CREATE TABLE public.club_subscriptions (
-  club_id UUID PRIMARY KEY REFERENCES clubs(id) ON DELETE CASCADE,
-  
-  plan_id TEXT NOT NULL REFERENCES club_plans(id),
-  status TEXT NOT NULL CHECK (status IN ('pending', 'active', 'grace', 'expired')),
-  
-  current_period_start TIMESTAMPTZ NULL,
-  current_period_end TIMESTAMPTZ NULL,
-  
-  grace_until TIMESTAMPTZ NULL,
-  
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_club_subscriptions_plan_id ON club_subscriptions(plan_id);
-CREATE INDEX idx_club_subscriptions_status ON club_subscriptions(status);
-CREATE INDEX idx_club_subscriptions_period_end ON club_subscriptions(current_period_end) 
-  WHERE current_period_end IS NOT NULL;
-```
-
-**Важно:** Если запись отсутствует → FREE план (персональные события без клуба)
-
-**Миграции:**
-- `20241212_create_club_subscriptions.sql` — создание таблицы
-- `20241215_alter_club_subscriptions_v2_SAFE.sql` — миграция на v2.0
-
-#### 3. `billing_policy` — Глобальная политика биллинга
-
-```sql
-CREATE TABLE public.billing_policy (
-  id TEXT PRIMARY KEY,                           -- 'default'
-  grace_period_days INT NOT NULL DEFAULT 7,      -- Дней grace периода
-  pending_ttl_minutes INT NOT NULL DEFAULT 60,   -- Время ожидания оплаты
-  
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
-
-**Seed:** `grace_period_days = 7`, `pending_ttl_minutes = 60`
-
-**Миграции:**
-- `20241215_create_billing_policy.sql`
-- `20241215_seed_billing_policy.sql`
-
-#### 4. `billing_policy_actions` — Разрешённые действия по статусам
-
-```sql
-CREATE TABLE public.billing_policy_actions (
-  policy_id TEXT NOT NULL REFERENCES billing_policy(id) ON DELETE CASCADE,
-  status TEXT NOT NULL CHECK (status IN ('pending','grace','expired')),
-  action TEXT NOT NULL,
-  is_allowed BOOLEAN NOT NULL DEFAULT false,
-  
-  PRIMARY KEY (policy_id, status, action)
-);
-```
-
-**Seed данные:**
-
-| status | action | is_allowed |
-|--------|--------|-----------|
-| **grace** | CLUB_CREATE_EVENT | ✅ true |
-| **grace** | CLUB_UPDATE_EVENT | ✅ true |
-| **grace** | CLUB_CREATE_PAID_EVENT | ✅ true |
-| **grace** | CLUB_EXPORT_PARTICIPANTS_CSV | ✅ true |
-| **grace** | CLUB_INVITE_MEMBER | ✅ true |
-| **expired** | ALL_ACTIONS | ❌ false |
-| **pending** | ALL_ACTIONS | ❌ false |
-
-**Миграции:**
-- `20241215_create_billing_policy_actions.sql`
-- `20241215_seed_billing_policy_actions.sql`
-
-#### 5. `billing_transactions` — История платежей (audit trail)
-
-```sql
-CREATE TABLE public.billing_transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
-  club_id UUID REFERENCES clubs(id) ON DELETE CASCADE,       -- NULL для one-off credits
-  user_id UUID REFERENCES users(id) ON DELETE SET NULL,      -- Для one-off credits
-  product_code TEXT NOT NULL,                                -- EVENT_UPGRADE_500, CLUB_*
-  plan_id TEXT REFERENCES club_plans(id) ON DELETE RESTRICT, -- NULL для one-off
-  
-  provider TEXT NOT NULL,                                    -- 'kaspi' | 'yookassa' | 'stripe'
-  provider_payment_id TEXT,
-  
-  amount NUMERIC(10,2) NOT NULL,                             -- Normalized (was amount_kzt)
-  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES currencies(code), -- FK
-  
-  status TEXT NOT NULL CHECK (status IN ('pending','completed','failed','refunded')),
-  
-  period_start TIMESTAMPTZ NULL,
-  period_end TIMESTAMPTZ NULL,
-  
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_billing_transactions_club_id ON billing_transactions(club_id);
-CREATE INDEX idx_billing_transactions_user_id ON billing_transactions(user_id);
-CREATE INDEX idx_billing_transactions_product_code ON billing_transactions(product_code);
-CREATE INDEX idx_billing_transactions_status ON billing_transactions(status);
-```
-
-**Назначение:** Только аудит. НЕ используется для проверок доступа.
-
-> **Schema alignment (2024-12-26):** `amount_kzt` → `amount`, `currency` → `currency_code` (FK), `status: 'paid'` → `status: 'completed'`.
-> See SSOT_DATABASE.md §5 for authoritative schema.
-
-### RLS (Row Level Security)
-
-**Включено для:**
-- `club_subscriptions` — `20241222_enable_rls_club_subscriptions.sql`
-- `billing_transactions` — `20241222_enable_rls_billing_transactions.sql`
+**Важно:** Если запись в `club_subscriptions` отсутствует → FREE план (персональные события без клуба).
 
 ---
 
@@ -360,24 +184,7 @@ CREATE INDEX idx_billing_transactions_status ON billing_transactions(status);
 - ✅ Лимит участников: 15
 - ❌ CSV экспорт недоступен
 
-**В БД:** FREE план теперь хранится в `club_plans` (с версии 2.1) для унификации кэширования.
-
-### Источник тарифов
-
-**Endpoint:** `GET /api/plans`
-
-```typescript
-// src/app/api/plans/route.ts
-export async function GET() {
-  const plans = await listPublicPlans(); // Все планы с is_public = true
-  return NextResponse.json({
-    success: true,
-    data: { plans },
-  });
-}
-```
-
-**Frontend:** Страница `/pricing` загружает планы из этого API.
+**В БД:** FREE план хранится в `club_plans` (с версии 2.1) для унификации кэширования.
 
 ---
 
@@ -385,149 +192,75 @@ export async function GET() {
 
 ### Центральная функция
 
-**Файл:** `src/lib/services/accessControl.ts`
+**File:** `src/lib/services/accessControl.ts`
 
+**Signature:**
 ```typescript
-export async function enforceClubAction(params: {
+enforceClubAction(params: {
   clubId: string;
   action: BillingActionCode;
-  context?: {
-    eventParticipantsCount?: number;
-    clubMembersCount?: number;
-    isPaidEvent?: boolean;
-  };
-}): Promise<void>
+  context?: { eventParticipantsCount?, clubMembersCount?, isPaidEvent? };
+}): Promise<void>  // throws PaywallError on violation
 ```
 
-### Алгоритм проверки (из спецификации)
+### Алгоритм проверки (Decision Tree)
 
 ```
 1. Load club_subscriptions by club_id
 2. If NULL → FREE plan
-   - Load FREE plan from DB (cached)
    - Check FREE limits
    - Throw PaywallError if violated
 3. If subscription exists:
-   a. Load plan from DB (cached)
-   b. Check status:
-      - active → check plan limits only
-      - grace/pending/expired → check billing_policy_actions + limits
-   c. If action not allowed → throw PaywallError
-   d. Check plan limits (max_members, max_event_participants, etc.)
-   e. If limits exceeded → throw PaywallError
+   a. Check status (active/grace/pending/expired)
+   b. Check billing_policy_actions for status
+   c. Check plan limits
+   d. Throw PaywallError if any check fails
 ```
 
 ### Коды действий (BillingActionCode)
 
-```typescript
-// src/lib/types/billing.ts
-export const BILLING_ACTION_CODES = [
-  "CLUB_CREATE_EVENT",
-  "CLUB_UPDATE_EVENT",
-  "CLUB_CREATE_PAID_EVENT",
-  "CLUB_EXPORT_PARTICIPANTS_CSV",
-  "CLUB_INVITE_MEMBER",
-  "CLUB_REMOVE_MEMBER",
-  "CLUB_UPDATE",
-] as const;
-```
-
-### Примеры проверок
-
-#### 1. Проверка лимита участников
-
-```typescript
-// src/lib/services/accessControl.ts (enforcePlanLimits)
-if (plan.maxEventParticipants !== null && 
-    context.eventParticipantsCount > plan.maxEventParticipants) {
-  
-  const requiredPlan = await getRequiredPlanForParticipants(
-    context.eventParticipantsCount
-  );
-  
-  throw new PaywallError({
-    message: `Event with ${context.eventParticipantsCount} participants exceeds limit`,
-    reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
-    currentPlanId: plan.id,
-    requiredPlanId: requiredPlan,
-    meta: {
-      requested: context.eventParticipantsCount,
-      limit: plan.maxEventParticipants,
-    },
-  });
-}
-```
-
-#### 2. Проверка CSV экспорта
-
-```typescript
-if (action === "CLUB_EXPORT_PARTICIPANTS_CSV") {
-  if (!plan.allowCsvExport) {
-    throw new PaywallError({
-      message: "CSV export not allowed on your plan",
-      reason: "CSV_EXPORT_NOT_ALLOWED",
-      currentPlanId: plan.id,
-      requiredPlanId: "club_50",
-    });
-  }
-}
-```
-
-#### 3. Проверка статуса подписки
-
-```typescript
-// Если status != 'active'
-const isAllowed = await isActionAllowed(subscription.status, action);
-
-if (!isAllowed) {
-  throw new PaywallError({
-    message: `Action "${action}" not allowed for status "${subscription.status}"`,
-    reason: "SUBSCRIPTION_NOT_ACTIVE",
-    currentPlanId: subscription.planId,
-    meta: { status: subscription.status },
-  });
-}
-```
+| Code | Description |
+|------|-------------|
+| `CLUB_CREATE_EVENT` | Создание события в клубе |
+| `CLUB_UPDATE_EVENT` | Обновление события в клубе |
+| `CLUB_CREATE_PAID_EVENT` | Создание платного события |
+| `CLUB_EXPORT_PARTICIPANTS_CSV` | Экспорт участников в CSV |
+| `CLUB_INVITE_MEMBER` | Приглашение участника |
+| `CLUB_REMOVE_MEMBER` | Удаление участника |
+| `CLUB_UPDATE` | Обновление клуба |
 
 ### PaywallError структура
 
 ```typescript
-// src/lib/errors.ts
-export class PaywallError extends AppError {
-  reason: string;
+PaywallError {
+  statusCode: 402;
+  code: "PAYWALL";
+  reason: PaywallReason;
   currentPlanId?: string;
   requiredPlanId?: string;
   meta?: Record<string, unknown>;
-  cta: {
-    type: "OPEN_PRICING";
-    href: "/pricing";
-  };
-  
-  // statusCode: 402
-  // code: "PAYWALL"
+  cta: { type: "OPEN_PRICING"; href: "/pricing" };
 }
 ```
 
 **Причины paywall (reason codes):**
 
-```typescript
-export const PAYWALL_REASONS = [
-  "CLUB_CREATION_REQUIRES_PLAN",
-  "SUBSCRIPTION_EXPIRED",
-  "SUBSCRIPTION_NOT_ACTIVE",
-  "PAID_EVENTS_NOT_ALLOWED",
-  "CSV_EXPORT_NOT_ALLOWED",
-  "MAX_EVENT_PARTICIPANTS_EXCEEDED",
-  "MAX_CLUB_MEMBERS_EXCEEDED",
-] as const;
-```
+| Reason | When Thrown |
+|--------|-------------|
+| `CLUB_CREATION_REQUIRES_PLAN` | Free user tries to create club |
+| `SUBSCRIPTION_EXPIRED` | Club subscription expired |
+| `SUBSCRIPTION_NOT_ACTIVE` | Status not in allowed list |
+| `PAID_EVENTS_NOT_ALLOWED` | Plan doesn't allow paid events |
+| `CSV_EXPORT_NOT_ALLOWED` | Plan doesn't allow CSV |
+| `MAX_EVENT_PARTICIPANTS_EXCEEDED` | Exceeds plan limit |
+| `MAX_CLUB_MEMBERS_EXCEEDED` | Exceeds plan limit |
 
 ---
 
 ## 🚧 Paywall UI Behavior (Normative Rules)
 
-> **Implementation Reference:** `docs/billing/legacy/PaywallModal_v4.md` — contains historical v4 code.  
-> **Current Implementation:** `src/components/billing/PaywallModal.tsx`, `src/components/billing/CreditConfirmationModal.tsx`
+> **Implementation Reference:** `src/components/billing/PaywallModal.tsx`, `src/components/billing/CreditConfirmationModal.tsx`
+> **Legacy Reference:** `docs/billing/legacy/PaywallModal_v4.md`
 
 ### PaywallModal — When Shown
 
@@ -541,9 +274,9 @@ export const PAYWALL_REASONS = [
 
 1. **UI DOES NOT decide limits** — Frontend only displays modal and reacts to backend errors
 2. **Backend is SSOT** — All enforcement via `enforceClubAction()` / `enforceEventPublish()`
-3. **PaywallError structure** — See PaywallError section below for contract
+3. **PaywallError structure** — See PaywallError section above for contract
 4. **No countdown timers** — TTL is backend concern, UI has no authority over time limits
-5. **User cancel ≠ error** — Closing paywall silently returns to form (see SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows)
+5. **User cancel ≠ error** — Closing paywall silently returns to form (see SSOT_ARCHITECTURE.md § 26)
 
 ### CreditConfirmationModal — Purpose
 
@@ -555,1168 +288,7 @@ Shown when 409 `CREDIT_CONFIRMATION_REQUIRED` is received. User must explicitly 
 
 ---
 
-## 🔄 Flow создания события
-
-### Успешный сценарий
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant FE as Frontend
-    participant API as POST /api/events
-    participant SVC as events.ts::createEvent()
-    participant AC as enforceClubAction()
-    participant DB as Database
-
-    U->>FE: Создать событие (30 участников, Club 50)
-    FE->>API: POST {clubId, maxParticipants: 30}
-    API->>SVC: createEvent(payload, currentUser)
-    SVC->>AC: enforceClubAction(clubId, "CLUB_CREATE_EVENT", {eventParticipantsCount: 30})
-    AC->>DB: getClubSubscription(clubId)
-    DB-->>AC: {planId: "club_50", status: "active"}
-    AC->>DB: getPlanById("club_50")
-    DB-->>AC: {maxEventParticipants: 50, ...}
-    AC->>AC: Check: 30 <= 50 ✅
-    AC-->>SVC: OK
-    SVC->>DB: INSERT INTO events
-    DB-->>SVC: Event created
-    SVC-->>API: event object
-    API-->>FE: 201 {success: true, data: {event}}
-    FE-->>U: ✅ Событие создано
-```
-
-### Сценарий с Paywall
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant FE as Frontend
-    participant API as POST /api/events
-    participant SVC as events.ts::createEvent()
-    participant AC as enforceClubAction()
-    participant DB as Database
-
-    U->>FE: Создать событие (100 участников, Club 50)
-    FE->>API: POST {clubId, maxParticipants: 100}
-    API->>SVC: createEvent(payload, currentUser)
-    SVC->>AC: enforceClubAction(clubId, "CLUB_CREATE_EVENT", {eventParticipantsCount: 100})
-    AC->>DB: getClubSubscription(clubId)
-    DB-->>AC: {planId: "club_50", status: "active"}
-    AC->>DB: getPlanById("club_50")
-    DB-->>AC: {maxEventParticipants: 50}
-    AC->>AC: Check: 100 > 50 ❌
-    AC->>AC: getRequiredPlanForParticipants(100)
-    AC-->>SVC: throw PaywallError({reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED", requiredPlanId: "club_500"})
-    SVC-->>API: PaywallError
-    API->>API: respondError(PaywallError)
-    API-->>FE: 402 {success: false, error: {code: "PAYWALL", details: {...}}}
-    FE->>FE: showPaywall(error.details)
-    FE-->>U: 🚧 PaywallModal: "Требуется Club 500"
-    U->>FE: Нажимает "Посмотреть тарифы"
-    FE-->>U: redirect to /pricing
-```
-
-### Код в createEvent()
-
-```typescript
-// src/lib/services/events.ts
-export async function createEvent(input: unknown, currentUser: CurrentUser | null) {
-  const validated = EventCreateSchema.parse(input);
-  
-  // Проверка биллинга v2.0
-  if (validated.clubId) {
-    await enforceClubAction({
-      clubId: validated.clubId,
-      action: validated.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
-      context: {
-        eventParticipantsCount: validated.maxParticipants ?? undefined,
-        isPaidEvent: validated.isPaid,
-      },
-    });
-  } else {
-    // Personal events (FREE plan)
-    const freePlan = await getPlanById("free");
-    
-    if (validated.isPaid && !freePlan.allowPaidEvents) {
-      throw new PaywallError({
-        message: "Платные события доступны только на платных тарифах",
-        reason: "PAID_EVENTS_NOT_ALLOWED",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-      });
-    }
-    
-    if (validated.maxParticipants && freePlan.maxEventParticipants !== null && 
-        validated.maxParticipants > freePlan.maxEventParticipants) {
-      throw new PaywallError({
-        message: `Превышен лимит участников (${validated.maxParticipants} > ${freePlan.maxEventParticipants})`,
-        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-        meta: {
-          requested: validated.maxParticipants,
-          limit: freePlan.maxEventParticipants,
-        },
-      });
-    }
-  }
-  
-  // Создание события в БД
-  const event = await createEventRecord({...validated, createdByUserId: currentUser.id});
-  return event;
-}
-```
-
----
-
-## 📁 Ключевые файлы
-
-### Backend
-
-#### Repository Layer (Database)
-
-```
-src/lib/db/
-├── planRepo.ts                     — Тарифы (с кэшем)
-│   ├── listPublicPlans()
-│   ├── getPlanById()
-│   ├── getRequiredPlanForParticipants()
-│   └── getRequiredPlanForMembers()
-│
-├── billingProductsRepo.ts          — Products (v4 NEW) ⚡
-│   ├── getBillingProductByCode()
-│   ├── listActiveBillingProducts()
-│   └── SSOT для one-off pricing
-│
-├── billingCreditsRepo.ts           — Credits (v4 NEW) ⚡
-│   ├── findAvailableCredit()
-│   ├── createBillingCredit()
-│   ├── consumeCredit()
-│   └── getUserCredits()
-│
-├── clubSubscriptionRepo.ts         — Подписки клубов
-│   ├── getClubSubscription()
-│   ├── upsertClubSubscription()
-│   ├── setClubSubscriptionStatus()
-│   └── activateSubscription()
-│
-├── billingPolicyRepo.ts            — Политики биллинга
-│   ├── getDefaultBillingPolicy()
-│   ├── getPolicyActionsMap()
-│   └── isActionAllowed()
-│
-└── billingTransactionsRepo.ts      — История платежей
-    ├── createPendingTransaction()
-    ├── markTransactionPaid()
-    ├── markTransactionFailed()
-    └── getClubTransactions()
-```
-
-#### Service Layer (Business Logic)
-
-```
-src/lib/services/
-├── accessControl.ts                — Enforcement системы
-│   ├── enforceClubAction()         ← Club billing
-│   ├── enforcePublish()            ← Personal events (v4 NEW) ⚡
-│   ├── enforceFreeLimit()
-│   ├── enforcePlanLimits()
-│   └── getClubCurrentPlan()
-│
-├── events.ts                       — Логика событий
-│   ├── createEvent()               → вызывает enforceClubAction()
-│   └── updateEvent()               → вызывает enforceClubAction()
-│
-└── clubs.ts                        — Логика клубов
-```
-
-#### API Routes
-
-```
-src/app/api/
-├── billing/ (v4 NEW) ⚡
-│   ├── products/
-│   │   └── route.ts                — GET /api/billing/products
-│   ├── purchase-intent/
-│   │   └── route.ts                — POST /api/billing/purchase-intent
-│   ├── transactions/
-│   │   └── status/
-│   │       └── route.ts            — GET /api/billing/transactions/status
-│   └── dev/
-│       └── billing/
-│           └── settle/
-│               └── route.ts        — POST /api/dev/billing/settle (DEV)
-│
-├── plans/
-│   └── route.ts                    — GET /api/plans
-│
-├── clubs/[id]/
-│   ├── route.ts                    — GET, PATCH /api/clubs/:id
-│   ├── current-plan/
-│   │   └── route.ts                — GET /api/clubs/:id/current-plan
-│   └── export/
-│       └── route.ts                — GET /api/clubs/:id/export (CSV)
-│
-└── events/
-    ├── route.ts                    — GET, POST /api/events (v5+: enforcement at save-time)
-    └── [id]/
-        └── route.ts                — GET, PUT /api/events/:id (v5+: enforcement at save-time)
-        # NOTE: publish/ directory was REMOVED in v5+ (enforcement moved to POST/PUT)
-```
-
-#### Errors & Response Handling
-
-```
-src/lib/
-├── errors.ts                       — PaywallError, AppError
-└── api/
-    └── response.ts                 — respondError(), respondSuccess()
-```
-
-#### Types
-
-```
-src/lib/types/
-└── billing.ts                      — Все типы биллинга
-    ├── PlanId, ClubPlan
-    ├── SubscriptionStatus, ClubSubscription
-    ├── BillingActionCode
-    ├── PaywallError, PaywallReason
-    └── BillingTransaction
-```
-
-### Frontend
-
-#### Components
-
-```
-src/components/
-├── billing/
-│   ├── PaywallModal.tsx            — v4 Modal (purchase-intent + polling) ⚡
-│   └── CreditConfirmationModal.tsx — 409 handling (v4 NEW) ⚡
-│
-├── events/
-│   ├── event-form.tsx              — Использует useClubPlan(), usePaywall()
-│   └── create-event-page-content.tsx
-│
-└── pricing/
-    └── pricing-card-button.tsx
-```
-
-#### Hooks
-
-```
-src/hooks/
-└── use-club-plan.ts                — Загрузка плана клуба для UI
-    └── useClubPlan(clubId)
-        ├── Загружает /api/clubs/:id/current-plan
-        ├── Для FREE: загружает планviz из БД (getPlanById("free"))
-        └── Возвращает {plan, limits, loading, error}
-```
-
-#### Pages
-
-```
-src/app/(app)/
-├── pricing/
-│   └── page.tsx                    — Страница тарифов
-│
-└── events/
-    ├── create/
-    │   └── create-event-client.tsx — ✅ Calls publish endpoint (v4) ⚡
-    └── [id]/
-        └── edit/
-            └── edit-event-client.tsx — ✅ Calls publish endpoint (v4) ⚡
-```
-
-### Database
-
-```
-supabase/migrations/
-├── 20241215_create_club_plans_v2.sql
-├── 20241215_seed_club_plans.sql
-├── 20241216_add_free_plan.sql
-├── 20241212_create_club_subscriptions.sql
-├── 20241215_alter_club_subscriptions_v2_SAFE.sql
-├── 20241215_create_billing_policy.sql
-├── 20241215_seed_billing_policy.sql
-├── 20241215_create_billing_policy_actions.sql
-├── 20241215_seed_billing_policy_actions.sql
-├── 20241215_create_billing_transactions.sql
-├── 20241222_enable_rls_club_subscriptions.sql
-└── 20241222_enable_rls_billing_transactions.sql
-```
-
-### Documentation
-
-```
-docs/
-├── BILLING_AND_LIMITS.md           — Продуктовая спецификация (source of truth)
-└── BILLING_SYSTEM_ANALYSIS.md      — Этот документ (технический анализ)
-```
-
----
-
-## 💡 Примеры использования
-
-### 1. Проверка доступа при создании события
-
-```typescript
-// src/lib/services/events.ts
-export async function createEvent(input: unknown, currentUser: CurrentUser | null) {
-  const validated = EventCreateSchema.parse(input);
-  
-  if (validated.clubId) {
-    // Проверка для клубных событий
-    await enforceClubAction({
-      clubId: validated.clubId,
-      action: validated.isPaid ? "CLUB_CREATE_PAID_EVENT" : "CLUB_CREATE_EVENT",
-      context: {
-        eventParticipantsCount: validated.maxParticipants ?? undefined,
-        isPaidEvent: validated.isPaid,
-      },
-    });
-  } else {
-    // Проверка для личных событий (FREE)
-    const freePlan = await getPlanById("free");
-    
-    if (validated.isPaid && !freePlan.allowPaidEvents) {
-      throw new PaywallError({...});
-    }
-  }
-  
-  // Создание события
-  const event = await createEventRecord({...});
-  return event;
-}
-```
-
-### 2. CSV экспорт с проверкой биллинга
-
-```typescript
-// src/app/api/clubs/[id]/export/route.ts
-export async function GET(req: NextRequest, { params }: Params) {
-  const { id: clubId } = await params;
-  const user = await getCurrentUserFromMiddleware(req);
-  
-  // Проверка прав доступа
-  // Canonical roles: owner, admin, member, pending (see SSOT_CLUBS_EVENTS_ACCESS.md §2)
-  const userRole = await getUserClubRole(user.id, clubId);
-  if (userRole !== "owner" && userRole !== "admin") {
-    throw new ForbiddenError("Нет доступа");
-  }
-  
-  // Проверка биллинга
-  await enforceClubAction({
-    clubId,
-    action: "CLUB_EXPORT_PARTICIPANTS_CSV",
-  });
-  
-  // Экспорт
-  const members = await listMembers(clubId);
-  const csv = generateCSV(members);
-  
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="members.csv"`,
-    },
-  });
-}
-```
-
-### 3. Использование useClubPlan в форме
-
-```typescript
-// src/components/events/event-form.tsx
-export function EventForm({ club, ...props }) {
-  const { plan, limits, loading } = useClubPlan(club?.id);
-  const { showPaywall, PaywallModalComponent } = usePaywall();
-  
-  // Динамический лимит из плана (или 15 для FREE)
-  const maxAllowedParticipants = limits?.maxEventParticipants ?? 15;
-  
-  const handleSubmit = async (data) => {
-    try {
-      await createEvent(data);
-    } catch (err) {
-      if (err.response?.status === 402) {
-        showPaywall(err.response.data.error.details);
-        return;
-      }
-      throw err;
-    }
-  };
-  
-  return (
-    <>
-      <form onSubmit={handleSubmit}>
-        <Input
-          label="Макс. участников"
-          max={maxAllowedParticipants}
-          hint={`Ваш план поддерживает до ${maxAllowedParticipants} участников`}
-        />
-        <Button type="submit">Создать</Button>
-      </form>
-      
-      {PaywallModalComponent}
-    </>
-  );
-}
-```
-
-### 4. Получение текущего плана клуба
-
-```typescript
-// src/app/api/clubs/[id]/current-plan/route.ts
-export async function GET(req: NextRequest, { params }: Params) {
-  const { id: clubId } = await params;
-  const user = await getCurrentUserFromMiddleware(req);
-  
-  // Получение плана через service
-  const { planId, plan, subscription } = await getClubCurrentPlan(clubId);
-  
-  return respondSuccess({
-    planId: plan.id,
-    planTitle: plan.title,
-    subscription: subscription ? {
-      status: subscription.status,
-      currentPeriodStart: subscription.currentPeriodStart,
-      currentPeriodEnd: subscription.currentPeriodEnd,
-      graceUntil: subscription.graceUntil,
-    } : null,
-    limits: {
-      maxMembers: plan.maxMembers,
-      maxEventParticipants: plan.maxEventParticipants,
-      allowPaidEvents: plan.allowPaidEvents,
-      allowCsvExport: plan.allowCsvExport,
-    },
-  });
-}
-```
-
-### 5. Обработка PaywallError в API
-
-```typescript
-// src/lib/api/response.ts
-export function respondError(error: AppError | Error | unknown) {
-  // Специальная обработка для PaywallError
-  if (isPaywallError(error)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: error.code,              // "PAYWALL"
-          message: error.message,
-          details: error.toJSON(),       // Полный payload
-        },
-      },
-      { status: 402 }
-    );
-  }
-  
-  // Остальные ошибки
-  if (isAppError(error)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-        },
-      },
-      { status: error.statusCode }
-    );
-  }
-  
-  return NextResponse.json({ error: "Internal Error" }, { status: 500 });
-}
-```
-
----
-
-## ⚡ Кэширование
-
-### StaticCache для планов
-
-**Файл:** `src/lib/cache/staticCache.ts`  
-**Использование:** `src/lib/db/planRepo.ts`
-
-```typescript
-const plansCache = new StaticCache<ClubPlan>(
-  {
-    ttl: 5 * 60 * 1000, // 5 минут
-    name: 'club_plans',
-  },
-  async () => {
-    // Loader: загружает ВСЕ планы из БД
-    const { data } = await supabase
-      .from('club_plans')
-      .select('*')
-      .order('price_monthly', { ascending: true });
-    
-    return data.map(mapDbPlanToDomain);
-  },
-  (plan) => plan.id // Key extractor
-);
-
-// Все запросы используют кэш
-export async function getPlanById(planId: PlanId): Promise<ClubPlan> {
-  const plan = await plansCache.getByKey(planId); // O(1)
-  if (!plan) throw new NotFoundError(`Plan '${planId}' not found`);
-  return plan;
-}
-
-export async function listPublicPlans(): Promise<ClubPlan[]> {
-  const allPlans = await plansCache.getAll();
-  return allPlans.filter(plan => plan.isPublic);
-}
-```
-
-### Преимущества
-
-- ✅ **O(1) доступ** по ключу (planId)
-- ✅ **Автоматическая инвалидация** через TTL
-- ✅ **Единое место загрузки** — один запрос к БД на 5 минут
-- ✅ **FREE план теперь в кэше** — унификация с платными планами
-
-### Инвалидация кэша
-
-```typescript
-export async function invalidatePlansCache(): Promise<void> {
-  plansCache.clear();
-  log.info("Club plans cache invalidated");
-}
-```
-
-Вызывается после обновления планов через admin API (когда будет реализован).
-
----
-
-## 🔄 Статус-машина подписки
-
-### Диаграмма состояний
-
-```mermaid
-stateDiagram-v2
-    [*] --> pending: Инициирована оплата
-    pending --> active: Оплата подтверждена
-    pending --> [*]: TTL истёк (60 мин)
-    
-    active --> grace: Период подписки истёк
-    grace --> active: Продление оплачено
-    grace --> expired: Grace период истёк
-    
-    expired --> active: Оплата возобновлена
-    expired --> [*]: Удаление клуба
-```
-
-### Описание статусов
-
-| Статус | Когда устанавливается | Разрешённые действия | Переход |
-|--------|----------------------|---------------------|---------|
-| **pending** | Payment intent создан, ждём подтверждения | ❌ Ничего (кроме просмотра) | → `active` (payment confirmed) <br> → deleted (TTL expired) |
-| **active** | Оплата подтверждена, подписка активна | ✅ Всё (в рамках лимитов плана) | → `grace` (period_end reached) |
-| **grace** | Период подписки истёк, но действует grace | ✅ Почти всё (настраивается) | → `active` (renewal paid) <br> → `expired` (grace_until reached) |
-| **expired** | Grace период истёк, подписка неактивна | ❌ Read-only | → `active` (payment) <br> → deleted (manual) |
-
-### Параметры из billing_policy
-
-```sql
-SELECT * FROM billing_policy WHERE id = 'default';
-
--- id: 'default'
--- grace_period_days: 7
--- pending_ttl_minutes: 60
-```
-
-**Grace period:** 7 дней после истечения `current_period_end`
-
-**Pending TTL:** 60 минут на ожидание подтверждения оплаты
-
-### Автоматизация переходов (TODO)
-
-**Сейчас:** Переходы статусов выполняются вручную через API.
-
-**Планируется:** Cron job для автоматических переходов:
-- `active` → `grace` (когда `current_period_end < now()`)
-- `grace` → `expired` (когда `grace_until < now()`)
-- `pending` → cleanup (когда `created_at + pending_ttl < now()`)
-
----
-
-## 🚨 Обработка ошибок
-
-### Backend: respondError()
-
-```typescript
-// src/lib/api/response.ts
-export function respondError(error: AppError | Error | unknown) {
-  // 1. PaywallError → 402
-  if (isPaywallError(error)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "PAYWALL",
-          message: error.message,
-          details: {
-            reason: error.reason,
-            currentPlanId: error.currentPlanId,
-            requiredPlanId: error.requiredPlanId,
-            meta: error.meta,
-            cta: { type: "OPEN_PRICING", href: "/pricing" },
-          },
-        },
-      },
-      { status: 402 }
-    );
-  }
-  
-  // 2. Другие AppError
-  if (isAppError(error)) {
-    return NextResponse.json(
-      { success: false, error: {...} },
-      { status: error.statusCode }
-    );
-  }
-  
-  // 3. Неизвестные ошибки
-  return NextResponse.json(
-    { success: false, error: { code: "InternalError", message: "..." } },
-    { status: 500 }
-  );
-}
-```
-
-### Frontend: обработка 402
-
-```typescript
-// В компоненте
-const { showPaywall, PaywallModalComponent } = usePaywall();
-
-const handleSubmit = async (data) => {
-  try {
-    const response = await fetch('/api/events', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    
-    if (!response.ok) {
-      if (response.status === 402) {
-        const json = await response.json();
-        showPaywall(json.error.details);
-        return;
-      }
-      throw new Error('Server error');
-    }
-    
-    const result = await response.json();
-    // Success handling
-  } catch (err) {
-    // Error handling
-  }
-};
-
-return (
-  <>
-    <form onSubmit={handleSubmit}>...</form>
-    {PaywallModalComponent}
-  </>
-);
-```
-
-### PaywallError JSON format
-
-**Response body при 402:**
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "PAYWALL",
-    "message": "Event with 100 participants exceeds your plan limit of 50",
-    "details": {
-      "reason": "MAX_EVENT_PARTICIPANTS_EXCEEDED",
-      "currentPlanId": "club_50",
-      "requiredPlanId": "club_500",
-      "meta": {
-        "requested": 100,
-        "limit": 50
-      },
-      "cta": {
-        "type": "OPEN_PRICING",
-        "href": "/pricing"
-      }
-    }
-  }
-}
-```
-
----
-
-## 🔍 Области для улучшения
-
-### 1. ~~Консолидация PaywallModal~~ ✅ ВЫПОЛНЕНО
-
-**Статус:** ✅ Завершено (23 декабря 2024)
-
-**Что сделано:**
-- ✅ Мигрированы все использования на `PaywallModal.tsx`
-- ✅ Удалён `paywall-modal.tsx`
-- ✅ Обновлён `src/app/(app)/events/[id]/edit/page.tsx`
-- ✅ Обновлён `src/components/events/create-event-page-content.tsx`
-
-**Результат:**
-- Единый типизированный API для paywall
-- Упрощённое использование через hook `usePaywall()`
-- Лучшая обработка ошибок 402
-- Более информативные сообщения для пользователей
-
----
-
-### 2. Автоматизация переходов статусов подписки
-
-**Проблема:** Переходы `active → grace → expired` не автоматизированы.
-
-**Сейчас:** Требуется ручное управление через API.
-
-**Решение:**
-- [ ] Создать cron endpoint `/api/cron/billing-status-update`
-- [ ] Настроить Vercel Cron (или внешний scheduler)
-- [ ] Реализовать логику:
-  ```typescript
-  // Псевдокод
-  async function updateExpiredSubscriptions() {
-    const policy = await getDefaultBillingPolicy();
-    
-    // active → grace
-    const activeExpired = await findSubscriptions({
-      status: 'active',
-      where: 'current_period_end < now()',
-    });
-    
-    for (const sub of activeExpired) {
-      const graceUntil = addDays(sub.currentPeriodEnd, policy.gracePeriodDays);
-      await setClubSubscriptionStatus(sub.clubId, 'grace', graceUntil);
-    }
-    
-    // grace → expired
-    const graceExpired = await findSubscriptions({
-      status: 'grace',
-      where: 'grace_until < now()',
-    });
-    
-    for (const sub of graceExpired) {
-      await setClubSubscriptionStatus(sub.clubId, 'expired', null);
-    }
-  }
-  ```
-
-**Частота:** Каждый час или каждый день (в зависимости от требований).
-
----
-
-### 3. Платёжная интеграция (Kaspi, ePay, Stripe)
-
-**Проблема:** Структура готова, но платежи не подключены.
-
-**Текущее состояние:**
-- ✅ Таблица `billing_transactions` создана
-- ✅ Repository методы реализованы
-- ❌ Провайдеры не интегрированы
-
-**План интеграции:**
-
-#### Этап 1: Kaspi QR (приоритет)
-- [ ] Получить API credentials (Kaspi Business)
-- [ ] Создать `/api/billing/kaspi/init` — генерация QR-кода
-- [ ] Создать `/api/billing/kaspi/webhook` — обработка callback
-- [ ] Логика:
-  ```typescript
-  // Инициализация платежа
-  POST /api/billing/kaspi/init
-  {
-    clubId: "...",
-    planId: "club_50"
-  }
-  
-  Response:
-  {
-    transactionId: "...",
-    qrCodeUrl: "...",
-    amount: 5000,
-    expiresAt: "2024-12-24T10:00:00Z"
-  }
-  
-  // Webhook от Kaspi
-  POST /api/billing/kaspi/webhook
-  {
-    transactionId: "...",
-    status: "SUCCESS",
-    paymentId: "kaspi_xxx"
-  }
-  
-  // Обработка:
-  1. markTransactionPaid(transactionId, paymentId)
-  2. activateSubscription(clubId, planId, periodStart, periodEnd)
-  3. Отправить уведомление пользователю
-  ```
-
-#### Этап 2: ePay (Казахстан)
-- [ ] Интеграция аналогична Kaspi
-- [ ] Endpoint: `/api/billing/epay/*`
-
-#### Этап 3: Stripe (международные платежи)
-- [ ] Использовать Stripe Checkout
-- [ ] Webhooks для обработки событий
-- [ ] Endpoint: `/api/billing/stripe/*`
-
-**Документация:**
-- [ ] Создать `docs/PAYMENT_INTEGRATION.md`
-
----
-
-### 4. Cleanup истёкших pending платежей
-
-**Проблема:** Pending transactions не очищаются после `pending_ttl_minutes`.
-
-**Решение:**
-- [ ] Добавить в cron задачу очистки:
-  ```typescript
-  async function cleanupPendingTransactions() {
-    const policy = await getDefaultBillingPolicy();
-    const ttlMinutes = policy.pendingTtlMinutes;
-    
-    const expired = await supabaseAdmin
-      .from('billing_transactions')
-      .select('*')
-      .eq('status', 'pending')
-      .lt('created_at', new Date(Date.now() - ttlMinutes * 60 * 1000).toISOString());
-    
-    for (const tx of expired.data) {
-      await markTransactionFailed(tx.id);
-      // Опционально: удалить draft клуба, если был создан
-    }
-  }
-  ```
-
----
-
-### 5. Grace period уведомления
-
-**Проблема:** Пользователи не получают уведомления о приближении окончания подписки.
-
-**Решение:**
-- [ ] Отправлять email/Telegram за 3 дня до `current_period_end`
-- [ ] Отправлять при переходе в `grace`
-- [ ] Отправлять за 2 дня до `grace_until`
-
-**Интеграция:**
-- Использовать существующую систему уведомлений (если есть)
-- Или интегрировать SendGrid/Mailgun/Resend
-
----
-
-### 6. Создание клубов без оплаты (club_drafts)
-
-**Проблема:** Клубы создаются до оплаты → "полумёртвые" клубы в БД.
-
-**Из спецификации:**
-> Чтобы не плодить "полумёртвые" клубы, делайте один из вариантов:
-> - **Вариант A (лучший):** `club_drafts` (временная сущность до оплаты)
-> - **Вариант B:** хранить draft в client/local storage (менее надёжно)
-
-**Решение (Вариант A):**
-
-```sql
-CREATE TABLE public.club_drafts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plan_id TEXT NOT NULL REFERENCES club_plans(id),
-  
-  -- Draft данные клуба
-  name TEXT NOT NULL,
-  description TEXT,
-  city_ids UUID[],
-  
-  -- Payment intent
-  transaction_id UUID REFERENCES billing_transactions(id),
-  
-  expires_at TIMESTAMPTZ NOT NULL, -- created_at + pending_ttl_minutes
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_club_drafts_user_id ON club_drafts(user_id);
-CREATE INDEX idx_club_drafts_expires_at ON club_drafts(expires_at);
-```
-
-**Flow:**
-1. User нажимает "Создать клуб"
-2. POST `/api/clubs/draft` → создаёт draft + transaction (pending)
-3. Возвращает `draftId` + `paymentInfo` (QR, ссылка)
-4. После оплаты: webhook → создать клуб из draft → удалить draft
-5. Cron очищает expired drafts
-
----
-
-### 7. Мониторинг и метрики
-
-**Проблема:** Нет метрик по биллингу.
-
-**Что отслеживать:**
-- [ ] MRR (Monthly Recurring Revenue)
-- [ ] Churn rate (отток пользователей)
-- [ ] Conversion rate (Free → Club 50)
-- [ ] Paywall показы и клики
-- [ ] Failed payments
-
-**Инструменты:**
-- Vercel Analytics
-- Mixpanel / Amplitude
-- Custom dashboard в Supabase
-
----
-
-### 8. Тесты для enforcement системы
-
-**Проблема:** Отсутствуют автотесты для критичной логики.
-
-**Из спецификации (раздел 11):**
-> Минимальный набор:
-> - ✅ Free не может создать клуб: 402 + reason `CLUB_CREATION_REQUIRES_PLAN`
-> - ✅ Free personal event >15 участников: 402 + `requiredPlanId: club_50`
-> - ✅ Club 50 event 51 участник: 402 + `requiredPlanId: club_500`
-> - ✅ Club subscription expired: любые действия → 402
-> - ✅ Grace period: действия разрешены/запрещены по policy
-> - ✅ CSV export: Free → 402, Club 50+ → ok
-> - ✅ Paid event: Free → 402, Club 50+ → ok
-
-**Решение:**
-- [ ] Создать `/tests/services/accessControl.test.ts`
-- [ ] Использовать Vitest / Jest
-- [ ] Моки для Supabase
-
-```typescript
-describe('enforceClubAction', () => {
-  it('should throw PaywallError when FREE user creates event with 20 participants', async () => {
-    // Mock: no subscription (FREE)
-    mockGetClubSubscription.mockResolvedValue(null);
-    mockGetPlanById.mockResolvedValue({
-      id: 'free',
-      maxEventParticipants: 15,
-    });
-    
-    await expect(
-      enforceClubAction({
-        clubId: 'test-club',
-        action: 'CLUB_CREATE_EVENT',
-        context: { eventParticipantsCount: 20 },
-      })
-    ).rejects.toThrow(PaywallError);
-  });
-  
-  // Остальные тесты...
-});
-```
-
----
-
-### 9. Admin панель для управления подписками
-
-**Проблема:** Нет UI для ручного управления подписками.
-
-**Функции:**
-- [ ] Просмотр всех подписок
-- [ ] Ручное изменение статуса (`active`, `grace`, `expired`)
-- [ ] Продление подписки
-- [ ] Просмотр истории транзакций
-- [ ] Invalidate plans cache
-
-**Endpoint:**
-```typescript
-PATCH /api/admin/subscriptions/:clubId
-{
-  status: "active",
-  periodEnd: "2025-01-31T00:00:00Z"
-}
-```
-
-**UI:** Next.js admin route (protected)
-
----
-
-### 10. Рефакторинг FREE плана
-
-**Проблема:** FREE план теперь в `club_plans`, но логически это не клубный план.
-
-**Варианты:**
-
-**A. Оставить как есть (текущее решение)**
-- ✅ Простота кэширования
-- ✅ Унификация с платными планами
-- ❌ Концептуально FREE ≠ club plan
-
-**B. Создать `personal_plan` таблицу**
-- ✅ Чистая концепция (FREE отдельно от clubs)
-- ❌ Дублирование структуры
-- ❌ Усложнение кода
-
-**Рекомендация:** Оставить текущее решение (A). FREE в `club_plans` с `id='free'` — практичный компромисс.
-
----
-
-### 11. Улучшение UX Paywall Modal
-
-**Идеи:**
-- [ ] Показывать сравнительную таблицу планов прямо в модалке
-- [ ] "Quick upgrade" кнопка (сразу на payment flow)
-- [ ] A/B тестирование текстов
-- [ ] Анимация + эмодзи для вовлечения
-
-**Mockup:**
-```
-┌─────────────────────────────────────────┐
-│  🚀 Превышен лимит участников           │
-│                                         │
-│  Ваш план: Club 50 (до 50 участников)   │
-│  Вы запросили: 100 участников           │
-│                                         │
-│  ┌─────────────────────────────────┐    │
-│  │ Club 500 - 15,000₸/мес          │    │
-│  │ ✓ До 500 участников             │    │
-│  │ ✓ Платные события               │    │
-│  │ ✓ CSV экспорт                   │    │
-│  │                                 │    │
-│  │ [Перейти на Club 500]           │    │
-│  └─────────────────────────────────┘    │
-│                                         │
-│  [Посмотреть все тарифы]  [Отмена]      │
-└─────────────────────────────────────────┘
-```
-
----
-
-### 12. Оптимизация кэша
-
-**Текущее:** TTL = 5 минут
-
-**Улучшения:**
-- [ ] Event-based invalidation при изменении планов через admin
-- [ ] Warm-up кэша при старте сервера (если cold start)
-- [ ] Metrics: cache hit rate
-
----
-
-## 📈 План развития
-
-### Фаза 1: Стабилизация (Q1 2025)
-
-**Приоритет: HIGH**
-
-- [ ] Консолидация PaywallModal (1-2 дня)
-- [ ] Тесты для accessControl.ts (2-3 дня)
-- [ ] Автоматизация статусов подписки (cron) (2-3 дня)
-- [ ] Cleanup pending transactions (1 день)
-
-**Цель:** Система работает стабильно без ручного вмешательства.
-
----
-
-### Фаза 2: Платёжная интеграция (Q1 2025)
-
-**Приоритет: HIGH**
-
-- [ ] Kaspi QR интеграция (1 неделя)
-- [ ] club_drafts для flow создания клубов (3-5 дней)
-- [ ] Webhook обработка (2-3 дня)
-- [ ] Тестирование оплаты end-to-end (3 дня)
-
-**Цель:** Пользователи могут оплачивать подписки через Kaspi.
-
----
-
-### Фаза 3: Мониторинг и метрики (Q1-Q2 2025)
-
-**Приоритет: MEDIUM**
-
-- [ ] Dashboard для MRR, churn, conversions (1 неделя)
-- [ ] Email/Telegram уведомления (3-5 дней)
-- [ ] A/B тесты Paywall Modal (ongoing)
-
-**Цель:** Понимание метрик, оптимизация конверсии.
-
----
-
-### Фаза 4: Масштабирование (Q2 2025)
-
-**Приоритет: LOW**
-
-- [ ] ePay интеграция (1 неделя)
-- [ ] Stripe для международных платежей (1 неделя)
-- [ ] Admin панель для управления подписками (1-2 недели)
-
-**Цель:** Поддержка нескольких платёжных методов, удобное управление.
-
----
-
-## 📚 Дополнительные ресурсы
-
-### Документация
-
-- **Продуктовая спецификация:** `docs/BILLING_AND_LIMITS.md`
-- **Этот анализ:** `docs/BILLING_SYSTEM_ANALYSIS.md`
-- **Миграции:** `supabase/migrations/20241215_*.sql`
-
-### Внешние ссылки
-
-- [Kaspi Business API](https://kaspi.kz/business) — документация по интеграции
-- [Stripe Billing](https://stripe.com/docs/billing) — best practices
-- [SaaS Metrics](https://www.saastr.com/saas-metrics-guide/) — MRR, Churn, CAC
-
-### Связанные фичи
-
-- **Уведомления:** `docs/NOTIFICATION_SYSTEM_HARDENED.md`
-- **RLS аудит:** `docs/RLS_COVERAGE_AUDIT.md`
-- **Архитектура:** `docs/ARCHITECTURE_REVIEW_REDIRECTS.md`
-
----
-
-## 🔄 История изменений
-
-| Дата | Версия | Изменения |
-|------|--------|-----------|
-| 2024-12-23 | 1.1 | Консолидация PaywallModal - удалена старая версия, все компоненты мигрированы на единый API |
-| 2024-12-23 | 1.0 | Первая версия документа (анализ текущей системы v2.0) |
-
----
-
-## 📝 Примечания
-
-### Терминология
-
-- **План (Plan)** — тарифный план (`free`, `club_50`, etc.)
-- **Подписка (Subscription)** — запись в `club_subscriptions` с текущим статусом
-- **Транзакция (Transaction)** — запись в `billing_transactions` (история платежей)
-- **Enforcement** — проверка доступа через `enforceClubAction()`
-- **Paywall** — модальное окно с предложением upgrade
-
-### Соглашения о коде
-
-- **Все проверки биллинга** — только через `enforceClubAction()`
-- **Все repo функции** — возвращают domain types (camelCase), а не DB types (snake_case)
-- **PaywallError** — всегда 402, всегда с `cta: {href: "/pricing"}`
-- **FREE план** — `null` в `club_subscriptions`, но существует в `club_plans`
-
----
-
-**Версия:** 1.1  
-**Последнее обновление:** 23 декабря 2024  
-**Автор:** AI Assistant (анализ кодовой базы Need4Trip)  
-**Статус:** ✅ Актуален (отражает текущую реализацию v2.0 + консолидация PaywallModal)
-
-## ⚡⚡ One-off Credits (NEW in v4)
+## ⚡ One-off Credits
 
 ### Концепция
 
@@ -1724,27 +296,19 @@ PATCH /api/admin/subscriptions/:clubId
 
 **Характеристики:**
 - **Бессрочный** - не привязан к событию при покупке
-- **Расходуется ровно один раз** - при подтверждении publish
+- **Расходуется ровно один раз** - при save с `confirm_credit=1`
 - **Только для личных событий** - club events используют club billing
-- **Не заменяет клуб** - при превышении лимитов credit user must buy club
+- **Не заменяет клуб** - при превышении лимитов (>500) требуется клуб
 
 ### Продукт: EVENT_UPGRADE_500
 
-**Из billing_products:**
-```json
-{
-  "code": "EVENT_UPGRADE_500",
-  "title": "Event Upgrade (до 500 участников)",
-  "price": 1000,
-  "currency_code": "KZT",
-  "constraints": {
-    "scope": "personal",
-    "max_participants": 500
-  }
-}
-```
-
-> **Schema alignment:** `price_kzt` → `price` + `currency_code`. See SSOT_DATABASE.md.
+| Field | Value |
+|-------|-------|
+| `code` | `EVENT_UPGRADE_500` |
+| `title` | Event Upgrade (до 500 участников) |
+| `price` | 1000 KZT |
+| `constraints.scope` | `personal` |
+| `constraints.max_participants` | 500 |
 
 **Лимиты:**
 - Free plan: ~15 participants
@@ -1761,109 +325,58 @@ PATCH /api/admin/subscriptions/:clubId
 ```
 
 > **v5+ Note:** Credit consumption happens at save-time (POST/PUT), not at a separate publish step.
-> See SSOT_CLUBS_EVENTS_ACCESS.md §10 for canonical timing rules.
+> See SSOT_CLUBS_EVENTS_ACCESS.md § 10 for canonical timing rules.
 
-### Database Schema
+### Credit State Machine
 
-```sql
--- SSOT для продуктов
-CREATE TABLE billing_products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  code TEXT NOT NULL UNIQUE,
-  title TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('credit')),
-  price NUMERIC(10,2) NOT NULL,                    -- Normalized (generic amount)
-  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES currencies(code), -- FK
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  constraints JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+> **Authoritative state machine:** SSOT_DATABASE.md § 8.1 "Billing Credits State Machine"
 
--- Entitlements (credits owned by user)
-CREATE TABLE billing_credits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  credit_code TEXT NOT NULL CHECK (credit_code IN ('EVENT_UPGRADE_500')),
-  status TEXT NOT NULL CHECK (status IN ('available', 'consumed')),
-  consumed_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
-  consumed_at TIMESTAMPTZ,
-  source_transaction_id UUID NOT NULL UNIQUE REFERENCES billing_transactions(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
+| Status | consumed_event_id | consumed_at | Meaning |
+|--------|-------------------|-------------|---------|
+| `available` | NULL | NULL | Ready to use |
+| `consumed` | NOT NULL | NOT NULL | Bound to event |
 
-> **Schema alignment (2024-12-26):** `price_kzt` → `price` + `currency_code` (FK).
-> See SSOT_DATABASE.md §6-7 for authoritative schema.
-
-**Key Points:**
-- `source_transaction_id UNIQUE` = idempotency
-- `credit_code FK` = referential integrity
-- `status` = lifecycle state
+**Constraint:** `chk_billing_credits_consumed_state` enforces this invariant at DB level.
 
 ---
 
-## ⚡⚡ Unified Purchase Flow (NEW in v4)
+## 🔄 Unified Purchase Flow
 
 ### Endpoint: POST /api/billing/purchase-intent
 
 **Purpose:** Unified API для покупки one-off credits + club subscriptions.
 
-**Input:**
+**Input Contract:**
 ```typescript
 {
-  product_code: "EVENT_UPGRADE_500" | "CLUB_50" | "CLUB_500" | "CLUB_UNLIMITED",
-  quantity?: number,  // default 1
-  context?: {
-    eventId?: string,
-    clubId?: string
-  }
+  product_code: "EVENT_UPGRADE_500" | "CLUB_50" | "CLUB_500" | "CLUB_UNLIMITED";
+  quantity?: number;  // default 1
+  context?: { eventId?: string; clubId?: string };
 }
 ```
 
-**Output:**
+**Output Contract:**
 ```typescript
 {
-  transaction_id: string,
-  transaction_reference: string,
+  transaction_id: string;
+  transaction_reference: string;
   payment: {
-    provider: "kaspi",
-    invoice_url?: string,    // stub for now
-    qr_payload?: string,     // stub for now
-    instructions: string
-  }
+    provider: "kaspi";
+    invoice_url?: string;    // stub for now
+    qr_payload?: string;     // stub for now
+    instructions: string;
+  };
 }
 ```
 
-### Flow Diagram
+### Flow Summary
 
 ```
-User clicks "Buy" → POST /api/billing/purchase-intent
-                    ↓
-                    Create billing_transactions(pending)
-                    ↓
-                    Return payment details (Kaspi stub)
-                    ↓
-User pays Kaspi  → Webhook / DEV: POST /api/dev/billing/settle
-                    ↓
-                    Mark transaction(completed)
-                    ↓
-                    Issue billing_credit (if one-off)
-                    OR
-                    Activate club_subscription (if club)
+1. User clicks "Buy" → POST /api/billing/purchase-intent
+2. Create billing_transactions(pending) → Return payment details
+3. User pays → Webhook OR DEV: POST /api/dev/billing/settle
+4. Mark transaction(completed) → Issue credit OR activate subscription
 ```
-
-### Kaspi Integration (Stub Mode)
-
-**Current (v4):**
-- Returns mock `invoice_url`, `qr_payload`
-- DEV settlement via `/api/dev/billing/settle`
-
-**Future (production):**
-- Real Kaspi API integration
-- Webhook endpoint for payment confirmation
-- No code changes in API contracts (stub → real swap)
 
 ---
 
@@ -1871,13 +384,13 @@ User pays Kaspi  → Webhook / DEV: POST /api/dev/billing/settle
 
 ### Architecture
 
-**Unified enforcement** - `enforceEventPublish()` в `src/lib/services/accessControl.ts`
+**Unified enforcement** at save-time via `enforceEventPublish()` in `src/lib/services/accessControl.ts`.
 
 **Integration points:**
-- `createEvent()` в `src/lib/services/events.ts` + `confirmCredit` param
-- `updateEvent()` в `src/lib/services/events.ts` + `confirmCredit` param
-- `POST /api/events` - extracts `?confirm_credit=1`, handles 409
-- `PUT /api/events/:id` - extracts `?confirm_credit=1`, handles 409
+- `createEvent()` in `src/lib/services/events.ts`
+- `updateEvent()` in `src/lib/services/events.ts`
+- `POST /api/events` with `?confirm_credit=1`
+- `PUT /api/events/:id` with `?confirm_credit=1`
 
 **Key difference from v4:**
 - ❌ NO separate publish step
@@ -1890,11 +403,11 @@ User pays Kaspi  → Webhook / DEV: POST /api/dev/billing/settle
 **Club Events (clubId != null):**
 ```
 1. Check subscription status + policy
-   ├─> expired/blocked → 402 PAYWALL (CLUB_ACCESS only)
+   ├─> expired/blocked → 402 PAYWALL
    └─> active → check plan limits
 
 2. Check plan limits (maxParticipants, isPaid)
-   ├─> exceeded → 402 PAYWALL (CLUB_ACCESS + recommended plan)
+   ├─> exceeded → 402 PAYWALL
    └─> ok → ALLOW (save event)
 ```
 
@@ -1910,398 +423,69 @@ User pays Kaspi  → Webhook / DEV: POST /api/dev/billing/settle
    └─> YES → check confirmation
 
 3. confirm_credit=1?
-   ├─> NO → 409 CREDIT_CONFIRMATION (show modal)
+   ├─> NO → 409 CREDIT_CONFIRMATION
    └─> YES → consume credit + ALLOW (save event)
 ```
 
-### Frontend Flow (v5)
-
-**CREATE:**
-```typescript
-// src/app/(app)/events/create/create-event-client.tsx
-const handleSubmit = async (payload, retryWithCredit = false) => {
-  const url = retryWithCredit ? "/api/events?confirm_credit=1" : "/api/events";
-  const res = await fetch(url, { method: "POST", body: JSON.stringify(payload) });
-  
-  if (res.status === 409) {
-    // Save payload for retry
-    setPendingPayload(payload);
-    showConfirmation({ ... });
-    return;
-  }
-  
-  if (res.status === 402) {
-    showPaywall({ ... });
-    return;
-  }
-  
-  // Success - redirect
-  router.push('/events');
-};
-
-// On credit confirmation
-onConfirm={() => handleSubmit(pendingPayload, true)}
-```
-
-**UPDATE:**
-```typescript
-// src/app/(app)/events/[id]/edit/edit-event-client.tsx
-const handleSubmit = async (payload, retryWithCredit = false) => {
-  const url = retryWithCredit 
-    ? `/api/events/${event.id}?confirm_credit=1`
-    : `/api/events/${event.id}`;
-  const res = await fetch(url, { method: "PUT", body: JSON.stringify(payload) });
-  
-  // Same 409/402 handling as create
-  // ...
-  
-  // Success - redirect to event detail
-  router.push(`/events/${event.id}`);
-};
-```
-
-### API Implementation (v5)
-
-**POST /api/events:**
-```typescript
-export async function POST(request: Request) {
-  const currentUser = await getCurrentUserFromMiddleware(request);
-  const url = new URL(request.url);
-  const confirmCredit = url.searchParams.get("confirm_credit") === "1";
-  
-  const payload = await request.json();
-  const event = await createEvent(payload, currentUser, confirmCredit);
-  
-  return respondJSON({ event }, undefined, 201);
-}
-// createEvent() calls enforceEventPublish() which throws 402/409
-```
-
-**PUT /api/events/:id:**
-```typescript
-export async function PUT(request: Request, { params }: Params) {
-  const currentUser = await getCurrentUserFromMiddleware(request);
-  const url = new URL(request.url);
-  const confirmCredit = url.searchParams.get("confirm_credit") === "1";
-  
-  const payload = await request.json();
-  const { id } = await params;
-  const updated = await updateEvent(id, payload, currentUser, confirmCredit);
-  
-  return respondJSON({ event: updated });
-}
-// updateEvent() calls enforceEventPublish() which throws 402/409
-```
-
----
-
-### UI Integration (v5.2)
-
-**Visual display of available credits across the app.**
-
-#### **1. CreditBadge Component** ⚡
-
-**Location:** Header (desktop + mobile)
-
-**Component:** `src/components/billing/credit-badge.tsx`
-
-**Features:**
-- Zap icon (⚡) with count
-- Reads from AuthContext → 0 API calls
-- Auto-hide when count = 0
-- Dropdown on click with:
-  - Credit type info
-  - CTA buttons (Create Event, View Profile)
-
-**Layout:**
-```
-Desktop: [Nav] [⚡ 2] [Avatar]
-Mobile:  [Nav] → [⚡ 2] → [User Menu]
-```
-
-**Performance:**
-- Count loaded with user (getCurrentUser)
-- No N+1 queries (single JOIN)
-- Instant display (from context)
-
----
-
-#### **2. Profile Credits Section**
-
-**Component:** `src/components/profile/profile-credits-section.tsx`
-
-**API:** `GET /api/profile/credits`
-
-**Response:**
-```json
-{
-  "available": [
-    {
-      "id": "uuid",
-      "creditCode": "EVENT_UPGRADE_500",
-      "createdAt": "2024-12-26",
-      "sourceTransaction": { ... }
-    }
-  ],
-  "consumed": [
-    {
-      "id": "uuid",
-      "consumedAt": "2024-12-20",
-      "consumedEvent": {
-        "id": "uuid",
-        "title": "Зимний поход",
-        "startDate": "2025-01-15",
-        "maxParticipants": 250
-      }
-    }
-  ],
-  "count": {
-    "available": 2,
-    "consumed": 5,
-    "total": 7
-  }
-}
-```
-
-**UI:**
-- Stats cards (available, consumed, total)
-- Green cards for available credits
-- Gray cards for consumed (with event links)
-- Empty state with CTA to /pricing
-
----
-
-#### **3. Event Create Banner**
-
-**Location:** `/events/create` page
-
-**Logic:**
-```typescript
-const showBanner = user?.availableCreditsCount > 0;
-
-{showBanner && (
-  <InfoBanner>
-    У вас есть {count} апгрейд(а).
-    Используйте при создании события до 500 участников.
-  </InfoBanner>
-)}
-```
-
-**Design:**
-- Primary color border + bg
-- Zap icon
-- Positioned above EventForm
-- Auto-hide when no credits
-
----
-
-#### **4. Invalidation Hooks**
-
-**After purchase:**
-```typescript
-// PaywallModal.tsx
-setPaymentStatus('success');
-router.refresh(); // ⚡ Re-fetch CurrentUser + credits count
-```
-
-**After event create/update:**
-```typescript
-// Already exists in v5.0
-router.push('/events');
-router.refresh();
-```
-
-**Flow:**
-1. User buys credit → polling → status=completed
-2. router.refresh() → getCurrentUser() re-runs
-3. availableCreditsCount updated
-4. CreditBadge updates instantly
-
----
-
 ### Credit Consumption (v5.1 - SSOT-compliant)
 
-**Updated:** 2026-01-01 — Fixed constraint violation (`chk_billing_credits_consumed_state`)
+**Pattern:** Compensating Transaction — ensures atomicity between event creation and credit consumption.
 
-**Compensating Transaction Pattern** - ensures atomicity between event creation and credit consumption.
+**Order (CRITICAL):**
+1. Create event FIRST (get eventId)
+2. Consume credit with ACTUAL eventId
+3. On failure → rollback (delete event)
 
-**File:** `src/lib/services/creditTransaction.ts`
+**Constraint Compliance:** `chk_billing_credits_consumed_state` requires `consumed_event_id IS NOT NULL` when `status='consumed'`. Event MUST exist before credit can be consumed.
 
-**CRITICAL SSOT Constraint:**
-```sql
--- chk_billing_credits_consumed_state
-(status = 'available' AND consumed_event_id IS NULL AND consumed_at IS NULL) OR
-(status = 'consumed' AND consumed_event_id IS NOT NULL AND consumed_at IS NOT NULL)
-```
-
-**Key Insight:** Credit consumption REQUIRES a valid `consumed_event_id`. Consuming credit for "future" or "hypothetical" event is FORBIDDEN (SSOT_CLUBS_EVENTS_ACCESS.md §10.1.2).
-
-**Pattern (SSOT-correct order):**
-```typescript
-// Wrap operation with credit consumption + rollback on failure
-export async function executeWithCreditTransaction<T extends { id: string }>(
-  userId: string,
-  creditCode: "EVENT_UPGRADE_500",
-  eventId: string | undefined,
-  operation: () => Promise<T>
-): Promise<T> {
-  let createdEventId: string | undefined;
-  
-  try {
-    // Step 1: Execute operation FIRST (create event, get eventId)
-    // SSOT §10.1.2: "The event is persisted as part of the save operation"
-    const result = await operation();
-    createdEventId = result.id;
-    
-    // Step 2: Consume credit with ACTUAL eventId (MUST NOT be NULL)
-    // Satisfies constraint: consumed_event_id IS NOT NULL
-    const actualEventId = eventId ?? createdEventId;
-    await consumeCredit(userId, creditCode, actualEventId);
-    
-    return result;
-    
-  } catch (error) {
-    // Step 3: If anything failed after event creation → rollback (delete event)
-    if (createdEventId && !eventId) {
-      await deleteEventForRollback(createdEventId);
-    }
-    
-    throw error; // Re-throw (PaywallError → 402, other → 500)
-  }
-}
-```
-
-**Order Change from v5.0:**
-| v5.0 (BROKEN) | v5.1 (FIXED) |
-|---------------|--------------|
-| 1. Consume credit (eventId=NULL) ❌ | 1. Create event (get eventId) |
-| 2. Create event | 2. Consume credit (eventId=actual) ✅ |
-| 3. Update credit with eventId | 3. (On failure) Delete event |
-
-**Why v5.0 was broken:** Step 1 with `eventId=NULL` violated `chk_billing_credits_consumed_state` which requires `consumed_event_id IS NOT NULL` when `status='consumed'`.
-
-**Error Semantics:**
-| Scenario | Error Type | HTTP Status |
-|----------|-----------|-------------|
-| No credit available | PaywallError | 402 |
-| Needs confirmation | CreditConfirmationRequiredError | 409 |
-| Unexpected failure | Error | 500 |
-
-**Benefits:**
-- ✅ **Constraint-compliant** - never violates `chk_billing_credits_consumed_state`
-- ✅ **SSOT-compliant** - event persisted BEFORE credit bound
-- ✅ **Atomicity** - credit and event saved together or both fail
-- ✅ **User-friendly** - clear error messages (402, 409)
-
-**Integration:**
-```typescript
-// In createEvent() / updateEvent()
-if (shouldUseCredit) {
-  event = await executeWithCreditTransaction(
-    userId,
-    "EVENT_UPGRADE_500",
-    eventId, // undefined for new, actual ID for update
-    async () => {
-      // Create event first
-      const db = await createEventRecord(validated);
-      await saveLocations(db.id, validated.locations);
-      await replaceAllowedBrands(db.id, validated.allowedBrandIds);
-      return mapDbEventToDomain(db); // Returns { id: string, ... }
-    }
-  );
-} else {
-  // Direct save without credit
-  event = await createEventRecord(validated);
-}
-```
-
-**Edge Cases:**
-
-1. **Credit consumption fails after event created:**
-   - Event is rolled back (deleted)
-   - User sees PaywallError (402)
-   - Can retry after purchasing credit
-
-2. **Rollback (event deletion) fails (rare):**
-   - Event exists but credit was NOT consumed
-   - User is NOT charged
-   - CRITICAL log generated:
-     ```json
-     {
-       "severity": "CRITICAL",
-       "requiresManualIntervention": true,
-       "eventId": "...",
-       "userId": "...",
-       "error": "..."
-     }
-     ```
-   - Admin must manually review orphaned event
-
-3. **Concurrent Requests:**
-   - `consumeCredit()` uses optimistic locking (SELECT...LIMIT 1)
-   - First request wins, second gets PaywallError (402)
-
-4. **Network Timeout:**
-   - User disconnects after event created but before credit consumed
-   - Transaction will fail, event will be deleted
-   - User can retry safely
+> **Implementation Reference:** `src/lib/services/creditTransaction.ts`
+> **Code Examples:** `docs/ssot/archive/SSOT_BILLING_IMPLEMENTATION_EXAMPLES.md` § 5
 
 ---
 
-### Aborted Purchase Attempts (Non-Completion)
+## Aborted / Incomplete Actions
 
-**Status:** CANONICAL (v5.4)
+> **CANONICAL SOURCE:** SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions (Canonical System Behavior)"
 
-**SSOT Authority:** SSOT_ARCHITECTURE.md § 26 is the primary source of truth for aborted/incomplete action behavior. This section provides billing-specific clarifications without duplicating rules.
+This section provides billing-specific clarifications. For full behavior rules, invariants, and scenario table, see SSOT_ARCHITECTURE.md § 26.
 
-**Reference:** See SSOT_ARCHITECTURE.md § 26 "Aborted / Incomplete Actions (Canonical System Behavior)" for:
-- Full definitions (incomplete action, aborted flow, pending/cancelled/failed transaction, **explicit cancellation, implicit interruption**)
-- 8 canonical invariants (INV-1 through INV-8)
-- Scenario table with deterministic outcomes
-- **§ 26.4 UI Behavior Rules** — explicit vs implicit abort handling
-- UI/Backend responsibilities split
-
-#### Billing-Specific Rules (Non-Duplicative)
+### Billing-Specific Rules (Non-Duplicative)
 
 | Rule | Description |
 |------|-------------|
-| **pending/cancelled/aborted = no credit consumed** | A `billing_credits` record is created with `status='available'` ONLY after transaction `status='completed'`. Pending/cancelled/failed transactions do NOT issue credits. |
-| **pending transaction ≠ entitlement** | `billing_transactions.status='pending'` does NOT grant access. Entitlement exists ONLY when credit `status='available'` (or club subscription `status='active'`). |
-| **Transaction logs ≠ entitlement** | `billing_transactions` is an audit trail. Access checks read from `billing_credits` and `club_subscriptions`, NOT from transactions. |
-| **No TTL timers in UI** | Frontend MUST NOT display "payment expires in X minutes". TTL enforcement is backend-only (see `billing_policy.pending_ttl_minutes`). |
-| **Payment completed but action failed** | If payment completed (transaction `status='completed'`) but event save failed, credit remains `status='available'` and user can retry. Credit is NOT lost. |
-| **Explicit/implicit cancellation = no credit consumed** | User closing paywall (explicit) or network drop (implicit) do NOT consume credits. Credit consumption requires completed transaction AND successful domain action binding. |
-| **Completed payment ≠ auto-applied entitlement** | Payment completion creates credit with `status='available'`. Credit is NOT automatically bound to any event. User must explicitly save event with `confirm_credit=1` for binding. |
-| **No pending-based UX assumptions** | UI MUST NOT display "payment pending", "awaiting confirmation", or any state that implies user should wait. Each interaction is independent. |
+| **pending/cancelled = no credit** | A `billing_credits` record is created with `status='available'` ONLY after transaction `status='completed'` |
+| **pending transaction ≠ entitlement** | `billing_transactions.status='pending'` does NOT grant access |
+| **Transaction logs ≠ entitlement** | Access checks read from `billing_credits` and `club_subscriptions`, NOT from transactions |
+| **Payment completed but action failed** | Credit remains `status='available'` and user can retry |
+| **Completed payment ≠ auto-applied** | Credit is NOT automatically bound to any event. User must save with `confirm_credit=1` |
 
-#### Transaction State → Entitlement Mapping
+### Transaction State → Entitlement Mapping
 
-| Transaction Status | Credit Issued | Domain Access Granted |
-|-------------------|---------------|----------------------|
+| Transaction Status | Credit Issued | Domain Access |
+|-------------------|---------------|---------------|
 | `pending` | ❌ NO | ❌ NO |
-| `completed` | ✅ YES (`status='available'`) | ✅ YES (after credit bound to action) |
+| `completed` | ✅ YES (`available`) | ✅ After credit bound |
 | `failed` | ❌ NO | ❌ NO |
-| `refunded` | ❌ Credit revoked if issued | ❌ NO (access may be revoked) |
+| `refunded` | ❌ Revoked | ❌ NO |
 
-#### Implementation Cross-References
+### Cross-References
 
 | Topic | Location |
 |-------|----------|
-| Invariants & scenario table | SSOT_ARCHITECTURE.md § 26 |
-| Explicit vs implicit abort UI rules | SSOT_ARCHITECTURE.md § 26.4 |
-| Neutral informational hint (implicit abort) | SSOT_DESIGN_SYSTEM.md § Neutral Informational Hint |
-| Compensating transactions | This document § Credit Consumption (v5.1) |
-| UI behavior on user cancel | SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows |
+| Full invariants (INV-1 to INV-8) | SSOT_ARCHITECTURE.md § 26.2 |
+| Scenario table (S1-S8) | SSOT_ARCHITECTURE.md § 26.3 |
+| Explicit vs implicit abort UI | SSOT_ARCHITECTURE.md § 26.4 |
 | Credit consumption timing | SSOT_CLUBS_EVENTS_ACCESS.md § 10 |
+| UI design for aborted flows | SSOT_DESIGN_SYSTEM.md § Aborted User-Initiated Flows |
 
 ---
 
-## ⚡ API Endpoints (v5+ Current)
+## ⚡ API Contracts (v5+ Current)
 
 > **Note:** The `/api/events/:id/publish` endpoint was **REMOVED in v5.0**.  
 > Enforcement now happens at save-time via POST/PUT `/api/events` with `?confirm_credit=1`.
 
-### Active Endpoints (v5+)
+### Active Endpoints
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
@@ -2311,17 +495,9 @@ if (shouldUseCredit) {
 | POST | `/api/dev/billing/settle` | DEV: manual settlement (stub) |
 | POST | `/api/events` | Create event (enforcement at save-time) |
 | PUT | `/api/events/:id` | Update event (enforcement at save-time) |
-
-### Removed Endpoints (v5+)
-
-| Method | Endpoint | Status |
-|--------|----------|--------|
-| POST | `/api/events/:id/publish` | **REMOVED** — enforcement moved to save-time |
-
-### Deleted Endpoints (v3)
-
-- ❌ `/api/billing/credits/purchase` → use purchase-intent
-- ❌ `/api/billing/credits/confirm` → use dev/billing/settle
+| GET | `/api/plans` | List public plans |
+| GET | `/api/clubs/[id]/current-plan` | Get club's current plan |
+| GET | `/api/clubs/[id]/export` | CSV export (billing check) |
 
 ### Response Contracts
 
@@ -2334,17 +510,8 @@ if (shouldUseCredit) {
     "reason": "PUBLISH_REQUIRES_PAYMENT",
     "meta": { "requestedParticipants": 100, "freeLimit": 15 },
     "options": [
-      {
-        "type": "ONE_OFF_CREDIT",
-        "product_code": "EVENT_UPGRADE_500",
-        "price": 1000,
-        "currency_code": "KZT",
-        "provider": "kaspi"
-      },
-      {
-        "type": "CLUB_ACCESS",
-        "recommended_plan_id": "club_50"
-      }
+      { "type": "ONE_OFF_CREDIT", "product_code": "EVENT_UPGRADE_500" },
+      { "type": "CLUB_ACCESS", "recommended_plan_id": "club_50" }
     ]
   }
 }
@@ -2357,24 +524,129 @@ if (shouldUseCredit) {
   "error": {
     "code": "CREDIT_CONFIRMATION_REQUIRED",
     "reason": "EVENT_UPGRADE_WILL_BE_CONSUMED",
-    "meta": {
-      "eventId": "...",
-      "creditCode": "EVENT_UPGRADE_500",
-      "requestedParticipants": 100
-    },
-    "cta": {
-      "type": "CONFIRM_CONSUME_CREDIT",
-      "action": "Retry with ?confirm_credit=1 query parameter"
-    }
+    "meta": { "eventId": "...", "creditCode": "EVENT_UPGRADE_500" },
+    "cta": { "type": "CONFIRM_CONSUME_CREDIT" }
   }
 }
 ```
-> **v5+ Note:** The `cta.href` field previously pointed to `/api/events/:id/publish?confirm_credit=1`.  
-> In v5+, retry the same POST/PUT endpoint with `?confirm_credit=1` appended.
+
+> **Full API documentation:** SSOT_API.md
+
+---
+
+## 📁 Ключевые файлы
+
+### Backend
+
+| Layer | Files |
+|-------|-------|
+| **Repository** | `planRepo.ts`, `billingProductsRepo.ts`, `billingCreditsRepo.ts`, `clubSubscriptionRepo.ts`, `billingPolicyRepo.ts`, `billingTransactionsRepo.ts` |
+| **Service** | `accessControl.ts` (enforceClubAction, enforceEventPublish), `creditTransaction.ts` |
+| **API Routes** | `billing/`, `plans/`, `clubs/[id]/`, `events/` |
+| **Errors** | `errors.ts` (PaywallError, CreditConfirmationRequiredError) |
+| **Types** | `types/billing.ts` |
+
+### Frontend
+
+| Category | Files |
+|----------|-------|
+| **Components** | `billing/PaywallModal.tsx`, `billing/CreditConfirmationModal.tsx`, `billing/credit-badge.tsx` |
+| **Hooks** | `use-club-plan.ts`, `usePaywall()` |
+| **Pages** | `pricing/page.tsx`, `events/create/`, `events/[id]/edit/` |
+
+### Database
+
+| Category | Migrations |
+|----------|------------|
+| **Plans** | `20241215_create_club_plans_v2.sql`, `20241215_seed_club_plans.sql`, `20241216_add_free_plan.sql` |
+| **Subscriptions** | `20241212_create_club_subscriptions.sql`, `20241215_alter_club_subscriptions_v2_SAFE.sql` |
+| **Policy** | `20241215_create_billing_policy.sql`, `20241215_seed_billing_policy.sql` |
+| **Products** | See SSOT_DATABASE.md for full list |
+| **RLS** | `20241222_enable_rls_*.sql` |
+
+---
+
+## ⚡ Кэширование
+
+### StaticCache для планов
+
+**File:** `src/lib/cache/staticCache.ts`  
+**Usage:** `src/lib/db/planRepo.ts`
+
+**Behavior:**
+- TTL: 5 minutes
+- Key: planId
+- Auto-invalidation on TTL expiry
+- All plan queries use cache
+
+**Benefits:**
+- O(1) access by key
+- Single DB query per 5 minutes
+- FREE план теперь в кэше
+
+---
+
+## 🔄 Статус-машина подписки
+
+### Диаграмма состояний
+
+```
+[*] → pending → active → grace → expired → [*]
+         ↓         ↑        ↓
+       [*]      grace → active
+```
+
+### Описание статусов
+
+| Статус | Когда | Действия | Переход |
+|--------|-------|----------|---------|
+| **pending** | Payment intent создан | ❌ Ничего | → `active` OR deleted |
+| **active** | Оплата подтверждена | ✅ Всё | → `grace` |
+| **grace** | Период истёк | ✅ Почти всё | → `active` OR `expired` |
+| **expired** | Grace истёк | ❌ Read-only | → `active` OR deleted |
+
+### Параметры из billing_policy
+
+| Parameter | Value |
+|-----------|-------|
+| `grace_period_days` | 7 |
+| `pending_ttl_minutes` | 60 |
+
+---
+
+## 📈 План развития
+
+### Фаза 1: Стабилизация ✅
+- ✅ Консолидация PaywallModal
+- ✅ Тесты для accessControl.ts
+- ⏳ Автоматизация статусов подписки (cron)
+
+### Фаза 2: Платёжная интеграция (Q1 2025)
+- [ ] Kaspi QR интеграция
+- [ ] club_drafts для создания клубов
+- [ ] Webhook обработка
+
+### Фаза 3: Мониторинг (Q1-Q2 2025)
+- [ ] MRR/churn dashboard
+- [ ] Уведомления о grace
+
+---
+
+## 📚 Связанные документы
+
+| Document | Purpose |
+|----------|---------|
+| `docs/ssot/SSOT_DATABASE.md` | Schema, constraints, RLS |
+| `docs/ssot/SSOT_ARCHITECTURE.md` | Layering, ownership, § 26 aborted flows |
+| `docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md` | § 10 credit consumption timing |
+| `docs/ssot/SSOT_API.md` | API contracts |
+| `docs/ssot/SSOT_DESIGN_SYSTEM.md` | UI patterns |
+| `docs/ssot/archive/SSOT_BILLING_IMPLEMENTATION_EXAMPLES.md` | Code examples (archived) |
+| `docs/ssot/archive/SSOT_BILLING_HISTORY.md` | Historical versions |
 
 ---
 
 **END OF DOCUMENT**
 
+*For implementation code examples, see `docs/ssot/archive/SSOT_BILLING_IMPLEMENTATION_EXAMPLES.md`*
 *For historical implementation details (v3.x, v4.x, migrations), see `docs/ssot/archive/SSOT_BILLING_HISTORY.md`*
-
