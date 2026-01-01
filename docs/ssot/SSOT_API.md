@@ -3574,7 +3574,7 @@ Total route handlers discovered: **33 files**
 
 ### 11.1 API SSOT Mandate
 
-**`docs/ssot/api-ssot.md` is the ONLY authoritative source for all API contracts, security policies, and endpoint behavior.**
+**`docs/ssot/SSOT_API.md` is the ONLY authoritative source for all API contracts, security policies, and endpoint behavior.**
 
 ### 11.2 Rules
 
@@ -3593,8 +3593,8 @@ Total route handlers discovered: **33 files**
    - Duplicate/conflicting docs should be deleted or merged into this file
 
 4. **Rule for AI / Cursor usage:**
-   - When analyzing, refactoring, adding, or discussing API logic, Cursor MUST read and account for `docs/ssot/api-ssot.md`
-   - API SSOT has same priority as `ARCHITECTURE.md`, `BILLING_SYSTEM_ANALYSIS.md`
+   - When analyzing, refactoring, adding, or discussing API logic, Cursor MUST read and account for `docs/ssot/SSOT_API.md`
+   - API SSOT has same priority as `SSOT_ARCHITECTURE.md`, `SSOT_BILLING_SYSTEM_ANALYSIS.md`
    - Code/SSOT mismatches MUST be explicitly called out
 
 ### 11.3 Change Process

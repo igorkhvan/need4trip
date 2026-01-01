@@ -127,10 +127,10 @@
 │ │  club_plans     │  │ billing_policy  │  │ billing_policy  │  │
 │ │                 │  │                 │  │    _actions     │  │
 │ │ - id            │  │ - id            │  │                 │  │
-│ │ - title         │  │ - grace_days    │  │ - status        │  │
-│ │ - price_kzt     │  │ - pending_ttl   │  │ - action        │  │
-│ │ - max_members   │  │                 │  │ - is_allowed    │  │
-│ │ - max_event_... │  │                 │  │                 │  │
+│ │ - name          │  │ - grace_days    │  │ - status        │  │
+│ │ - price_monthly │  │ - pending_ttl   │  │ - action        │  │
+│ │ - currency_code │  │                 │  │ - is_allowed    │  │
+│ │ - max_members   │  │                 │  │                 │  │
 │ │ - allow_paid    │  │                 │  │                 │  │
 │ │ - allow_csv     │  │                 │  │                 │  │
 │ └─────────────────┘  └─────────────────┘  └─────────────────┘  │
@@ -138,10 +138,10 @@
 │ ┌─────────────────┐  ┌─────────────────────────────────────┐   │
 │ │ club_           │  │ billing_transactions (audit)        │   │
 │ │  subscriptions  │  │                                     │   │
-│ │                 │  │ - id, club_id, plan_id              │   │
-│ │ - club_id       │  │ - provider, provider_payment_id     │   │
-│ │ - plan_id       │  │ - amount_kzt, currency              │   │
-│ │ - status        │  │ - status (pending/paid/failed)      │   │
+│ │                 │  │ - id, club_id, user_id, plan_id     │   │
+│ │ - club_id       │  │ - product_code, provider            │   │
+│ │ - plan_id       │  │ - amount, currency_code             │   │
+│ │ - status        │  │ - status (pending/completed/failed) │   │
 │ │ - period_start  │  │ - period_start, period_end          │   │
 │ │ - period_end    │  │ - created_at, updated_at            │   │
 │ │ - grace_until   │  │                                     │   │
@@ -223,25 +223,30 @@ graph TB
 ```sql
 CREATE TABLE public.club_plans (
   id TEXT PRIMARY KEY,                          -- 'free' | 'club_50' | 'club_500' | 'club_unlimited'
-  title TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
   
-  price_monthly_kzt NUMERIC(10,2) NOT NULL,     -- Цена в тенге
-  currency TEXT NOT NULL DEFAULT 'KZT',
+  price_monthly NUMERIC(10,2) NOT NULL,         -- Normalized (generic amount)
+  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES currencies(code),  -- FK
   
-  max_members INT NULL,                         -- NULL = безлимит
+  max_club_members INT NULL,                    -- NULL = безлимит
   max_event_participants INT NULL,              -- NULL = безлимит
   
-  allow_paid_events BOOLEAN NOT NULL,
-  allow_csv_export BOOLEAN NOT NULL,
+  allow_paid_events BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_csv_export BOOLEAN NOT NULL DEFAULT FALSE,
   
-  is_public BOOLEAN NOT NULL DEFAULT true,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_club_plans_public ON club_plans(is_public, price_monthly_kzt);
+CREATE INDEX idx_club_plans_price_monthly ON club_plans(price_monthly);
+CREATE INDEX idx_club_plans_currency_code ON club_plans(currency_code);
 ```
+
+> **Schema alignment (2024-12-26):** `price_monthly_kzt` → `price_monthly` + `currency_code` FK.
+> See SSOT_DATABASE.md §6 for authoritative schema.
 
 **Миграции:**
 - `20241215_create_club_plans_v2.sql` — создание таблицы
@@ -332,16 +337,18 @@ CREATE TABLE public.billing_policy_actions (
 CREATE TABLE public.billing_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
-  club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-  plan_id TEXT NOT NULL REFERENCES club_plans(id),
+  club_id UUID REFERENCES clubs(id) ON DELETE CASCADE,       -- NULL для one-off credits
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,      -- Для one-off credits
+  product_code TEXT NOT NULL,                                -- EVENT_UPGRADE_500, CLUB_*
+  plan_id TEXT REFERENCES club_plans(id) ON DELETE RESTRICT, -- NULL для one-off
   
-  provider TEXT NOT NULL,                       -- 'kaspi' | 'epay' | 'manual'
+  provider TEXT NOT NULL,                                    -- 'kaspi' | 'yookassa' | 'stripe'
   provider_payment_id TEXT,
   
-  amount_kzt NUMERIC(10,2) NOT NULL,
-  currency TEXT NOT NULL DEFAULT 'KZT',
+  amount NUMERIC(10,2) NOT NULL,                             -- Normalized (was amount_kzt)
+  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES currencies(code), -- FK
   
-  status TEXT NOT NULL CHECK (status IN ('pending','paid','failed','refunded')),
+  status TEXT NOT NULL CHECK (status IN ('pending','completed','failed','refunded')),
   
   period_start TIMESTAMPTZ NULL,
   period_end TIMESTAMPTZ NULL,
@@ -351,12 +358,15 @@ CREATE TABLE public.billing_transactions (
 );
 
 CREATE INDEX idx_billing_transactions_club_id ON billing_transactions(club_id);
+CREATE INDEX idx_billing_transactions_user_id ON billing_transactions(user_id);
+CREATE INDEX idx_billing_transactions_product_code ON billing_transactions(product_code);
 CREATE INDEX idx_billing_transactions_status ON billing_transactions(status);
 ```
 
 **Назначение:** Только аудит. НЕ используется для проверок доступа.
 
-**Миграция:** `20241215_create_billing_transactions.sql`
+> **Schema alignment (2024-12-26):** `amount_kzt` → `amount`, `currency` → `currency_code` (FK), `status: 'paid'` → `status: 'completed'`.
+> See SSOT_DATABASE.md §5 for authoritative schema.
 
 ### RLS (Row Level Security)
 
@@ -675,7 +685,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
                         Одноразовое событие до 500 участников
                       </p>
                       <p className="font-bold text-lg mb-3">
-                        {option.price_kzt} ₸
+                        {option.price} {option.currency_code === 'KZT' ? '₸' : option.currency_code}
                       </p>
                       <Button
                         onClick={() => handlePurchase(option.product_code)}
@@ -691,7 +701,7 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
                     <>
                       <h4 className="font-semibold">Клубный доступ</h4>
                       <p className="text-sm text-gray-600 mb-2">
-                        Неограниченные события + организаторы
+                        Неограниченные события + members
                       </p>
                       <Button
                         variant="outline"
@@ -1274,8 +1284,9 @@ export async function GET(req: NextRequest, { params }: Params) {
   const user = await getCurrentUserFromMiddleware(req);
   
   // Проверка прав доступа
+  // Canonical roles: owner, admin, member, pending (see SSOT_CLUBS_EVENTS_ACCESS.md §2)
   const userRole = await getUserClubRole(user.id, clubId);
-  if (userRole !== "owner" && userRole !== "organizer") {
+  if (userRole !== "owner" && userRole !== "admin") {
     throw new ForbiddenError("Нет доступа");
   }
   
@@ -1427,7 +1438,7 @@ const plansCache = new StaticCache<ClubPlan>(
     const { data } = await supabase
       .from('club_plans')
       .select('*')
-      .order('price_monthly_kzt', { ascending: true });
+      .order('price_monthly', { ascending: true });
     
     return data.map(mapDbPlanToDomain);
   },
@@ -2108,7 +2119,8 @@ PATCH /api/admin/subscriptions/:clubId
 {
   "code": "EVENT_UPGRADE_500",
   "title": "Event Upgrade (до 500 участников)",
-  "price_kzt": 1000,
+  "price": 1000,
+  "currency_code": "KZT",
   "constraints": {
     "scope": "personal",
     "max_participants": 500
@@ -2116,40 +2128,58 @@ PATCH /api/admin/subscriptions/:clubId
 }
 ```
 
+> **Schema alignment:** `price_kzt` → `price` + `currency_code`. See SSOT_DATABASE.md.
+
 **Лимиты:**
 - Free plan: ~15 participants
 - One-off credit: до 500 participants
 - Больше 500: требуется club
 
-### Credit Lifecycle
+### Credit Lifecycle (v5+)
 
 ```
 1. Purchase → billing_transactions(pending)
 2. Payment  → billing_transactions(completed)
 3. Issue    → billing_credits(status='available')
-4. Publish  → billing_credits(status='consumed', consumed_event_id set)
+4. Save (POST/PUT with confirm_credit=1) → billing_credits(status='consumed', consumed_event_id set)
 ```
+
+> **v5+ Note:** Credit consumption happens at save-time (POST/PUT), not at a separate publish step.
+> See SSOT_CLUBS_EVENTS_ACCESS.md §10 for canonical timing rules.
 
 ### Database Schema
 
 ```sql
 -- SSOT для продуктов
 CREATE TABLE billing_products (
-  code TEXT PRIMARY KEY,
-  price_kzt NUMERIC(10,2) NOT NULL,
-  constraints JSONB NOT NULL
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('credit')),
+  price NUMERIC(10,2) NOT NULL,                    -- Normalized (generic amount)
+  currency_code TEXT NOT NULL DEFAULT 'KZT' REFERENCES currencies(code), -- FK
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  constraints JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Entitlements (credits owned by user)
 CREATE TABLE billing_credits (
-  id UUID PRIMARY KEY,
-  user_id UUID NOT NULL,
-  credit_code TEXT NOT NULL REFERENCES billing_products(code),
-  status TEXT CHECK (status IN ('available', 'consumed')),
-  consumed_event_id UUID,
-  source_transaction_id UUID UNIQUE
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  credit_code TEXT NOT NULL CHECK (credit_code IN ('EVENT_UPGRADE_500')),
+  status TEXT NOT NULL CHECK (status IN ('available', 'consumed')),
+  consumed_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
+  consumed_at TIMESTAMPTZ,
+  source_transaction_id UUID NOT NULL UNIQUE REFERENCES billing_transactions(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
+
+> **Schema alignment (2024-12-26):** `price_kzt` → `price` + `currency_code` (FK).
+> See SSOT_DATABASE.md §6-7 for authoritative schema.
 
 **Key Points:**
 - `source_transaction_id UNIQUE` = idempotency
@@ -2736,7 +2766,8 @@ export async function enforcePublish(params: {
         {
           type: 'ONE_OFF_CREDIT',
           product_code: 'EVENT_UPGRADE_500',
-          price_kzt: oneOffProduct.price_kzt,
+          price: oneOffProduct.price,
+          currency_code: oneOffProduct.currency_code,
           provider: 'kaspi'
         },
         {
@@ -2912,7 +2943,8 @@ Step 2: Personal events
       {
         "type": "ONE_OFF_CREDIT",
         "product_code": "EVENT_UPGRADE_500",
-        "price_kzt": 1000,
+        "price": 1000,
+        "currency_code": "KZT",
         "provider": "kaspi"
       },
       {
