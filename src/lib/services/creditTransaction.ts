@@ -2,18 +2,25 @@
  * Credit Transaction Service
  * 
  * Handles atomic consumption of one-off credits with event creation/update.
- * Implements compensating transaction pattern (rollback on failure).
+ * Implements SSOT-compliant compensating transaction pattern.
  * 
- * Architecture:
- * 1. Consume credit first (mark as consumed)
- * 2. Try to save event
- * 3. If event save fails → rollback credit (mark as available)
- * 4. If rollback fails → log error for manual intervention
+ * CRITICAL SSOT COMPLIANCE (SSOT_CLUBS_EVENTS_ACCESS.md §10.1.2):
+ * "Consumption requires a persisted eventId"
+ * "Consuming a credit for a 'future' or 'hypothetical' event is FORBIDDEN"
+ * 
+ * Architecture (SSOT-correct order):
+ * 1. Execute operation FIRST (create event, get eventId)
+ * 2. Consume credit with ACTUAL eventId (satisfies DB constraint)
+ * 3. If credit consumption fails → delete event (compensating rollback)
+ * 
+ * Constraint being satisfied: chk_billing_credits_consumed_state
+ * - status='consumed' requires consumed_event_id IS NOT NULL
  */
 
 import { consumeCredit } from "@/lib/db/billingCreditsRepo";
 import { getAdminDb } from "@/lib/db/client";
 import { log } from "@/lib/utils/logger";
+import { isPaywallError } from "@/lib/errors";
 
 /**
  * Result of atomic credit transaction
@@ -28,14 +35,17 @@ export interface CreditTransactionResult {
 /**
  * Execute operation with credit consumption in compensating transaction
  * 
- * Pattern:
- * 1. Mark credit as consumed (optimistic lock)
- * 2. Execute operation (save event)
- * 3. If operation fails → rollback credit (mark as available)
+ * SSOT-COMPLIANT Pattern (SSOT_CLUBS_EVENTS_ACCESS.md §10.1.2):
+ * 1. Execute operation FIRST (create event, get actual eventId)
+ * 2. Consume credit with ACTUAL eventId (NOT NULL - satisfies constraint)
+ * 3. If credit consumption fails → delete event (compensating rollback)
+ * 
+ * This order ensures chk_billing_credits_consumed_state is never violated:
+ * - consumed_event_id will ALWAYS be a valid UUID when status='consumed'
  * 
  * @param userId User ID
  * @param creditCode Credit code to consume
- * @param eventId Event ID for tracking
+ * @param eventId Event ID for tracking (undefined for new events)
  * @param operation Async operation to execute (e.g., save event)
  * @returns Transaction result
  */
@@ -45,62 +55,73 @@ export async function executeWithCreditTransaction<T extends { id: string }>(
   eventId: string | undefined,
   operation: () => Promise<T>
 ): Promise<T> {
-  let consumedCreditId: string | undefined;
+  let createdEventId: string | undefined;
   
   try {
-    // Step 1: Consume credit (mark as consumed with NULL eventId for new events)
-    log.info("[CreditTransaction] Consuming credit", { userId, creditCode, eventId });
+    // Step 1: Execute operation FIRST (create event, get eventId)
+    // SSOT §10.1.2: "The event is persisted as part of the save operation"
+    log.info("[CreditTransaction] Executing operation first", { userId, creditCode, eventId });
     
-    const credit = await consumeCredit(userId, creditCode, eventId ?? null);
-    consumedCreditId = credit.id;
+    const result = await operation();
+    createdEventId = result.id;
     
-    log.info("[CreditTransaction] Credit consumed", { 
+    log.info("[CreditTransaction] Operation succeeded, got eventId", { 
+      eventId: createdEventId 
+    });
+    
+    // Step 2: Consume credit with ACTUAL eventId (MUST NOT be NULL)
+    // SSOT §10.1.2: "consumed_event_id MUST be set to the actual event UUID at consumption time"
+    const actualEventId = eventId ?? createdEventId;
+    
+    if (!actualEventId) {
+      throw new Error("SSOT violation: Cannot consume credit without eventId");
+    }
+    
+    log.info("[CreditTransaction] Consuming credit with eventId", { 
+      userId, 
+      creditCode, 
+      eventId: actualEventId 
+    });
+    
+    const credit = await consumeCredit(userId, creditCode, actualEventId);
+    
+    log.info("[CreditTransaction] Credit consumed successfully", { 
       creditId: credit.id, 
       userId, 
       creditCode, 
-      eventId 
+      eventId: actualEventId 
     });
-    
-    // Step 2: Execute operation (e.g., save event)
-    log.info("[CreditTransaction] Executing operation", { eventId });
-    
-    const result = await operation();
-    
-    log.info("[CreditTransaction] Operation succeeded", { eventId: result.id });
-    
-    // Step 3: Update credit with actual eventId if it was NULL
-    if (!eventId && result.id) {
-      await updateCreditEventId(consumedCreditId, result.id);
-      log.info("[CreditTransaction] Credit updated with eventId", { 
-        creditId: consumedCreditId, 
-        eventId: result.id 
-      });
-    }
     
     return result;
     
-  } catch (operationError: any) {
-    // Step 4: Operation failed → rollback credit
-    log.error("[CreditTransaction] Operation failed, attempting rollback", { 
-      error: operationError.message,
-      creditId: consumedCreditId,
-      eventId 
+  } catch (error: any) {
+    // Step 3: If anything failed after event creation → rollback (delete event)
+    const isPaywall = isPaywallError(error);
+    
+    log.error("[CreditTransaction] Operation or credit consumption failed", { 
+      error: error.message,
+      isPaywallError: isPaywall,
+      createdEventId,
+      eventId,
+      userId
     });
     
-    if (consumedCreditId) {
+    // Only rollback (delete) if we created a NEW event (eventId was undefined)
+    // For existing events (update flow), we don't delete
+    if (createdEventId && !eventId) {
       try {
-        await rollbackCredit(consumedCreditId);
+        await deleteEventForRollback(createdEventId);
         
-        log.info("[CreditTransaction] Credit rollback successful", { 
-          creditId: consumedCreditId 
+        log.info("[CreditTransaction] Event rollback successful (deleted)", { 
+          eventId: createdEventId 
         });
       } catch (rollbackError: any) {
         // CRITICAL: Rollback failed - requires manual intervention
-        log.error("[CreditTransaction] CRITICAL: Credit rollback failed", {
-          creditId: consumedCreditId,
+        // Event exists but credit was not consumed
+        log.error("[CreditTransaction] CRITICAL: Event deletion rollback failed", {
+          eventId: createdEventId,
           rollbackError: rollbackError.message,
-          originalError: operationError.message,
-          eventId,
+          originalError: error.message,
           userId,
           // This should trigger alerts in production
           severity: "CRITICAL",
@@ -108,58 +129,37 @@ export async function executeWithCreditTransaction<T extends { id: string }>(
         });
         
         // Still throw original error to user
-        // Admin will need to manually fix credit in DB
+        // Admin will need to manually fix event in DB
       }
     }
     
-    // Re-throw original operation error
-    throw operationError;
+    // Re-throw original error (PaywallError will be handled properly by API layer → 402)
+    throw error;
   }
 }
 
 /**
- * Update credit with actual eventId after event creation
+ * Delete event for rollback (compensating transaction)
  * 
- * @param creditId Credit ID
- * @param eventId Event ID
+ * Called when credit consumption fails after event creation.
+ * SSOT §10.1.2: Credit binding is atomic with event save; if binding fails, event must be deleted.
+ * 
+ * @param eventId Event ID to delete
  */
-async function updateCreditEventId(creditId: string, eventId: string): Promise<void> {
+async function deleteEventForRollback(eventId: string): Promise<void> {
   const db = getAdminDb();
   
+  // Delete event and all related data (cascade handles locations, brands, access)
   const { error } = await db
-    .from("billing_credits")
-    .update({
-      consumed_event_id: eventId,
-    })
-    .eq("id", creditId);
+    .from("events")
+    .delete()
+    .eq("id", eventId);
   
   if (error) {
-    log.error("Failed to update credit with eventId", { error, creditId, eventId });
-    // Don't throw - credit is already consumed, this is just linking
+    throw new Error(`Failed to delete event for rollback: ${error.message}`);
   }
-}
-
-/**
- * Rollback consumed credit (mark as available again)
- * 
- * @param creditId Credit ID to rollback
- */
-async function rollbackCredit(creditId: string): Promise<void> {
-  const db = getAdminDb();
   
-  const { error } = await db
-    .from("billing_credits")
-    .update({
-      status: "available",
-      consumed_event_id: null,
-      consumed_at: null,
-    })
-    .eq("id", creditId)
-    .eq("status", "consumed"); // Only rollback if still consumed
-  
-  if (error) {
-    throw new Error(`Failed to rollback credit: ${error.message}`);
-  }
+  log.info("[CreditTransaction] Event deleted for rollback", { eventId });
 }
 
 /**

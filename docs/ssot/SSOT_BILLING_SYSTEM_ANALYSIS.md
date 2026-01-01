@@ -2504,49 +2504,79 @@ router.refresh();
 
 ---
 
-### Credit Consumption (v5)
+### Credit Consumption (v5.1 - SSOT-compliant)
 
-**Compensating Transaction Pattern** - ensures atomicity between credit and event save.
+**Updated:** 2026-01-01 — Fixed constraint violation (`chk_billing_credits_consumed_state`)
+
+**Compensating Transaction Pattern** - ensures atomicity between event creation and credit consumption.
 
 **File:** `src/lib/services/creditTransaction.ts`
 
-**Pattern:**
+**CRITICAL SSOT Constraint:**
+```sql
+-- chk_billing_credits_consumed_state
+(status = 'available' AND consumed_event_id IS NULL AND consumed_at IS NULL) OR
+(status = 'consumed' AND consumed_event_id IS NOT NULL AND consumed_at IS NOT NULL)
+```
+
+**Key Insight:** Credit consumption REQUIRES a valid `consumed_event_id`. Consuming credit for "future" or "hypothetical" event is FORBIDDEN (SSOT_CLUBS_EVENTS_ACCESS.md §10.1.2).
+
+**Pattern (SSOT-correct order):**
 ```typescript
 // Wrap operation with credit consumption + rollback on failure
-export async function executeWithCreditTransaction<T>(
+export async function executeWithCreditTransaction<T extends { id: string }>(
   userId: string,
   creditCode: "EVENT_UPGRADE_500",
   eventId: string | undefined,
   operation: () => Promise<T>
 ): Promise<T> {
-  let consumedCreditId: string | undefined;
+  let createdEventId: string | undefined;
   
   try {
-    // Step 1: Consume credit (mark as consumed)
-    const credit = await consumeCredit(userId, creditCode, eventId ?? "pending");
-    consumedCreditId = credit.id;
-    
-    // Step 2: Execute operation (save event)
+    // Step 1: Execute operation FIRST (create event, get eventId)
+    // SSOT §10.1.2: "The event is persisted as part of the save operation"
     const result = await operation();
+    createdEventId = result.id;
+    
+    // Step 2: Consume credit with ACTUAL eventId (MUST NOT be NULL)
+    // Satisfies constraint: consumed_event_id IS NOT NULL
+    const actualEventId = eventId ?? createdEventId;
+    await consumeCredit(userId, creditCode, actualEventId);
     
     return result;
     
-  } catch (operationError) {
-    // Step 3: Rollback credit (mark as available)
-    if (consumedCreditId) {
-      await rollbackCredit(consumedCreditId);
+  } catch (error) {
+    // Step 3: If anything failed after event creation → rollback (delete event)
+    if (createdEventId && !eventId) {
+      await deleteEventForRollback(createdEventId);
     }
     
-    throw operationError; // Re-throw to user
+    throw error; // Re-throw (PaywallError → 402, other → 500)
   }
 }
 ```
 
+**Order Change from v5.0:**
+| v5.0 (BROKEN) | v5.1 (FIXED) |
+|---------------|--------------|
+| 1. Consume credit (eventId=NULL) ❌ | 1. Create event (get eventId) |
+| 2. Create event | 2. Consume credit (eventId=actual) ✅ |
+| 3. Update credit with eventId | 3. (On failure) Delete event |
+
+**Why v5.0 was broken:** Step 1 with `eventId=NULL` violated `chk_billing_credits_consumed_state` which requires `consumed_event_id IS NOT NULL` when `status='consumed'`.
+
+**Error Semantics:**
+| Scenario | Error Type | HTTP Status |
+|----------|-----------|-------------|
+| No credit available | PaywallError | 402 |
+| Needs confirmation | CreditConfirmationRequiredError | 409 |
+| Unexpected failure | Error | 500 |
+
 **Benefits:**
+- ✅ **Constraint-compliant** - never violates `chk_billing_credits_consumed_state`
+- ✅ **SSOT-compliant** - event persisted BEFORE credit bound
 - ✅ **Atomicity** - credit and event saved together or both fail
-- ✅ **User-friendly** - credit not lost if save fails
-- ✅ **Retry-safe** - user can retry after rollback
-- ✅ **Observable** - CRITICAL logs for manual intervention
+- ✅ **User-friendly** - clear error messages (402, 409)
 
 **Integration:**
 ```typescript
@@ -2555,13 +2585,13 @@ if (shouldUseCredit) {
   event = await executeWithCreditTransaction(
     userId,
     "EVENT_UPGRADE_500",
-    eventId,
+    eventId, // undefined for new, actual ID for update
     async () => {
-      // Save event + all related data
+      // Create event first
       const db = await createEventRecord(validated);
       await saveLocations(db.id, validated.locations);
       await replaceAllowedBrands(db.id, validated.allowedBrandIds);
-      return mapDbEventToDomain(db);
+      return mapDbEventToDomain(db); // Returns { id: string, ... }
     }
   );
 } else {
@@ -2572,35 +2602,34 @@ if (shouldUseCredit) {
 
 **Edge Cases:**
 
-1. **Rollback Failed (rare):**
-   - Credit stuck in "consumed" state
+1. **Credit consumption fails after event created:**
+   - Event is rolled back (deleted)
+   - User sees PaywallError (402)
+   - Can retry after purchasing credit
+
+2. **Rollback (event deletion) fails (rare):**
+   - Event exists but credit was NOT consumed
+   - User is NOT charged
    - CRITICAL log generated:
      ```json
      {
        "severity": "CRITICAL",
        "requiresManualIntervention": true,
-       "creditId": "...",
+       "eventId": "...",
        "userId": "...",
-       "eventId": "..."
+       "error": "..."
      }
      ```
-   - Admin must manually fix:
-     ```sql
-     UPDATE billing_credits 
-     SET status = 'available', 
-         consumed_event_id = NULL, 
-         consumed_at = NULL
-     WHERE id = 'CREDIT_ID';
-     ```
+   - Admin must manually review orphaned event
 
-2. **Concurrent Requests:**
-   - consumeCredit() uses optimistic locking
-   - First request wins, second gets "No available credit"
+3. **Concurrent Requests:**
+   - `consumeCredit()` uses optimistic locking (SELECT...LIMIT 1)
+   - First request wins, second gets PaywallError (402)
 
-3. **Network Timeout:**
-   - User disconnects after credit consumed but before response
-   - Event may or may not be saved
-   - User can retry (will see "No available credit" if first succeeded)
+4. **Network Timeout:**
+   - User disconnects after event created but before credit consumed
+   - Transaction will fail, event will be deleted
+   - User can retry safely
 
 ---
 
