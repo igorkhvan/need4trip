@@ -1,15 +1,22 @@
 /**
- * Integration Tests: Billing v4 (One-off Credits + Publish Enforcement)
+ * Integration Tests: Billing v5 (Save-time Enforcement + One-off Credits)
  * 
- * Purpose: Test critical paths per v4 spec Definition of Done
+ * Purpose: Test critical paths per v5 spec - NO publish step
  * Status: P0 - REQUIRED before merge
+ * 
+ * SSOT: docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md §7 (Event Save Enforcement v5)
+ * 
+ * enforceEventPublish() returns void on success, throws:
+ * - PaywallError (402) when payment required
+ * - CreditConfirmationRequiredError (409) when credit confirmation needed
  */
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
-import { enforcePublish, PublishDecision } from '@/lib/services/accessControl';
+import { enforceEventPublish, CreditConfirmationRequiredError } from '@/lib/services/accessControl';
 import { createBillingCredit, consumeCredit } from '@/lib/db/billingCreditsRepo';
 import { getProductByCode } from '@/lib/db/billingProductsRepo';
+import { PaywallError } from '@/lib/errors';
 import { randomUUID } from 'crypto';
 
 /**
@@ -40,7 +47,7 @@ async function createTestCredit(userId: string) {
   });
 }
 
-describe('Billing v4: Publish Enforcement', () => {
+describe('Billing v5: Save-time Enforcement', () => {
   let testUserId: string;
   let testEventId: string;
 
@@ -91,25 +98,25 @@ describe('Billing v4: Publish Enforcement', () => {
   });
 
   /**
-   * QA 1: Publish within free limits → NO credit consumed
+   * QA 1: Save within free limits → NO credit consumed
+   * 
+   * v5: enforceEventPublish returns void (no error) when within limits
    */
-  test('publish within free limits does not consume credit', async () => {
+  test('save within free limits does not consume credit', async () => {
     // Given: user has available credit
     const credit = await createTestCredit(testUserId);
 
-    // When: publish event within free limits (≤15 participants)
-    const decision = await enforcePublish({
-      eventId: testEventId,
-      userId: testUserId,
-      maxParticipants: 10, // Within free
-      clubId: null,
-    }, false);
-
-    // Then: allowed immediately, no credit check
-    expect(decision.allowed).toBe(true);
-    if (decision.allowed) {
-      expect(decision.willConsumeCredit).toBeUndefined();
-    }
+    // When: save event within free limits (≤15 participants)
+    // enforceEventPublish returns void on success, throws on error
+    await expect(
+      enforceEventPublish({
+        eventId: testEventId,
+        userId: testUserId,
+        maxParticipants: 10, // Within free
+        clubId: null,
+        isPaid: false,
+      }, false)
+    ).resolves.toBeUndefined(); // Success = no error
 
     // Verify: credit still available
     const db = getAdminDb();
@@ -124,38 +131,36 @@ describe('Billing v4: Publish Enforcement', () => {
 
   /**
    * QA 2: 409 → confirm → exactly one credit consumed
+   * 
+   * v5: CreditConfirmationRequiredError thrown when credit available but not confirmed
    */
   test('credit confirmation flow consumes exactly one credit', async () => {
     // Given: user has credit, event exceeds free (but ≤500)
     await createTestCredit(testUserId);
 
-    // When: first publish attempt (no confirm)
-    const decision1 = await enforcePublish({
-      eventId: testEventId,
-      userId: testUserId,
-      maxParticipants: 100, // Exceeds free, within oneoff
-      clubId: null,
-    }, false);
+    // When: first save attempt (no confirm)
+    // Should throw CreditConfirmationRequiredError (409)
+    await expect(
+      enforceEventPublish({
+        eventId: testEventId,
+        userId: testUserId,
+        maxParticipants: 100, // Exceeds free, within oneoff
+        clubId: null,
+        isPaid: false,
+      }, false)
+    ).rejects.toThrow(CreditConfirmationRequiredError);
 
-    // Then: requires confirmation (409)
-    expect(decision1.allowed).toBe(false);
-    if (!decision1.allowed) {
-      expect(decision1.requiresCreditConfirmation).toBe(true);
-    }
-
-    // When: confirm publish
-    const decision2 = await enforcePublish({
-      eventId: testEventId,
-      userId: testUserId,
-      maxParticipants: 100,
-      clubId: null,
-    }, true); // confirm_credit=1
-
-    // Then: allowed with credit consumption
-    expect(decision2.allowed).toBe(true);
-    if (decision2.allowed) {
-      expect(decision2.willConsumeCredit).toBe(true);
-    }
+    // When: confirm save
+    // Should succeed (returns void)
+    await expect(
+      enforceEventPublish({
+        eventId: testEventId,
+        userId: testUserId,
+        maxParticipants: 100,
+        clubId: null,
+        isPaid: false,
+      }, true) // confirm_credit=1
+    ).resolves.toBeUndefined();
 
     // **Actually consume the credit** (emulate API route behavior)
     await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
@@ -176,44 +181,52 @@ describe('Billing v4: Publish Enforcement', () => {
    * NOTE: Current implementation doesn't use FOR UPDATE lock,
    * so both requests may succeed, but we verify only ONE credit consumed
    */
-  test('concurrent publish confirms consume only one credit', async () => {
+  test('concurrent save confirms consume only one credit', async () => {
     // Given: user has one credit
     await createTestCredit(testUserId);
 
     // When: two concurrent consumption attempts (simulating API race)
     const promises = [
       (async () => {
-        const decision = await enforcePublish({
-          eventId: testEventId,
-          userId: testUserId,
-          maxParticipants: 100,
-          clubId: null,
-        }, true);
-        // Consume if allowed
-        if (decision.allowed && decision.willConsumeCredit) {
+        try {
+          await enforceEventPublish({
+            eventId: testEventId,
+            userId: testUserId,
+            maxParticipants: 100,
+            clubId: null,
+            isPaid: false,
+          }, true);
+          // Success - consume credit
           await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
+          return { success: true };
+        } catch {
+          return { success: false };
         }
-        return decision;
       })(),
       (async () => {
-        const decision = await enforcePublish({
-          eventId: testEventId,
-          userId: testUserId,
-          maxParticipants: 100,
-          clubId: null,
-        }, true);
-        // Consume if allowed
-        if (decision.allowed && decision.willConsumeCredit) {
+        try {
+          await enforceEventPublish({
+            eventId: testEventId,
+            userId: testUserId,
+            maxParticipants: 100,
+            clubId: null,
+            isPaid: false,
+          }, true);
+          // Success - consume credit
           await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
+          return { success: true };
+        } catch {
+          return { success: false };
         }
-        return decision;
       })(),
     ];
 
     const results = await Promise.allSettled(promises);
 
     // Then: At least one succeeds
-    const successful = results.filter(r => r.status === 'fulfilled');
+    const successful = results.filter(r => 
+      r.status === 'fulfilled' && (r.value as { success: boolean }).success
+    );
     expect(successful.length).toBeGreaterThanOrEqual(1);
     
     // Most important: Verify exactly ONE credit consumed (no double-spend)
@@ -228,80 +241,87 @@ describe('Billing v4: Publish Enforcement', () => {
   });
 
   /**
-   * QA 4: Personal >500 → only club option
+   * QA 4: Personal >500 → only club option (PaywallError)
    */
   test('personal event >500 participants requires club', async () => {
-    // When: publish event >500 participants
-    const decision = enforcePublish({
-      eventId: testEventId,
-      userId: testUserId,
-      maxParticipants: 600, // Exceeds oneoff limit
-      clubId: null,
-    }, false);
-
-    // Then: PaywallError with ONLY club option
-    await expect(decision).rejects.toMatchObject({
-      code: 'PAYWALL',
-      reason: 'CLUB_REQUIRED_FOR_LARGE_EVENT',
-      options: expect.arrayContaining([
-        expect.objectContaining({ type: 'CLUB_ACCESS' })
-      ])
-    });
-
-    // Verify: NO one-off option
-    await expect(decision).rejects.toMatchObject({
-      options: expect.not.arrayContaining([
-        expect.objectContaining({ type: 'ONE_OFF_CREDIT' })
-      ])
-    });
+    // When: save event >500 participants
+    // Should throw PaywallError
+    try {
+      await enforceEventPublish({
+        eventId: testEventId,
+        userId: testUserId,
+        maxParticipants: 600, // Exceeds oneoff limit
+        clubId: null,
+        isPaid: false,
+      }, false);
+      fail('Expected PaywallError to be thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PaywallError);
+      const paywallErr = err as PaywallError;
+      expect(paywallErr.reason).toBe('CLUB_REQUIRED_FOR_LARGE_EVENT');
+      
+      // Verify: ONLY club option, NO one-off option
+      const options = paywallErr.options ?? [];
+      const hasClubOption = options.some(o => o.type === 'CLUB_ACCESS');
+      const hasOneOffOption = options.some(o => o.type === 'ONE_OFF_CREDIT');
+      
+      expect(hasClubOption).toBe(true);
+      expect(hasOneOffOption).toBe(false);
+    }
   });
 
   /**
-   * QA 5: Idempotent publish
+   * QA 5: Idempotent save (v5 - no published_at field)
+   * 
+   * v5: Events are saved directly, no separate publish step.
+   * Idempotency is enforced at event creation level.
    */
-  test('republish does not consume additional credit', async () => {
+  test('re-save does not consume additional credit', async () => {
     const db = getAdminDb();
     
-    // Given: event already published with credit consumed
+    // Given: event already saved with credit consumed
     await createTestCredit(testUserId);
 
-    // Publish once (with credit consumption)
-    const decision1 = await enforcePublish({
+    // First save (with credit consumption)
+    await enforceEventPublish({
       eventId: testEventId,
       userId: testUserId,
       maxParticipants: 100,
       clubId: null,
+      isPaid: false,
     }, true);
     
-    // Consume credit for first publish
-    if (decision1.allowed && decision1.willConsumeCredit) {
-      await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
-    }
+    // Consume credit for first save
+    await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
 
-    // Mark event as published
-    await db.from('events')
-      .update({ published_at: new Date().toISOString() })
-      .eq('id', testEventId);
+    // Verify credit consumed
+    const { data: credits1 } = await db
+      .from('billing_credits')
+      .select('status')
+      .eq('user_id', testUserId);
+    const consumed1 = credits1?.filter(c => c.status === 'consumed');
+    expect(consumed1?.length).toBe(1);
 
-    // When: check if event is already published (this is what API route does)
-    const { data: event } = await db
-      .from('events')
-      .select('published_at')
-      .eq('id', testEventId)
-      .single();
-
-    // Then: idempotent - if already published, don't call enforcePublish again
-    // (API route returns 200 OK immediately)
-    expect(event?.published_at).not.toBeNull();
+    // When: event has consumed credit, second save within limit should succeed
+    // The effective entitlements now include the credit
+    await expect(
+      enforceEventPublish({
+        eventId: testEventId,
+        userId: testUserId,
+        maxParticipants: 100, // Same or less
+        clubId: null,
+        isPaid: false,
+      }, false) // No confirmation needed - credit already applied
+    ).resolves.toBeUndefined();
 
     // Verify: still only one consumed credit
-    const { data: credits } = await db
+    const { data: credits2 } = await db
       .from('billing_credits')
       .select('status')
       .eq('user_id', testUserId);
 
-    const consumed = credits?.filter(c => c.status === 'consumed');
-    expect(consumed?.length).toBe(1); // Still one
+    const consumed2 = credits2?.filter(c => c.status === 'consumed');
+    expect(consumed2?.length).toBe(1); // Still one
   });
 
   /**
@@ -349,11 +369,40 @@ describe('Billing v4: Publish Enforcement', () => {
   });
 });
 
-describe('Billing v4: billing_products SSOT', () => {
+describe('Billing v5: billing_products SSOT', () => {
+  let testUserId: string;
+  let testEventId: string;
+
+  beforeEach(async () => {
+    const db = getAdminDb();
+    
+    testUserId = randomUUID();
+    await db.from('users').insert({
+      id: testUserId,
+      name: 'Test User',
+      telegram_id: `test-${testUserId}`,
+    });
+
+    const { data: cities } = await db.from('cities').select('id').limit(1);
+    const cityId = cities?.[0]?.id;
+    
+    testEventId = randomUUID();
+    await db.from('events').insert({
+      id: testEventId,
+      title: 'Test Event',
+      description: 'Test',
+      created_by_user_id: testUserId,
+      visibility: 'public',
+      max_participants: 100,
+      date_time: new Date().toISOString(),
+      city_id: cityId!,
+    });
+  });
+
   /**
-   * QA 7: enforcePublish reads constraints from DB
+   * QA 7: enforceEventPublish reads constraints from DB
    */
-  test('enforcePublish uses billing_products constraints', async () => {
+  test('enforceEventPublish uses billing_products constraints', async () => {
     // Given: billing_products contains EVENT_UPGRADE_500
     const product = await getProductByCode('EVENT_UPGRADE_500');
     
@@ -362,7 +411,7 @@ describe('Billing v4: billing_products SSOT', () => {
     expect(product?.currencyCode).toBe('KZT');     // ⚡ Verify currency
     expect(product?.constraints.max_participants).toBe(500);
 
-    // When: enforcePublish is called
+    // When: enforceEventPublish is called
     // Then: uses these constraints (tested implicitly by QA 4)
   });
 
@@ -371,23 +420,25 @@ describe('Billing v4: billing_products SSOT', () => {
    */
   test('PaywallError contains price from billing_products', async () => {
     // When: trigger paywall (no credit, exceeds free)
-    const decision = enforcePublish({
-      eventId: 'test-event',
-      userId: 'test-user',
-      maxParticipants: 100,
-      clubId: null,
-    }, false);
-
-    // Then: PaywallError contains price from DB
-    await expect(decision).rejects.toMatchObject({
-      options: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'ONE_OFF_CREDIT',
-          price: 1000,                       // ⚡ Normalized (was priceKzt)
-          currencyCode: 'KZT'                // ⚡ Added
-        })
-      ])
-    });
+    try {
+      await enforceEventPublish({
+        eventId: testEventId,
+        userId: testUserId,
+        maxParticipants: 100,
+        clubId: null,
+        isPaid: false,
+      }, false);
+      fail('Expected PaywallError to be thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PaywallError);
+      const paywallErr = err as PaywallError;
+      
+      // Then: PaywallError contains price from DB
+      const oneOffOption = paywallErr.options?.find(o => o.type === 'ONE_OFF_CREDIT');
+      expect(oneOffOption).toBeDefined();
+      expect(oneOffOption?.price).toBe(1000);        // ⚡ Normalized
+      expect(oneOffOption?.currencyCode).toBe('KZT'); // ⚡ Added
+    }
   });
 });
 
@@ -404,4 +455,3 @@ describe('Billing v4: billing_products SSOT', () => {
  * 
  * Expected: ALL PASS ✅
  */
-

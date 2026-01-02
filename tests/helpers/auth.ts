@@ -6,6 +6,7 @@
  * NO MOCKS - Uses real JWT creation and user management
  */
 
+import { NextRequest } from 'next/server';
 import { getAdminDb } from '@/lib/db/client';
 import { createAuthToken } from '@/lib/auth/jwt';
 import { randomUUID } from 'crypto';
@@ -70,7 +71,7 @@ export async function createTestUser(overrides?: {
 }
 
 /**
- * Create Request with x-user-id header (simulates middleware auth)
+ * Create NextRequest with x-user-id header (simulates middleware auth)
  * 
  * This is the REAL way API routes receive authenticated requests:
  * Middleware validates JWT and adds x-user-id header.
@@ -80,22 +81,49 @@ export async function createTestUser(overrides?: {
  * const req = createAuthenticatedRequest('/api/events', userId);
  * const res = await POST(req, context);
  * ```
+ * 
+ * Note: Returns NextRequest to match API route handler signatures
  */
 export function createAuthenticatedRequest(
   url: string,
   userId: string,
-  options?: RequestInit
-): Request {
+  options?: {
+    method?: string;
+    body?: string;
+    headers?: Record<string, string>;
+  }
+): NextRequest {
   const headers = new Headers(options?.headers);
   
   // Add x-user-id header (same as middleware does)
   headers.set('x-user-id', userId);
   headers.set('Content-Type', 'application/json');
   
-  return new Request(url, {
-    method: 'POST',
-    ...options,
+  return new NextRequest(url, {
+    method: options?.method ?? 'POST',
     headers,
+    body: options?.body,
+  });
+}
+
+/**
+ * Create unauthenticated NextRequest (for testing 401 responses)
+ */
+export function createUnauthenticatedRequest(
+  url: string,
+  options?: {
+    method?: string;
+    body?: string;
+    headers?: Record<string, string>;
+  }
+): NextRequest {
+  const headers = new Headers(options?.headers);
+  headers.set('Content-Type', 'application/json');
+  
+  return new NextRequest(url, {
+    method: options?.method ?? 'POST',
+    headers,
+    body: options?.body,
   });
 }
 
@@ -174,4 +202,3 @@ export async function createTestCredit(userId: string): Promise<string> {
   
   return creditId;
 }
-

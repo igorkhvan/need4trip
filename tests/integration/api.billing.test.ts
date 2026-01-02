@@ -5,23 +5,23 @@
  * Scope: QA-14 to QA-22
  * 
  * Uses REAL authentication via x-user-id header (simulates middleware)
+ * 
+ * SSOT: docs/ssot/SSOT_API.md (Billing endpoints)
  */
 
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
-import { createTestUser, createAuthenticatedRequest } from '../helpers/auth';
+import { createTestUser, createAuthenticatedRequest, createUnauthenticatedRequest } from '../helpers/auth';
 import { randomUUID } from 'crypto';
 
 describe('API: POST /api/billing/purchase-intent', () => {
   let testUserId: string;
-  let testToken: string;
   let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
     // Create real test user with JWT token
     const testUser = await createTestUser();
     testUserId = testUser.user.id;
-    testToken = testUser.token;
     cleanup = testUser.cleanup;
   });
   
@@ -105,7 +105,7 @@ describe('API: POST /api/billing/purchase-intent', () => {
   test('QA-16: unauthenticated request returns 401', async () => {
     const { POST } = await import('@/app/api/billing/purchase-intent/route');
     
-    const req = new Request(
+    const req = createUnauthenticatedRequest(
       'http://localhost:3000/api/billing/purchase-intent',
       { 
         method: 'POST',

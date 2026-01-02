@@ -2,17 +2,21 @@
  * Integration Tests: Event Create/Update Enforcement (Production Bug Fix)
  * 
  * Purpose: Verify that create/update allows personal events ≤500 participants
- * without blocking on free limit (publish will handle monetization)
+ * without blocking on free limit (save-time enforcement handles monetization)
  * 
  * Bug: Previous implementation threw PaywallError on create/update when
  * maxParticipants > free limit, blocking one-off credit flow.
  * 
  * Fix: create/update only blocks maxParticipants > 500 (requires club)
+ * 
+ * SSOT: docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md §7 (Event Save Enforcement v5)
  */
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
 import { createEvent, updateEvent } from '@/lib/services/events';
+import { enforceEventPublish } from '@/lib/services/accessControl';
+import { PaywallError } from '@/lib/errors';
 import { CurrentUser } from '@/lib/auth/currentUser';
 import { randomUUID } from 'crypto';
 
@@ -59,7 +63,7 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
    * QA-9: Personal event create with maxParticipants > free but ≤500 → ALLOWED
    * 
    * Expected: createEvent() succeeds (does NOT throw PaywallError)
-   * Monetization check happens at publish endpoint
+   * Monetization check happens at save-time via enforceEventPublish
    */
   test('create personal event with 50 participants (over free limit) succeeds', async () => {
     // Given: personal event with 50 participants (exceeds free 15 limit)
@@ -171,13 +175,15 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
     
     try {
       await createEvent(input, currentUser);
-    } catch (err: any) {
-      const paywall = err.toJSON ? err.toJSON() : err;
-      expect(paywall.reason || err.message).toContain('CLUB_REQUIRED_FOR_LARGE_EVENT');
-      expect(err.statusCode).toBe(402);
-      if (paywall.meta) {
-        expect(paywall.meta.requested).toBe(501);
-        expect(paywall.meta.maxOneOffLimit).toBe(500);
+    } catch (err: unknown) {
+      const paywall = err instanceof PaywallError ? err : null;
+      if (paywall) {
+        expect(paywall.reason).toBe('CLUB_REQUIRED_FOR_LARGE_EVENT');
+        expect(paywall.statusCode).toBe(402);
+        expect(paywall.meta?.requestedParticipants || paywall.meta?.requested).toBe(501);
+      } else {
+        // Zod validation may catch it first
+        expect(err).toBeDefined();
       }
     }
   });
@@ -273,7 +279,7 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
     try {
       await updateEvent(eventId, { maxParticipants: 600 }, currentUser);
       fail('Expected update to throw error for 600 participants');
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Either Zod validation error OR PaywallError is acceptable
       // Zod catches it first (max 500), which is fine for blocking > 500
       expect(err).toBeDefined();
@@ -281,14 +287,13 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
   });
 
   /**
-   * QA-15: Regression - Publish enforcement after update still works
+   * QA-15: Regression - Enforcement after update still works
    * 
-   * Verify that after updating event to 50 participants, publish endpoint
+   * Verify that after updating event to 50 participants, enforcement
    * correctly requires credit/payment (402 or 409)
    */
-  test('after updating to 50 participants, publish requires credit or payment', async () => {
+  test('after updating to 50 participants, enforcement requires credit or payment', async () => {
     const db = getAdminDb();
-    const { enforcePublish } = await import('@/lib/services/accessControl');
     
     // Given: event updated to 50 participants
     const eventId = randomUUID();
@@ -305,23 +310,24 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
 
     await updateEvent(eventId, { maxParticipants: 50 }, currentUser);
 
-    // When: try to publish without credit
-    // Then: should throw PaywallError (402) or return requiresCreditConfirmation (409)
+    // When: try to enforce without credit
+    // Then: should throw PaywallError (402) with reason PUBLISH_REQUIRES_PAYMENT
     try {
-      await enforcePublish({
+      await enforceEventPublish({
         eventId,
         userId: testUserId,
         maxParticipants: 50,
         clubId: null,
+        isPaid: false,
       }, false);
       
-      // If no error thrown, check for credit confirmation requirement
-      fail('Expected enforcePublish to throw PaywallError or require confirmation');
-    } catch (err: any) {
+      // If no error thrown, something is wrong
+      fail('Expected enforceEventPublish to throw PaywallError');
+    } catch (err: unknown) {
       // Should throw PaywallError with reason PUBLISH_REQUIRES_PAYMENT
-      expect(err.reason).toBe('PUBLISH_REQUIRES_PAYMENT');
-      expect(err.statusCode).toBe(402);
+      const paywallErr = err as PaywallError;
+      expect(paywallErr.reason).toBe('PUBLISH_REQUIRES_PAYMENT');
+      expect(paywallErr.statusCode).toBe(402);
     }
   });
 });
-
