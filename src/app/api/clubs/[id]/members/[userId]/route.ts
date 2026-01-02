@@ -15,7 +15,7 @@ import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { updateClubMemberRole, removeClubMember } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
-import { ValidationError, ForbiddenError } from "@/lib/errors";
+import { ValidationError, UnauthorizedError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -33,16 +33,18 @@ interface RouteContext {
  * - Assigning 'owner' via role change is FORBIDDEN
  * - Allowed transitions: member ↔ admin
  * 
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
+ * 
  * Body: { role: ClubRole }
  */
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
     const { id, userId } = await params;
     
-    // Require authentication
+    // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
     const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
-      throw new ForbiddenError("Требуется авторизация для изменения роли");
+      throw new UnauthorizedError("Требуется авторизация для изменения роли");
     }
     
     const body = await req.json();
@@ -71,15 +73,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
  * - Members can leave on their own (self-removal)
  * - Owner cannot leave without transferring ownership first
  * - Only owner can remove other members
+ * 
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
  */
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const { id, userId } = await params;
     
-    // Require authentication
+    // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
     const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
-      throw new ForbiddenError("Требуется авторизация для удаления участника");
+      throw new UnauthorizedError("Требуется авторизация для удаления участника");
     }
     
     // Service layer enforces: self-leave OR owner-only for removal

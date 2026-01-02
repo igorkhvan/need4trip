@@ -59,7 +59,7 @@ import {
   type ClubUpdateInput,
   type ClubRole,
 } from "@/lib/types/club";
-import { AuthError, ConflictError, ForbiddenError, InternalError, NotFoundError, ValidationError } from "@/lib/errors";
+import { AuthError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 // ============================================================================
@@ -255,6 +255,11 @@ export async function getUserClubRole(
  * - Only owner can manage members (invite/remove/role changes)
  * - Only owner can change visibility, settings, delete club
  * 
+ * Per SSOT_ARCHITECTURE.md §20.2:
+ * - 401 UnauthorizedError for unauthenticated (null userId)
+ * - 403 ForbiddenError for authenticated but insufficient permission
+ * 
+ * @throws UnauthorizedError if user is not authenticated
  * @throws ForbiddenError if user is not owner
  */
 export async function requireClubOwner(
@@ -262,12 +267,14 @@ export async function requireClubOwner(
   userId: string | null | undefined,
   action: string
 ): Promise<void> {
+  // 401: Unauthenticated (SSOT_ARCHITECTURE.md §20.2)
   if (!userId) {
-    throw new ForbiddenError(`Требуется авторизация для: ${action}`);
+    throw new UnauthorizedError(`Требуется авторизация для: ${action}`);
   }
   
   const role = await getUserClubRole(clubId, userId);
   
+  // 403: Authenticated but not owner (SSOT_ARCHITECTURE.md §20.2)
   if (role !== "owner") {
     throw new ForbiddenError(
       `Только владелец клуба может: ${action}. Текущая роль: ${role ?? "не участник"}`
@@ -279,6 +286,11 @@ export async function requireClubOwner(
  * Require user to be club member (non-pending).
  * Per SSOT_CLUBS_DOMAIN.md §3.3: pending has NO privileges.
  * 
+ * Per SSOT_ARCHITECTURE.md §20.2:
+ * - 401 UnauthorizedError for unauthenticated (null userId)
+ * - 403 ForbiddenError for authenticated but not a member
+ * 
+ * @throws UnauthorizedError if user is not authenticated
  * @throws ForbiddenError if user is not a club member or is pending
  */
 export async function requireClubMember(
@@ -286,12 +298,14 @@ export async function requireClubMember(
   userId: string | null | undefined,
   action: string
 ): Promise<ClubRole> {
+  // 401: Unauthenticated (SSOT_ARCHITECTURE.md §20.2)
   if (!userId) {
-    throw new ForbiddenError(`Требуется авторизация для: ${action}`);
+    throw new UnauthorizedError(`Требуется авторизация для: ${action}`);
   }
   
   const role = await getUserClubRole(clubId, userId);
   
+  // 403: Authenticated but not member (or pending) (SSOT_ARCHITECTURE.md §20.2)
   if (!role || role === "pending") {
     throw new ForbiddenError(
       `Доступ только для участников клуба: ${action}. Текущая роль: ${role ?? "не участник"}`
@@ -417,14 +431,16 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
 /**
  * Создать клуб
  * Any authenticated user can create a club (becomes owner)
+ * 
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
  */
 export async function createClub(
   input: unknown,
   currentUser: CurrentUser | null
 ): Promise<Club> {
-  // Require authentication
+  // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
   if (!currentUser) {
-    throw new ForbiddenError("Требуется авторизация для создания клуба");
+    throw new UnauthorizedError("Требуется авторизация для создания клуба");
   }
 
   // Валидация данных
@@ -448,19 +464,48 @@ export async function createClub(
 
 /**
  * Обновить клуб
- * Per SSOT_CLUBS_DOMAIN.md §8.1: Owner-only for settings/visibility changes.
- * For security hardening, requiring owner for all club updates.
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §8.1:
+ * - Owner + Admin may edit: description/about, rules, FAQ, contacts, media (avatar/banner)
+ * - Owner-only: visibility, slug change, archive/delete, clubs.settings
+ * 
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated, 403 for insufficient permission
+ * 
+ * Current schema (clubUpdateSchema) only contains content fields (name, description, 
+ * cityIds, logoUrl, telegramUrl, websiteUrl) — all are admin-editable.
+ * When visibility/settings are added to schema, this function must enforce owner-only.
  */
 export async function updateClub(
   id: string,
   input: unknown,
   currentUser: CurrentUser | null
 ): Promise<Club> {
-  // Owner-only check (SSOT_CLUBS_DOMAIN.md §8.1)
-  await requireClubOwner(id, currentUser?.id, "обновить настройки клуба");
+  // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
+  if (!currentUser) {
+    throw new UnauthorizedError("Требуется авторизация для обновления клуба");
+  }
 
   // Валидация данных
   const parsed = clubUpdateSchema.parse(input);
+
+  // Get user's role in this club
+  const role = await getUserClubRole(id, currentUser.id);
+  
+  // SSOT_CLUBS_DOMAIN.md §8.1: Owner-only fields
+  // Currently clubUpdateSchema has NO owner-only fields (visibility, settings not in schema)
+  // When they are added, check here:
+  // const hasOwnerOnlyFields = 'visibility' in parsed || 'settings' in parsed || 'slug' in parsed;
+  // if (hasOwnerOnlyFields && role !== 'owner') {
+  //   throw new ForbiddenError("Только владелец может изменять visibility, settings или slug");
+  // }
+  
+  // SSOT_CLUBS_DOMAIN.md §8.1 + §A1: Content fields require owner OR admin
+  // pending and member cannot edit (403)
+  if (!role || role === "pending" || role === "member") {
+    throw new ForbiddenError(
+      `Редактирование клуба доступно только владельцу или администратору. Текущая роль: ${role ?? "не участник"}`
+    );
+  }
 
   // Обновить клуб
   const updated = await updateClubRepo(id, parsed);
@@ -607,14 +652,16 @@ export async function updateClubMemberRole(
  * Удалить участника из клуба
  * Per SSOT_CLUBS_DOMAIN.md §7.2 and §A1: Owner-only for removal.
  * Per SSOT_CLUBS_DOMAIN.md §7.1: Members can leave on their own (self-removal).
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
  */
 export async function removeClubMember(
   clubId: string,
   userId: string,
   currentUser: CurrentUser | null
 ): Promise<boolean> {
+  // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
   if (!currentUser) {
-    throw new ForbiddenError("Требуется авторизация");
+    throw new UnauthorizedError("Требуется авторизация");
   }
 
   const isSelfRemoval = userId === currentUser.id;

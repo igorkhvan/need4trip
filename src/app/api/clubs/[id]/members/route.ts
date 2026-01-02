@@ -13,7 +13,7 @@ import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { getClubMembers, addClubMember, requireClubMember } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
-import { ValidationError, ForbiddenError } from "@/lib/errors";
+import { ValidationError, UnauthorizedError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -30,16 +30,18 @@ interface RouteContext {
  * - Authentication
  * - Club membership (owner | admin | member; pending is denied)
  * 
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
+ * 
  * Future: public_members_list_enabled flag may allow guest access (§8.4.1)
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     
-    // Require authentication (SSOT_CLUBS_DOMAIN.md §10.4)
+    // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
     const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
-      throw new ForbiddenError("Требуется авторизация для просмотра списка участников");
+      throw new UnauthorizedError("Требуется авторизация для просмотра списка участников");
     }
     
     // Require club membership (owner | admin | member; pending is denied)
@@ -61,6 +63,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
  * Добавить участника (owner-only)
  * 
  * Per SSOT_CLUBS_DOMAIN.md §5.1 and §A1: Only owner can invite members.
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
  * 
  * Body: { userId: string, role: ClubRole }
  */
@@ -68,10 +71,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     
-    // Require authentication
+    // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
     const user = await getCurrentUserFromMiddleware(req);
     if (!user) {
-      throw new ForbiddenError("Требуется авторизация для добавления участника");
+      throw new UnauthorizedError("Требуется авторизация для добавления участника");
     }
     
     const body = await req.json();
