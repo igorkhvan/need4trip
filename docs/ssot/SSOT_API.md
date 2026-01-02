@@ -1,13 +1,20 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.2.1  
-**Last Updated:** 1 января 2026  
+**Version:** 1.3.0  
+**Last Updated:** 2 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.3.0 (2026-01-02) — P0 Security Hardening
+**Clubs Members API Hardening per SSOT_CLUBS_DOMAIN.md**:
+- **API-019 (GET members):** Changed from public to auth-required + club membership check. Pending role denied.
+- **API-020 (POST members):** Changed from "owner or admin" to "owner only". Blocked role="owner" assignment.
+- **API-021 (PATCH role):** Changed from "owner or admin" to "owner only". Blocked role="owner" assignment. Cannot modify owner's role.
+- **API-022 (DELETE member):** Changed from "owner/admin/self" to "owner for removal, self for leaving". Owner cannot leave without transfer.
 
 ### 1.2.1 (2026-01-01)
 - **Removed deprecated `organizer` role** — Replaced with canonical roles (`owner`, `admin`, `member`, `pending`) per SSOT_CLUBS_EVENTS_ACCESS.md §2.
@@ -1473,12 +1480,15 @@ Delete club (cascades members, subscriptions, events).
 **Method:** GET  
 **Path:** `/api/clubs/[id]/members`  
 **Runtime:** Node.js  
-**Auth:** None (public)  
-**Auth mechanism:** N/A  
-**Authorization:** Public member list  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Club member (owner | admin | member; pending denied)  
 
 **Purpose:**  
 Get list of club members with roles, user details.
+
+**Security hardening (2026-01-02):**
+Per SSOT_CLUBS_DOMAIN.md §10.4: Default members list access requires authentication and club membership. Pending role has NO privileges.
 
 **Request:**
 
@@ -1509,13 +1519,15 @@ Get list of club members with roles, user details.
 
 | Status | Condition | Notes |
 |--------|-----------|-------|
+| 403 | Not authenticated | Login required |
+| 403 | Not club member / pending | Member access required |
 | 404 | Club not found | Invalid UUID |
 
 **Security & Abuse:**
 
 - **Rate limit:** read tier (300 req/5min)
-- **Spam / Cost abuse risk:** Low (read-only)
-- **Sensitive data exposure:** No (public member list)
+- **Spam / Cost abuse risk:** Low (read-only, member-only)
+- **Sensitive data exposure:** No (member-only access)
 
 **Dependencies:**
 
@@ -1524,7 +1536,7 @@ Get list of club members with roles, user details.
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/members/route.ts`
-- Key functions: `getClubMembers()`
+- Key functions: `getClubMembers()`, `requireClubMember()`
 
 ---
 
@@ -1536,10 +1548,14 @@ Get list of club members with roles, user details.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or admin only  
+**Authorization:** Owner only  
 
 **Purpose:**  
 Add member to club with specified role.
+
+**Security hardening (2026-01-02):**
+Per SSOT_CLUBS_DOMAIN.md §5.1 and §A1: Only owner can invite members.
+Per SSOT_CLUBS_DOMAIN.md §7.4: Cannot assign 'owner' role via this endpoint (use ownership transfer).
 
 **Request:**
 
@@ -1549,7 +1565,7 @@ Add member to club with specified role.
   ```typescript
   {
     userId: string; // UUID
-    role: "member" | "admin" | "owner";
+    role: "member" | "admin"; // Note: "owner" is REJECTED
   }
   ```
 - **Idempotency:** No (creates new membership, duplicate throws Conflict)
@@ -1572,25 +1588,27 @@ Add member to club with specified role.
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 400 | Missing fields | userId, role required |
-| 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner/admin | Authorization check |
+| 403 | Not authenticated | Login required |
+| 403 | Not owner | Owner-only action |
+| 403 | role="owner" | Cannot assign owner via add member |
 | 404 | Club not found | Invalid UUID |
 | 409 | Already member | Duplicate membership |
 
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Medium (DB insert, no limit check)
+- **Spam / Cost abuse risk:** Medium (DB insert, billing limit check applied)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
 
 - Supabase (club_members, clubs tables)
+- Billing enforcement (via `enforceClubAction()`)
 
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/members/route.ts`
-- Key functions: `addClubMember()`
+- Key functions: `addClubMember()`, `requireClubOwner()`
 
 ---
 
@@ -1602,10 +1620,17 @@ Add member to club with specified role.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or admin only  
+**Authorization:** Owner only  
 
 **Purpose:**  
-Change member role (member → admin, etc).
+Change member role (member ↔ admin). Cannot assign 'owner' role via this endpoint.
+
+**Security hardening (2026-01-02):**
+Per SSOT_CLUBS_DOMAIN.md §7.3-7.4:
+- Only owner can change roles
+- Assigning 'owner' via role change is FORBIDDEN (use ownership transfer command)
+- Allowed transitions: member ↔ admin
+- Cannot modify current owner's role
 
 **Request:**
 
@@ -1614,7 +1639,7 @@ Change member role (member → admin, etc).
 - **Body schema:**
   ```typescript
   {
-    role: "member" | "admin" | "owner";
+    role: "member" | "admin"; // Note: "owner" is REJECTED
   }
   ```
 - **Idempotency:** Yes (update role)
@@ -1637,14 +1662,16 @@ Change member role (member → admin, etc).
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 400 | Missing role | Required field |
-| 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner/admin | Authorization check |
+| 403 | Not authenticated | Login required |
+| 403 | Not owner | Owner-only action |
+| 403 | role="owner" | Cannot assign owner via role change |
+| 403 | Target is owner | Cannot modify owner's role |
 | 404 | Club or member not found | Invalid UUID |
 
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Low (authorization check, single DB update)
+- **Spam / Cost abuse risk:** Low (owner-only, single DB update)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
@@ -1654,7 +1681,7 @@ Change member role (member → admin, etc).
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/members/[userId]/route.ts`
-- Key functions: `updateClubMemberRole()`
+- Key functions: `updateClubMemberRole()`, `requireClubOwner()`
 
 ---
 
@@ -1666,10 +1693,16 @@ Change member role (member → admin, etc).
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner or admin (or self if member)  
+**Authorization:** Owner for removal; Self for leaving  
 
 **Purpose:**  
-Remove member from club.
+Remove member from club (removal by owner) or leave club (self-removal).
+
+**Security hardening (2026-01-02):**
+Per SSOT_CLUBS_DOMAIN.md §7.1-7.2:
+- Members can leave on their own (self-removal)
+- Owner cannot leave without transferring ownership first
+- Only owner can remove other members (admin cannot remove members)
 
 **Request:**
 
@@ -1691,14 +1724,16 @@ Remove member from club.
 
 | Status | Condition | Notes |
 |--------|-----------|-------|
-| 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner/admin/self | Authorization check |
+| 403 | Not authenticated | Login required |
+| 403 | Not owner (and not self) | Owner-only for removal |
+| 403 | Self is owner | Owner cannot leave without transfer |
+| 403 | Target is owner | Cannot remove owner |
 | 404 | Club or member not found | Invalid UUID |
 
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Low (authorization check, single DB delete)
+- **Spam / Cost abuse risk:** Low (owner-only for removal, single DB delete)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
@@ -1708,7 +1743,7 @@ Remove member from club.
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/members/[userId]/route.ts`
-- Key functions: `removeClubMember()`
+- Key functions: `removeClubMember()`, `requireClubOwner()`
 
 ---
 

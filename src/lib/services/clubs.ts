@@ -47,12 +47,6 @@ import {
 } from "@/lib/db/eventRepo";
 import { hydrateCities, hydrateCitiesByIds } from "@/lib/utils/hydration";
 
-// Temporary stubs until migration to v2.0 accessControl
-const canCreateClubPermission = async (...args: any[]) => ({ allowed: true, reason: "" });
-const canManageClub = async (...args: any[]) => ({ allowed: true, reason: "" });
-const canManageClubMembers = async (...args: any[]) => ({ allowed: true, reason: "" });
-const canDeleteClubPermission = async (...args: any[]) => ({ allowed: true, reason: "" });
-
 import {
   clubCreateSchema,
   clubUpdateSchema,
@@ -65,7 +59,7 @@ import {
   type ClubUpdateInput,
   type ClubRole,
 } from "@/lib/types/club";
-import { AuthError, ConflictError, InternalError, NotFoundError, ValidationError } from "@/lib/errors";
+import { AuthError, ConflictError, ForbiddenError, InternalError, NotFoundError, ValidationError } from "@/lib/errors";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 // ============================================================================
@@ -251,6 +245,62 @@ export async function getUserClubRole(
   return member?.role ?? null;
 }
 
+// ============================================================================
+// AUTHORIZATION HELPERS (SSOT: SSOT_CLUBS_DOMAIN.md §3, §A1)
+// ============================================================================
+
+/**
+ * Require user to be club owner.
+ * Per SSOT_CLUBS_DOMAIN.md §3.2 and Appendix A1:
+ * - Only owner can manage members (invite/remove/role changes)
+ * - Only owner can change visibility, settings, delete club
+ * 
+ * @throws ForbiddenError if user is not owner
+ */
+export async function requireClubOwner(
+  clubId: string,
+  userId: string | null | undefined,
+  action: string
+): Promise<void> {
+  if (!userId) {
+    throw new ForbiddenError(`Требуется авторизация для: ${action}`);
+  }
+  
+  const role = await getUserClubRole(clubId, userId);
+  
+  if (role !== "owner") {
+    throw new ForbiddenError(
+      `Только владелец клуба может: ${action}. Текущая роль: ${role ?? "не участник"}`
+    );
+  }
+}
+
+/**
+ * Require user to be club member (non-pending).
+ * Per SSOT_CLUBS_DOMAIN.md §3.3: pending has NO privileges.
+ * 
+ * @throws ForbiddenError if user is not a club member or is pending
+ */
+export async function requireClubMember(
+  clubId: string,
+  userId: string | null | undefined,
+  action: string
+): Promise<ClubRole> {
+  if (!userId) {
+    throw new ForbiddenError(`Требуется авторизация для: ${action}`);
+  }
+  
+  const role = await getUserClubRole(clubId, userId);
+  
+  if (!role || role === "pending") {
+    throw new ForbiddenError(
+      `Доступ только для участников клуба: ${action}. Текущая роль: ${role ?? "не участник"}`
+    );
+  }
+  
+  return role;
+}
+
 /**
  * Получить базовую информацию о клубе (для быстрой загрузки)
  * Без members и subscription - они загружаются через Suspense
@@ -366,27 +416,27 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
 
 /**
  * Создать клуб
+ * Any authenticated user can create a club (becomes owner)
  */
 export async function createClub(
   input: unknown,
   currentUser: CurrentUser | null
 ): Promise<Club> {
-  // Проверка авторизации
-  const permissionCheck = await canCreateClubPermission(currentUser);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 401);
+  // Require authentication
+  if (!currentUser) {
+    throw new ForbiddenError("Требуется авторизация для создания клуба");
   }
 
   // Валидация данных
   const parsed = clubCreateSchema.parse(input);
 
   // Ensure user exists in DB
-  await ensureUserExists(currentUser!.id, currentUser!.name ?? undefined);
+  await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
 
   // Создать клуб
   const dbClub = await createClubRepo({
     ...parsed,
-    createdBy: currentUser!.id,
+    createdBy: currentUser.id,
   });
 
   // Триггеры БД автоматически:
@@ -398,17 +448,16 @@ export async function createClub(
 
 /**
  * Обновить клуб
+ * Per SSOT_CLUBS_DOMAIN.md §8.1: Owner-only for settings/visibility changes.
+ * For security hardening, requiring owner for all club updates.
  */
 export async function updateClub(
   id: string,
   input: unknown,
   currentUser: CurrentUser | null
 ): Promise<Club> {
-  // Проверка прав
-  const permissionCheck = await canManageClub(currentUser, id);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 403);
-  }
+  // Owner-only check (SSOT_CLUBS_DOMAIN.md §8.1)
+  await requireClubOwner(id, currentUser?.id, "обновить настройки клуба");
 
   // Валидация данных
   const parsed = clubUpdateSchema.parse(input);
@@ -424,16 +473,14 @@ export async function updateClub(
 
 /**
  * Удалить клуб
+ * Per SSOT_CLUBS_DOMAIN.md §3.2 and §8.3: Owner-only.
  */
 export async function deleteClub(
   id: string,
   currentUser: CurrentUser | null
 ): Promise<boolean> {
-  // Проверка прав (только owner)
-  const permissionCheck = await canDeleteClubPermission(currentUser, id);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 403);
-  }
+  // Owner-only check (SSOT_CLUBS_DOMAIN.md §8.3)
+  await requireClubOwner(id, currentUser?.id, "удалить клуб");
 
   // Проверить нет ли активных событий
   const activeEventsCount = await countActiveClubEvents(id);
@@ -463,6 +510,8 @@ export async function getClubMembers(clubId: string): Promise<ClubMemberWithUser
 
 /**
  * Добавить участника в клуб
+ * Per SSOT_CLUBS_DOMAIN.md §5.1 and §A1: Owner-only.
+ * Per SSOT_CLUBS_DOMAIN.md §7.4: Cannot assign 'owner' role via this method.
  */
 export async function addClubMember(
   clubId: string,
@@ -470,10 +519,15 @@ export async function addClubMember(
   role: ClubRole,
   currentUser: CurrentUser | null
 ): Promise<ClubMember> {
-  // Проверка прав (только owner может добавлять участников)
-  const permissionCheck = await canManageClubMembers(currentUser, clubId);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 403);
+  // Owner-only check (SSOT_CLUBS_DOMAIN.md §A1)
+  await requireClubOwner(clubId, currentUser?.id, "добавить участника");
+
+  // SECURITY: Cannot assign 'owner' role via member add (SSOT_CLUBS_DOMAIN.md §7.4)
+  // Ownership transfer is a separate command.
+  if (role === "owner") {
+    throw new ForbiddenError(
+      "Нельзя назначить роль 'owner' через добавление участника. Используйте передачу владения."
+    );
   }
 
   // Проверить что пользователь еще не в клубе
@@ -482,17 +536,6 @@ export async function addClubMember(
     throw new ConflictError("Пользователь уже является участником клуба", {
       code: "MemberAlreadyExists",
     });
-  }
-
-  // Проверить ограничение на одного owner
-  if (role === "owner") {
-    const dbMembers = await listMembers(clubId);
-    const hasOwner = dbMembers.some((m) => m.role === "owner");
-    if (hasOwner) {
-      throw new ConflictError("В клубе уже есть владелец. Сначала передайте права владения.", {
-        code: "OwnerAlreadyExists",
-      });
-    }
   }
 
   // ⚡ Billing v2.0: Check club members limit
@@ -517,6 +560,10 @@ export async function addClubMember(
 
 /**
  * Изменить роль участника
+ * Per SSOT_CLUBS_DOMAIN.md §7.3 and §A1: Owner-only.
+ * Per SSOT_CLUBS_DOMAIN.md §7.3-7.4: 
+ *   - Allowed transitions: member ↔ admin
+ *   - Assigning 'owner' via role change is DISALLOWED (use ownership transfer)
  */
 export async function updateClubMemberRole(
   clubId: string,
@@ -524,36 +571,30 @@ export async function updateClubMemberRole(
   newRole: ClubRole,
   currentUser: CurrentUser | null
 ): Promise<ClubMember> {
-  // Проверка прав (только owner)
-  const permissionCheck = await canManageClubMembers(currentUser, clubId);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 403);
-  }
+  // Owner-only check (SSOT_CLUBS_DOMAIN.md §7.3)
+  await requireClubOwner(clubId, currentUser?.id, "изменить роль участника");
 
-  // Нельзя изменить свою собственную роль owner
-  if (userId === currentUser!.id) {
-    const member = await getMember(clubId, userId);
-    if (member?.role === "owner") {
-      throw new ValidationError(
-        "Нельзя изменить свою роль владельца. Сначала передайте права другому участнику."
-      );
-    }
-  }
-
-  // Проверка перехода на owner
+  // SECURITY: Cannot assign 'owner' role via role change (SSOT_CLUBS_DOMAIN.md §7.3-7.4)
+  // "Assigning owner via 'role change' endpoint; ownership transfer is separate (see §7.4)."
   if (newRole === "owner") {
-    const dbMembers = await listMembers(clubId);
-    const currentOwner = dbMembers.find((m) => m.role === "owner");
-    
-    if (currentOwner && currentOwner.user_id !== userId) {
-      throw new ConflictError(
-        "В клубе уже есть владелец. Сначала снимите права текущего владельца.",
-        { code: "OwnerAlreadyExists" }
-      );
-    }
+    throw new ForbiddenError(
+      "Нельзя назначить роль 'owner' через изменение роли. Используйте отдельную команду передачи владения."
+    );
   }
 
-  // Обновить роль
+  // Cannot modify the current owner's role
+  const targetMember = await getMember(clubId, userId);
+  if (!targetMember) {
+    throw new NotFoundError("Участник не найден");
+  }
+  
+  if (targetMember.role === "owner") {
+    throw new ForbiddenError(
+      "Нельзя изменить роль владельца клуба. Используйте передачу владения для смены владельца."
+    );
+  }
+
+  // Обновить роль (only member ↔ admin transitions allowed)
   const updated = await updateMemberRoleRepo(clubId, userId, newRole);
   if (!updated) {
     throw new NotFoundError("Member not found");
@@ -564,23 +605,46 @@ export async function updateClubMemberRole(
 
 /**
  * Удалить участника из клуба
+ * Per SSOT_CLUBS_DOMAIN.md §7.2 and §A1: Owner-only for removal.
+ * Per SSOT_CLUBS_DOMAIN.md §7.1: Members can leave on their own (self-removal).
  */
 export async function removeClubMember(
   clubId: string,
   userId: string,
   currentUser: CurrentUser | null
 ): Promise<boolean> {
-  // Проверка прав (только owner)
-  const permissionCheck = await canManageClubMembers(currentUser, clubId);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 403);
+  if (!currentUser) {
+    throw new ForbiddenError("Требуется авторизация");
   }
 
-  // Нельзя удалить owner (нужно сначала передать права)
-  const member = await getMember(clubId, userId);
-  if (member?.role === "owner") {
-    throw new ValidationError(
-      "Нельзя удалить владельца клуба. Сначала передайте права другому участнику или удалите клуб."
+  const isSelfRemoval = userId === currentUser.id;
+  
+  if (isSelfRemoval) {
+    // Self-removal (leaving): Per SSOT_CLUBS_DOMAIN.md §7.1
+    // member/admin can leave; owner cannot leave without transfer first
+    const member = await getMember(clubId, userId);
+    if (!member) {
+      throw new NotFoundError("Вы не являетесь участником клуба");
+    }
+    if (member.role === "owner") {
+      throw new ForbiddenError(
+        "Владелец не может покинуть клуб. Сначала передайте права владения другому участнику."
+      );
+    }
+    return removeMemberRepo(clubId, userId);
+  }
+  
+  // Removal by owner: Per SSOT_CLUBS_DOMAIN.md §7.2 - Owner-only
+  await requireClubOwner(clubId, currentUser.id, "удалить участника");
+
+  // Cannot remove owner
+  const targetMember = await getMember(clubId, userId);
+  if (!targetMember) {
+    throw new NotFoundError("Участник не найден");
+  }
+  if (targetMember.role === "owner") {
+    throw new ForbiddenError(
+      "Нельзя удалить владельца клуба. Используйте передачу владения для смены владельца."
     );
   }
 
@@ -589,22 +653,20 @@ export async function removeClubMember(
 
 /**
  * Подтвердить участника (pending → member)
+ * Per SSOT_CLUBS_DOMAIN.md §5.3 and §A1: Owner-only.
  */
 export async function approveClubMember(
   clubId: string,
   userId: string,
   currentUser: CurrentUser | null
 ): Promise<ClubMember> {
-  // Проверка прав (только owner)
-  const permissionCheck = await canManageClubMembers(currentUser, clubId);
-  if (!permissionCheck.allowed) {
-    throw new AuthError(permissionCheck.reason ?? "Недостаточно прав", undefined, 403);
-  }
+  // Owner-only check (SSOT_CLUBS_DOMAIN.md §A1)
+  await requireClubOwner(clubId, currentUser?.id, "подтвердить участника");
 
   // Проверить что участник в статусе pending
   const member = await getMember(clubId, userId);
   if (!member) {
-    throw new NotFoundError("Member not found");
+    throw new NotFoundError("Участник не найден");
   }
   if (member.role !== "pending") {
     throw new ValidationError("Участник уже подтвержден");
@@ -613,7 +675,7 @@ export async function approveClubMember(
   // Подтвердить
   const approved = await approveMemberRepo(clubId, userId);
   if (!approved) {
-    throw new NotFoundError("Member not found");
+    throw new NotFoundError("Участник не найден");
   }
 
   return mapDbClubMemberToDomain(approved);
@@ -681,72 +743,4 @@ export async function getClubStats(clubId: string) {
   };
 }
 
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
-/**
- * Валидация создания клуба
- */
-export async function validateClubCreation(
-  input: unknown,
-  currentUser: CurrentUser | null
-): Promise<{ valid: boolean; errors: string[] }> {
-  const errors: string[] = [];
-
-  // Проверка авторизации
-  const permissionCheck = await canCreateClubPermission(currentUser);
-  if (!permissionCheck.allowed) {
-    errors.push(permissionCheck.reason ?? "Необходима авторизация");
-  }
-
-  // Валидация данных
-  try {
-    clubCreateSchema.parse(input);
-  } catch (err: any) {
-    if (err.errors) {
-      errors.push(...err.errors.map((e: any) => e.message));
-    } else {
-      errors.push("Некорректные данные клуба");
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
-
-/**
- * Валидация обновления клуба
- */
-export async function validateClubUpdate(
-  clubId: string,
-  input: unknown,
-  currentUser: CurrentUser | null
-): Promise<{ valid: boolean; errors: string[] }> {
-  const errors: string[] = [];
-
-  // Проверка прав
-  const permissionCheck = await canManageClub(currentUser, clubId);
-  if (!permissionCheck.allowed) {
-    errors.push(permissionCheck.reason ?? "Недостаточно прав");
-  }
-
-  // Валидация данных
-  try {
-    clubUpdateSchema.parse(input);
-  } catch (err: any) {
-    if (err.errors) {
-      errors.push(...err.errors.map((e: any) => e.message));
-    } else {
-      errors.push("Некорректные данные клуба");
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
 

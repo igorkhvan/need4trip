@@ -1,16 +1,19 @@
 /**
  * API: /api/clubs/[id]/members
  * 
- * GET - Список участников клуба
- * POST - Добавить участника
+ * GET - Список участников клуба (requires auth + role check)
+ * POST - Добавить участника (owner-only)
+ * 
+ * Security hardening per SSOT_CLUBS_DOMAIN.md §10.4:
+ * Default: Guests cannot access members list or internal content.
  */
 
 import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { getClubMembers, addClubMember } from "@/lib/services/clubs";
+import { getClubMembers, addClubMember, requireClubMember } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, ForbiddenError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -22,11 +25,27 @@ interface RouteContext {
 /**
  * GET /api/clubs/[id]/members
  * Список участников клуба
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §10.4: Default members list access requires:
+ * - Authentication
+ * - Club membership (owner | admin | member; pending is denied)
+ * 
+ * Future: public_members_list_enabled flag may allow guest access (§8.4.1)
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
-    // GET is public - anyone can see club members
+    
+    // Require authentication (SSOT_CLUBS_DOMAIN.md §10.4)
+    const user = await getCurrentUserFromMiddleware(req);
+    if (!user) {
+      throw new ForbiddenError("Требуется авторизация для просмотра списка участников");
+    }
+    
+    // Require club membership (owner | admin | member; pending is denied)
+    // Per SSOT_CLUBS_DOMAIN.md §3.3: pending has NO privileges
+    await requireClubMember(id, user.id, "просмотреть список участников");
+    
     const members = await getClubMembers(id);
 
     return respondSuccess({ members });
@@ -39,7 +58,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
 /**
  * POST /api/clubs/[id]/members
- * Добавить участника
+ * Добавить участника (owner-only)
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §5.1 and §A1: Only owner can invite members.
  * 
  * Body: { userId: string, role: ClubRole }
  */
@@ -47,8 +68,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     
-    // Get user from middleware (JWT already verified)
+    // Require authentication
     const user = await getCurrentUserFromMiddleware(req);
+    if (!user) {
+      throw new ForbiddenError("Требуется авторизация для добавления участника");
+    }
     
     const body = await req.json();
     const { userId, role } = body;
@@ -57,6 +81,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       throw new ValidationError("Missing required fields: userId, role");
     }
 
+    // Service layer enforces owner-only + blocks 'owner' role assignment
     const member = await addClubMember(id, userId, role as ClubRole, user);
 
     return respondSuccess({ member }, undefined, 201);
