@@ -1,13 +1,21 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Last Updated:** 2 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.4.0 (2026-01-02) — P1 Club Archiving
+**Club Archiving (soft-delete) per SSOT_CLUBS_DOMAIN.md §8.3**:
+- **API-018 (DELETE /api/clubs/[id]):** Changed from hard-delete to archive (soft-delete). Sets `archived_at` timestamp. Idempotent.
+- **API-051 (POST /api/clubs/[id]/unarchive):** NEW endpoint. Owner-only. Restores archived club. Idempotent.
+- **All club write endpoints:** Now return 403 with code `CLUB_ARCHIVED` when club is archived (except whitelist: self-leave, cancel subscription, unarchive).
+- **Club listings:** Archived clubs excluded from public listings (GET /api/clubs, search).
+- **Events:** Create/edit events for archived clubs returns `CLUB_ARCHIVED` error.
 
 ### 1.3.0 (2026-01-02) — P0 Security Hardening
 **Clubs Members API Hardening per SSOT_CLUBS_DOMAIN.md**:
@@ -294,6 +302,7 @@ See SSOT_CLUBS_EVENTS_ACCESS.md §2 for normative rules.
 | `AuthError` | 401 | `AuthError` | Authentication failed |
 | `UnauthorizedError` | 401 | `UNAUTHORIZED` | Auth required |
 | `ForbiddenError` | 403 | `FORBIDDEN` | Access denied |
+| `ClubArchivedError` | 403 | `CLUB_ARCHIVED` | Club is archived (write forbidden) |
 | `InternalError` | 500 | `InternalError` | Server error |
 | `PaywallError` | 402 | `PAYWALL` | Plan limit exceeded |
 
@@ -308,6 +317,12 @@ See SSOT_CLUBS_EVENTS_ACCESS.md §2 for normative rules.
 **PaywallError (402):**
 - Triggered by `enforceClubAction()` when plan limits exceeded
 - Frontend shows upgrade modal
+
+**ClubArchivedError (403):**
+- Triggered when attempting a write operation on an archived club
+- Per SSOT_CLUBS_DOMAIN.md §8.3: Archived clubs forbid all write operations except whitelist
+- Whitelist (allowed even when archived): self-leave, cancel subscription, unarchive, read profile
+- Frontend should show "Club is archived" message with option to unarchive (if owner)
 
 ---
 
@@ -1418,7 +1433,7 @@ Update club details (name, description, logo).
 
 ---
 
-#### API-018: Delete Club
+#### API-018: Archive Club (Soft-Delete)
 
 **Endpoint ID:** API-018  
 **Method:** DELETE  
@@ -1429,12 +1444,14 @@ Update club details (name, description, logo).
 **Authorization:** Owner only  
 
 **Purpose:**  
-Delete club (cascades members, subscriptions, events).
+Archive club (soft-delete). Sets `archived_at` timestamp. Per SSOT_CLUBS_DOMAIN.md §8.3.
+
+**Changed in v1.4.0 (2026-01-02):** Now archives (soft-delete) instead of hard-delete. Archived clubs are excluded from public listings but can still be read. All write operations on archived clubs return 403 with code `CLUB_ARCHIVED` (except whitelist).
 
 **Request:**
 
 - **Path params:** `id` (UUID)
-- **Idempotency:** Yes (delete is idempotent)
+- **Idempotency:** Yes (if already archived, returns success without side effects)
 
 **Response:**
 
@@ -1446,8 +1463,68 @@ Delete club (cascades members, subscriptions, events).
   }
   ```
 - **Side effects:** 
-  - Deletes from `clubs` table
-  - Cascades to `club_members`, `club_subscriptions`, `events`
+  - Sets `clubs.archived_at = NOW()` (idempotent)
+  - Archived clubs excluded from listings
+  - Does NOT cascade delete members, subscriptions, events
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 401 | Not authenticated | Middleware blocks |
+| 403 | Not owner | Authorization check |
+| 404 | Club not found | Invalid UUID |
+| 409 | Club has active events | Cannot archive with future events |
+
+**Security & Abuse:**
+
+- **Rate limit:** write tier (30 req/min)
+- **Spam / Cost abuse risk:** Low (soft-delete, reversible via unarchive)
+- **Sensitive data exposure:** No
+
+**Dependencies:**
+
+- Supabase (clubs table)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/route.ts`
+- Key functions: `archiveClub()`
+
+---
+
+#### API-051: Unarchive Club
+
+**Endpoint ID:** API-051  
+**Method:** POST  
+**Path:** `/api/clubs/[id]/unarchive`  
+**Runtime:** Node.js  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Owner only  
+
+**Purpose:**  
+Restore archived club. Sets `archived_at = NULL`. Per SSOT_CLUBS_DOMAIN.md §8.3.1.
+
+**Added in v1.4.0 (2026-01-02).**
+
+**Request:**
+
+- **Path params:** `id` (UUID)
+- **Idempotency:** Yes (if already active, returns success without side effects)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": { "success": true }
+  }
+  ```
+- **Side effects:** 
+  - Sets `clubs.archived_at = NULL` (idempotent)
+  - Club reappears in listings
 
 **Errors:**
 
@@ -1460,17 +1537,17 @@ Delete club (cascades members, subscriptions, events).
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Medium (cascading delete, permanent)
+- **Spam / Cost abuse risk:** Low (restoration is safe)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
 
-- Supabase (clubs, club_members, club_subscriptions, events tables)
+- Supabase (clubs table)
 
 **Code pointers:**
 
-- Route handler: `/src/app/api/clubs/[id]/route.ts`
-- Key functions: `deleteClub()`
+- Route handler: `/src/app/api/clubs/[id]/unarchive/route.ts`
+- Key functions: `unarchiveClub()`
 
 ---
 
@@ -3526,6 +3603,7 @@ Total route handlers discovered: **33 files**
 | 7 | `/src/app/api/profile/cars/route.ts` | GET, POST, PUT, PATCH, DELETE | API-009 to API-013 |
 | 8 | `/src/app/api/clubs/route.ts` | GET, POST | API-014, API-015 |
 | 9 | `/src/app/api/clubs/[id]/route.ts` | GET, PATCH, DELETE | API-016 to API-018 |
+| 9.1 | `/src/app/api/clubs/[id]/unarchive/route.ts` | POST | API-051 |
 | 10 | `/src/app/api/clubs/[id]/members/route.ts` | GET, POST | API-019, API-020 |
 | 11 | `/src/app/api/clubs/[id]/members/[userId]/route.ts` | PATCH, DELETE | API-021, API-022 |
 | 12 | `/src/app/api/clubs/[id]/current-plan/route.ts` | GET | API-023 |

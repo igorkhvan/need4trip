@@ -25,6 +25,7 @@ export interface Club {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null; // NULL = active, NOT NULL = archived (soft-delete)
 }
 
 // ============================================================================

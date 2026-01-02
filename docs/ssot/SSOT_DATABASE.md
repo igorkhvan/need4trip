@@ -1,12 +1,21 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2026-01-01  
+> Последнее обновление: 2026-01-02  
 > PostgreSQL + Supabase
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-02 (Club Archiving)
+- **Added `clubs.archived_at` column** — Nullable TIMESTAMPTZ for soft-delete (archiving).
+  - NULL = active club
+  - NOT NULL = archived club (soft-deleted)
+  - Per SSOT_CLUBS_DOMAIN.md §8.3
+- **Added partial indexes** — `idx_clubs_active` (for list queries), `idx_clubs_archived_at` (for admin queries)
+- **Updated clubs table documentation** — Added notes about archiving behavior
+- **Migration:** `supabase/migrations/20260102_add_club_archived_at.sql`
 
 ### 2026-01-01 (v5+ Alignment)
 - **Updated §8.1 credit consumption triggers** — Changed "event publish" to "event save" to reflect v5+ model (no separate publish step).
@@ -632,15 +641,26 @@ CREATE TABLE public.clubs (
   telegram_url TEXT CHECK (telegram_url IS NULL OR char_length(telegram_url) <= 500),
   website_url TEXT CHECK (website_url IS NULL OR char_length(website_url) <= 500),
   created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  archived_at TIMESTAMPTZ, -- NULL = active, NOT NULL = archived (soft-delete)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
+**Notes**:
+- ⚡ **`archived_at`** (добавлено 2026-01-02):
+  - NULL означает активный клуб
+  - NOT NULL означает архивированный клуб (soft-delete)
+  - Архивированные клубы исключаются из публичных листингов
+  - Операции записи запрещены для архивированных клубов (кроме whitelist: self-leave, cancel subscription, unarchive)
+  - Per SSOT_CLUBS_DOMAIN.md §8.3
+
 **Indexes**:
 - `clubs_pkey` (PRIMARY KEY on id)
 - `idx_clubs_created_by` (on created_by)
 - `idx_clubs_created_at` (on created_at DESC)
+- `idx_clubs_active` (on created_at DESC WHERE archived_at IS NULL) — partial index for active clubs
+- `idx_clubs_archived_at` (on archived_at WHERE archived_at IS NOT NULL) — for admin queries
 
 **RLS**: 4 policies
 - `authenticated_read_all_clubs`

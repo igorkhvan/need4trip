@@ -9,7 +9,9 @@ import {
   getClubById,
   getClubWithOwner,
   updateClub as updateClubRepo,
-  deleteClub as deleteClubRepo,
+  archiveClub as archiveClubRepo,
+  unarchiveClub as unarchiveClubRepo,
+  isClubArchived,
   listClubs as listClubsRepo,
   listClubsWithOwner,
   listClubsByCreator,
@@ -59,7 +61,7 @@ import {
   type ClubUpdateInput,
   type ClubRole,
 } from "@/lib/types/club";
-import { AuthError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { AuthError, ClubArchivedError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 // ============================================================================
@@ -77,6 +79,7 @@ function mapDbClubToDomain(db: DbClub): Club {
     createdBy: db.created_by,
     createdAt: db.created_at,
     updatedAt: db.updated_at,
+    archivedAt: db.archived_at,
   };
 }
 
@@ -316,6 +319,32 @@ export async function requireClubMember(
 }
 
 /**
+ * Assert that club is NOT archived.
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Archived clubs forbid all write operations except whitelist.
+ * 
+ * Whitelist (allowed even when archived):
+ * - Read club profile (read-only)
+ * - View billing status
+ * - Cancel subscription
+ * - Unarchive (owner-only)
+ * - Self-leave (natural leave)
+ * 
+ * @throws ClubArchivedError (403, code: CLUB_ARCHIVED) if club is archived
+ */
+export async function assertClubNotArchived(
+  clubId: string,
+  action: string
+): Promise<void> {
+  const archived = await isClubArchived(clubId);
+  
+  if (archived) {
+    throw new ClubArchivedError(
+      `Клуб заархивирован. Операция "${action}" недоступна для архивированных клубов.`
+    );
+  }
+}
+
+/**
  * Получить базовую информацию о клубе (для быстрой загрузки)
  * Без members и subscription - они загружаются через Suspense
  */
@@ -469,6 +498,8 @@ export async function createClub(
  * - Owner + Admin may edit: description/about, rules, FAQ, contacts, media (avatar/banner)
  * - Owner-only: visibility, slug change, archive/delete, clubs.settings
  * 
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived (Edit club profile/content)
+ * 
  * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated, 403 for insufficient permission
  * 
  * Current schema (clubUpdateSchema) only contains content fields (name, description, 
@@ -484,6 +515,9 @@ export async function updateClub(
   if (!currentUser) {
     throw new UnauthorizedError("Требуется авторизация для обновления клуба");
   }
+
+  // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid profile/content editing
+  await assertClubNotArchived(id, "редактирование клуба");
 
   // Валидация данных
   const parsed = clubUpdateSchema.parse(input);
@@ -517,28 +551,51 @@ export async function updateClub(
 }
 
 /**
- * Удалить клуб
+ * Архивировать клуб (soft-delete)
  * Per SSOT_CLUBS_DOMAIN.md §3.2 and §8.3: Owner-only.
+ * 
+ * Archived clubs:
+ * - Forbidden: all write operations except whitelist (§8.3.2)
+ * - Allowed: read profile, view billing, cancel subscription, unarchive, self-leave (§8.3.1)
+ * - Excluded from public listings
+ * 
+ * Idempotent: if already archived, returns success without side effects.
  */
-export async function deleteClub(
+export async function archiveClub(
   id: string,
   currentUser: CurrentUser | null
 ): Promise<boolean> {
   // Owner-only check (SSOT_CLUBS_DOMAIN.md §8.3)
-  await requireClubOwner(id, currentUser?.id, "удалить клуб");
+  await requireClubOwner(id, currentUser?.id, "архивировать клуб");
 
   // Проверить нет ли активных событий
   const activeEventsCount = await countActiveClubEvents(id);
 
   if (activeEventsCount > 0) {
     throw new ConflictError(
-      `Нельзя удалить клуб с активными событиями (${activeEventsCount}). Сначала удалите или завершите все события.`,
+      `Нельзя архивировать клуб с активными событиями (${activeEventsCount}). Сначала удалите или завершите все события.`,
       { activeEventsCount }
     );
   }
 
-  // Удалить клуб (CASCADE удалит members и subscription)
-  return deleteClubRepo(id);
+  // Archive club (soft-delete)
+  return archiveClubRepo(id);
+}
+
+/**
+ * Разархивировать клуб (restore from archive)
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.1: Owner-only, if supported.
+ * Idempotent: if already active, returns success.
+ */
+export async function unarchiveClub(
+  id: string,
+  currentUser: CurrentUser | null
+): Promise<boolean> {
+  // Owner-only check
+  await requireClubOwner(id, currentUser?.id, "разархивировать клуб");
+
+  // Unarchive club
+  return unarchiveClubRepo(id);
 }
 
 // ============================================================================
@@ -557,6 +614,7 @@ export async function getClubMembers(clubId: string): Promise<ClubMemberWithUser
  * Добавить участника в клуб
  * Per SSOT_CLUBS_DOMAIN.md §5.1 and §A1: Owner-only.
  * Per SSOT_CLUBS_DOMAIN.md §7.4: Cannot assign 'owner' role via this method.
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived (Create/edit invites)
  */
 export async function addClubMember(
   clubId: string,
@@ -564,6 +622,9 @@ export async function addClubMember(
   role: ClubRole,
   currentUser: CurrentUser | null
 ): Promise<ClubMember> {
+  // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid invite operations
+  await assertClubNotArchived(clubId, "добавить участника");
+
   // Owner-only check (SSOT_CLUBS_DOMAIN.md §A1)
   await requireClubOwner(clubId, currentUser?.id, "добавить участника");
 
@@ -609,6 +670,7 @@ export async function addClubMember(
  * Per SSOT_CLUBS_DOMAIN.md §7.3-7.4: 
  *   - Allowed transitions: member ↔ admin
  *   - Assigning 'owner' via role change is DISALLOWED (use ownership transfer)
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived (Role changes)
  */
 export async function updateClubMemberRole(
   clubId: string,
@@ -616,6 +678,9 @@ export async function updateClubMemberRole(
   newRole: ClubRole,
   currentUser: CurrentUser | null
 ): Promise<ClubMember> {
+  // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid role changes
+  await assertClubNotArchived(clubId, "изменить роль участника");
+
   // Owner-only check (SSOT_CLUBS_DOMAIN.md §7.3)
   await requireClubOwner(clubId, currentUser?.id, "изменить роль участника");
 
@@ -653,6 +718,10 @@ export async function updateClubMemberRole(
  * Per SSOT_CLUBS_DOMAIN.md §7.2 and §A1: Owner-only for removal.
  * Per SSOT_CLUBS_DOMAIN.md §7.1: Members can leave on their own (self-removal).
  * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2:
+ * - Member removal (other than natural leave): FORBIDDEN when archived
+ * - Self-leave (natural leave): ALLOWED even when archived (§8.3.1 whitelist)
  */
 export async function removeClubMember(
   clubId: string,
@@ -669,6 +738,7 @@ export async function removeClubMember(
   if (isSelfRemoval) {
     // Self-removal (leaving): Per SSOT_CLUBS_DOMAIN.md §7.1
     // member/admin can leave; owner cannot leave without transfer first
+    // Per SSOT_CLUBS_DOMAIN.md §8.3.1: Self-leave (natural leave) is ALLOWED even when archived
     const member = await getMember(clubId, userId);
     if (!member) {
       throw new NotFoundError("Вы не являетесь участником клуба");
@@ -680,6 +750,9 @@ export async function removeClubMember(
     }
     return removeMemberRepo(clubId, userId);
   }
+  
+  // SSOT_CLUBS_DOMAIN.md §8.3.2: Owner-initiated removal is FORBIDDEN when archived
+  await assertClubNotArchived(clubId, "удалить участника");
   
   // Removal by owner: Per SSOT_CLUBS_DOMAIN.md §7.2 - Owner-only
   await requireClubOwner(clubId, currentUser.id, "удалить участника");
@@ -701,12 +774,16 @@ export async function removeClubMember(
 /**
  * Подтвердить участника (pending → member)
  * Per SSOT_CLUBS_DOMAIN.md §5.3 and §A1: Owner-only.
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived (Approve/reject join requests)
  */
 export async function approveClubMember(
   clubId: string,
   userId: string,
   currentUser: CurrentUser | null
 ): Promise<ClubMember> {
+  // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid join request approval
+  await assertClubNotArchived(clubId, "подтвердить участника");
+
   // Owner-only check (SSOT_CLUBS_DOMAIN.md §A1)
   await requireClubOwner(clubId, currentUser?.id, "подтвердить участника");
 

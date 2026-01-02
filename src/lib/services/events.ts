@@ -425,7 +425,12 @@ export async function createEvent(
   
   // ⚡ SSOT §5.1: IF club_id != null THEN user MUST be owner/admin in that club
   // ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
+  // ⚡ SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid creating/editing events
   if (validated.clubId) {
+    // Check if club is archived first (SSOT_CLUBS_DOMAIN.md §8.3.2)
+    const { assertClubNotArchived } = await import("@/lib/services/clubs");
+    await assertClubNotArchived(validated.clubId, "создание события в клубе");
+    
     const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
     const role = await getUserClubRole(validated.clubId, currentUser.id);
     
@@ -696,6 +701,10 @@ export async function updateEvent(
   
   if (finalClubId) {
     // Club event: check club role
+    // ⚡ SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid editing events
+    const { assertClubNotArchived } = await import("@/lib/services/clubs");
+    await assertClubNotArchived(finalClubId, "редактирование события клуба");
+    
     // ⚡ SSOT §5.1: Only owner/admin can update club events
     // ⚡ SSOT §2: pending role has NO elevated permissions (explicit check)
     const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");

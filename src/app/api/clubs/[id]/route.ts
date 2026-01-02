@@ -8,7 +8,7 @@
 
 import { NextRequest } from "next/server";
 import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { getClubWithDetails, updateClub, deleteClub } from "@/lib/services/clubs";
+import { getClubWithDetails, updateClub, archiveClub } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
 
@@ -61,7 +61,10 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
 /**
  * DELETE /api/clubs/[id]
- * Удалить клуб
+ * Archive club (soft-delete)
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Archives club by setting archived_at timestamp.
+ * Archived clubs are excluded from public listings but can still be read.
+ * Idempotent: if already archived, returns success.
  */
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
@@ -69,12 +72,12 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     
     // Get user from middleware (JWT already verified)
     const user = await getCurrentUserFromMiddleware(req);
-    await deleteClub(id, user);
+    await archiveClub(id, user);
 
     return respondSuccess({ success: true });
   } catch (error) {
     const { id } = await params;
-    log.errorWithStack("Failed to delete club", error, { clubId: id });
+    log.errorWithStack("Failed to archive club", error, { clubId: id });
     return respondError(error);
   }
 }

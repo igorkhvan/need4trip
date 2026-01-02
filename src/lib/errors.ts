@@ -54,6 +54,27 @@ export class ForbiddenError extends AppError {
   }
 }
 
+/**
+ * ClubArchivedError - thrown when attempting a forbidden operation on an archived club.
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §8.3:
+ * - Archived clubs (archived_at IS NOT NULL) forbid all write operations except whitelist
+ * - API returns 403 with code: "CLUB_ARCHIVED"
+ * 
+ * Whitelist (allowed when archived):
+ * - Read club profile (read-only)
+ * - View billing status
+ * - Cancel subscription
+ * - Unarchive (owner-only)
+ * - Self-leave (natural leave)
+ */
+export class ClubArchivedError extends AppError {
+  constructor(message: string = "Club is archived. This operation is not allowed.", details?: unknown) {
+    super(message, { statusCode: 403, code: "CLUB_ARCHIVED", details });
+    this.name = "ClubArchivedError";
+  }
+}
+
 export class InternalError extends AppError {
   constructor(message: string, details?: unknown) {
     super(message, { statusCode: 500, code: "InternalError", details });
@@ -145,6 +166,10 @@ export function isAppError(err: unknown): err is AppError {
 
 export function isPaywallError(err: unknown): err is PaywallError {
   return err instanceof PaywallError;
+}
+
+export function isClubArchivedError(err: unknown): err is ClubArchivedError {
+  return err instanceof ClubArchivedError;
 }
 
 /**

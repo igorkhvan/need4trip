@@ -6,7 +6,10 @@ import { log } from "@/lib/utils/logger";
 const table = "clubs";
 
 // Explicit column list for select queries (performance optimization)
-const CLUB_COLUMNS = "id, name, description, logo_url, telegram_url, website_url, created_by, created_at, updated_at" as const;
+// IMPORTANT: After running migration 20260102_add_club_archived_at.sql,
+// regenerate Supabase types with: npx supabase gen types typescript
+// For now, using "*" select and manual type assertion
+const CLUB_COLUMNS = "*" as const;
 
 // ============================================================================
 // Database Types (snake_case)
@@ -22,6 +25,7 @@ export interface DbClub {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null; // NULL = active, NOT NULL = archived (soft-delete)
 }
 
 export interface DbClubWithOwner extends DbClub {
@@ -38,6 +42,7 @@ export interface DbClubWithOwner extends DbClub {
 
 /**
  * List all clubs with pagination
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Excludes archived clubs from public listings
  */
 export async function listClubs(page = 1, limit = 12): Promise<{
   data: DbClub[];
@@ -52,6 +57,7 @@ export async function listClubs(page = 1, limit = 12): Promise<{
   const { data, error, count } = await db
     .from(table)
     .select(CLUB_COLUMNS, { count: "exact" })
+    .is("archived_at", null) // Exclude archived clubs
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -69,6 +75,7 @@ export async function listClubs(page = 1, limit = 12): Promise<{
 
 /**
  * List clubs with owner info
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Excludes archived clubs from listings
  */
 export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
   const db = getAdminDb();
@@ -76,6 +83,7 @@ export async function listClubsWithOwner(): Promise<DbClubWithOwner[]> {
   const { data, error} = await db
     .from(table)
     .select("*, created_by_user:users!created_by(id, name, telegram_handle)")
+    .is("archived_at", null) // Exclude archived clubs
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -215,26 +223,115 @@ export async function updateClub(
 }
 
 /**
- * Delete club
+ * Archive club (soft-delete)
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Sets archived_at timestamp
+ * Idempotent: if already archived, returns success without side effects
  */
-export async function deleteClub(id: string): Promise<boolean> {
+export async function archiveClub(id: string): Promise<boolean> {
   const db = getAdminDb();
 
-  const { error, count } = await db
+  const now = new Date().toISOString();
+
+  // Use upsert-like behavior: only set archived_at if currently NULL
+  const { data, error } = await db
     .from(table)
-    .delete({ count: "exact" })
-    .eq("id", id);
+    .update({ 
+      archived_at: now,
+      updated_at: now 
+    })
+    .eq("id", id)
+    .is("archived_at", null) // Only archive if not already archived
+    .select("id")
+    .maybeSingle();
 
   if (error) {
-    log.error("Failed to delete club", { clubId: id, error });
-    throw new InternalError("Failed to delete club", error);
+    log.error("Failed to archive club", { clubId: id, error });
+    throw new InternalError("Failed to archive club", error);
   }
 
-  if ((count ?? 0) === 0) {
+  // If no rows updated, check if club exists (might be already archived)
+  if (!data) {
+    const existing = await getClubById(id);
+    if (!existing) {
+      throw new NotFoundError("Club not found");
+    }
+    // Club exists but was already archived - idempotent success
+    log.info("Club already archived (idempotent)", { clubId: id });
+    return true;
+  }
+
+  log.info("Club archived", { clubId: id, archivedAt: now });
+  return true;
+}
+
+/**
+ * Unarchive club (restore from archive)
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.1: Owner-only, if supported
+ * Idempotent: if already active, returns success
+ */
+export async function unarchiveClub(id: string): Promise<boolean> {
+  const db = getAdminDb();
+
+  const now = new Date().toISOString();
+
+  // Only unarchive if currently archived
+  const { data, error } = await db
+    .from(table)
+    .update({ 
+      archived_at: null,
+      updated_at: now 
+    })
+    .eq("id", id)
+    .not("archived_at", "is", null) // Only unarchive if currently archived
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    log.error("Failed to unarchive club", { clubId: id, error });
+    throw new InternalError("Failed to unarchive club", error);
+  }
+
+  // If no rows updated, check if club exists (might be already active)
+  if (!data) {
+    const existing = await getClubById(id);
+    if (!existing) {
+      throw new NotFoundError("Club not found");
+    }
+    // Club exists but was already active - idempotent success
+    log.info("Club already active (idempotent)", { clubId: id });
+    return true;
+  }
+
+  log.info("Club unarchived", { clubId: id });
+  return true;
+}
+
+/**
+ * Check if club is archived
+ * Returns true if archived_at IS NOT NULL
+ */
+export async function isClubArchived(id: string): Promise<boolean> {
+  const db = getAdminDb();
+
+  // Use "*" and type assertion until Supabase types are regenerated
+  const { data, error } = await db
+    .from(table)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    log.error("Failed to check club archived status", { clubId: id, error });
+    throw new InternalError("Failed to check club archived status", error);
+  }
+
+  if (!data) {
     throw new NotFoundError("Club not found");
   }
 
-  return true;
+  // Type assertion for archived_at (column exists after migration)
+  const club = data as DbClub;
+  return club.archived_at !== null;
 }
 
 /**
@@ -259,6 +356,7 @@ export async function listClubsByCreator(userId: string): Promise<DbClub[]> {
 
 /**
  * Search clubs by name with pagination
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Excludes archived clubs from search results
  */
 export async function searchClubs(query: string, page = 1, limit = 12): Promise<{
   data: DbClub[];
@@ -275,6 +373,7 @@ export async function searchClubs(query: string, page = 1, limit = 12): Promise<
     .from(table)
     .select(CLUB_COLUMNS, { count: "exact" })
     .ilike("name", searchPattern)
+    .is("archived_at", null) // Exclude archived clubs
     .order("name", { ascending: true })
     .range(from, to);
 
@@ -404,6 +503,7 @@ export async function updateClubCities(clubId: string, cityIds: string[]): Promi
 
 /**
  * List clubs by city (filter) with pagination
+ * Per SSOT_CLUBS_DOMAIN.md §8.3: Excludes archived clubs from listings
  */
 export async function listClubsByCity(cityId: string, page = 1, limit = 12): Promise<{
   data: DbClub[];
@@ -431,11 +531,12 @@ export async function listClubsByCity(cityId: string, page = 1, limit = 12): Pro
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  // Get clubs by IDs with pagination
+  // Get clubs by IDs with pagination, excluding archived
   const { data, error, count } = await db
     .from(table)
     .select(CLUB_COLUMNS, { count: "exact" })
     .in("id", clubIds)
+    .is("archived_at", null) // Exclude archived clubs
     .order("created_at", { ascending: false })
     .range(from, to);
 
