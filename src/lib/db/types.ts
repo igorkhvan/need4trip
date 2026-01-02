@@ -529,6 +529,7 @@ export type Database = {
       }
       clubs: {
         Row: {
+          archived_at: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -540,6 +541,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -551,6 +553,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null

@@ -6,10 +6,8 @@ import { log } from "@/lib/utils/logger";
 const table = "clubs";
 
 // Explicit column list for select queries (performance optimization)
-// IMPORTANT: After running migration 20260102_add_club_archived_at.sql,
-// regenerate Supabase types with: npx supabase gen types typescript
-// For now, using "*" select and manual type assertion
-const CLUB_COLUMNS = "*" as const;
+// Explicit column list for select queries (performance optimization)
+const CLUB_COLUMNS = "id, name, description, logo_url, telegram_url, website_url, created_by, created_at, updated_at, archived_at" as const;
 
 // ============================================================================
 // Database Types (snake_case)
@@ -313,10 +311,9 @@ export async function unarchiveClub(id: string): Promise<boolean> {
 export async function isClubArchived(id: string): Promise<boolean> {
   const db = getAdminDb();
 
-  // Use "*" and type assertion until Supabase types are regenerated
   const { data, error } = await db
     .from(table)
-    .select("*")
+    .select("archived_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -329,9 +326,7 @@ export async function isClubArchived(id: string): Promise<boolean> {
     throw new NotFoundError("Club not found");
   }
 
-  // Type assertion for archived_at (column exists after migration)
-  const club = data as DbClub;
-  return club.archived_at !== null;
+  return data.archived_at !== null;
 }
 
 /**
