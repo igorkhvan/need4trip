@@ -1,13 +1,18 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.8  
-> **Дата:** 1 января 2026  
-> **Статус:** Production (v5.8 - SSOT-Linter Compliant)
+> **Версия:** 5.9  
+> **Дата:** 2 января 2026  
+> **Статус:** Production (v5.9 - Cancellation Policy Added)
 
 ---
 
 ## 🆕 Changelog
+
+**v5.9 (2 January 2026) — Cancellation Policy Added:**
+- ✅ Added § 11 "Subscription Cancellation Policy (NORMATIVE)"
+- 📝 Defined: no proration, cancel at period end, no partial refunds
+- 🔗 Cross-referenced from SSOT_CLUBS_DOMAIN.md § 14.4
 
 **v5.8 (1 January 2026) — SSOT-Linter Compliance:**
 - ✂️ Removed all framework-specific code blocks (>10 lines) per SSOT_ARCHITECTURE.md § 27
@@ -58,6 +63,7 @@
 8. [Aborted / Incomplete Actions](#aborted--incomplete-actions)
 9. [API Contracts (v5+)](#-api-contracts-v5-current)
 10. [Ключевые файлы](#-ключевые-файлы)
+11. [Subscription Cancellation Policy](#-§-11-subscription-cancellation-policy-normative) — **NORMATIVE**
 
 > **Historical sections (v4.x, migrations):** See `docs/ssot/archive/SSOT_BILLING_HISTORY.md`
 
@@ -611,6 +617,65 @@ This section provides billing-specific clarifications. For full behavior rules, 
 |-----------|-------|
 | `grace_period_days` | 7 |
 | `pending_ttl_minutes` | 60 |
+
+---
+
+## 📋 § 11. Subscription Cancellation Policy (NORMATIVE)
+
+This section defines the canonical rules for subscription cancellation.
+
+### 11.1 Core Principles
+
+| Principle | Rule |
+|-----------|------|
+| **No proration** | Partial period usage is not refunded |
+| **Cancel at period end** | Cancellation takes effect at `current_period_end`, not immediately |
+| **No partial refunds** | Mid-period cancellation does not result in any refund |
+| **Access continues** | Subscriber retains full access until `current_period_end` |
+
+### 11.2 Cancellation Flow
+
+```
+1. Owner requests cancellation
+2. System sets cancel_at_period_end = true (or equivalent)
+3. Subscription remains status='active' until current_period_end
+4. At period end: subscription transitions to status='expired'
+5. No automatic renewal after cancellation
+```
+
+### 11.3 Invariants
+
+| INV | Rule |
+|-----|------|
+| **INV-C1** | Cancellation does NOT immediately revoke access |
+| **INV-C2** | No financial transaction is created for cancellation |
+| **INV-C3** | User can re-subscribe at any time (creates new subscription) |
+| **INV-C4** | Cancellation is reversible until period end (owner can "undo cancel") |
+
+### 11.4 State Transitions on Cancellation
+
+| Before | Action | After | Access |
+|--------|--------|-------|--------|
+| `active` | Cancel | `active` (with cancel flag) | ✅ Full |
+| `active` (cancelled) | Period ends | `expired` | ❌ None |
+| `active` (cancelled) | Undo cancel | `active` | ✅ Full |
+| `grace` | Cancel | `grace` (with cancel flag) | ✅ Limited |
+
+### 11.5 No Proration — Examples
+
+| Scenario | Refund | Access |
+|----------|--------|--------|
+| Cancel on day 1 of 30-day period | ₸0 | 29 days remaining |
+| Cancel on day 29 of 30-day period | ₸0 | 1 day remaining |
+| Cancel during grace period | ₸0 | Until grace ends |
+
+### 11.6 Cross-References
+
+| Topic | Location |
+|-------|----------|
+| Archived club billing operations | SSOT_CLUBS_DOMAIN.md § 8.3.1 |
+| Owner-only billing authority | SSOT_CLUBS_DOMAIN.md § 14.1 |
+| Subscription state machine | This document § 10 |
 
 ---
 

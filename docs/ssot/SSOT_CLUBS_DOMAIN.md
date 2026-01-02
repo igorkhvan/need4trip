@@ -1,8 +1,8 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.0  
-**Last Updated:** 2026-01-01  
+**Version:** 1.1  
+**Last Updated:** 2026-01-02  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club entity domain model (lifecycle, visibility, settings)
 - Membership model (entry methods, invites, join requests, transitions)
@@ -11,22 +11,37 @@
 - Club monetization boundaries (owner-only financial authority; integration points)
 - Club network model (directory, discovery, relationships)
 - Audit, security invariants, idempotency rules for club operations
+- User profile visibility rules (cross-club)
+- Telegram link exposure rules
 
 This SSOT must be read and followed for any changes in:
 - Clubs (entity lifecycle, visibility, settings)
 - Memberships (invites, join requests, roles, transitions)
 - Club page content (profile, FAQ, rules)
 - Trust badges and partner directories
+- User profile visibility across clubs
+- Telegram link display policy
 
 Related SSOTs:
 - SSOT_CLUBS_EVENTS_ACCESS.md — RBAC + events access + paid modes separation + club_id canonical clubness
-- SSOT_BILLING_SYSTEM_ANALYSIS.md — billing products, paywall rules, subscription enforcement, credits behavior
+- SSOT_BILLING_SYSTEM_ANALYSIS.md — billing products, paywall rules, subscription enforcement, credits behavior, **cancellation policy (§ 11)**
 - SSOT_ARCHITECTURE.md — layering, error taxonomy, aborted/incomplete actions canonical behavior
 - SSOT_DATABASE.md — schema, constraints, RLS, state machines
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-02 (v1.1 — D1–D9 Decisions)
+- **D1:** Added `clubs.settings.public_members_list_enabled` flag (§8.4)
+- **D2:** Added `clubs.settings.public_show_owner_badge` flag (§8.4)
+- **D3:** Defined guest-visible member fields explicitly (§8.4.3)
+- **D4:** Hardened invite link policy — auto-accept forbidden except Open Join (§5.2)
+- **D5:** Archived club behavior now explicit whitelist + forbidden list (§8.3)
+- **D7:** Ownership transfer hardened — separate command, atomic, idempotent (§7.4)
+- **D8:** Added User Profile Visibility section (§18) — enum, access matrix, field exposure
+- **D9:** Added Telegram Link Policy section (§19) — enabled flag, context limitations
+- **Updated decision tables (A2)** to reflect optional guest members list
 
 ### 2026-01-01 (v1.0 — Initial)
 - **Initial SSOT document** — Consolidated clubs domain model
@@ -107,11 +122,12 @@ Trust badges are per-club labels with scoped permissions limited to partner dire
 - `created_by_user_id`
 - `created_at`, `updated_at`
 - `archived_at` (nullable, soft-delete)
+- `settings` (jsonb, see §8.4)
 
 **Invariants:**
 - `slug` unique (case-insensitive)
 - Club has exactly one owner (see §3)
-- If `archived_at` is set, all write operations are rejected except owner-only "unarchive" (if supported) or billing resolution flows (if any)
+- Archived club behavior is defined by explicit whitelist (see §8.3)
 
 ### 2.2 club_members
 
@@ -201,7 +217,8 @@ Only owner may:
 - change visibility (public/private),
 - manage monetization/subscription decisions (integration with billing SSOT),
 - transfer ownership,
-- archive/delete club (subject to billing constraints).
+- archive/delete club (subject to billing constraints),
+- manage club settings (§8.4).
 
 Admin must never be allowed to perform owner-only actions by any implicit path.
 
@@ -251,19 +268,20 @@ This section defines ALL allowed ways a user can become a member.
 - Invite acceptance is user-only.
 - Acceptance is idempotent.
 
-### 5.2 Entry method: Invite Link (token)
+### 5.2 Entry method: Invite Link (token) (NORMATIVE)
 
 **Flow:**
 1. Owner generates invite link (token).
 2. User opens link while authenticated.
-3. System creates/uses join request or direct acceptance policy (see below).
+3. System creates a `club_join_request` with status `pending`.
+4. Owner approves or rejects the request.
 
-**Owner approval policy:**
-- Default (recommended): link creates a `club_join_request` pending owner approval.
-- Alternative (not recommended for security): auto-accept as member.
+**Invariants:**
+- Invite link ALWAYS creates a `club_join_request` pending owner approval.
+- Auto-accept via invite link is **FORBIDDEN** unless Open Join is explicitly enabled (see §5.4).
+- There is no "alternative" or "not recommended" auto-accept path — it does not exist outside Open Join.
 
-**Preferred rule (best practice):**
-Invite link results in owner approval required, unless club explicitly enables "open join" (see §5.4).
+**Rationale:** Invite links are shareable and may leak. Owner approval provides security gate.
 
 ### 5.3 Entry method: Request to Join (user-initiated)
 
@@ -283,7 +301,8 @@ A club may allow open join:
 
 **Invariant:**
 - Open join must never grant admin/owner.
-- Open join must be explicitly enabled by owner.
+- Open join must be explicitly enabled by owner via `clubs.settings.open_join_enabled` (RESERVED).
+- Open Join is the ONLY mechanism that allows instant membership without owner approval.
 
 ### 5.5 Entry method: Partner / Trust onboarding (RESERVED / PLANNED)
 
@@ -341,19 +360,28 @@ Owner-only.
 - Any self-escalation by non-owner.
 - Assigning owner via "role change" endpoint; ownership transfer is separate (see §7.4).
 
-### 7.4 Ownership transfer
+### 7.4 Ownership transfer (NORMATIVE)
 
-Owner-only. Atomic operation:
-1. target must be active member/admin (not pending)
-2. after transfer:
-   - target becomes owner
-   - previous owner becomes admin (default)
+**Command type:** Ownership transfer is a **separate command/endpoint** (not a "role change" operation).
 
-Must be explicitly confirmed by owner.
+**Constraints:**
+1. Owner-only action.
+2. Target must be active member or admin (`role IN ('member', 'admin')`, NOT `pending`).
+3. Must be explicitly confirmed by owner.
+
+**Behavior:**
+- **Atomic:** The operation either fully completes or fully fails — no partial state.
+- **Idempotent:** Repeating the same transfer request (same owner → same target) returns success without side effects if already transferred.
+
+**After transfer:**
+- Target becomes `owner`.
+- Previous owner becomes `admin` (default).
+
+**Audit:** `OWNERSHIP_TRANSFERRED` is logged with `actor_user_id` (previous owner) and `target_user_id` (new owner).
 
 ---
 
-## 8. Club Page & Settings (NORMATIVE for current + RESERVED slots)
+## 8. Club Page & Settings (NORMATIVE)
 
 ### 8.1 Club profile editable fields
 
@@ -368,6 +396,7 @@ Must be explicitly confirmed by owner.
 - visibility (public/private)
 - slug change (if allowed)
 - archive/delete
+- all settings in `clubs.settings` (§8.4)
 
 ### 8.2 Slug changes
 
@@ -375,13 +404,96 @@ Must be explicitly confirmed by owner.
 - slug change is owner-only, rate-limited, and logged.
 - old slug may remain reserved for a cooldown window (RESERVED / PLANNED).
 
-### 8.3 Archiving / Deletion
+### 8.3 Archiving / Deletion (NORMATIVE)
 
-**Preferred:**
-- archive (soft-delete) owner-only.
-- Deletion (hard-delete) is discouraged; if supported, must require:
-  - no active subscription,
-  - irreversible confirmation.
+**Archive (soft-delete):** Owner-only.
+
+When `archived_at IS NOT NULL`, the club is in archived state.
+
+#### 8.3.1 Archived State — Allowed Operations (Whitelist)
+
+| Operation | Actor | Notes |
+|-----------|-------|-------|
+| View billing status (read-only) | Owner | Check subscription state |
+| Cancel auto-renew / cancel at period end | Owner | See SSOT_BILLING § 11 |
+| Unarchive | Owner | If supported by implementation |
+| Export data | Owner | If supported by implementation |
+| Read club profile | Any with access | Read-only |
+
+#### 8.3.2 Archived State — Forbidden Operations
+
+All other write operations are **FORBIDDEN** when club is archived:
+- ❌ Create/edit invites
+- ❌ Approve/reject join requests
+- ❌ Role changes
+- ❌ Edit club profile/content
+- ❌ Create/edit events
+- ❌ Member removal (other than natural leave)
+- ❌ Any setting changes except cancellation
+
+**Implementation note:** API must return error code `CLUB_ARCHIVED` for any forbidden operation.
+
+#### 8.3.3 Deletion (Hard-delete)
+
+Deletion (hard-delete) is discouraged. If supported, must require:
+- no active subscription (or cancelled at period end),
+- irreversible confirmation.
+
+### 8.4 Club Settings (NORMATIVE)
+
+Club settings are stored in `clubs.settings` (jsonb) with the following canonical fields:
+
+#### 8.4.1 public_members_list_enabled
+
+| Property | Value |
+|----------|-------|
+| **Type** | boolean |
+| **Default** | `false` |
+| **Who can change** | Owner only |
+| **Effect** | When `true`, unauthenticated guests can view members list for public clubs |
+
+**Constraints:**
+- Only applies to clubs with `visibility = 'public'`.
+- Private clubs: guests cannot view members list regardless of this flag.
+- When enabled, guests see only the fields defined in §8.4.3.
+
+#### 8.4.2 public_show_owner_badge
+
+| Property | Value |
+|----------|-------|
+| **Type** | boolean |
+| **Default** | `false` |
+| **Who can change** | Owner only |
+| **Effect** | When `true` AND `public_members_list_enabled = true`, guests see "Owner" badge next to owner's entry |
+
+**Constraints:**
+- Only meaningful when `public_members_list_enabled = true`.
+- If `public_members_list_enabled = false`, this flag has no effect.
+- Guests still see only the minimal fields (§8.4.3); the badge is the only additional information.
+
+#### 8.4.3 Guest-Visible Member Fields (NORMATIVE)
+
+When guests view the members list (enabled via `public_members_list_enabled`), they see ONLY:
+
+| Field | Included | Notes |
+|-------|----------|-------|
+| displayName | ✅ | Or public handle |
+| Avatar | ✅ | If available |
+| **Contact info** | ❌ | NEVER exposed |
+| **Internal IDs** | ❌ | user_id, etc. |
+| **telegram_id** | ❌ | NEVER exposed |
+| **telegram_username** | ❌ | See §19 for authenticated contexts |
+| **Role** | ❌ | NOT shown (except Owner badge if §8.4.2 enabled) |
+
+**Rationale:** Data minimization — guests have no legitimate need for contact info or internal identifiers.
+
+#### 8.4.4 Settings Decision Table
+
+| Setting | Default | Who Changes | Dependency |
+|---------|---------|-------------|------------|
+| `public_members_list_enabled` | `false` | Owner | — |
+| `public_show_owner_badge` | `false` | Owner | Requires `public_members_list_enabled = true` |
+| `open_join_enabled` | `false` | Owner | RESERVED / PLANNED |
 
 ---
 
@@ -394,6 +506,7 @@ Must log:
 - `CLUB_UPDATED`
 - `CLUB_VISIBILITY_CHANGED`
 - `CLUB_ARCHIVED` / `CLUB_UNARCHIVED`
+- `CLUB_SETTINGS_CHANGED`
 - `INVITE_CREATED`
 - `INVITE_CANCELLED`
 - `INVITE_ACCEPTED`
@@ -422,6 +535,7 @@ Must log:
 - Creating invite for same target while pending exists is idempotent.
 - Accepting the same invite twice returns success without duplicating membership.
 - Creating join request while pending exists is idempotent.
+- Ownership transfer is idempotent (see §7.4).
 
 ### 10.2 Rate limits (policy-level)
 
@@ -438,9 +552,16 @@ Invite tokens are secrets:
 
 Token must not be logged.
 
-### 10.4 Data minimization
+### 10.4 Data minimization (NORMATIVE)
 
-Guests cannot access members list or internal content unless explicitly allowed.
+**Default:** Guests cannot access members list or internal content.
+
+**Exception:** Guest access to members list is allowed ONLY when ALL of:
+1. Club `visibility = 'public'`
+2. `clubs.settings.public_members_list_enabled = true`
+3. Fields exposed are limited to §8.4.3
+
+Private clubs: members list is NEVER exposed to guests regardless of settings.
 
 ---
 
@@ -512,6 +633,11 @@ This SSOT defines only:
 - what UI/actions are owner-only
 - what states should lock down club admin operations (as outcomes, not HTTP codes)
 
+### 14.4 Subscription cancellation policy (by reference)
+
+Cancellation policy (no proration, cancel at period end, no partial refunds) is defined in:
+**SSOT_BILLING_SYSTEM_ANALYSIS.md § 11**
+
 ---
 
 ## 15. Network (RESERVED / PLANNED, with invariants)
@@ -569,6 +695,107 @@ This section maps roadmap phases to domain capabilities and what MUST be impleme
 
 ---
 
+## 18. User Profile Visibility (NORMATIVE)
+
+This section defines how user profiles are visible across the system, independent of club membership.
+
+### 18.1 Visibility Enum
+
+| Value | Description |
+|-------|-------------|
+| `public` | Profile visible to anyone (authenticated or guest) |
+| `members_only` | Profile visible only to users who share at least one club |
+| `private` | Profile visible only to self |
+
+**Default:** `members_only`
+
+**Storage:** `users.settings.profile_visibility` (enum)
+
+### 18.2 Access Matrix
+
+| Viewer | `public` profile | `members_only` profile | `private` profile |
+|--------|-----------------|------------------------|-------------------|
+| Self | ✅ | ✅ | ✅ |
+| Shared club member | ✅ | ✅ | ❌ |
+| Authenticated, no shared club | ✅ | ❌ | ❌ |
+| Guest | ✅ | ❌ | ❌ |
+
+**"Shared club member"** = viewer and profile owner are both non-pending members of at least one common club.
+
+### 18.3 Field Exposure
+
+| Field | `public` | `members_only` | `private` |
+|-------|----------|----------------|-----------|
+| displayName | ✅ | ✅ | ✅ (self only) |
+| avatar | ✅ | ✅ | ✅ (self only) |
+| short bio (if any) | ✅ | ✅ | ❌ |
+| Contact info | ❌ | ❌ | ❌ |
+| telegram_id | ❌ | ❌ | ❌ |
+| Internal IDs | ❌ | ❌ | ❌ |
+
+**Invariant:** Contact info and internal IDs are NEVER exposed via profile visibility. Telegram link is governed separately (§19).
+
+### 18.4 No "Show Profile" Boolean
+
+There is no separate `show_profile` boolean. The `profile_visibility` enum is the single control.
+
+---
+
+## 19. Telegram Link Policy (NORMATIVE)
+
+This section defines when and how a user's Telegram link is shown.
+
+### 19.1 Enabled Flag
+
+| Property | Value |
+|----------|-------|
+| **Field** | `users.settings.telegram_link_enabled` |
+| **Type** | boolean |
+| **Default** | `false` |
+| **Who can change** | User only (self) |
+
+### 19.2 Link Source
+
+- Link is constructed from `telegram_username` ONLY.
+- `telegram_id` is NEVER exposed or used for links.
+- If `telegram_username` is NULL or empty, no link is shown regardless of `telegram_link_enabled`.
+
+### 19.3 Context Limitations (NORMATIVE)
+
+Telegram link is shown ONLY when ALL conditions are met:
+1. `telegram_link_enabled = true`
+2. `telegram_username` exists and is non-empty
+3. Viewer has access to the user's profile per §18.2
+4. Context is in the allowed list (below)
+
+**Allowed contexts (initial):**
+
+| Context | Viewers | Notes |
+|---------|---------|-------|
+| User profile page | Per §18.2 access rules | Main profile view |
+| Club members list | Authenticated members only | Viewer must be member/admin/owner of the club |
+
+**Forbidden contexts:**
+
+| Context | Reason |
+|---------|--------|
+| Guest viewing members list | Even with `public_members_list_enabled`, guests do not see Telegram links |
+| Search results | Too broad exposure |
+| Event participant lists (public) | Privacy concern |
+
+### 19.4 Decision Table
+
+| telegram_link_enabled | telegram_username | Viewer access | Context | Link shown |
+|-----------------------|-------------------|---------------|---------|------------|
+| `false` | any | any | any | ❌ |
+| `true` | NULL/empty | any | any | ❌ |
+| `true` | exists | Guest | any | ❌ |
+| `true` | exists | No profile access | any | ❌ |
+| `true` | exists | Has access | profile page | ✅ |
+| `true` | exists | Club member | club members list | ✅ |
+
+---
+
 ## Appendix A — Decision Tables (NORMATIVE)
 
 ### A1. Who can do what (club operations)
@@ -582,14 +809,23 @@ This section maps roadmap phases to domain capabilities and what MUST be impleme
 | Remove member | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Change roles | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Transfer ownership | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Change club settings | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Leave club | ❌ (transfer first) | ✅ | ✅ | ✅ (cancel/decline only) | n/a |
 
-### A2. Visibility access
+### A2. Visibility access (updated for optional guest members list)
 
 | Club visibility | Guest profile | Guest content | Guest members list |
 |-----------------|---------------|---------------|-------------------|
-| public | ✅ | Optional (public-marked only) | ❌ |
+| public | ✅ | Optional (public-marked only) | **Optional** (if `public_members_list_enabled`) |
 | private | minimal only | ❌ | ❌ |
+
+**A2.1 Guest Members List Conditions:**
+
+| Condition | Guest sees members list |
+|-----------|------------------------|
+| `visibility = 'private'` | ❌ Never |
+| `visibility = 'public'` AND `public_members_list_enabled = false` | ❌ |
+| `visibility = 'public'` AND `public_members_list_enabled = true` | ✅ (minimal fields per §8.4.3) |
 
 ---
 
@@ -597,7 +833,7 @@ This section maps roadmap phases to domain capabilities and what MUST be impleme
 
 > This appendix lists future ideas and is not binding until promoted to NORMATIVE.
 
-- open join
+- open join (`open_join_enabled` flag in settings)
 - club-to-club partnerships
 - advanced moderation queues
 - reputation scoring
