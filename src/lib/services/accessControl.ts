@@ -9,7 +9,7 @@
  * Updated: 2024-12-30 - Added owner-only check for paid club events (SSOT §5.4)
  */
 
-import { PaywallError, AuthError, ValidationError } from "@/lib/errors";
+import { PaywallError, AuthError, ValidationError, CreditConfirmationRequiredError, type CreditConfirmationPayload } from "@/lib/errors";
 import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { 
   getPlanById,
@@ -525,7 +525,7 @@ export async function enforceEventPublish(params: {
   // Decision 4: Has credit, but not confirmed
   if (!confirmCredit) {
     // Return 409 - need confirmation
-    const error = {
+    const errorPayload: CreditConfirmationPayload = {
       success: false,
       error: {
         code: "CREDIT_CONFIRMATION_REQUIRED",
@@ -533,7 +533,7 @@ export async function enforceEventPublish(params: {
         meta: {
           creditCode: "EVENT_UPGRADE_500",
           eventId: eventId ?? null,
-          requestedParticipants: maxParticipants,
+          requestedParticipants: maxParticipants!,
         },
         cta: {
           type: "CONFIRM_CONSUME_CREDIT",
@@ -543,7 +543,7 @@ export async function enforceEventPublish(params: {
     };
     
     // Throw special error that API layer will convert to 409
-    throw new CreditConfirmationRequiredError(error);
+    throw new CreditConfirmationRequiredError(errorPayload);
   }
 
   // Decision 5: Confirmed - consume credit atomically
@@ -564,21 +564,9 @@ export async function enforceEventPublish(params: {
   // in createEvent()/updateEvent() to ensure atomicity
 }
 
-/**
- * Special error for credit confirmation required (409)
- * 
- * This is NOT a PaywallError (402) - it's a warning that requires user confirmation
- * before proceeding with credit consumption.
- */
-export class CreditConfirmationRequiredError extends Error {
-  public readonly payload: any;
-  
-  constructor(payload: any) {
-    super("CREDIT_CONFIRMATION_REQUIRED");
-    this.name = "CreditConfirmationRequiredError";
-    this.payload = payload;
-  }
-}
+// CreditConfirmationRequiredError is now imported from @/lib/errors
+// Re-export for backwards compatibility with existing imports
+export { CreditConfirmationRequiredError } from "@/lib/errors";
 
 // ============================================================================
 // Helper: Get Current Plan for Club

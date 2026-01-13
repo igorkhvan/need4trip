@@ -126,13 +126,18 @@ export async function canViewEvent(
  * 
  * Rules:
  * - visibility === "public" → true
- * - isClubEvent === true → false (club events never fully public, even if visibility=public)
+ * - clubId !== null → false (club events never fully public, even if visibility=public)
+ * 
+ * SSOT §1.2: clubId is source of truth for club membership (NOT isClubEvent)
  * 
  * @param event Event to check
  * @returns true if event is publicly visible to all users
  */
 export function isPubliclyVisible(event: Event): boolean {
-  return event.visibility === "public" && !event.isClubEvent;
+  // SSOT §1.2: clubId is source of truth (NOT isClubEvent)
+  // Club events are never fully public, even if visibility=public
+  // Using !event.clubId to handle both null and undefined
+  return event.visibility === "public" && !event.clubId;
 }
 
 /**

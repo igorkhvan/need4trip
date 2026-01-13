@@ -98,7 +98,9 @@ export async function canRegisterForEvent(
   }
   
   // 6. Check club membership (for club events)
-  if (event.isClubEvent && event.clubId) {
+  // SSOT §1.2: clubId is source of truth for club membership (NOT isClubEvent)
+  // Using truthy check to handle both null and undefined
+  if (event.clubId) {
     if (!currentUser) {
       return {
         canRegister: false,
@@ -107,7 +109,7 @@ export async function canRegisterForEvent(
       };
     }
     
-    // Check if user is club member
+    // Check if user is club member (clubId is guaranteed to be string here)
     const isMember = await isClubMember(event.clubId, currentUser.id);
     
     if (!isMember && !isOwner) {

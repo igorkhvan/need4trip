@@ -173,6 +173,52 @@ export function isClubArchivedError(err: unknown): err is ClubArchivedError {
 }
 
 /**
+ * CreditConfirmationRequiredError - требуется подтверждение использования кредита
+ * 
+ * Возвращает 409 Conflict когда пользователь имеет доступный кредит,
+ * но должен явно подтвердить его использование перед сохранением события.
+ * 
+ * НЕ является PaywallError (402) - это предупреждение о предстоящем списании.
+ * 
+ * Spec: docs/ssot/SSOT_BILLING_SYSTEM_ANALYSIS.md
+ * SSOT: docs/ssot/SSOT_CLUBS_EVENTS_ACCESS.md §10
+ */
+export interface CreditConfirmationPayload {
+  success: false;
+  error: {
+    code: "CREDIT_CONFIRMATION_REQUIRED";
+    reason: string;
+    meta: {
+      creditCode: string;
+      eventId: string | null;
+      requestedParticipants: number;
+    };
+    cta: {
+      type: "CONFIRM_CONSUME_CREDIT";
+      href?: string;
+    };
+  };
+}
+
+export class CreditConfirmationRequiredError extends AppError {
+  public readonly payload: CreditConfirmationPayload;
+  
+  constructor(payload: CreditConfirmationPayload) {
+    super("CREDIT_CONFIRMATION_REQUIRED", { 
+      statusCode: 409, 
+      code: "CREDIT_CONFIRMATION_REQUIRED",
+      details: payload.error 
+    });
+    this.name = "CreditConfirmationRequiredError";
+    this.payload = payload;
+  }
+}
+
+export function isCreditConfirmationRequiredError(err: unknown): err is CreditConfirmationRequiredError {
+  return err instanceof CreditConfirmationRequiredError;
+}
+
+/**
  * Check if error is a PostgreSQL unique constraint violation
  * 
  * Detects errors from:
