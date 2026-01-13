@@ -51,6 +51,39 @@ export interface ClubMemberWithUser extends ClubMember {
 }
 
 // ============================================================================
+// Club Invite Interface
+// ============================================================================
+
+export type ClubInviteStatus = 'pending' | 'accepted' | 'expired' | 'cancelled';
+
+export interface ClubInvite {
+  id: string;
+  clubId: string;
+  invitedByUserId: string;
+  inviteeUserId: string;
+  status: ClubInviteStatus;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// Club Join Request Interface
+// ============================================================================
+
+export type ClubJoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'expired';
+
+export interface ClubJoinRequest {
+  id: string;
+  clubId: string;
+  requesterUserId: string;
+  status: ClubJoinRequestStatus;
+  message: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
 // Club Subscription Interface
 // ============================================================================
 

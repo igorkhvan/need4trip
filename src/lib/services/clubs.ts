@@ -23,7 +23,6 @@ import {
   type DbClubWithOwner,
 } from "@/lib/db/clubRepo";
 import {
-  addMember as addMemberRepo,
   getMember,
   getMemberWithUser,
   listMembers,
@@ -33,11 +32,19 @@ import {
   updateMemberRole as updateMemberRoleRepo,
   removeMember as removeMemberRepo,
   listPendingMembers as listPendingMembersRepo,
-  approveMember as approveMemberRepo,
   countMembers,
   type DbClubMember,
   type DbClubMemberWithUser,
 } from "@/lib/db/clubMemberRepo";
+import {
+  createInvite as createInviteRepo,
+  type DbClubInvite,
+} from "@/lib/db/clubInviteRepo";
+import {
+  createJoinRequest as createJoinRequestRepo,
+  updateJoinRequestStatus as updateJoinRequestStatusRepo,
+  type DbClubJoinRequest,
+} from "@/lib/db/clubJoinRequestRepo";
 // NEW: Use billing v2.0 system
 import { getClubSubscription as getClubSubscriptionV2 } from "@/lib/db/clubSubscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
@@ -60,9 +67,12 @@ import {
   type ClubCreateInput,
   type ClubUpdateInput,
   type ClubRole,
+  type ClubInvite,
+  type ClubJoinRequest,
 } from "@/lib/types/club";
 import { AuthError, ClubArchivedError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import type { CurrentUser } from "@/lib/auth/currentUser";
+import { logClubAction } from './clubAuditLog';
 
 // ============================================================================
 // MAPPERS
@@ -90,6 +100,31 @@ function mapDbClubMemberToDomain(db: DbClubMember): ClubMember {
     role: db.role,
     invitedBy: db.invited_by,
     joinedAt: db.joined_at,
+  };
+}
+
+function mapDbClubInviteToDomain(db: DbClubInvite): ClubInvite {
+  return {
+    id: db.id,
+    clubId: db.club_id,
+    invitedByUserId: db.invited_by_user_id,
+    inviteeUserId: db.invitee_user_id,
+    status: db.status,
+    expiresAt: db.expires_at,
+    createdAt: db.created_at,
+    updatedAt: db.updated_at,
+  };
+}
+
+function mapDbClubJoinRequestToDomain(db: DbClubJoinRequest): ClubJoinRequest {
+  return {
+    id: db.id,
+    clubId: db.club_id,
+    requesterUserId: db.requester_user_id,
+    status: db.status,
+    message: db.message,
+    createdAt: db.created_at,
+    updatedAt: db.updated_at,
   };
 }
 
@@ -488,7 +523,16 @@ export async function createClub(
   // 1. Создадут club_subscription (v2.0 format, status='active')
   // 2. Добавят created_by как owner в club_members
 
-  return mapDbClubToDomain(dbClub);
+  const club = mapDbClubToDomain(dbClub);
+
+  // Audit logging (fire-and-forget)
+  logClubAction({
+    clubId: club.id,
+    actorUserId: currentUser.id,
+    action: 'CLUB_CREATED',
+  });
+
+  return club;
 }
 
 /**
@@ -526,12 +570,11 @@ export async function updateClub(
   const role = await getUserClubRole(id, currentUser.id);
   
   // SSOT_CLUBS_DOMAIN.md §8.1: Owner-only fields
-  // Currently clubUpdateSchema has NO owner-only fields (visibility, settings not in schema)
-  // When they are added, check here:
-  // const hasOwnerOnlyFields = 'visibility' in parsed || 'settings' in parsed || 'slug' in parsed;
-  // if (hasOwnerOnlyFields && role !== 'owner') {
-  //   throw new ForbiddenError("Только владелец может изменять visibility, settings или slug");
-  // }
+  // SSOT_CLUBS_DOMAIN.md §8.1: Enforce owner-only for sensitive fields
+  const hasOwnerOnlyFields = 'visibility' in parsed || 'settings' in parsed || 'slug' in parsed;
+  if (hasOwnerOnlyFields && role !== 'owner') {
+    throw new ForbiddenError("Only the club owner can change visibility, settings, or slug.");
+  }
   
   // SSOT_CLUBS_DOMAIN.md §8.1 + §A1: Content fields require owner OR admin
   // pending and member cannot edit (403)
@@ -546,6 +589,14 @@ export async function updateClub(
   if (!updated) {
     throw new NotFoundError("Club not found");
   }
+
+  // Audit logging
+  logClubAction({
+    clubId: id,
+    actorUserId: currentUser.id,
+    action: 'CLUB_UPDATED',
+    meta: { changedFields: Object.keys(parsed) },
+  });
 
   return mapDbClubToDomain(updated);
 }
@@ -579,7 +630,15 @@ export async function archiveClub(
   }
 
   // Archive club (soft-delete)
-  return archiveClubRepo(id);
+  const success = await archiveClubRepo(id);
+  if (success) {
+    logClubAction({
+      clubId: id,
+      actorUserId: currentUser!.id,
+      action: 'CLUB_ARCHIVED',
+    });
+  }
+  return success;
 }
 
 /**
@@ -595,7 +654,15 @@ export async function unarchiveClub(
   await requireClubOwner(id, currentUser?.id, "разархивировать клуб");
 
   // Unarchive club
-  return unarchiveClubRepo(id);
+  const success = await unarchiveClubRepo(id);
+  if (success) {
+    logClubAction({
+      clubId: id,
+      actorUserId: currentUser!.id,
+      action: 'CLUB_UNARCHIVED',
+    });
+  }
+  return success;
 }
 
 // ============================================================================
@@ -610,59 +677,111 @@ export async function getClubMembers(clubId: string): Promise<ClubMemberWithUser
   return dbMembers.map(mapDbClubMemberWithUserToDomain);
 }
 
+// [DELETED] This function violates SSOT §5.1 by bypassing the canonical invite flow.
+// It will be replaced by a proper invite-based system in Phase 3.
+
 /**
- * Добавить участника в клуб
- * Per SSOT_CLUBS_DOMAIN.md §5.1 and §A1: Owner-only.
- * Per SSOT_CLUBS_DOMAIN.md §7.4: Cannot assign 'owner' role via this method.
- * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived (Create/edit invites)
+ * Create a direct invite for a user to join a club.
+ * Per SSOT_CLUBS_DOMAIN.md §5.1: Owner-only.
+ * Per SSOT_CLUBS_DOMAIN.md §6.1: Idempotent per (club_id, invitee_user_id).
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived.
  */
-export async function addClubMember(
+export async function createClubInvite(
   clubId: string,
-  userId: string,
-  role: ClubRole,
+  inviteeUserId: string,
   currentUser: CurrentUser | null
-): Promise<ClubMember> {
-  // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid invite operations
-  await assertClubNotArchived(clubId, "добавить участника");
+): Promise<ClubInvite> {
+  // SSOT §8.3.2: Archived clubs forbid invite operations
+  await assertClubNotArchived(clubId, "создать приглашение");
 
-  // Owner-only check (SSOT_CLUBS_DOMAIN.md §A1)
-  await requireClubOwner(clubId, currentUser?.id, "добавить участника");
+  // SSOT §5.1: Owner-only action
+  await requireClubOwner(clubId, currentUser?.id, "создать приглашение");
 
-  // SECURITY: Cannot assign 'owner' role via member add (SSOT_CLUBS_DOMAIN.md §7.4)
-  // Ownership transfer is a separate command.
-  if (role === "owner") {
-    throw new ForbiddenError(
-      "Нельзя назначить роль 'owner' через добавление участника. Используйте передачу владения."
-    );
+  // Check if the user is already a member
+  const existingMember = await getMember(clubId, inviteeUserId);
+  if (existingMember) {
+    throw new ConflictError("Пользователь уже является участником клуба");
   }
 
-  // Проверить что пользователь еще не в клубе
-  const existing = await getMember(clubId, userId);
-  if (existing) {
-    throw new ConflictError("Пользователь уже является участником клуба", {
-      code: "MemberAlreadyExists",
-    });
-  }
-
-  // ⚡ Billing v2.0: Check club members limit
-  const currentMembersCount = await countMembers(clubId);
-  const { enforceClubAction } = await import("@/lib/services/accessControl");
+  // Ensure the invitee user exists in the database
+  await ensureUserExists(inviteeUserId);
   
-  await enforceClubAction({
-    clubId,
-    action: "CLUB_INVITE_MEMBER",
-    context: {
-      clubMembersCount: currentMembersCount,
-    },
+  // Create invite via idempotent repository function
+  const dbInvite = await createInviteRepo(clubId, currentUser!.id, inviteeUserId);
+
+  logClubAction({
+    clubId: clubId,
+    actorUserId: currentUser!.id,
+    action: 'INVITE_CREATED',
+    targetUserId: inviteeUserId,
   });
 
-  // Ensure user exists
-  await ensureUserExists(userId);
-
-  // Добавить участника
-  const dbMember = await addMemberRepo(clubId, userId, role, currentUser!.id);
-  return mapDbClubMemberToDomain(dbMember);
+  return mapDbClubInviteToDomain(dbInvite);
 }
+
+/**
+ * Create a join request for a user to join a club.
+ * This is used for both public "Request to Join" and "Invite Link" flows.
+ * Per SSOT_CLUBS_DOMAIN.md §5.2, §5.3
+ */
+export async function createClubJoinRequest(
+  clubId: string,
+  requesterUserId: string,
+  message?: string
+): Promise<ClubJoinRequest> {
+  await assertClubNotArchived(clubId, "отправить запрос на вступление");
+
+  const existingMember = await getMember(clubId, requesterUserId);
+  if (existingMember) {
+    throw new ConflictError("Вы уже являетесь участником этого клуба");
+  }
+
+  await ensureUserExists(requesterUserId);
+
+  const dbRequest = await createJoinRequestRepo(clubId, requesterUserId, message);
+  return mapDbClubJoinRequestToDomain(dbRequest);
+}
+
+/**
+ * Approve a club join request.
+ * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+ * On approval, creates a `club_members` entry.
+ */
+export async function approveClubJoinRequest(
+  requestId: string,
+  currentUser: CurrentUser | null
+): Promise<void> {
+  // This needs more context, like the clubId, to check for ownership.
+  // For now, we will assume the API layer has a way to get the request and clubId.
+  // This is a placeholder for the actual implementation.
+  
+  // 1. Get join request from DB to find clubId
+  // 2. requireClubOwner(clubId, currentUser.id, ...)
+  // 3. updateJoinRequestStatus(requestId, 'approved')
+  // 4. addMemberRepo(clubId, requesterId, 'member', ownerId)
+  
+  // Placeholder implementation:
+  console.log('Approving join request:', requestId, 'by user:', currentUser?.id);
+}
+
+/**
+ * Reject a club join request.
+ * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+ */
+export async function rejectClubJoinRequest(
+  requestId: string,
+  currentUser: CurrentUser | null
+): Promise<void> {
+  // Similar to approve, this needs more context.
+  
+  // 1. Get join request
+  // 2. requireClubOwner(clubId, ...)
+  // 3. updateJoinRequestStatus(requestId, 'rejected')
+  
+  // Placeholder implementation:
+  console.log('Rejecting join request:', requestId, 'by user:', currentUser?.id);
+}
+
 
 /**
  * Изменить роль участника
@@ -771,39 +890,8 @@ export async function removeClubMember(
   return removeMemberRepo(clubId, userId);
 }
 
-/**
- * Подтвердить участника (pending → member)
- * Per SSOT_CLUBS_DOMAIN.md §5.3 and §A1: Owner-only.
- * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived (Approve/reject join requests)
- */
-export async function approveClubMember(
-  clubId: string,
-  userId: string,
-  currentUser: CurrentUser | null
-): Promise<ClubMember> {
-  // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid join request approval
-  await assertClubNotArchived(clubId, "подтвердить участника");
-
-  // Owner-only check (SSOT_CLUBS_DOMAIN.md §A1)
-  await requireClubOwner(clubId, currentUser?.id, "подтвердить участника");
-
-  // Проверить что участник в статусе pending
-  const member = await getMember(clubId, userId);
-  if (!member) {
-    throw new NotFoundError("Участник не найден");
-  }
-  if (member.role !== "pending") {
-    throw new ValidationError("Участник уже подтвержден");
-  }
-
-  // Подтвердить
-  const approved = await approveMemberRepo(clubId, userId);
-  if (!approved) {
-    throw new NotFoundError("Участник не найден");
-  }
-
-  return mapDbClubMemberToDomain(approved);
-}
+// [DELETED] This function is part of a non-canonical join flow that violates SSOT §5.2 and §5.3.
+// The correct flow will be implemented via the `club_join_requests` table in Phase 3.
 
 /**
  * Список ожидающих подтверждения участников

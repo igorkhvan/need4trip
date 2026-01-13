@@ -128,6 +128,8 @@ MIGRATIONS=(
     "supabase/migrations/20241213_migrate_clubs_city_to_fk.sql"
     "supabase/migrations/20241213_normalize_car_brands_in_users.sql"
     "supabase/migrations/20241213_normalize_currencies.sql"
+    "supabase/migrations/20260113_clubs_foundation/01_schema.sql"
+    "supabase/migrations/20260113_clubs_foundation/02_invite_idempotency_function.sql"
 )
 
 SUCCESS_COUNT=0
@@ -135,24 +137,25 @@ TOTAL_COUNT=${#MIGRATIONS[@]}
 
 for migration in "${MIGRATIONS[@]}"; do
     echo "──────────────────────────────────────────────────────────────"
-    echo "Применяем: $(basename $migration)"
+    echo "Applying: $(basename "$migration")"
     echo "──────────────────────────────────────────────────────────────"
     
     if [ ! -f "$migration" ]; then
-        echo -e "${RED}❌ Файл не найден: $migration${NC}"
+        echo -e "${RED}❌ File not found: $migration${NC}"
         continue
     fi
     
-    if $SUPABASE_CLI db execute --file "$migration"; then
-        echo -e "${GREEN}✅ Успешно применена: $(basename $migration)${NC}"
+    # Correct way to execute a local SQL file on the remote database
+    if cat "$migration" | $SUPABASE_CLI db remote psql; then
+        echo -e "${GREEN}✅ Successfully applied: $(basename "$migration")${NC}"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
-        echo -e "${RED}❌ Ошибка при применении: $(basename $migration)${NC}"
+        echo -e "${RED}❌ Error applying: $(basename "$migration")${NC}"
         echo ""
-        echo "Хотите продолжить с следующей миграцией? (y/n)"
+        echo "Do you want to continue with the next migration? (y/n)"
         read -r CONTINUE
         if [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ]; then
-            echo "Прерывание..."
+            echo "Aborting..."
             exit 1
         fi
     fi

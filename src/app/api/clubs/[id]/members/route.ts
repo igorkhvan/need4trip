@@ -10,10 +10,10 @@
 
 import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { getClubMembers, addClubMember, requireClubMember } from "@/lib/services/clubs";
+import { getClubMembers, requireClubMember } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
-import { ValidationError, UnauthorizedError } from "@/lib/errors";
+import { ValidationError, UnauthorizedError, InternalError } from "@/lib/errors";
 import type { ClubRole } from "@/lib/types/club";
 
 export const dynamic = "force-dynamic";
@@ -69,25 +69,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
  */
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
-    const { id } = await params;
-    
-    // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
-    const user = await getCurrentUserFromMiddleware(req);
-    if (!user) {
-      throw new UnauthorizedError("Требуется авторизация для добавления участника");
-    }
-    
-    const body = await req.json();
-    const { userId, role } = body;
+    // [CANONICAL_REFACTOR_TODO]: This endpoint is temporarily disabled.
+    // The `addClubMember` service was removed as it violates the SSOT invite flow.
+    // This POST handler should be replaced in Phase 3 with the new `createClubInvite` service.
+    throw new InternalError("This functionality is temporarily disabled pending canonical refactor.", 503);
 
-    if (!userId || !role) {
-      throw new ValidationError("Missing required fields: userId, role");
-    }
-
-    // Service layer enforces owner-only + blocks 'owner' role assignment
-    const member = await addClubMember(id, userId, role as ClubRole, user);
-
-    return respondSuccess({ member }, undefined, 201);
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to add club member", error, { clubId: id });
