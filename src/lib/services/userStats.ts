@@ -1,4 +1,9 @@
-import { supabase, ensureClient } from "../db/client";
+import {
+  countTotalEventsForUser,
+  countCompletedEventsForUser,
+  countOrganizedEventsForUser,
+} from "../db/userStatsRepo";
+import { log } from "@/lib/utils/logger";
 
 /**
  * Статистика событий пользователя
@@ -13,38 +18,20 @@ export interface UserEventStats {
  * Получить статистику событий пользователя
  */
 export async function getUserEventStats(userId: string): Promise<UserEventStats> {
-  ensureClient();
-  if (!supabase) {
-    return { totalEvents: 0, completedEvents: 0, organizedEvents: 0 };
-  }
-
   try {
-    // 1. Всего событий (где пользователь зарегистрирован)
-    const { count: totalCount } = await supabase
-      .from("event_participants")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    // 2. Завершенные события (date_time < NOW())
-    const { count: completedCount } = await supabase
-      .from("event_participants")
-      .select("event_id, events!inner(date_time)", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .lt("events.date_time", new Date().toISOString());
-
-    // 3. Организованные события (created_by_user_id)
-    const { count: organizedCount } = await supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("created_by_user_id", userId);
+    const [totalEvents, completedEvents, organizedEvents] = await Promise.all([
+      countTotalEventsForUser(userId),
+      countCompletedEventsForUser(userId),
+      countOrganizedEventsForUser(userId),
+    ]);
 
     return {
-      totalEvents: totalCount || 0,
-      completedEvents: completedCount || 0,
-      organizedEvents: organizedCount || 0,
+      totalEvents,
+      completedEvents,
+      organizedEvents,
     };
   } catch (error) {
-    console.error("[getUserEventStats] Error:", error);
+    log.error("[getUserEventStats] Error:", { error, userId });
     return {
       totalEvents: 0,
       completedEvents: 0,

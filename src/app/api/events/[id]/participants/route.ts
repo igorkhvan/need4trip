@@ -3,7 +3,9 @@ import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
-import { listParticipants, registerParticipant } from "@/lib/services/participants";
+import { registerParticipant } from "@/lib/services/participants";
+import { listParticipants as listParticipantsRepo } from "@/lib/db/participantRepo";
+import { mapDbParticipantToDomain } from "@/lib/mappers";
 
 // ❌ Edge Runtime не совместим с revalidatePath
 // Используем Node.js runtime с оптимизированными запросами
@@ -20,7 +22,7 @@ export async function GET(_: Request, context: Params) {
     const currentUser = await getCurrentUser();
     
     const [participants] = await Promise.all([
-      listParticipants(id),
+      listParticipantsRepo(id).then(rows => rows.map(mapDbParticipantToDomain)),
       // Visibility check doesn't need to return event data, just verify access
       getEventWithVisibility(id, { currentUser, enforceVisibility: true })
     ]);

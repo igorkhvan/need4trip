@@ -20,7 +20,7 @@ import {
 } from "@/lib/db/eventRepo";
 import {
   countParticipants,
-  listParticipants,
+  listParticipants as listParticipantsRepo,
   listEventIdsForUser,
   listParticipantEventIds,
 } from "@/lib/db/participantRepo";
@@ -271,7 +271,7 @@ export async function getEventWithParticipants(
 ): Promise<{ event: Event | null; participants: DomainParticipant[] }> {
   const dbEvent = await getEventById(id);
   if (!dbEvent) return { event: null, participants: [] };
-  const participants = await listParticipants(dbEvent.id);
+  const participants = await listParticipantsRepo(dbEvent.id);
   const event = mapDbEventToDomain(dbEvent);
   try {
     event.allowedBrands = await getAllowedBrands(id);
@@ -360,7 +360,7 @@ export async function getEventWithParticipantsVisibility(
 ): Promise<{ event: Event | null; participants: DomainParticipant[] }> {
   const dbEvent = await getEventById(id);
   if (!dbEvent) return { event: null, participants: [] };
-  const participants = await listParticipants(dbEvent.id);
+  const participants = await listParticipantsRepo(dbEvent.id);
   let event = mapDbEventToDomain(dbEvent);
   
   // Hydrate all related data
@@ -895,7 +895,7 @@ async function queueEventUpdatedNotificationsAsync(
   if (!existing || !updated) return;
   
   try {
-    const { listParticipants } = await import("@/lib/db/participantRepo");
+    const { listParticipants: listParticipantsRepo } = await import("@/lib/db/participantRepo");
     const { queueEventUpdatedNotifications } = await import("@/lib/services/notifications");
     const { detectLocationChanges } = await import("@/lib/utils/eventChanges");
     
@@ -932,7 +932,7 @@ async function queueEventUpdatedNotificationsAsync(
     }
     
     // Get all participants
-    const participants = await listParticipants(updated.id);
+    const participants = await listParticipantsRepo(updated.id);
     if (participants.length === 0) {
       log.debug("No participants to notify for event update", { eventId: updated.id });
       return;

@@ -27,10 +27,6 @@ import {
 import { CurrentUser } from "@/lib/auth/currentUser";
 import { z } from "zod";
 
-export async function listParticipants(eventId: string): Promise<DomainParticipant[]> {
-  const rows = await listParticipantsRepo(eventId);
-  return rows.map(mapDbParticipantToDomain);
-}
 
 function validateCustomFieldValues(
   event: Event,
