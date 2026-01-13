@@ -122,12 +122,6 @@ echo "────────────────────────�
 echo ""
 
 MIGRATIONS=(
-    "supabase/migrations/20241213_normalize_cities.sql"
-    "supabase/migrations/20241213_migrate_events_city_to_fk.sql"
-    "supabase/migrations/20241213_migrate_users_city_to_fk.sql"
-    "supabase/migrations/20241213_migrate_clubs_city_to_fk.sql"
-    "supabase/migrations/20241213_normalize_car_brands_in_users.sql"
-    "supabase/migrations/20241213_normalize_currencies.sql"
     "supabase/migrations/20260113_clubs_foundation/01_schema.sql"
     "supabase/migrations/20260113_clubs_foundation/02_invite_idempotency_function.sql"
 )
@@ -146,7 +140,8 @@ for migration in "${MIGRATIONS[@]}"; do
     fi
     
     # Correct way to execute a local SQL file on the remote database
-    if cat "$migration" | $SUPABASE_CLI db remote psql; then
+    # Correct way to execute a local SQL file on the remote database
+    if cat "$migration" | PGPASSWORD="$DB_PASSWORD" $SUPABASE_CLI db remote psql; then
         echo -e "${GREEN}✅ Successfully applied: $(basename "$migration")${NC}"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
