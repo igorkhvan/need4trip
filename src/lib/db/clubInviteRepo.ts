@@ -6,7 +6,7 @@ export type DbClubInvite = {
   id: string;
   club_id: string;
   invited_by_user_id: string;
-  invitee_user_id: string;
+  invitee_user_id: string | null;
   status: ClubInviteStatus;
   expires_at: string;
   created_at: string;
@@ -25,7 +25,7 @@ export async function createInvite(
   const db = getAdminDb();
 
   // Check for existing pending invite
-  const { data: existing } = await (db as any)
+  const { data: existing } = await db
     .from('club_invites')
     .select('*')
     .eq('club_id', clubId)
@@ -35,7 +35,7 @@ export async function createInvite(
 
   if (existing) {
     // Refresh and return existing invite
-    const { data: updated, error } = await (db as any)
+    const { data: updated, error } = await db
       .from('club_invites')
       .update({ expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
       .eq('id', existing.id)
@@ -46,7 +46,7 @@ export async function createInvite(
   }
 
   // Create new invite
-  const { data, error } = await (db as any)
+  const { data, error } = await db
     .from('club_invites')
     .insert({
       club_id: clubId,

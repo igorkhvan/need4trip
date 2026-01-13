@@ -41,17 +41,11 @@ export async function addMember(
 ): Promise<DbClubMember> {
   const db = getAdminDb();
 
-  const insertPayload: {
-    club_id: string;
-    user_id: string;
-    role: string;
-    invited_by: string | null;
-  } = {
+  const insertPayload = {
     club_id: clubId,
     user_id: userId,
-    role: role as string, // Cast to string for Supabase
+    role: role,
     invited_by: invitedBy,
-    // joined_at will be set by DB DEFAULT NOW()
   };
 
   const { data, error } = await db
@@ -211,7 +205,7 @@ export async function updateMemberRole(
 
   const { data, error } = await db
     .from(table)
-    .update({ role: role as string })
+    .update({ role: role })
     .eq("club_id", clubId)
     .eq("user_id", userId)
     .select("*")
@@ -293,7 +287,7 @@ export async function countMembersByRole(
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
-    .eq("role", role as string);
+    .eq("role", role);
 
   if (error) {
     log.error("Failed to count members by role", { clubId, role, error });

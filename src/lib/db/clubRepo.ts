@@ -7,7 +7,7 @@ const table = "clubs";
 
 // Explicit column list for select queries (performance optimization)
 // Explicit column list for select queries (performance optimization)
-const CLUB_COLUMNS = "id, name, description, logo_url, telegram_url, website_url, created_by, created_at, updated_at, archived_at" as const;
+const CLUB_COLUMNS = "id, name, slug, visibility, owner_user_id, settings, description, logo_url, telegram_url, website_url, created_by, created_at, updated_at, archived_at" as const;
 
 // ============================================================================
 // Database Types (snake_case)
@@ -16,6 +16,10 @@ const CLUB_COLUMNS = "id, name, description, logo_url, telegram_url, website_url
 export interface DbClub {
   id: string;
   name: string;
+  slug: string;
+  visibility: 'public' | 'private';
+  owner_user_id: string | null;
+  settings: Record<string, any>;
   description: string | null;
   logo_url: string | null;
   telegram_url: string | null;
@@ -152,11 +156,13 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
 
   const insertPayload = {
     name: payload.name,
+    slug: payload.name.toLowerCase().replace(/\s+/g, '-'),
     description: payload.description ?? null,
     logo_url: payload.logoUrl ?? null,
     telegram_url: payload.telegramUrl ?? null,
     website_url: payload.websiteUrl ?? null,
     created_by: payload.createdBy ?? null,
+    owner_user_id: payload.createdBy ?? null,
     created_at: now,
     updated_at: now,
   };

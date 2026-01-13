@@ -333,6 +333,78 @@ export type Database = {
         }
         Relationships: []
       }
+      club_audit_log: {
+        Row: {
+          action_code: string
+          actor_user_id: string
+          club_id: string
+          created_at: string
+          id: number
+          meta: Json | null
+          target_entity_id: string | null
+          target_entity_type: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action_code: string
+          actor_user_id: string
+          club_id: string
+          created_at?: string
+          id?: number
+          meta?: Json | null
+          target_entity_id?: string | null
+          target_entity_type?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action_code?: string
+          actor_user_id?: string
+          club_id?: string
+          created_at?: string
+          id?: number
+          meta?: Json | null
+          target_entity_id?: string | null
+          target_entity_type?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_audit_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_audit_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_audit_log_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_audit_log_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_audit_log_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_cities: {
         Row: {
           city_id: string
@@ -366,26 +438,159 @@ export type Database = {
           },
         ]
       }
+      club_invites: {
+        Row: {
+          club_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          invited_by_user_id: string
+          invitee_contact: string | null
+          invitee_user_id: string | null
+          status: Database["public"]["Enums"]["club_invite_status"]
+          token: string | null
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id: string
+          invitee_contact?: string | null
+          invitee_user_id?: string | null
+          status?: Database["public"]["Enums"]["club_invite_status"]
+          token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id?: string
+          invitee_contact?: string | null
+          invitee_user_id?: string | null
+          status?: Database["public"]["Enums"]["club_invite_status"]
+          token?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_invites_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_invites_invited_by_user_id_fkey"
+            columns: ["invited_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_invites_invited_by_user_id_fkey"
+            columns: ["invited_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_invites_invitee_user_id_fkey"
+            columns: ["invitee_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_invites_invitee_user_id_fkey"
+            columns: ["invitee_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_join_requests: {
+        Row: {
+          club_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          message: string | null
+          requester_user_id: string
+          status: Database["public"]["Enums"]["club_join_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          requester_user_id: string
+          status?: Database["public"]["Enums"]["club_join_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          requester_user_id?: string
+          status?: Database["public"]["Enums"]["club_join_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_join_requests_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_join_requests_requester_user_id_fkey"
+            columns: ["requester_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_join_requests_requester_user_id_fkey"
+            columns: ["requester_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_members: {
         Row: {
           club_id: string
+          created_at: string
           invited_by: string | null
           joined_at: string
-          role: string
+          role: Database["public"]["Enums"]["club_member_role"]
           user_id: string
         }
         Insert: {
           club_id: string
+          created_at?: string
           invited_by?: string | null
           joined_at?: string
-          role: string
+          role: Database["public"]["Enums"]["club_member_role"]
           user_id: string
         }
         Update: {
           club_id?: string
+          created_at?: string
           invited_by?: string | null
           joined_at?: string
-          role?: string
+          role?: Database["public"]["Enums"]["club_member_role"]
           user_id?: string
         }
         Relationships: [
@@ -536,8 +741,12 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          owner_user_id: string | null
+          settings: Json
+          slug: string
           telegram_url: string | null
           updated_at: string
+          visibility: Database["public"]["Enums"]["club_visibility"]
           website_url: string | null
         }
         Insert: {
@@ -548,8 +757,12 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          owner_user_id?: string | null
+          settings?: Json
+          slug: string
           telegram_url?: string | null
           updated_at?: string
+          visibility?: Database["public"]["Enums"]["club_visibility"]
           website_url?: string | null
         }
         Update: {
@@ -560,8 +773,12 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          owner_user_id?: string | null
+          settings?: Json
+          slug?: string
           telegram_url?: string | null
           updated_at?: string
+          visibility?: Database["public"]["Enums"]["club_visibility"]
           website_url?: string | null
         }
         Relationships: [
@@ -575,6 +792,20 @@ export type Database = {
           {
             foreignKeyName: "clubs_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clubs_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clubs_owner_user_id_fkey"
+            columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1487,6 +1718,31 @@ export type Database = {
         }
       }
       cleanup_old_idempotency_keys: { Args: never; Returns: undefined }
+      create_club_invite: {
+        Args: {
+          p_club_id: string
+          p_invited_by_user_id: string
+          p_invitee_user_id: string
+        }
+        Returns: {
+          club_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          invited_by_user_id: string
+          invitee_contact: string | null
+          invitee_user_id: string | null
+          status: Database["public"]["Enums"]["club_invite_status"]
+          token: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "club_invites"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       deactivate_expired_club_subscriptions: { Args: never; Returns: undefined }
       get_club_city_ids: { Args: { p_club_id: string }; Returns: string[] }
       get_club_total_revenue: { Args: { p_club_id: string }; Returns: number }
@@ -1512,6 +1768,15 @@ export type Database = {
       }
     }
     Enums: {
+      club_invite_status: "pending" | "accepted" | "expired" | "cancelled"
+      club_join_request_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "expired"
+      club_member_role: "owner" | "admin" | "member" | "pending"
+      club_visibility: "public" | "private"
       notification_status:
         | "pending"
         | "processing"
@@ -1652,6 +1917,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      club_invite_status: ["pending", "accepted", "expired", "cancelled"],
+      club_join_request_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "expired",
+      ],
+      club_member_role: ["owner", "admin", "member", "pending"],
+      club_visibility: ["public", "private"],
       notification_status: [
         "pending",
         "processing",

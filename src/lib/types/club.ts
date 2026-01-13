@@ -60,7 +60,7 @@ export interface ClubInvite {
   id: string;
   clubId: string;
   invitedByUserId: string;
-  inviteeUserId: string;
+  inviteeUserId: string | null;
   status: ClubInviteStatus;
   expiresAt: string;
   createdAt: string;
