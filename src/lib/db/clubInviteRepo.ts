@@ -23,24 +23,39 @@ export async function createInvite(
   inviteeUserId: string
 ): Promise<DbClubInvite> {
   const db = getAdminDb();
-  // TODO: The `as any` cast is a temporary workaround.
-  // After the database schema is updated and Supabase types are regenerated,
-  // 'create_club_invite' will be a valid RPC name and the cast can be removed.
-  const { data, error } = await (db.rpc as any)('create_club_invite', {
-    p_club_id: clubId,
-    p_invited_by_user_id: invitedByUserId,
-    p_invitee_user_id: inviteeUserId,
-  });
 
-  if (error) {
-    log.error('Error creating club invite', { error });
-    throw new Error('Failed to create club invite');
-  }
-  
-  if (!data) {
-    log.error('RPC create_club_invite returned no data');
-    throw new Error('Failed to create or retrieve club invite');
+  // Check for existing pending invite
+  const { data: existing } = await (db as any)
+    .from('club_invites')
+    .select('*')
+    .eq('club_id', clubId)
+    .eq('invitee_user_id', inviteeUserId)
+    .eq('status', 'pending')
+    .single();
+
+  if (existing) {
+    // Refresh and return existing invite
+    const { data: updated, error } = await (db as any)
+      .from('club_invites')
+      .update({ expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated;
   }
 
+  // Create new invite
+  const { data, error } = await (db as any)
+    .from('club_invites')
+    .insert({
+      club_id: clubId,
+      invited_by_user_id: invitedByUserId,
+      invitee_user_id: inviteeUserId,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
   return data;
 }
