@@ -1,12 +1,30 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2026-01-02  
+> Последнее обновление: 2026-01-13
 > PostgreSQL + Supabase
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-13 (Finalization)
+- **Reason**: SSOT_DATABASE finalized after Clubs domain foundation migrations and audit.
+- **Updated Migration History** to reflect key milestones.
+- **Documented `create_club_invite()`** stored procedure.
+- **Added explicit `SSOT GAP` annotations** for owner uniqueness and reference synchronization, clarifying where enforcement lives (service layer vs. DB).
+- **Added historical backfill notes** for `clubs.owner_user_id` and `club_members.joined_at`.
+- **Clarified semantics** for RLS, `events.is_club_event`, and legacy fields.
+
+### 2026-01-13 (Clubs Domain Foundation)
+- **Added `club_invites` table** — Manages user invitations to clubs (SSOT §2.3).
+- **Added `club_join_requests` table** — Manages user requests to join clubs (SSOT §2.4).
+- **Added `club_audit_log` table** — Provides an immutable audit trail for all club-related actions (SSOT §2.6).
+- **Updated `clubs` table** — Added `slug`, `visibility`, canonical `owner_user_id`, and `settings` (JSONB) to align with SSOT §2.1.
+- **Updated `club_members` table** — Converted `role` to a strict ENUM and added standard timestamps to align with SSOT §2.2.
+- **Added Clubs Domain ENUMs** — Created `club_visibility`, `club_member_role`, `club_invite_status`, `club_join_request_status`.
+- **Removed `club_cities`** from this document's scope as it's not a core domain table.
+- **Migration:** `supabase/migrations/20260113_clubs_foundation/01_schema.sql`
 
 ### 2026-01-02 (Club Archiving)
 - **Added `clubs.archived_at` column** — Nullable TIMESTAMPTZ for soft-delete (archiving).
@@ -65,10 +83,10 @@
 
 - **Core Tables**: 7 (users, events, event_participants, event_user_access, event_locations, event_allowed_brands, idempotency_keys) ⚡
 - **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans) ⚡
-- **Club & Billing**: 7 (clubs, club_members, club_cities, club_subscriptions, billing_transactions, billing_products, billing_credits) ⚡
+- **Club & Billing**: 9 (clubs, club_members, club_invites, club_join_requests, club_audit_log, club_subscriptions, billing_transactions, billing_products, billing_credits) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
 - **User Extensions**: 1 (user_cars)
-- **Итого**: 24 таблицы ⚡
+- **Итого**: 26 таблиц ⚡
 
 ---
 
@@ -174,6 +192,8 @@ CREATE TABLE public.events (
   - Данные мигрированы в отдельную таблицу `event_locations` (поддержка множественных точек)
   - Каждое событие имеет минимум 1 локацию (sort_order=1, обязательная)
 - ⚡ **`is_club_event`** (добавлен 2024-12-05, constraint 2024-12-12):
+  - ❌ **MUST NOT be used as a business or permission decision source.** This field exists for denormalization and client-side filtering convenience only.
+  - ✅ **The presence of `club_id` is the ONLY source of truth for club event status.**
   - Автоматически синхронизируется с `club_id` через trigger `sync_event_club_flag()`
   - Constraint гарантирует: `is_club_event = TRUE ⇔ club_id IS NOT NULL`
   - **НЕ требует ручной установки** — всегда вычисляется автоматически
@@ -591,42 +611,21 @@ CREATE TABLE public.vehicle_types (
 
 ### 6. `club_plans`
 
-**Назначение**: Справочник тарифных планов для клубов
-
-```sql
-CREATE TABLE public.club_plans (
-  id TEXT PRIMARY KEY, -- 'free', 'club_50', 'club_500', 'club_unlimited'
-  name TEXT NOT NULL,
-  description TEXT,
-  price_monthly NUMERIC(10,2) NOT NULL,
-  currency_code TEXT NOT NULL DEFAULT 'KZT',
-  
-  -- Лимиты
-  max_event_participants INTEGER,
-  max_club_members INTEGER,
-  
-  -- Возможности (canonical field names per SSOT)
-  allow_paid_events BOOLEAN NOT NULL DEFAULT FALSE,
-  allow_csv_export BOOLEAN NOT NULL DEFAULT FALSE,
-  
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
-
-**Indexes**:
-- `club_plans_pkey` (PRIMARY KEY on id)
-
-**Access**: `GRANT SELECT TO anon, authenticated`
-
-**Semantic Helper (code)**: Use `planAllowsPaidEvents(plan)` to check `allow_paid_events` field (SSOT §A7.1)
-
-**Данные**: Seeded в `20241215_seed_club_plans.sql`
+`club_plans` is a business-critical table.
+Canonical definition is located in the
+'Club & Billing Tables' section below.
 
 ---
 
 ## 🏢 Club & Billing Tables
+
+**⚡ NEW: Clubs Domain Enums (2026-01-13)**
+- `public.club_visibility`: ('public', 'private')
+- `public.club_member_role`: ('owner', 'admin', 'member', 'pending')
+- `public.club_invite_status`: ('pending', 'accepted', 'expired', 'cancelled')
+- `public.club_join_request_status`: ('pending', 'approved', 'rejected', 'cancelled', 'expired')
+
+---
 
 ### 1. `clubs`
 
@@ -636,27 +635,46 @@ CREATE TABLE public.club_plans (
 CREATE TABLE public.clubs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL CHECK (char_length(name) >= 2 AND char_length(name) <= 100),
+  slug TEXT NOT NULL, -- ⚡ Unique, case-insensitive slug (SSOT §2.1)
   description TEXT,
   logo_url TEXT CHECK (logo_url IS NULL OR char_length(logo_url) <= 500),
   telegram_url TEXT CHECK (telegram_url IS NULL OR char_length(telegram_url) <= 500),
   website_url TEXT CHECK (website_url IS NULL OR char_length(website_url) <= 500),
+  visibility public.club_visibility NOT NULL DEFAULT 'private', -- ⚡ public/private (SSOT §2.1)
+  owner_user_id UUID REFERENCES public.users(id), -- ⚡ Canonical owner (SSOT §2.1)
   created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
   archived_at TIMESTAMPTZ, -- NULL = active, NOT NULL = archived (soft-delete)
+  settings JSONB NOT NULL DEFAULT '{}'::jsonb, -- ⚡ Feature flags (SSOT §8.4)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
 **Notes**:
+- ⚡ **`owner_user_id`** (добавлено 2026-01-13):
+  - Canonical reference to the club's owner.
+  - **Historical Note:** This field was backfilled from `club_members(role='owner')` during the 2026-01-13 foundation migration.
+  - ⚠️ **SSOT GAP — Owner Reference Synchronization**: The database does NOT enforce synchronization between `clubs.owner_user_id` and the user with `role='owner'` in `club_members`. This invariant is maintained by the service layer, not DB constraints.
+  - SSOT Reference: SSOT_CLUBS_DOMAIN.md §2.1
+- ⚡ **`slug`** (добавлено 2026-01-13):
+  - Unique, case-insensitive identifier for URLs.
+  - Enforced by a unique index on `lower(slug)`.
+- ⚡ **`telegram_url`**:
+  - Legacy / non-normative field.
+  - NOT part of SSOT_CLUBS_DOMAIN §19 Telegram Policy.
+  - ❌ **MUST NOT** be used for permissions, visibility decisions, or access control.
+- ⚡ **`settings`** (добавлено 2026-01-13):
+  - JSONB field for storing club-specific feature flags and settings.
+  - Examples: `public_members_list_enabled`, `public_show_owner_badge`.
+  - SSOT Reference: SSOT_CLUBS_DOMAIN.md §8.4
 - ⚡ **`archived_at`** (добавлено 2026-01-02):
-  - NULL означает активный клуб
-  - NOT NULL означает архивированный клуб (soft-delete)
-  - Архивированные клубы исключаются из публичных листингов
-  - Операции записи запрещены для архивированных клубов (кроме whitelist: self-leave, cancel subscription, unarchive)
-  - Per SSOT_CLUBS_DOMAIN.md §8.3
+  - NULL means active club.
+  - NOT NULL means archived (soft-deleted) club, which restricts write operations.
+  - SSOT Reference: SSOT_CLUBS_DOMAIN.md §8.3
 
 **Indexes**:
 - `clubs_pkey` (PRIMARY KEY on id)
+- `clubs_slug_idx` (UNIQUE on lower(slug)) ⚡ NEW
 - `idx_clubs_created_by` (on created_by)
 - `idx_clubs_created_at` (on created_at DESC)
 - `idx_clubs_active` (on created_at DESC WHERE archived_at IS NULL) — partial index for active clubs
@@ -674,6 +692,9 @@ CREATE TABLE public.clubs (
 - ← `club_subscriptions` (club_id)
 - ← `events` (club_id)
 - ← `club_cities` (club_id) -- many-to-many
+- ← `club_invites` (club_id) ⚡ NEW
+- ← `club_join_requests` (club_id) ⚡ NEW
+- ← `club_audit_log` (club_id) ⚡ NEW
 
 ---
 
@@ -686,12 +707,10 @@ CREATE TABLE public.club_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'pending')),
-  -- Note: 'organizer' role was removed in migration 20241230_remove_organizer_role
-  -- Canonical roles per SSOT_CLUBS_EVENTS_ACCESS.md §2: owner, admin, member, pending
-  -- DB allows role='pending' for invitation state; authorization treats 'pending' as non-member 
-  -- (no elevated permissions). Canonical semantics: SSOT_CLUBS_EVENTS_ACCESS.md §2.
-  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  role public.club_member_role NOT NULL, -- ⚡ ENUM: owner, admin, member, pending (SSOT §1.3)
+  joined_at TIMESTAMPTZ, -- ⚡ NULL if role='pending', NOT NULL otherwise
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   
   CONSTRAINT club_members_unique UNIQUE (club_id, user_id)
 );
@@ -703,6 +722,15 @@ CREATE TABLE public.club_members (
 - `idx_club_members_club_id` (on club_id)
 - `idx_club_members_user_id` (on user_id)
 
+**Notes**:
+- **Historical Note:** The `joined_at` field was backfilled for existing non-pending members during the 2026-01-13 foundation migration.
+
+**⚠️ SSOT GAP — Owner Uniqueness**
+- **Requirement**: `SSOT_CLUBS_DOMAIN` §3.1 requires exactly one owner per club.
+- **DB Enforcement**: The database enforces uniqueness of `(club_id, user_id)` and that `role` is a valid ENUM.
+- **DB GAP**: The database **does NOT enforce** that only one user per club can have the `role='owner'`. There is no partial unique index for this.
+- **Current Enforcement**: This rule is currently enforced at the **service layer** and through application logic.
+
 **RLS**: 6 policies
 - `authenticated_read_all_members`
 - `authenticated_join_clubs`
@@ -711,38 +739,113 @@ CREATE TABLE public.club_members (
 - `authenticated_leave_clubs`
 - `auto_add_creator_as_owner`
 
+**RLS Semantic Disambiguation**:
+- Despite any policy naming, the **ADMIN** role does NOT have member approval rights, member removal rights, or role change rights.
+- These OWNER-only actions are enforced at the service layer per `SSOT_CLUBS_DOMAIN`.
+
 **Связи**:
 - → `clubs` (club_id)
 - → `users` (user_id)
 
 ---
 
-### 3. `club_cities` (many-to-many)
+### 3. `club_invites` ⚡ NEW
 
-**Назначение**: Связь клубов с городами (клуб может действовать в нескольких городах)
+**Назначение**: Приглашения пользователей в клуб (SSOT §2.3)
 
 ```sql
-CREATE TABLE public.club_cities (
-  club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
-  city_id UUID NOT NULL REFERENCES public.cities(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
-  PRIMARY KEY (club_id, city_id)
+CREATE TABLE public.club_invites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
+    invited_by_user_id UUID NOT NULL REFERENCES public.users(id),
+    invitee_user_id UUID REFERENCES public.users(id),
+    invitee_contact TEXT,
+    token TEXT,
+    status public.club_invite_status NOT NULL DEFAULT 'pending',
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT now() + interval '7 days',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT unique_pending_invite_per_user UNIQUE (club_id, invitee_user_id) WHERE (status = 'pending')
 );
 ```
 
 **Indexes**:
-- `club_cities_pkey` (PRIMARY KEY on club_id, city_id)
+- `club_invites_pkey` (PRIMARY KEY on id)
+- `club_invites_token_idx` (on token)
+- `unique_pending_invite_per_user` (UNIQUE on club_id, invitee_user_id WHERE status = 'pending')
 
-**RLS**: Наследуется от clubs (через FK)
+**RLS**: TBD
 
 **Связи**:
 - → `clubs` (club_id)
-- → `cities` (city_id)
+- → `users` (invited_by_user_id)
+- → `users` (invitee_user_id)
 
 ---
 
-### 4. `club_subscriptions`
+### 4. `club_join_requests` ⚡ NEW
+
+**Назначение**: Запросы пользователей на вступление в клуб (SSOT §2.4)
+
+```sql
+CREATE TABLE public.club_join_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
+    requester_user_id UUID NOT NULL REFERENCES public.users(id),
+    status public.club_join_request_status NOT NULL DEFAULT 'pending',
+    message TEXT,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT unique_pending_join_request_per_user UNIQUE (club_id, requester_user_id) WHERE (status = 'pending')
+);
+```
+
+**Indexes**:
+- `club_join_requests_pkey` (PRIMARY KEY on id)
+- `unique_pending_join_request_per_user` (UNIQUE on club_id, requester_user_id WHERE status = 'pending')
+
+**RLS**: TBD
+
+**Связи**:
+- → `clubs` (club_id)
+- → `users` (requester_user_id)
+
+---
+
+### 5. `club_audit_log` ⚡ NEW
+
+**Назначение**: Журнал аудита всех действий, связанных с клубами (SSOT §2.6)
+
+```sql
+CREATE TABLE public.club_audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    club_id UUID NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
+    actor_user_id UUID NOT NULL REFERENCES public.users(id),
+    action_code TEXT NOT NULL,
+    target_user_id UUID REFERENCES public.users(id),
+    target_entity_type TEXT,
+    target_entity_id TEXT,
+    meta JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+**Indexes**:
+- `club_audit_log_pkey` (PRIMARY KEY on id)
+- `club_audit_log_club_id_idx` (on club_id)
+- `club_audit_log_actor_user_id_idx` (on actor_user_id)
+
+**RLS**: Service role only
+
+**Связи**:
+- → `clubs` (club_id)
+- → `users` (actor_user_id)
+- → `users` (target_user_id)
+
+---
+
+### 6. `club_subscriptions`
 
 **Назначение**: Подписки клубов на тарифные планы
 
@@ -779,7 +882,7 @@ CREATE TABLE public.club_subscriptions (
 
 ---
 
-### 5. `billing_transactions`
+### 7. `billing_transactions`
 
 **Назначение**: Аудит биллинговых транзакций (поддерживает клубы + one-off credits)
 
@@ -843,7 +946,7 @@ CREATE TABLE public.billing_transactions (
 
 ---
 
-### 6. `billing_products` ⚡
+### 8. `billing_products` ⚡
 
 **Назначение**: SSOT для purchasable products (one-off credits pricing and constraints)
 
@@ -885,7 +988,7 @@ CREATE TABLE public.billing_products (
 
 ---
 
-### 7. `club_plans` ⚡
+### 9. `club_plans` ⚡
 
 **Назначение**: Тарифные планы для клубов (including FREE plan)
 
@@ -927,7 +1030,7 @@ CREATE TABLE public.club_plans (
 
 ---
 
-### 8. `billing_credits` ⚡
+### 10. `billing_credits` ⚡
 
 **Назначение**: Purchased one-off credits для event upgrades (perpetual, consumed once)
 
@@ -966,7 +1069,7 @@ CREATE TABLE public.billing_credits (
 
 ---
 
-### 8.1 Billing Credits State Machine (Canonical)
+### 10.1 Billing Credits State Machine (Canonical)
 
 **Status:** LOCKED / Production-enforced  
 **Constraint Name:** `chk_billing_credits_consumed_state`
@@ -1024,7 +1127,7 @@ Transition `consumed` → `available` is NOT currently supported. If rollback se
 
 ---
 
-### 8.2 Billing – Consumption Timing (DB Perspective)
+### 10.2 Billing – Consumption Timing (DB Perspective)
 
 **Status:** LOCKED / DB-centric rules only
 
@@ -1280,52 +1383,27 @@ CREATE INDEX idx_event_participants_user_event
 
 **Детали**: См. `supabase/migrations/20241212_create_initial_triggers.sql`
 
+#### Stored Procedures / Functions
+
+- **`create_club_invite(club_id, invited_by_user_id, invitee_user_id)`**
+  - **Purpose**: Provides DB-level idempotent invite creation. This is the canonical way to create invites.
+  - **Behavior**:
+    - Guarantees at most one pending invite per `(club_id, invitee_user_id)`.
+    - If a pending invite already exists for the user, repeated calls to this function will refresh its `expires_at` timestamp and return the existing invite.
+    - If no pending invite exists, a new one is created.
+  - **Status**: Complements service-layer idempotency checks but is not a replacement for permission checks (e.g., verifying that `invited_by_user_id` is the club owner).
+  - **Security Note**: Invite tokens are treated as secrets and must not be logged.
+
 ---
 
 ## 📜 Migration History
 
-### Key Migrations (хронологически):
+This section documents key milestone migrations, not every historical change.
 
 | Date | Migration | Description |
 |------|-----------|-------------|
-| 2024-12-04 | `add_telegram_columns` | Добавлены telegram_id, telegram_handle |
-| 2024-12-05 | `event_extensions` | Добавлены кастомные поля регистрации |
-| 2024-12-09 | `add_guest_session_id` | Гостевые сессии для анонимов |
-| 2024-12-12 | `create_clubs` | Система клубов |
-| 2024-12-12 | `create_club_members` | Участники клубов |
-| 2024-12-13 | `create_cities_table` | Справочник городов |
-| 2024-12-13 | `normalize_cities` | Миграция city (TEXT → FK) |
-| 2024-12-13 | `create_currencies_table` | Справочник валют |
-| 2024-12-13 | `create_event_categories` | Справочник категорий |
-| 2024-12-14 | `create_user_cars` | Автомобили пользователей |
-| 2024-12-15 | `create_club_plans_v2` | Тарифные планы v2 |
-| 2024-12-15 | `create_billing_transactions` | Биллинговый аудит |
-| 2024-12-16 | `create_vehicle_types` | Типы транспорта |
-| 2024-12-17 | `create_notification_tables` | Система уведомлений |
-| 2024-12-18 | `create_event_locations` | Мультилокации для событий |
-| 2024-12-20 | `add_registration_controls` | Контроль регистрации |
-| 2024-12-22 | `enable_rls_*` | Включение RLS на всех таблицах (9 миграций) |
-| 2024-12-22 | `grant_select_reference_tables` | GRANT SELECT для справочников |
-| 2024-12-24 | `performance_indexes` | Performance optimization indexes |
-| 2024-12-25 | `extend_billing_transactions` | ⚡ Добавлено `product_code` в billing_transactions |
-| 2024-12-25 | `add_user_id_to_billing_transactions` | ⚡ Добавлено `user_id` в billing_transactions |
-| 2024-12-25 | `create_billing_credits` | ⚡ Создана таблица `billing_credits` (one-off credits) |
-| 2024-12-26 | `remove_published_at` | 🔥 Удалено `published_at` (events published immediately) |
-| 2024-12-26 | `create_billing_products` | ⚡ Создана таблица `billing_products` (pricing SSOT) |
-| 2024-12-26 | `add_billing_credits_fk` | ⚡ FK от `billing_credits.credit_code` к `billing_products.code` |
-| 2024-12-26 | `normalize_billing_transactions` | ⚡ **Normalization**: amount_kzt→amount, currency→currency_code (FK), status: paid→completed |
-| 2024-12-26 | `cleanup_billing_transactions` | ⚡ Удалены deprecated columns (amount_kzt, currency) после миграции |
-| 2024-12-26 | `normalize_billing_products` | ⚡ **Normalization**: price_kzt→price + currency_code FK |
-| 2024-12-26 | `normalize_club_plans` | ⚡ **Normalization**: price_monthly_kzt→price_monthly + currency_code FK |
-| 2024-12-26 | `cleanup_currency_columns` | ⚡ Удалены deprecated columns (price_kzt, price_monthly_kzt) |
-| 2024-12-30 | `remove_organizer_role` | 🔥 Удалена роль `organizer` из club_members (SSOT §2) |
-| 2024-12-30 | `fix_rls_owner_only_members` | 🔒 RLS: ТОЛЬКО owner может управлять members (SSOT §6.2) |
-| 2024-12-31 | `enforce_club_id_immutability` | 🔒 DB trigger v1: club_id immutability (superseded by v2) |
-| 2024-12-31 | `enforce_club_id_immutability_v2` | 🔒 DB trigger v2: club_id immutability (SSOT §5.7) — ACTIVE |
-| 2024-12-31 | `test_club_id_immutability` | ✅ SQL test suite: club_id immutability verification |
-| 2024-12-31 | `add_idempotency_keys` | ⚡ Таблица `idempotency_keys` (prevent duplicate requests) |
-
-**Всего миграций**: 87 timestamped файлов ⚡
+| **2026-01-13** | **`invite_idempotency_function`** | Introduction of the DB-level idempotent `create_club_invite()` function. Refreshes `expires_at` for existing pending invites on re-invitation. |
+| **2026-01-13** | **`clubs_domain_foundation`** | Introduction of normative clubs-domain tables (`club_invites`, `club_join_requests`, `club_audit_log`), ENUMs for statuses and roles, and normalization of `clubs` and `club_members` tables. Added partial unique constraints for pending states. |
 
 **Расположение**: `/supabase/migrations/`
 
@@ -1430,7 +1508,23 @@ user_cars ──→ car_brands
 
 ---
 
-**Последнее обновление**: 2024-12-27  
-**Версия документа**: 1.1 ⚡  
-**Статус**: SSOT (Single Source of Truth) для структуры БД Need4Trip
+---
+
+⚠️ SSOT LOCK NOTICE
+
+This document represents the canonical and finalized
+Single Source of Truth for the Need4Trip database schema.
+
+Any future database changes MUST be accompanied by:
+- a new timestamped migration
+- an explicit update to this document
+- a version bump and changelog entry
+
+Ad-hoc or undocumented schema changes are forbidden.
+
+---
+
+Last Updated: 2026-01-13
+Document Version: 1.2
+Status: LOCKED SSOT (Database Schema)
 
