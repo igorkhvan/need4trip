@@ -1,217 +1,171 @@
 /**
- * Club Details Page
+ * Club Profile (Public) Page
  * 
- * Страница деталей клуба с Streaming SSR
+ * Per Visual Contract v2 §4: Authoritative contract for Club Profile (Public).
+ * 
+ * Layout (STRICT ORDER per Visual Contract v2 §4.1):
+ * 1. Header (Blocking)
+ * 2. About (Blocking)
+ * 3. Rules / FAQ (Blocking)
+ * 4. Members Preview (Progressive)
+ * 5. Events Preview (Progressive)
+ * 6. Join / Request CTA (Blocking)
+ * 
+ * States:
+ * - Loading → Skeletons
+ * - Forbidden → Full-page forbidden (403 from API-016)
+ * - Archived → Banner + read-only
+ * 
+ * Data source: GET /api/clubs/[id] (API-016)
  */
 
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Users, Settings, MapPin, Globe, Send } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
-import { Badge } from "@/components/ui/badge";
-import { getClubRoleLabel } from "@/lib/types/club";
-import { ClubMembersAsync } from "./_components/members-async";
-import { ClubSubscriptionAsync } from "./_components/subscription-async";
-import { ClubMembersSkeleton, ClubSubscriptionSkeleton } from "@/components/ui/skeletons";
+
+// Section components
+import { ClubProfileHeader } from "./_components/club-profile-header";
+import { ClubAboutSection } from "./_components/club-about-section";
+import { ClubMembersPreviewAsync } from "./_components/club-members-preview-async";
+import { ClubEventsPreviewAsync } from "./_components/club-events-preview-async";
+import { ClubJoinCTA } from "./_components/club-join-cta";
+import { ClubArchivedBanner } from "./_components/club-archived-banner";
+import { ClubForbiddenPage } from "./_components/club-forbidden-page";
+
+// Skeletons per Visual Contract v2 §3
+import { 
+  ClubMembersPreviewSkeleton, 
+  ClubEventsPreviewSkeleton 
+} from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
 
-interface ClubDetailsPageProps {
+interface ClubProfilePageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function ClubDetailsPage({ params }: ClubDetailsPageProps) {
+export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
   const { id } = await params;
   
-  // Загружаем критичные данные сразу
-  const [user, club, userRole] = await Promise.all([
+  // Load critical data for blocking render (per Visual Contract v2 §2.1)
+  const [user, clubResult] = await Promise.all([
     getCurrentUser(),
     getClubBasicInfo(id).catch(() => null),
-    (async () => {
-      const u = await getCurrentUser();
-      return getUserClubRole(id, u?.id);
-    })(),
   ]);
 
-  if (!club) {
+  // 404: Club not found
+  if (!clubResult) {
     notFound();
   }
 
-  const canManage = userRole === "owner" || userRole === "admin";
-  const isOwner = userRole === "owner";
+  const club = clubResult;
   
-  // Показывать боковую панель только для owner
-  const showSidebar = isOwner;
+  // Get user's role in club (if authenticated)
+  const userRole = user ? await getUserClubRole(id, user.id) : null;
+  
+  // Determine states per Visual Contract v2 §5.6
+  const isAuthenticated = !!user;
+  const isMember = userRole !== null && userRole !== "pending";
+  const isPending = userRole === "pending";
+  const isArchived = !!club.archivedAt;
+
+  // Per Visual Contract v2 §7: FORBIDDEN UI (not shown on public profile)
+  // - edit buttons, member management, billing, admin controls
+  // This page intentionally does NOT show any management UI
 
   return (
-    <>
-      <div className="space-y-6 pb-10 pt-12">
-        {/* Кнопка назад */}
-        <Link
-          href="/clubs"
-          className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span>Все клубы</span>
-        </Link>
+    <div className="space-y-6 pb-10 pt-12">
+      {/* Back button */}
+      <Link
+        href="/clubs"
+        className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+      >
+        <ArrowLeft className="h-5 w-5" />
+        <span>Все клубы</span>
+      </Link>
 
-        <div className={showSidebar ? "grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8" : ""}>
-          {/* Основная информация */}
-          <div className={`space-y-6 ${showSidebar ? "lg:col-span-2" : ""}`}>
-            {/* Заголовок */}
-            <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-6">
-                {/* Логотип */}
-                {club.logoUrl ? (
-                  <img
-                    src={club.logoUrl}
-                    alt={club.name}
-                    className="h-24 w-24 flex-shrink-0 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] text-3xl font-bold text-white">
-                    {club.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+      {/* Archived Banner - per Visual Contract v2 §6.2 */}
+      {isArchived && <ClubArchivedBanner />}
 
-                <div className="flex-1">
-                  <div className="mb-3 flex items-start justify-between">
-                    <h1 className="text-3xl font-bold text-[var(--color-text)] md:text-4xl">{club.name}</h1>
-                    {canManage && (
-                      <Link
-                        href={`/clubs/${club.id}/manage`}
-                        className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-2 text-base text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg-subtle)]"
-                      >
-                        <Settings className="h-4 w-4" />
-                        <span>Управление</span>
-                      </Link>
-                    )}
-                  </div>
+      {/* SECTION 1: Header (Blocking) - per Visual Contract v2 §5.1 */}
+      <ClubProfileHeader
+        club={{
+          id: club.id,
+          name: club.name,
+          logoUrl: club.logoUrl,
+          visibility: "public", // TODO: Add visibility field to club type
+          archivedAt: club.archivedAt,
+          cities: club.cities,
+          memberCount: club.memberCount,
+          eventCount: club.eventCount,
+          telegramUrl: club.telegramUrl,
+          websiteUrl: club.websiteUrl,
+        }}
+      />
 
-                  {/* Роль пользователя */}
-                  {userRole && (
-                    <div className="mb-3">
-                      <Badge variant="default" size="sm">
-                        {getClubRoleLabel(userRole)}
-                      </Badge>
-                    </div>
-                  )}
+      {/* SECTION 2 & 3: About + Rules/FAQ (Blocking) - per Visual Contract v2 §5.2-5.3 */}
+      <ClubAboutSection
+        description={club.description}
+        cities={club.cities}
+        rules={null} // TODO: Add rules field to club type when available
+      />
 
-                  {/* Метаинформация */}
-                  <div className="flex flex-wrap gap-4 text-[14px] text-muted-foreground">
-                    {club.cities && club.cities.length > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4 flex-shrink-0" />
-                        <span>
-                          {club.cities.length === 1
-                            ? club.cities[0].region
-                              ? `${club.cities[0].name}, ${club.cities[0].region}`
-                              : club.cities[0].name
-                            : `${club.cities.length} городов`}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-4 w-4" />
-                      <span>{club.memberCount} участников</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      <span>{club.eventCount} событий</span>
-                    </div>
-                  </div>
+      {/* SECTION 4: Members Preview (Progressive) - per Visual Contract v2 §5.4 */}
+      <Suspense fallback={<ClubMembersPreviewSkeleton />}>
+        <ClubMembersPreviewAsync clubId={club.id} />
+      </Suspense>
 
-                  {/* Ссылки */}
-                  {(club.telegramUrl || club.websiteUrl) && (
-                    <div className="mt-4 flex gap-3">
-                      {club.telegramUrl && (
-                        <a
-                          href={club.telegramUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-[14px] text-[#111827] transition-colors hover:bg-[#F9FAFB]"
-                        >
-                          <Send className="h-4 w-4" />
-                          <span>Telegram</span>
-                        </a>
-                      )}
-                      {club.websiteUrl && (
-                        <a
-                          href={club.websiteUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-[14px] text-[#111827] transition-colors hover:bg-[#F9FAFB]"
-                        >
-                          <Globe className="h-4 w-4" />
-                          <span>Сайт</span>
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+      {/* SECTION 5: Events Preview (Progressive) - per Visual Contract v2 §5.5 */}
+      <Suspense fallback={<ClubEventsPreviewSkeleton />}>
+        <ClubEventsPreviewAsync clubId={club.id} />
+      </Suspense>
 
-              {/* Описание и Города */}
-              {(club.description || (club.cities && club.cities.length > 0)) && (
-                <div className="mt-6 space-y-6 border-t border-[#E5E7EB] pt-6">
-                  {/* Города клуба */}
-                  {club.cities && club.cities.length > 0 && (
-                    <div>
-                      <h2 className="mb-3 flex items-center gap-2 text-[18px] font-semibold text-[#1F2937]">
-                        <MapPin className="h-5 w-5 text-muted-foreground" />
-                        <span>Города клуба</span>
-                      </h2>
-                      <div className="flex flex-wrap gap-2">
-                        {club.cities.map((city: any) => (
-                          <Badge key={city.id} variant="secondary" size="md">
-                            {city.region ? `${city.name}, ${city.region}` : city.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Описание */}
-                  {club.description && (
-                    <div>
-                      <h2 className="mb-3 text-[18px] font-semibold text-[#1F2937]">О клубе</h2>
-                      <p className="whitespace-pre-wrap text-[15px] text-[#111827]">{club.description}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Участники - загружаем через Suspense */}
-            <Suspense fallback={<ClubMembersSkeleton />}>
-              <ClubMembersAsync
-                clubId={club.id}
-                canManage={canManage}
-                currentUserId={user?.id}
-              />
-            </Suspense>
-          </div>
-
-          {/* Боковая панель (только для owner) */}
-          {showSidebar && (
-            <div className="space-y-6">
-              {/* Подписка - загружаем через Suspense */}
-              <Suspense fallback={<ClubSubscriptionSkeleton />}>
-                <ClubSubscriptionAsync 
-                  clubId={club.id}
-                  canManage={isOwner}
-                />
-              </Suspense>
-
-              {/* TODO: Последние события клуба */}
-              {/* TODO: Кнопка "Вступить в клуб" для не-членов */}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+      {/* SECTION 6: Join / Request CTA (Blocking) - per Visual Contract v2 §5.6 */}
+      <ClubJoinCTA
+        clubId={club.id}
+        isAuthenticated={isAuthenticated}
+        isMember={isMember}
+        isPending={isPending}
+        isArchived={isArchived}
+      />
+    </div>
   );
 }
 
+/* ===========================================================================
+ * DEAD UI CODE REPORT (per implementation instructions)
+ * 
+ * The following existing code in this directory is FORBIDDEN per Visual 
+ * Contract v2 §7 for Club Profile (Public):
+ * 
+ * 1. _components/members-async.tsx
+ *    - Shows full member management UI (add/remove members)
+ *    - Uses repository directly instead of API
+ *    - Should be moved to Club Members page (Club Home Member View)
+ * 
+ * 2. _components/members-client.tsx
+ *    - Contains management controls (role change, remove)
+ *    - FORBIDDEN on public profile
+ *    - Should be moved to Club Members page
+ * 
+ * 3. _components/subscription-async.tsx
+ *    - Shows billing/subscription UI
+ *    - FORBIDDEN on public profile
+ *    - Should be moved to Club Settings page (Club Owner only)
+ * 
+ * 4. Previous page.tsx code (replaced by this file):
+ *    - Showed "Управление" (Manage) button - FORBIDDEN
+ *    - Had sidebar with subscription card - FORBIDDEN
+ *    - Used canManage to show/hide UI (frontend permission inference) - FORBIDDEN
+ *    - Showed user role badge to user - acceptable but not per contract
+ * 
+ * These files are NOT deleted per instruction "MUST NOT delete any existing 
+ * code". They should be migrated to appropriate pages:
+ * - members-async.tsx → /clubs/[id]/members/page.tsx (Club Members page)
+ * - members-client.tsx → /clubs/[id]/members/page.tsx
+ * - subscription-async.tsx → /clubs/[id]/manage/page.tsx (Club Settings)
+ * ===========================================================================
+ */

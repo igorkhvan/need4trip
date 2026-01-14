@@ -1,13 +1,19 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.4.0  
-**Last Updated:** 2 января 2026  
+**Version:** 1.5.0  
+**Last Updated:** 14 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.5.0 (2026-01-14) — Club Profile (Public) API Extension
+**New endpoints for Club Profile (Public) page support per CLUBS_IMPLEMENTATION_BLUEPRINT v1:**
+- **API-052 (POST /api/clubs/[id]/join-requests):** NEW endpoint. Creates pending join request. Idempotent per (user_id, club_id). No auto-join.
+- **API-053 (GET /api/clubs/[id]/members/preview):** NEW endpoint. Public members preview. Limited fields and count. Safe for unauthenticated access (when club settings allow).
+- **API-016 (GET /api/clubs/[id]):** Formalized Public/Private Club Visibility behavior. Private clubs return minimal profile to non-members.
 
 ### 1.4.0 (2026-01-02) — P1 Club Archiving
 **Club Archiving (soft-delete) per SSOT_CLUBS_DOMAIN.md §8.3**:
@@ -1313,10 +1319,21 @@ Create new club (user becomes owner).
 **Runtime:** Node.js  
 **Auth:** None (public)  
 **Auth mechanism:** N/A  
-**Authorization:** Public club data  
+**Authorization:** Visibility-based (see below)  
 
 **Purpose:**  
-Get club details with current plan, subscription, member count.
+Get club details with current plan, subscription, member count. Respects club visibility settings.
+
+**Visibility Behavior (Formalized 2026-01-14):**
+
+Per SSOT_CLUBS_DOMAIN.md §4:
+- **Public clubs (`visibility = 'public'`):** Full profile visible to all (guests, non-members, members)
+- **Private clubs (`visibility = 'private'`):** Minimal profile visible to non-members (name, slug, avatar only)
+
+| Club Visibility | Guest / Non-member | Member |
+|-----------------|-------------------|--------|
+| `public` | Full profile | Full profile |
+| `private` | Minimal profile (name, slug, avatar) | Full profile |
 
 **Request:**
 
@@ -1333,6 +1350,7 @@ Get club details with current plan, subscription, member count.
       "club": {
         "id": "uuid",
         "name": "Club Name",
+        "visibility": "public",
         "currentPlan": { /* Plan */ },
         "subscription": { /* Subscription */ },
         "memberCount": 25,
@@ -1354,7 +1372,7 @@ Get club details with current plan, subscription, member count.
 
 - **Rate limit:** read tier (300 req/5min)
 - **Spam / Cost abuse risk:** Low (read-only)
-- **Sensitive data exposure:** No (public club data)
+- **Sensitive data exposure:** No (respects visibility settings)
 
 **Dependencies:**
 
@@ -1548,6 +1566,199 @@ Restore archived club. Sets `archived_at = NULL`. Per SSOT_CLUBS_DOMAIN.md §8.3
 
 - Route handler: `/src/app/api/clubs/[id]/unarchive/route.ts`
 - Key functions: `unarchiveClub()`
+
+---
+
+#### API-052: Create Join Request
+
+**Endpoint ID:** API-052  
+**Method:** POST  
+**Path:** `/api/clubs/[id]/join-requests`  
+**Runtime:** Node.js  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Any authenticated user  
+
+**Purpose:**  
+Create a pending join request for a club. User-initiated request to join.
+
+**Added in v1.5.0 (2026-01-14).**
+
+Per SSOT_CLUBS_DOMAIN.md §5.3:
+- User requests to join a club
+- Owner approves/rejects
+- Only owner may approve/reject
+
+Per SSOT_CLUBS_DOMAIN.md §10.1:
+- Idempotent per (club_id, requester_user_id)
+- If a pending request exists, returns existing request without error
+
+**Request:**
+
+- **Content-Type:** `application/json`
+- **Path params:** `id` (club UUID)
+- **Body schema:**
+  ```typescript
+  {
+    message?: string; // Optional message to club owner (max 500 chars)
+  }
+  ```
+- **Idempotency:** Yes (returns existing pending request if one exists)
+
+**Response:**
+
+- **Success:** 201
+  ```json
+  {
+    "success": true,
+    "data": {
+      "joinRequest": {
+        "id": "uuid",
+        "clubId": "uuid",
+        "requesterUserId": "uuid",
+        "status": "pending",
+        "message": "Optional message",
+        "createdAt": "2026-01-14T00:00:00Z",
+        "updatedAt": "2026-01-14T00:00:00Z"
+      }
+    },
+    "message": "Запрос на вступление отправлен"
+  }
+  ```
+- **Side effects:** Inserts into `club_join_requests` table (or returns existing pending)
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 401 | Not authenticated | Middleware blocks |
+| 403 | Club is archived | Per SSOT_CLUBS_DOMAIN.md §8.3.2 |
+| 404 | Club not found | Invalid UUID |
+| 409 | Already a member | User is already member (any role including pending) |
+
+**Security & Abuse:**
+
+- **Rate limit:** write tier (30 req/min)
+- **Spam / Cost abuse risk:** Low (idempotent, one pending request per user per club)
+- **Sensitive data exposure:** No
+
+**Dependencies:**
+
+- Supabase (clubs, club_members, club_join_requests tables)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/join-requests/route.ts`
+- Key functions: `createClubJoinRequest()`
+
+---
+
+#### API-053: Get Members Preview (Public)
+
+**Endpoint ID:** API-053  
+**Method:** GET  
+**Path:** `/api/clubs/[id]/members/preview`  
+**Runtime:** Node.js  
+**Auth:** None (optional auth for extended preview)  
+**Auth mechanism:** JWT (optional)  
+**Authorization:** Visibility + settings-based (see below)  
+
+**Purpose:**  
+Public preview of club members with limited fields and count. Safe for unauthenticated access when club settings allow.
+
+**Added in v1.5.0 (2026-01-14).**
+
+Per SSOT_CLUBS_DOMAIN.md §10.4 (Data minimization):
+- Default: Guests cannot access members list
+- Exception: Guest access allowed ONLY when ALL conditions met:
+  1. Club `visibility = 'public'`
+  2. `clubs.settings.public_members_list_enabled = true`
+  3. Fields exposed are limited to §8.4.3 (displayName, avatar only)
+
+Per SSOT_CLUBS_DOMAIN.md §8.4.3 (Guest-Visible Member Fields):
+- `displayName`: ✅
+- `avatarUrl`: ✅
+- `isOwner`: ✅ (only if `public_show_owner_badge = true`)
+- Contact info, telegram_id, internal IDs, role: ❌ NEVER
+
+**Access Matrix:**
+
+| Club Visibility | public_members_list_enabled | Guest Access | Member Access |
+|-----------------|----------------------------|--------------|---------------|
+| `public` | `true` | ✅ (minimal fields) | ✅ (extended) |
+| `public` | `false` | ❌ 403 | ✅ (extended) |
+| `private` | any | ❌ 403 | ✅ (extended) |
+
+**Request:**
+
+- **Path params:** `id` (club UUID)
+- **Idempotency:** Yes (read-only)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "members": [
+        {
+          "displayName": "User Name",
+          "avatarUrl": "https://...",
+          "isOwner": true
+        }
+      ],
+      "totalCount": 25,
+      "hasMore": true,
+      "previewLimit": 6
+    }
+  }
+  ```
+  
+  For authenticated members (extended preview):
+  ```json
+  {
+    "success": true,
+    "data": {
+      "members": [
+        {
+          "userId": "uuid",
+          "displayName": "User Name",
+          "avatarUrl": "https://...",
+          "role": "owner",
+          "isOwner": true
+        }
+      ],
+      "totalCount": 25,
+      "hasMore": true,
+      "previewLimit": 6
+    }
+  }
+  ```
+- **Side effects:** None
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 403 | Private club (for guests) | Private clubs never expose members list to guests |
+| 403 | public_members_list_enabled = false (for guests) | Setting must be enabled |
+| 404 | Club not found | Invalid UUID |
+
+**Security & Abuse:**
+
+- **Rate limit:** read tier (300 req/5min)
+- **Spam / Cost abuse risk:** Low (read-only, limited data)
+- **Sensitive data exposure:** No (strictly enforced field limitations per SSOT)
+
+**Dependencies:**
+
+- Supabase (clubs, club_members, users tables)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/members/preview/route.ts`
+- Key functions: `listMembersWithUser()`, `countMembers()`
 
 ---
 
@@ -3590,7 +3801,7 @@ Get current notification queue stats without triggering processing (for monitori
 
 ### 10.1 Route Handler Files Found
 
-Total route handlers discovered: **33 files**
+Total route handlers discovered: **35 files**
 
 | # | Path | Methods | API IDs |
 |---|------|---------|---------|
@@ -3604,7 +3815,9 @@ Total route handlers discovered: **33 files**
 | 8 | `/src/app/api/clubs/route.ts` | GET, POST | API-014, API-015 |
 | 9 | `/src/app/api/clubs/[id]/route.ts` | GET, PATCH, DELETE | API-016 to API-018 |
 | 9.1 | `/src/app/api/clubs/[id]/unarchive/route.ts` | POST | API-051 |
+| 9.2 | `/src/app/api/clubs/[id]/join-requests/route.ts` | POST | API-052 |
 | 10 | `/src/app/api/clubs/[id]/members/route.ts` | GET, POST | API-019, API-020 |
+| 10.1 | `/src/app/api/clubs/[id]/members/preview/route.ts` | GET | API-053 |
 | 11 | `/src/app/api/clubs/[id]/members/[userId]/route.ts` | PATCH, DELETE | API-021, API-022 |
 | 12 | `/src/app/api/clubs/[id]/current-plan/route.ts` | GET | API-023 |
 | 13 | `/src/app/api/clubs/[id]/export/route.ts` | GET | API-024 |
@@ -3630,8 +3843,8 @@ Total route handlers discovered: **33 files**
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 32
-- **Total endpoints documented:** 49 (API-001 to API-049)
+- **Total route handler files:** 34
+- **Total endpoints documented:** 53 (API-001 to API-053, excluding API-050)
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -3735,10 +3948,10 @@ Verified: TypeScript ✅, Build ✅
 ## 12. Metadata
 
 **Document Stats:**
-- Total endpoints: 50
-- Total route handlers: 33
-- Lines: ~2500
-- Last audit: 28 December 2024
+- Total endpoints: 53
+- Total route handlers: 34
+- Lines: ~3000
+- Last audit: 14 January 2026
 
 **Maintenance:**
 - Review quarterly (every 3 months)

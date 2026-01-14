@@ -37,3 +37,13 @@ export {
 export { ClubMembersSkeleton } from "./club-members-skeleton";
 export { ClubSubscriptionSkeleton } from "./club-subscription-skeleton";
 export { EventParticipantsSkeleton } from "./event-participants-skeleton";
+
+// Club Profile (Public) skeletons per Visual Contract v2
+export {
+  ClubProfileHeaderSkeleton,
+  ClubAboutSectionSkeleton,
+  ClubMembersPreviewSkeleton,
+  ClubEventsPreviewSkeleton,
+  ClubJoinCTASkeleton,
+  ClubProfileSkeleton,
+} from "./club-profile-skeleton";
