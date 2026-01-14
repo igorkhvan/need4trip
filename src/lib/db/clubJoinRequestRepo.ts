@@ -80,3 +80,72 @@ export async function updateJoinRequestStatus(
 
   return data;
 }
+
+/**
+ * Get a join request by ID.
+ */
+export async function getJoinRequestById(
+  requestId: string
+): Promise<DbClubJoinRequest | null> {
+  const db = getAdminDb();
+
+  const { data, error } = await (db as any)
+    .from('club_join_requests')
+    .select('*')
+    .eq('id', requestId)
+    .maybeSingle();
+
+  if (error) {
+    log.error('Error fetching join request by ID', { error, requestId });
+    throw new Error('Failed to fetch join request');
+  }
+
+  return data;
+}
+
+/**
+ * List pending join requests for a club.
+ * Per SSOT_CLUBS_DOMAIN.md §5.3: Used by owner to view incoming requests.
+ */
+export async function listPendingJoinRequests(
+  clubId: string
+): Promise<DbClubJoinRequest[]> {
+  const db = getAdminDb();
+
+  const { data, error } = await (db as any)
+    .from('club_join_requests')
+    .select('*')
+    .eq('club_id', clubId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    log.error('Error listing pending join requests', { error, clubId });
+    throw new Error('Failed to list pending join requests');
+  }
+
+  return data ?? [];
+}
+
+/**
+ * List pending join requests with user data (for display).
+ */
+export async function listPendingJoinRequestsWithUser(
+  clubId: string
+): Promise<(DbClubJoinRequest & { user: { id: string; name: string; telegram_handle: string | null; avatar_url: string | null } })[]> {
+  const db = getAdminDb();
+
+  const { data, error } = await (db as any)
+    .from('club_join_requests')
+    .select('*, user:users!requester_user_id(id, name, telegram_handle, avatar_url)')
+    .eq('club_id', clubId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    log.error('Error listing pending join requests with user', { error, clubId });
+    throw new Error('Failed to list pending join requests');
+  }
+
+  return data ?? [];
+}

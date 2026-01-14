@@ -1,0 +1,145 @@
+/**
+ * Club Members Page
+ * 
+ * Per Visual Contract v4 (CLUBS_UI_VISUAL_CONTRACT V4 MEMBERS):
+ * 
+ * Layout (STRICT ORDER per Visual Contract v4 §3):
+ * 1. Header (Blocking)
+ * 2. Members List (Blocking)
+ * 3. Pending Join Requests (Blocking, owner only)
+ * 
+ * States:
+ * - Loading → Full-page skeleton
+ * - Forbidden (403) → Full-page forbidden
+ * - Archived → read-only UI
+ * 
+ * Data sources:
+ * - Header: GET /api/clubs/[id] (API-016)
+ * - Members: GET /api/clubs/[id]/members (API-019)
+ * - Join Requests: GET /api/clubs/[id]/join-requests (API-054) - owner only
+ */
+
+import { Suspense } from "react";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
+
+// Section components
+import { ClubMembersHeader } from "./_components/club-members-header";
+import { ClubArchivedBanner } from "../_components/club-archived-banner";
+import { ClubForbiddenPage } from "../_components/club-forbidden-page";
+import { ClubMembersContent } from "./_components/club-members-content";
+
+// Skeletons per Visual Contract v4 §9
+import { ClubMembersPageSkeleton } from "@/components/ui/skeletons";
+
+export const dynamic = "force-dynamic";
+
+interface ClubMembersPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function ClubMembersPage({ params }: ClubMembersPageProps) {
+  const { id } = await params;
+  
+  // Load critical data for blocking render (per Visual Contract v4 §9)
+  const [user, clubResult] = await Promise.all([
+    getCurrentUser(),
+    getClubBasicInfo(id).catch(() => null),
+  ]);
+
+  // 404: Club not found
+  if (!clubResult) {
+    notFound();
+  }
+
+  const club = clubResult;
+  
+  // Get user's role in club (if authenticated)
+  const userRole = user ? await getUserClubRole(id, user.id) : null;
+  
+  // Determine states per Visual Contract v4 §1
+  const isMember = userRole !== null && userRole !== "pending";
+  const isOwner = userRole === "owner";
+  const isArchived = !!club.archivedAt;
+
+  // 403: Not authenticated or not a member (per Visual Contract v4 §1)
+  // Per Visual Contract v4 §5: Visible to member, admin, owner
+  if (!user || !isMember) {
+    return (
+      <div className="space-y-6 pb-10 pt-12">
+        <Link
+          href={`/clubs/${id}`}
+          className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span>К профилю клуба</span>
+        </Link>
+        <ClubForbiddenPage message="У вас нет доступа к просмотру списка участников. Вступите в клуб, чтобы видеть участников." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-10 pt-12">
+      {/* Back button */}
+      <Link
+        href={`/clubs/${id}`}
+        className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+      >
+        <ArrowLeft className="h-5 w-5" />
+        <span>К профилю клуба</span>
+      </Link>
+
+      {/* Archived Banner - per Visual Contract v4 §7 */}
+      {isArchived && <ClubArchivedBanner />}
+
+      {/* SECTION 1: Header (Blocking) - per Visual Contract v4 §4 */}
+      <ClubMembersHeader
+        club={{
+          name: club.name,
+          visibility: "public", // TODO: Add visibility field to club type
+          archivedAt: club.archivedAt,
+        }}
+      />
+
+      {/* SECTIONS 2 & 3: Members List + Pending Join Requests */}
+      {/* Use Suspense for client-side data fetching */}
+      <Suspense fallback={<ClubMembersPageSkeleton />}>
+        <ClubMembersContent
+          clubId={id}
+          currentUserId={user.id}
+          currentUserRole={userRole}
+          isOwner={isOwner}
+          isArchived={isArchived}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+/* ===========================================================================
+ * DEAD UI CODE REPORT (per implementation instructions)
+ * 
+ * The following existing code in parent directory may conflict with this page:
+ * 
+ * 1. ../page.tsx (Club Profile Public) - OK, different page
+ *    - Contains DEAD UI CODE REPORT noting:
+ *      - members-async.tsx: Should be moved here
+ *      - members-client.tsx: Should be moved here
+ *    - These files are NOT deleted per instruction
+ * 
+ * 2. ../manage/page.tsx - OK, different page (Club Settings)
+ * 
+ * Legacy components in ../_components/ that relate to members:
+ * - members-async.tsx: Legacy full member management, uses repo directly
+ * - members-client.tsx: Legacy client-side member controls
+ * 
+ * These files are NOT deleted per instruction "MUST NOT delete any existing 
+ * code". They should be deprecated in favor of the new implementation:
+ * - members/_components/club-members-list.tsx
+ * - members/_components/club-pending-join-requests.tsx
+ * ===========================================================================
+ */

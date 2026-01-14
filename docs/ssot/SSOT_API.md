@@ -1,13 +1,20 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.5.0  
+**Version:** 1.6.0  
 **Last Updated:** 14 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.6.0 (2026-01-14) — Club Members API Extension
+**New endpoints for Club Members management per CLUBS_IMPLEMENTATION_BLUEPRINT v1.1:**
+- **API-054 (GET /api/clubs/[id]/join-requests):** NEW endpoint. Lists pending join requests. Owner-only. Returns requests with user data.
+- **API-055 (POST /api/clubs/[id]/join-requests/[requestId]/approve):** NEW endpoint. Approves join request. Owner-only. Transitions pending → approved. Creates club_members record.
+- **API-056 (POST /api/clubs/[id]/join-requests/[requestId]/reject):** NEW endpoint. Rejects join request. Owner-only. Transitions pending → rejected (terminal).
+- **API-016 (GET /api/clubs/[id]):** CLARIFICATION — Documented `archivedAt` (isArchived) field in response. No behavior change.
 
 ### 1.5.0 (2026-01-14) — Club Profile (Public) API Extension
 **New endpoints for Club Profile (Public) page support per CLUBS_IMPLEMENTATION_BLUEPRINT v1:**
@@ -1351,6 +1358,7 @@ Per SSOT_CLUBS_DOMAIN.md §4:
         "id": "uuid",
         "name": "Club Name",
         "visibility": "public",
+        "archivedAt": null,
         "currentPlan": { /* Plan */ },
         "subscription": { /* Subscription */ },
         "memberCount": 25,
@@ -1360,6 +1368,15 @@ Per SSOT_CLUBS_DOMAIN.md §4:
     }
   }
   ```
+
+**Archived State Field (Clarified 2026-01-14):**
+
+Per SSOT_CLUBS_DOMAIN.md §8.3:
+- `archivedAt` (nullable string, ISO 8601): When club was archived (soft-deleted)
+- If `archivedAt !== null`, club is in archived state
+- Archived clubs are excluded from public listings but can still be read via direct ID
+- Frontend can derive `isArchived: boolean` from `archivedAt !== null`
+
 - **Side effects:** None
 
 **Errors:**
@@ -1759,6 +1776,237 @@ Per SSOT_CLUBS_DOMAIN.md §8.4.3 (Guest-Visible Member Fields):
 
 - Route handler: `/src/app/api/clubs/[id]/members/preview/route.ts`
 - Key functions: `listMembersWithUser()`, `countMembers()`
+
+---
+
+#### API-054: List Join Requests (Owner only)
+
+**Endpoint ID:** API-054  
+**Method:** GET  
+**Path:** `/api/clubs/[id]/join-requests`  
+**Runtime:** Node.js  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Owner only  
+
+**Purpose:**  
+List all pending join requests for a club. Allows owner to review and manage incoming membership requests.
+
+**Added in v1.6.0 (2026-01-14).**
+
+Per SSOT_CLUBS_DOMAIN.md §5.3: Only owner may view/approve/reject join requests.
+
+**Request:**
+
+- **Path params:** `id` (club UUID)
+- **Idempotency:** Yes (read-only)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "joinRequests": [
+        {
+          "id": "uuid",
+          "clubId": "uuid",
+          "requesterUserId": "uuid",
+          "status": "pending",
+          "message": "Optional message from requester",
+          "createdAt": "2026-01-14T00:00:00Z",
+          "updatedAt": "2026-01-14T00:00:00Z",
+          "user": {
+            "id": "uuid",
+            "name": "User Name",
+            "telegramHandle": "@username",
+            "avatarUrl": "https://..."
+          }
+        }
+      ]
+    }
+  }
+  ```
+- **Side effects:** None
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 401 | Not authenticated | Middleware blocks |
+| 403 | Not owner | Owner-only action |
+| 404 | Club not found | Invalid UUID |
+
+**Security & Abuse:**
+
+- **Rate limit:** read tier (300 req/5min)
+- **Spam / Cost abuse risk:** Low (read-only, owner-only)
+- **Sensitive data exposure:** No (owner has full club access)
+
+**Dependencies:**
+
+- Supabase (clubs, club_join_requests, users tables)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/join-requests/route.ts`
+- Key functions: `listClubJoinRequests()`, `requireClubOwner()`
+
+---
+
+#### API-055: Approve Join Request (Owner only)
+
+**Endpoint ID:** API-055  
+**Method:** POST  
+**Path:** `/api/clubs/[id]/join-requests/[requestId]/approve`  
+**Runtime:** Node.js  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Owner only  
+
+**Purpose:**  
+Approve a pending join request. Creates club_members record with role='member'.
+
+**Added in v1.6.0 (2026-01-14).**
+
+Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+Per SSOT_CLUBS_DOMAIN.md §6.2: Transitions pending → approved.
+Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
+
+**Request:**
+
+- **Path params:** `id` (club UUID), `requestId` (join request UUID)
+- **Body:** None
+- **Idempotency:** No (creates membership, returns 409 if already processed)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "joinRequest": {
+        "id": "uuid",
+        "clubId": "uuid",
+        "requesterUserId": "uuid",
+        "status": "approved",
+        "message": "Optional message",
+        "createdAt": "2026-01-14T00:00:00Z",
+        "updatedAt": "2026-01-14T00:00:00Z"
+      }
+    },
+    "message": "Заявка на вступление одобрена"
+  }
+  ```
+- **Side effects:** 
+  - Updates `club_join_requests.status` to 'approved'
+  - Creates `club_members` record with `role='member'`
+  - Emits audit event `JOIN_REQUEST_APPROVED`
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 401 | Not authenticated | Middleware blocks |
+| 403 | Not owner | Owner-only action |
+| 403 | Club is archived | Per SSOT_CLUBS_DOMAIN.md §8.3.2 |
+| 404 | Club not found | Invalid club UUID |
+| 404 | Join request not found | Invalid request UUID or doesn't belong to club |
+| 409 | Request already processed | Status is not 'pending' |
+
+**Security & Abuse:**
+
+- **Rate limit:** write tier (30 req/min)
+- **Spam / Cost abuse risk:** Low (owner-only, creates membership)
+- **Sensitive data exposure:** No
+
+**Dependencies:**
+
+- Supabase (clubs, club_join_requests, club_members, club_audit_log tables)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/join-requests/[requestId]/approve/route.ts`
+- Key functions: `approveClubJoinRequest()`, `requireClubOwner()`, `addMember()`
+
+---
+
+#### API-056: Reject Join Request (Owner only)
+
+**Endpoint ID:** API-056  
+**Method:** POST  
+**Path:** `/api/clubs/[id]/join-requests/[requestId]/reject`  
+**Runtime:** Node.js  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Owner only  
+
+**Purpose:**  
+Reject a pending join request. User can retry after rejection (creates new request).
+
+**Added in v1.6.0 (2026-01-14).**
+
+Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+Per SSOT_CLUBS_DOMAIN.md §6.2: Transitions pending → rejected (terminal state).
+Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
+
+**Request:**
+
+- **Path params:** `id` (club UUID), `requestId` (join request UUID)
+- **Body:** None
+- **Idempotency:** No (returns 409 if already processed)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "joinRequest": {
+        "id": "uuid",
+        "clubId": "uuid",
+        "requesterUserId": "uuid",
+        "status": "rejected",
+        "message": "Optional message",
+        "createdAt": "2026-01-14T00:00:00Z",
+        "updatedAt": "2026-01-14T00:00:00Z"
+      }
+    },
+    "message": "Заявка на вступление отклонена"
+  }
+  ```
+- **Side effects:** 
+  - Updates `club_join_requests.status` to 'rejected'
+  - Emits audit event `JOIN_REQUEST_REJECTED`
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 401 | Not authenticated | Middleware blocks |
+| 403 | Not owner | Owner-only action |
+| 403 | Club is archived | Per SSOT_CLUBS_DOMAIN.md §8.3.2 |
+| 404 | Club not found | Invalid club UUID |
+| 404 | Join request not found | Invalid request UUID or doesn't belong to club |
+| 409 | Request already processed | Status is not 'pending' |
+
+**Security & Abuse:**
+
+- **Rate limit:** write tier (30 req/min)
+- **Spam / Cost abuse risk:** Low (owner-only, no new records)
+- **Sensitive data exposure:** No
+
+**Dependencies:**
+
+- Supabase (clubs, club_join_requests, club_audit_log tables)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/join-requests/[requestId]/reject/route.ts`
+- Key functions: `rejectClubJoinRequest()`, `requireClubOwner()`
 
 ---
 
@@ -3801,7 +4049,7 @@ Get current notification queue stats without triggering processing (for monitori
 
 ### 10.1 Route Handler Files Found
 
-Total route handlers discovered: **35 files**
+Total route handlers discovered: **37 files**
 
 | # | Path | Methods | API IDs |
 |---|------|---------|---------|
@@ -3815,7 +4063,9 @@ Total route handlers discovered: **35 files**
 | 8 | `/src/app/api/clubs/route.ts` | GET, POST | API-014, API-015 |
 | 9 | `/src/app/api/clubs/[id]/route.ts` | GET, PATCH, DELETE | API-016 to API-018 |
 | 9.1 | `/src/app/api/clubs/[id]/unarchive/route.ts` | POST | API-051 |
-| 9.2 | `/src/app/api/clubs/[id]/join-requests/route.ts` | POST | API-052 |
+| 9.2 | `/src/app/api/clubs/[id]/join-requests/route.ts` | GET, POST | API-052, API-054 |
+| 9.3 | `/src/app/api/clubs/[id]/join-requests/[requestId]/approve/route.ts` | POST | API-055 |
+| 9.4 | `/src/app/api/clubs/[id]/join-requests/[requestId]/reject/route.ts` | POST | API-056 |
 | 10 | `/src/app/api/clubs/[id]/members/route.ts` | GET, POST | API-019, API-020 |
 | 10.1 | `/src/app/api/clubs/[id]/members/preview/route.ts` | GET | API-053 |
 | 11 | `/src/app/api/clubs/[id]/members/[userId]/route.ts` | PATCH, DELETE | API-021, API-022 |
@@ -3843,8 +4093,8 @@ Total route handlers discovered: **35 files**
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 34
-- **Total endpoints documented:** 53 (API-001 to API-053, excluding API-050)
+- **Total route handler files:** 37
+- **Total endpoints documented:** 56 (API-001 to API-056, excluding API-050)
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -3948,9 +4198,9 @@ Verified: TypeScript ✅, Build ✅
 ## 12. Metadata
 
 **Document Stats:**
-- Total endpoints: 53
-- Total route handlers: 34
-- Lines: ~3000
+- Total endpoints: 56
+- Total route handlers: 37
+- Lines: ~4200
 - Last audit: 14 January 2026
 
 **Maintenance:**

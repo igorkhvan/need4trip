@@ -43,8 +43,11 @@ import {
 import {
   createJoinRequest as createJoinRequestRepo,
   updateJoinRequestStatus as updateJoinRequestStatusRepo,
+  getJoinRequestById as getJoinRequestByIdRepo,
+  listPendingJoinRequestsWithUser as listPendingJoinRequestsWithUserRepo,
   type DbClubJoinRequest,
 } from "@/lib/db/clubJoinRequestRepo";
+import { addMember } from "@/lib/db/clubMemberRepo";
 // NEW: Use billing v2.0 system
 import { getClubSubscription as getClubSubscriptionV2 } from "@/lib/db/clubSubscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
@@ -743,43 +746,152 @@ export async function createClubJoinRequest(
 }
 
 /**
+ * List pending join requests for a club.
+ * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+ */
+export async function listClubJoinRequests(
+  clubId: string,
+  currentUser: CurrentUser | null
+): Promise<ClubJoinRequest[]> {
+  // Owner-only check (SSOT_CLUBS_DOMAIN.md §5.3, §A1)
+  await requireClubOwner(clubId, currentUser?.id, "просмотреть заявки на вступление");
+
+  const dbRequests = await listPendingJoinRequestsWithUserRepo(clubId);
+  
+  return dbRequests.map((req) => ({
+    id: req.id,
+    clubId: req.club_id,
+    requesterUserId: req.requester_user_id,
+    status: req.status,
+    message: req.message,
+    createdAt: req.created_at,
+    updatedAt: req.updated_at,
+    user: req.user ? {
+      id: req.user.id,
+      name: req.user.name,
+      telegramHandle: req.user.telegram_handle,
+      avatarUrl: req.user.avatar_url,
+    } : undefined,
+  }));
+}
+
+/**
  * Approve a club join request.
  * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
- * On approval, creates a `club_members` entry.
+ * On approval, creates a `club_members` entry with role='member'.
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived.
+ * 
+ * Emits audit event: JOIN_REQUEST_APPROVED
  */
 export async function approveClubJoinRequest(
+  clubId: string,
   requestId: string,
   currentUser: CurrentUser | null
-): Promise<void> {
-  // This needs more context, like the clubId, to check for ownership.
-  // For now, we will assume the API layer has a way to get the request and clubId.
-  // This is a placeholder for the actual implementation.
-  
-  // 1. Get join request from DB to find clubId
-  // 2. requireClubOwner(clubId, currentUser.id, ...)
-  // 3. updateJoinRequestStatus(requestId, 'approved')
-  // 4. addMemberRepo(clubId, requesterId, 'member', ownerId)
-  
-  // Placeholder implementation:
-  console.log('Approving join request:', requestId, 'by user:', currentUser?.id);
+): Promise<ClubJoinRequest> {
+  // 401: Require authentication
+  if (!currentUser) {
+    throw new UnauthorizedError("Требуется авторизация для одобрения заявки");
+  }
+
+  // Get join request to verify it exists and belongs to this club
+  const joinRequest = await getJoinRequestByIdRepo(requestId);
+  if (!joinRequest) {
+    throw new NotFoundError("Заявка на вступление не найдена");
+  }
+
+  // Verify request belongs to the specified club
+  if (joinRequest.club_id !== clubId) {
+    throw new NotFoundError("Заявка не принадлежит указанному клубу");
+  }
+
+  // Verify request is pending
+  if (joinRequest.status !== 'pending') {
+    throw new ConflictError(
+      `Заявка уже обработана: ${joinRequest.status}`,
+      { currentStatus: joinRequest.status }
+    );
+  }
+
+  // SSOT §8.3.2: Archived clubs forbid approve/reject
+  await assertClubNotArchived(clubId, "одобрить заявку на вступление");
+
+  // SSOT §5.3 + §A1: Owner-only action
+  await requireClubOwner(clubId, currentUser.id, "одобрить заявку на вступление");
+
+  // Update request status to 'approved'
+  const updatedRequest = await updateJoinRequestStatusRepo(requestId, 'approved');
+
+  // Create club membership with role='member'
+  await addMember(clubId, joinRequest.requester_user_id, 'member', currentUser.id);
+
+  // Audit logging
+  logClubAction({
+    clubId: clubId,
+    actorUserId: currentUser.id,
+    action: 'JOIN_REQUEST_APPROVED',
+    targetUserId: joinRequest.requester_user_id,
+    meta: { requestId },
+  });
+
+  return mapDbClubJoinRequestToDomain(updatedRequest);
 }
 
 /**
  * Reject a club join request.
  * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+ * Per SSOT_CLUBS_DOMAIN.md §6.2: Terminal state — user can retry after rejection.
+ * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived.
+ * 
+ * Emits audit event: JOIN_REQUEST_REJECTED
  */
 export async function rejectClubJoinRequest(
+  clubId: string,
   requestId: string,
   currentUser: CurrentUser | null
-): Promise<void> {
-  // Similar to approve, this needs more context.
-  
-  // 1. Get join request
-  // 2. requireClubOwner(clubId, ...)
-  // 3. updateJoinRequestStatus(requestId, 'rejected')
-  
-  // Placeholder implementation:
-  console.log('Rejecting join request:', requestId, 'by user:', currentUser?.id);
+): Promise<ClubJoinRequest> {
+  // 401: Require authentication
+  if (!currentUser) {
+    throw new UnauthorizedError("Требуется авторизация для отклонения заявки");
+  }
+
+  // Get join request to verify it exists and belongs to this club
+  const joinRequest = await getJoinRequestByIdRepo(requestId);
+  if (!joinRequest) {
+    throw new NotFoundError("Заявка на вступление не найдена");
+  }
+
+  // Verify request belongs to the specified club
+  if (joinRequest.club_id !== clubId) {
+    throw new NotFoundError("Заявка не принадлежит указанному клубу");
+  }
+
+  // Verify request is pending
+  if (joinRequest.status !== 'pending') {
+    throw new ConflictError(
+      `Заявка уже обработана: ${joinRequest.status}`,
+      { currentStatus: joinRequest.status }
+    );
+  }
+
+  // SSOT §8.3.2: Archived clubs forbid approve/reject
+  await assertClubNotArchived(clubId, "отклонить заявку на вступление");
+
+  // SSOT §5.3 + §A1: Owner-only action
+  await requireClubOwner(clubId, currentUser.id, "отклонить заявку на вступление");
+
+  // Update request status to 'rejected' (terminal state per §6.2)
+  const updatedRequest = await updateJoinRequestStatusRepo(requestId, 'rejected');
+
+  // Audit logging
+  logClubAction({
+    clubId: clubId,
+    actorUserId: currentUser.id,
+    action: 'JOIN_REQUEST_REJECTED',
+    targetUserId: joinRequest.requester_user_id,
+    meta: { requestId },
+  });
+
+  return mapDbClubJoinRequestToDomain(updatedRequest);
 }
 
 

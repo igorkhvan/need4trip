@@ -81,6 +81,13 @@ export interface ClubJoinRequest {
   message: string | null;
   createdAt: string;
   updatedAt: string;
+  // Optional user data (included in list responses)
+  user?: {
+    id: string;
+    name: string;
+    telegramHandle: string | null;
+    avatarUrl: string | null;
+  };
 }
 
 // ============================================================================

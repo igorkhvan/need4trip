@@ -1,6 +1,7 @@
 /**
  * API: /api/clubs/[id]/join-requests
  * 
+ * GET  - List pending join requests (Owner only)
  * POST - Create a pending join request
  * 
  * Per SSOT_CLUBS_DOMAIN.md §5.3: User-initiated request to join a club.
@@ -10,7 +11,7 @@
 
 import { NextRequest } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { createClubJoinRequest } from "@/lib/services/clubs";
+import { createClubJoinRequest, listClubJoinRequests } from "@/lib/services/clubs";
 import { getClubById } from "@/lib/db/clubRepo";
 import { getMember } from "@/lib/db/clubMemberRepo";
 import { respondSuccess, respondError } from "@/lib/api/response";
@@ -111,6 +112,49 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   } catch (error) {
     const { id } = await params;
     log.errorWithStack("Failed to create join request", error, { clubId: id });
+    return respondError(error);
+  }
+}
+
+/**
+ * GET /api/clubs/[id]/join-requests
+ * List pending join requests for a club.
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §5.3:
+ * - Only owner may view pending join requests
+ * 
+ * Responses:
+ * - 200: List of pending join requests with user data
+ * - 401: Not authenticated
+ * - 403: Not club owner
+ * - 404: Club not found
+ */
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  try {
+    const { id: clubId } = await params;
+    
+    // 404: Check club exists
+    const club = await getClubById(clubId);
+    if (!club) {
+      throw new NotFoundError("Клуб не найден");
+    }
+    
+    // Auth and owner check is done in service layer
+    const user = await getCurrentUserFromMiddleware(req);
+    
+    // Get pending join requests (owner-only check inside)
+    const joinRequests = await listClubJoinRequests(clubId, user);
+    
+    log.info("Club join requests listed", { 
+      clubId, 
+      userId: user?.id, 
+      count: joinRequests.length 
+    });
+    
+    return respondSuccess({ joinRequests });
+  } catch (error) {
+    const { id } = await params;
+    log.errorWithStack("Failed to list join requests", error, { clubId: id });
     return respondError(error);
   }
 }

@@ -47,3 +47,11 @@ export {
   ClubJoinCTASkeleton,
   ClubProfileSkeleton,
 } from "./club-profile-skeleton";
+
+// Club Members page skeletons per Visual Contract v4
+export {
+  ClubMembersHeaderSkeleton,
+  ClubMembersListSkeleton,
+  ClubPendingJoinRequestsSkeleton,
+  ClubMembersPageSkeleton,
+} from "./club-members-page-skeleton";
