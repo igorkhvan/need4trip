@@ -1,13 +1,19 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.7.0  
+**Version:** 1.7.1  
 **Last Updated:** 14 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.7.1 (2026-01-14) — Event Details Backend Alignment
+**Backend alignment per CLUBS_UI_VISUAL_CONTRACT v1 — EVENTS:**
+- **API-027/028 (GET /api/events/[id]):** RESPONSE CHANGE — Club events now include `club.archivedAt` field in response for UI read-only enforcement. Field is `null` for active clubs, ISO timestamp string for archived clubs. Personal events: `club` field remains `null`.
+- **API-028 (PUT /api/events/[id]):** VERIFICATION — Confirmed admin authorization for club events already implemented. Club owner OR admin can update club events. Personal events: creator only.
+- **API-029 (DELETE /api/events/[id]):** VERIFICATION — Confirmed admin authorization for club events already implemented. Club owner OR admin can delete club events. Personal events: creator only. Archived clubs: FORBIDDEN.
 
 ### 1.7.0 (2026-01-14) — Club Events API Expansion
 **New endpoint + Authorization clarifications per CLUBS_IMPLEMENTATION_BLUEPRINT v1 §5.6:**
@@ -2729,10 +2735,23 @@ Get full event details with hydrated relations (city, category, organizer, parti
       "organizer": { /* User */ },
       "participantsCount": 10,
       "maxParticipants": 50,
+      "clubId": "uuid | null",
+      "club": {
+        "id": "uuid",
+        "name": "Club Name",
+        "logoUrl": "string | null",
+        "archivedAt": "string | null"
+      } | null,
       ...
     }
   }
   ```
+
+**Club events response (v1.7.1+):**
+- `club.archivedAt`: ISO timestamp if archived, `null` if active
+- Used by UI for read-only enforcement when club is archived
+- Personal events (clubId=null): `club` field is `null`
+
 - **Side effects:** 
   - Auto-grant access for restricted events (first view by authenticated user)
 

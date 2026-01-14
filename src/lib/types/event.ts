@@ -123,6 +123,7 @@ export interface Event {
     id: string;
     name: string;
     logoUrl: string | null;
+    archivedAt: string | null; // NULL = active, NOT NULL = archived (for UI read-only enforcement)
   } | null;
   isPaid: boolean;
   price?: number | null;

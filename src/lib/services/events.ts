@@ -185,7 +185,8 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     locations,
     hydratedWithCity,
     hydratedWithCategory,
-    hydratedWithVehicleType
+    hydratedWithVehicleType,
+    clubData,
   ] = await Promise.all([
     // Load allowed brands
     getAllowedBrands(event.id).catch((err) => {
@@ -221,7 +222,25 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     hydrateVehicleTypes([event]).then(([hydrated]) => hydrated).catch((err) => {
       log.warn("Failed to hydrate vehicle type for event", { eventId: event.id, error: err });
       return event;
-    })
+    }),
+    
+    // ⚡ FIX #2: Load club data with archivedAt for UI read-only enforcement
+    // Per CLUBS_UI_VISUAL_CONTRACT v1 — EVENTS §5.2
+    (async () => {
+      if (!event.clubId) return null;
+      const { getClubById } = await import("@/lib/db/clubRepo");
+      const club = await getClubById(event.clubId);
+      if (!club) return null;
+      return {
+        id: club.id,
+        name: club.name,
+        logoUrl: club.logo_url,
+        archivedAt: club.archived_at,
+      };
+    })().catch((err) => {
+      log.warn("Failed to load club data for event", { eventId: event.id, clubId: event.clubId, error: err });
+      return event.club ?? null;
+    }),
   ]);
   
   // Merge all hydrated data
@@ -232,6 +251,7 @@ export async function hydrateEvent(event: Event): Promise<Event> {
     allowedBrands,
     participantsCount,
     locations,
+    club: clubData,
   };
 }
 
