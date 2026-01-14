@@ -55,3 +55,10 @@ export {
   ClubPendingJoinRequestsSkeleton,
   ClubMembersPageSkeleton,
 } from "./club-members-page-skeleton";
+
+// Club Events page skeletons per Visual Contract v1 — EVENTS
+export {
+  ClubEventsHeaderSkeleton,
+  ClubEventsListSkeleton,
+  ClubEventsPageSkeleton,
+} from "./club-events-page-skeleton";
