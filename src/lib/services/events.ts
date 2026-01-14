@@ -954,17 +954,62 @@ async function queueEventUpdatedNotificationsAsync(
   }
 }
 
+/**
+ * Delete event
+ * 
+ * Authorization (SSOT_CLUBS_EVENTS_ACCESS.md §5 + Blueprint §5.6):
+ * - Personal event (club_id = NULL): Only event creator can delete
+ * - Club event (club_id != NULL): Owner or Admin of the club can delete
+ * 
+ * Archived clubs:
+ * - SSOT_CLUBS_DOMAIN.md §8.3: Deletion is a write operation, FORBIDDEN for archived clubs
+ * 
+ * @param id Event ID
+ * @param currentUser Current authenticated user
+ * @returns true if deleted successfully
+ * @throws AuthError (401) if not authenticated
+ * @throws NotFoundError (404) if event not found
+ * @throws AuthError (403) if insufficient permissions
+ * @throws ClubArchivedError (403) if club is archived
+ */
 export async function deleteEvent(id: string, currentUser: CurrentUser | null): Promise<boolean> {
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для удаления события", undefined, 401);
   }
+  
   const existing = await getEventById(id);
   if (!existing) {
     throw new NotFoundError("Event not found");
   }
-  if (existing.created_by_user_id !== currentUser.id) {
-    throw new AuthError("Недостаточно прав для удаления события", undefined, 403);
+  
+  // ⚡ Authorization based on event type (personal vs club)
+  if (existing.club_id) {
+    // Club event: Owner or Admin can delete
+    // SSOT_CLUBS_DOMAIN.md §8.3.2: Archived clubs forbid deleting events
+    const { assertClubNotArchived } = await import("@/lib/services/clubs");
+    await assertClubNotArchived(existing.club_id, "удаление события клуба");
+    
+    // SSOT_CLUBS_EVENTS_ACCESS.md §5.1 + Blueprint §5.6:
+    // - Admin can "manage" club events (includes delete)
+    // - Owner has "full access"
+    // - pending role has NO elevated permissions
+    const { getUserClubRole } = await import("@/lib/db/clubMemberRepo");
+    const role = await getUserClubRole(existing.club_id, currentUser.id);
+    
+    if (!role || role === "pending" || (role !== "owner" && role !== "admin")) {
+      throw new AuthError(
+        "Недостаточно прав для удаления события клуба. Требуется роль owner или admin.",
+        undefined,
+        403
+      );
+    }
+  } else {
+    // Personal event: Only event creator can delete
+    if (existing.created_by_user_id !== currentUser.id) {
+      throw new AuthError("Недостаточно прав для удаления события", undefined, 403);
+    }
   }
+  
   return deleteEventRecord(id);
 }
 

@@ -1,13 +1,20 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.6.0  
+**Version:** 1.7.0  
 **Last Updated:** 14 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.7.0 (2026-01-14) — Club Events API Expansion
+**New endpoint + Authorization clarifications per CLUBS_IMPLEMENTATION_BLUEPRINT v1 §5.6:**
+- **API-057 (GET /api/clubs/[id]/events):** NEW endpoint. Lists events for a specific club. Club members only (owner/admin/member). Pagination + sort by startAt. Archived clubs: read-only semantics (listing allowed).
+- **API-026 (POST /api/events):** CLARIFICATION — Club events can ONLY be created by club owner or admin. Personal events: any authenticated user.
+- **API-028 (PUT /api/events/[id]):** CLARIFICATION — Club events can be updated by club owner or admin. Personal events: event creator only.
+- **API-029 (DELETE /api/events/[id]):** BEHAVIOR CHANGE — Club events can be deleted by club owner or admin (aligned with Blueprint §5.6). Personal events: event creator only. Archived clubs: delete FORBIDDEN.
 
 ### 1.6.0 (2026-01-14) — Club Members API Extension
 **New endpoints for Club Members management per CLUBS_IMPLEMENTATION_BLUEPRINT v1.1:**
@@ -2404,6 +2411,102 @@ Export club members to CSV file (requires plan with `allowCsvExport`).
 
 ---
 
+#### API-057: List Club Events
+
+**Endpoint ID:** API-057  
+**Method:** GET  
+**Path:** `/api/clubs/[id]/events`  
+**Runtime:** Node.js  
+**Auth:** Required (JWT)  
+**Auth mechanism:** JWT via middleware  
+**Authorization:** Club members only (owner, admin, member). Pending role = DENIED.  
+
+**Purpose:**  
+List events belonging to a specific club with pagination and sorting.
+
+**Authorization matrix:**
+| Role in Club | Access |
+|--------------|--------|
+| owner | ✅ Full list |
+| admin | ✅ Full list |
+| member | ✅ Full list |
+| pending | ❌ DENIED (403) |
+| non-member | ❌ DENIED (403) |
+
+**Archived clubs:** Listing is ALLOWED (read-only semantics per SSOT_CLUBS_DOMAIN.md §8.3 whitelist).
+
+**Request:**
+
+- **Path params:** `id` (club UUID)
+- **Query params:**
+  - `page` (optional): Page number (default: 1)
+  - `limit` (optional): Items per page (min: 1, max: 50, default: 12)
+- **Idempotency:** Yes (read-only)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "events": [
+      {
+        "id": "uuid",
+        "title": "Event Title",
+        "description": "...",
+        "dateTime": "ISO 8601",
+        "cityId": "uuid",
+        "city": { "id": "uuid", "name": "Москва", "countryCode": "RU" },
+        "categoryId": "uuid",
+        "category": { "id": "uuid", "name": "Автопробег", "icon": "🚗" },
+        "maxParticipants": 50,
+        "visibility": "public",
+        "isPaid": false,
+        "clubId": "uuid"
+      }
+    ],
+    "meta": {
+      "total": 42,
+      "page": 1,
+      "limit": 12,
+      "totalPages": 4,
+      "hasMore": true
+    },
+    "club": {
+      "id": "uuid",
+      "name": "Club Name",
+      "isArchived": false
+    }
+  }
+  ```
+- **Side effects:** None (read-only)
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Validation error | Invalid query params (Zod) |
+| 401 | Not authenticated | Auth required |
+| 403 | Not club member | Non-members denied |
+| 403 | Pending role | Pending = no access (same as non-member) |
+| 404 | Club not found | Invalid UUID |
+
+**Security & Abuse:**
+
+- **Rate limit:** read tier (300 req/5min)
+- **Spam / Cost abuse risk:** Low (read-only, paginated)
+- **Sensitive data exposure:** No (event data visible to members)
+
+**Dependencies:**
+
+- Supabase (events, clubs, club_members tables)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/clubs/[id]/events/route.ts`
+- Key functions: `listClubEvents()`, `getUserClubRole()`
+
+---
+
 ### 9.4 Events
 
 #### API-025: List Events
@@ -2482,10 +2585,19 @@ List events with filters, search, pagination. Server-side rendering.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Any authenticated user  
+**Authorization:** Personal event: Any authenticated user. Club event: Owner or Admin in target club only.  
 
 **Purpose:**  
 Create new event (personal or club).
+
+**Authorization matrix (SSOT_CLUBS_EVENTS_ACCESS.md §5.1 + §8.1):**
+| Event Type | Who can create |
+|------------|----------------|
+| Personal (clubId=null) | Any authenticated user |
+| Club (clubId=X) | Owner in X OR Admin in X |
+| Club (clubId=X) | Member/Pending in X → DENIED (403) |
+
+**Archived clubs:** Creating events in archived clubs is FORBIDDEN (403, code: `CLUB_ARCHIVED`).
 
 **Request:**
 
@@ -2564,6 +2676,8 @@ Create new event (personal or club).
 | 400 | Validation error | Zod schema violation |
 | 401 | Not authenticated | Middleware blocks |
 | 402 | Plan limit exceeded | PaywallError (club event, maxParticipants > plan limit) |
+| 403 | Not owner/admin in club | Club event: requires owner or admin role |
+| 403 | Club archived | CLUB_ARCHIVED: Cannot create events in archived clubs |
 | 409 | Credit confirmation required | CreditConfirmationRequiredError (personal event 16-500 participants) |
 
 **Security & Abuse:**
@@ -2654,10 +2768,19 @@ Get full event details with hydrated relations (city, category, organizer, parti
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Event owner only  
+**Authorization:** Personal event: Event owner only. Club event: Owner or Admin in club.  
 
 **Purpose:**  
 Update event details.
+
+**Authorization matrix (SSOT_CLUBS_EVENTS_ACCESS.md §5.1-5.2 + §8.1):**
+| Event Type | Who can update |
+|------------|----------------|
+| Personal (clubId=null) | Event creator only |
+| Club (clubId=X) | Owner in X OR Admin in X |
+| Club (clubId=X) | Member/Pending in X → DENIED (403) |
+
+**Archived clubs:** Updating events in archived clubs is FORBIDDEN (403, code: `CLUB_ARCHIVED`).
 
 **Request:**
 
@@ -2691,7 +2814,9 @@ Update event details.
 | 400 | Validation error | Zod schema violation |
 | 401 | Not authenticated | Middleware blocks |
 | 402 | Plan limit exceeded | PaywallError (club event) |
-| 403 | Not event owner | Authorization check |
+| 403 | Not event owner | Personal event: creator only |
+| 403 | Not owner/admin in club | Club event: requires owner or admin role |
+| 403 | Club archived | CLUB_ARCHIVED: Cannot update events in archived clubs |
 | 404 | Event not found | Invalid UUID |
 | 409 | Credit confirmation required | CreditConfirmationRequiredError (personal event 16-500 participants) |
 
@@ -2721,10 +2846,19 @@ Update event details.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Event owner only  
+**Authorization:** Personal event: Event owner only. Club event: Owner or Admin in club.  
 
 **Purpose:**  
 Delete event (cascades participants, access grants).
+
+**Authorization matrix (SSOT_CLUBS_EVENTS_ACCESS.md §5 + Blueprint §5.6):**
+| Event Type | Who can delete |
+|------------|----------------|
+| Personal (clubId=null) | Event creator only |
+| Club (clubId=X) | Owner in X OR Admin in X |
+| Club (clubId=X) | Member/Pending in X → DENIED (403) |
+
+**Archived clubs:** Deleting events in archived clubs is FORBIDDEN (403, code: `CLUB_ARCHIVED`).
 
 **Request:**
 
@@ -2749,7 +2883,9 @@ Delete event (cascades participants, access grants).
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not event owner | Authorization check |
+| 403 | Not event owner | Personal event: creator only |
+| 403 | Not owner/admin in club | Club event: requires owner or admin role |
+| 403 | Club archived | CLUB_ARCHIVED: Cannot delete events in archived clubs |
 | 404 | Event not found | Invalid UUID |
 
 **Security & Abuse:**
@@ -4071,6 +4207,7 @@ Total route handlers discovered: **37 files**
 | 11 | `/src/app/api/clubs/[id]/members/[userId]/route.ts` | PATCH, DELETE | API-021, API-022 |
 | 12 | `/src/app/api/clubs/[id]/current-plan/route.ts` | GET | API-023 |
 | 13 | `/src/app/api/clubs/[id]/export/route.ts` | GET | API-024 |
+| 13.1 | `/src/app/api/clubs/[id]/events/route.ts` | GET | API-057 |
 | 14 | `/src/app/api/events/route.ts` | GET, POST | API-025, API-026 |
 | 15 | `/src/app/api/events/[id]/route.ts` | GET, PUT, DELETE | API-027 to API-029 |
 | 16 | `/src/app/api/events/[id]/registration/route.ts` | PATCH | API-030 |
@@ -4093,8 +4230,8 @@ Total route handlers discovered: **37 files**
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 37
-- **Total endpoints documented:** 56 (API-001 to API-056, excluding API-050)
+- **Total route handler files:** 38
+- **Total endpoints documented:** 57 (API-001 to API-057, excluding API-050)
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
