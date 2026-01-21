@@ -2,8 +2,21 @@
 
 **Status:** LOCKED / Production-target  
 **Version:** 1.1  
-**Last Updated:** 2026-01-02  
+**Last Updated:** 2026-01-21  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
+
+---
+
+### ⚠️ Clubs Settings v1 — COMPLETE & FROZEN
+
+| Property | Value |
+|----------|-------|
+| **Status** | COMPLETE |
+| **Freeze Date** | 2026-01-21 |
+| **Scope** | §8.4 Club Settings (`public_members_list_enabled`, `public_show_owner_badge`, `open_join_enabled` reserved) |
+| **Freeze Rule** | Any changes to Clubs Settings MUST be versioned as v2 with a new contract |
+
+---
 - Club entity domain model (lifecycle, visibility, settings)
 - Membership model (entry methods, invites, join requests, transitions)
 - Trust & Partner model (badges, scoped permissions)

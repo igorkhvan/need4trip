@@ -9,6 +9,9 @@
 
 ## Change Log (SSOT)
 
+### 1.7.2 (2026-01-21) — Clubs Settings v1 Freeze
+**Clubs Settings v1 is COMPLETE and FROZEN.** API endpoints related to `clubs.settings` (API-017 PATCH /api/clubs/[id]) are stable. Any changes to club settings behavior or schema require a new versioned contract (v2).
+
 ### 1.7.1 (2026-01-14) — Event Details Backend Alignment
 **Backend alignment per CLUBS_UI_VISUAL_CONTRACT v1 — EVENTS:**
 - **API-027/028 (GET /api/events/[id]):** RESPONSE CHANGE — Club events now include `club.archivedAt` field in response for UI read-only enforcement. Field is `null` for active clubs, ISO timestamp string for archived clubs. Personal events: `club` field remains `null`.

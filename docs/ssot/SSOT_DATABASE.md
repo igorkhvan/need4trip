@@ -665,7 +665,7 @@ CREATE TABLE public.clubs (
   - ❌ **MUST NOT** be used for permissions, visibility decisions, or access control.
 - ⚡ **`settings`** (добавлено 2026-01-13):
   - JSONB field for storing club-specific feature flags and settings.
-  - Examples: `public_members_list_enabled`, `public_show_owner_badge`.
+  - Examples: `public_members_list_enabled`, `public_show_owner_badge`, `open_join_enabled` (RESERVED).
   - SSOT Reference: SSOT_CLUBS_DOMAIN.md §8.4
 - ⚡ **`archived_at`** (добавлено 2026-01-02):
   - NULL means active club.
