@@ -3,12 +3,13 @@
  * 
  * Client component that fetches and displays:
  * - Members List (API-019)
- * - Pending Join Requests (API-054, owner only)
+ * - Pending Join Requests (API-054, owner/admin - per V5 §4)
  * 
- * Per Visual Contract v4:
+ * Per Visual Contract v4 + v5:
  * - No optimistic UI
  * - Explicit refresh after mutations
  * - Section-level loading states
+ * - Requests section visible to Owner OR Admin (V5 §4)
  */
 
 "use client";
@@ -57,7 +58,8 @@ interface ClubMembersContentProps {
   clubId: string;
   currentUserId: string;
   currentUserRole: ClubRole | null;
-  isOwner: boolean;
+  /** Per V5 §4: Owner OR Admin can manage requests */
+  canManageRequests: boolean;
   isArchived: boolean;
 }
 
@@ -65,7 +67,7 @@ export function ClubMembersContent({
   clubId,
   currentUserId,
   currentUserRole,
-  isOwner,
+  canManageRequests,
   isArchived,
 }: ClubMembersContentProps) {
   // Members state
@@ -73,7 +75,7 @@ export function ClubMembersContent({
   const [membersLoading, setMembersLoading] = useState(true);
   const [membersError, setMembersError] = useState<string | null>(null);
 
-  // Join requests state (owner only)
+  // Join requests state (owner/admin per V5 §4)
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsError, setRequestsError] = useState<string | null>(null);
@@ -107,9 +109,9 @@ export function ClubMembersContent({
     }
   }, [clubId]);
 
-  // Fetch join requests (API-054, owner only)
+  // Fetch join requests (API-054, owner/admin per V5 §4)
   const fetchJoinRequests = useCallback(async () => {
-    if (!isOwner) {
+    if (!canManageRequests) {
       setRequestsLoading(false);
       return;
     }
@@ -126,7 +128,7 @@ export function ClubMembersContent({
           return;
         }
         if (response.status === 403) {
-          // Not owner - just hide section
+          // Not owner/admin - just hide section
           setJoinRequests([]);
           return;
         }
@@ -140,7 +142,7 @@ export function ClubMembersContent({
     } finally {
       setRequestsLoading(false);
     }
-  }, [clubId, isOwner]);
+  }, [clubId, canManageRequests]);
 
   // Initial data fetch
   useEffect(() => {
@@ -187,9 +189,9 @@ export function ClubMembersContent({
         />
       )}
 
-      {/* SECTION 3: Pending Join Requests (Blocking, owner only) - per Visual Contract v4 §6 */}
-      {/* Per Visual Contract v4 §6: Entire section is hidden for non-owners */}
-      {isOwner && (
+      {/* SECTION 3: Pending Join Requests (Blocking, owner/admin) - per Visual Contract v4 §6, v5 §4 */}
+      {/* Per Visual Contract v5 §4: Section visible to Owner OR Admin */}
+      {canManageRequests && (
         requestsLoading ? (
           <ClubPendingJoinRequestsSkeleton />
         ) : requestsError ? (

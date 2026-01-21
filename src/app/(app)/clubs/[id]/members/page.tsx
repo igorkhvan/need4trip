@@ -2,11 +2,12 @@
  * Club Members Page
  * 
  * Per Visual Contract v4 (CLUBS_UI_VISUAL_CONTRACT V4 MEMBERS):
+ * Per Visual Contract v5 (CLUBS_UI_VISUAL_CONTRACT V5 MEMBERSHIP REQUESTS):
  * 
  * Layout (STRICT ORDER per Visual Contract v4 §3):
  * 1. Header (Blocking)
  * 2. Members List (Blocking)
- * 3. Pending Join Requests (Blocking, owner only)
+ * 3. Pending Join Requests (Blocking, owner/admin - per V5 §4)
  * 
  * States:
  * - Loading → Full-page skeleton
@@ -16,7 +17,7 @@
  * Data sources:
  * - Header: GET /api/clubs/[id] (API-016)
  * - Members: GET /api/clubs/[id]/members (API-019)
- * - Join Requests: GET /api/clubs/[id]/join-requests (API-054) - owner only
+ * - Join Requests: GET /api/clubs/[id]/join-requests (API-054) - owner/admin
  */
 
 import { Suspense } from "react";
@@ -60,10 +61,13 @@ export default async function ClubMembersPage({ params }: ClubMembersPageProps) 
   // Get user's role in club (if authenticated)
   const userRole = user ? await getUserClubRole(id, user.id) : null;
   
-  // Determine states per Visual Contract v4 §1
+  // Determine states per Visual Contract v4 §1, V5 §4
   const isMember = userRole !== null && userRole !== "pending";
   const isOwner = userRole === "owner";
+  const isAdmin = userRole === "admin";
   const isArchived = !!club.archivedAt;
+  // Per V5 §4: Join Requests section visible to Owner OR Admin
+  const canManageRequests = isOwner || isAdmin;
 
   // 403: Not authenticated or not a member (per Visual Contract v4 §1)
   // Per Visual Contract v4 §5: Visible to member, admin, owner
@@ -112,7 +116,7 @@ export default async function ClubMembersPage({ params }: ClubMembersPageProps) 
           clubId={id}
           currentUserId={user.id}
           currentUserRole={userRole}
-          isOwner={isOwner}
+          canManageRequests={canManageRequests}
           isArchived={isArchived}
         />
       </Suspense>
