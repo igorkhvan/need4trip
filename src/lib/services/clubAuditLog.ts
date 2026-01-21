@@ -7,6 +7,7 @@ import { log } from '@/lib/utils/logger';
  */
 
 // A simplified definition of the audit action codes from SSOT §9.1
+// Updated in v1.7.3 (2026-01-21): Added JOIN_REQUEST_CREATED, JOIN_REQUEST_CANCELLED
 export type ClubAuditAction =
   | 'CLUB_CREATED'
   | 'CLUB_UPDATED'
@@ -14,6 +15,8 @@ export type ClubAuditAction =
   | 'CLUB_ARCHIVED'
   | 'CLUB_UNARCHIVED'
   | 'INVITE_CREATED'
+  | 'JOIN_REQUEST_CREATED'
+  | 'JOIN_REQUEST_CANCELLED'
   | 'JOIN_REQUEST_APPROVED'
   | 'JOIN_REQUEST_REJECTED'
   | 'MEMBER_REMOVED'

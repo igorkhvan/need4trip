@@ -9,6 +9,14 @@
 
 ## Change Log (SSOT)
 
+### 1.7.3 (2026-01-21) — Membership Requests v1 Backend Enablement
+**Phase 8A: Membership Requests v1 backend implementation.**
+- **API-052 (POST /api/clubs/[id]/join-requests):** BEHAVIOR CHANGE — Added preconditions: openJoinEnabled must be false, user must not be owner/admin.
+- **API-054 (GET /api/clubs/[id]/join-requests):** AUTHORIZATION CHANGE — Now Owner OR Admin (was owner-only).
+- **API-055 (POST /api/clubs/[id]/join-requests/[requestId]/approve):** BEHAVIOR CHANGE — Now transactional (INSERT member + DELETE request). Owner OR Admin authorization.
+- **API-056 (POST /api/clubs/[id]/join-requests/[requestId]/reject):** BEHAVIOR CHANGE — Now silent DELETE (no status stored). Owner OR Admin authorization.
+- **SSOT Reference:** SSOT_CLUBS_DOMAIN.md §6.3 "Membership Requests v1"
+
 ### 1.7.2 (2026-01-21) — Clubs Settings v1 Freeze
 **Clubs Settings v1 is COMPLETE and FROZEN.** API endpoints related to `clubs.settings` (API-017 PATCH /api/clubs/[id]) are stable. Any changes to club settings behavior or schema require a new versioned contract (v2).
 
@@ -1631,17 +1639,23 @@ Restore archived club. Sets `archived_at = NULL`. Per SSOT_CLUBS_DOMAIN.md §8.3
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Any authenticated user  
+**Authorization:** Any authenticated user (except owner/admin)  
 
 **Purpose:**  
 Create a pending join request for a club. User-initiated request to join.
 
-**Added in v1.5.0 (2026-01-14).**
+**Added in v1.5.0 (2026-01-14).**  
+**Updated in v1.7.3 (2026-01-21):** Added v1 preconditions.
 
-Per SSOT_CLUBS_DOMAIN.md §5.3:
-- User requests to join a club
-- Owner approves/rejects
-- Only owner may approve/reject
+Per SSOT_CLUBS_DOMAIN.md §6.3 (Membership Requests v1):
+
+**Preconditions (HARD):**
+- User is authenticated
+- User is NOT already a club member (any role)
+- User is NOT owner or admin of the club
+- `club.settings.openJoinEnabled === false`
+
+If `openJoinEnabled === true`: returns 409 (use direct join instead).
 
 Per SSOT_CLUBS_DOMAIN.md §10.1:
 - Idempotent per (club_id, requester_user_id)
@@ -1689,6 +1703,8 @@ Per SSOT_CLUBS_DOMAIN.md §10.1:
 | 403 | Club is archived | Per SSOT_CLUBS_DOMAIN.md §8.3.2 |
 | 404 | Club not found | Invalid UUID |
 | 409 | Already a member | User is already member (any role including pending) |
+| 409 | Owner/Admin submitting | Owner/Admin NEVER submit join requests (v1) |
+| 409 | openJoinEnabled=true | Use direct join, not join request |
 
 **Security & Abuse:**
 
@@ -1816,7 +1832,7 @@ Per SSOT_CLUBS_DOMAIN.md §8.4.3 (Guest-Visible Member Fields):
 
 ---
 
-#### API-054: List Join Requests (Owner only)
+#### API-054: List Join Requests (Owner/Admin)
 
 **Endpoint ID:** API-054  
 **Method:** GET  
@@ -1824,14 +1840,15 @@ Per SSOT_CLUBS_DOMAIN.md §8.4.3 (Guest-Visible Member Fields):
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner only  
+**Authorization:** Owner OR Admin  
 
 **Purpose:**  
-List all pending join requests for a club. Allows owner to review and manage incoming membership requests.
+List all pending join requests for a club. Allows owner/admin to review and manage incoming membership requests.
 
-**Added in v1.6.0 (2026-01-14).**
+**Added in v1.6.0 (2026-01-14).**  
+**Updated in v1.7.3 (2026-01-21):** Changed authorization to Owner OR Admin (was owner-only).
 
-Per SSOT_CLUBS_DOMAIN.md §5.3: Only owner may view/approve/reject join requests.
+Per SSOT_CLUBS_DOMAIN.md §6.3: Only owner/admin may list/approve/reject join requests.
 
 **Request:**
 
@@ -1872,14 +1889,14 @@ Per SSOT_CLUBS_DOMAIN.md §5.3: Only owner may view/approve/reject join requests
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner | Owner-only action |
+| 403 | Not owner/admin | Owner or Admin required |
 | 404 | Club not found | Invalid UUID |
 
 **Security & Abuse:**
 
 - **Rate limit:** read tier (300 req/5min)
-- **Spam / Cost abuse risk:** Low (read-only, owner-only)
-- **Sensitive data exposure:** No (owner has full club access)
+- **Spam / Cost abuse risk:** Low (read-only, owner/admin only)
+- **Sensitive data exposure:** No (owner/admin has full club access)
 
 **Dependencies:**
 
@@ -1888,11 +1905,11 @@ Per SSOT_CLUBS_DOMAIN.md §5.3: Only owner may view/approve/reject join requests
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/join-requests/route.ts`
-- Key functions: `listClubJoinRequests()`, `requireClubOwner()`
+- Key functions: `listClubJoinRequests()`, `requireClubOwnerOrAdmin()`
 
 ---
 
-#### API-055: Approve Join Request (Owner only)
+#### API-055: Approve Join Request (Owner/Admin)
 
 **Endpoint ID:** API-055  
 **Method:** POST  
@@ -1900,22 +1917,25 @@ Per SSOT_CLUBS_DOMAIN.md §5.3: Only owner may view/approve/reject join requests
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner only  
+**Authorization:** Owner OR Admin  
 
 **Purpose:**  
-Approve a pending join request. Creates club_members record with role='member'.
+Approve a pending join request. TRANSACTIONAL: creates club_members record and deletes the join request.
 
-**Added in v1.6.0 (2026-01-14).**
+**Added in v1.6.0 (2026-01-14).**  
+**Updated in v1.7.3 (2026-01-21):** Changed to v1 transactional semantic (INSERT + DELETE). Owner OR Admin authorization.
 
-Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
-Per SSOT_CLUBS_DOMAIN.md §6.2: Transitions pending → approved.
-Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
+Per SSOT_CLUBS_DOMAIN.md §6.3 (Membership Requests v1):
+- MUST BE TRANSACTIONAL: insert into club_members + delete join request
+- Must be race-safe and idempotent
+- Only Owner/Admin may approve
+- Forbidden when club is archived
 
 **Request:**
 
 - **Path params:** `id` (club UUID), `requestId` (join request UUID)
 - **Body:** None
-- **Idempotency:** No (creates membership, returns 409 if already processed)
+- **Idempotency:** Yes (returns success if user already member)
 
 **Response:**
 
@@ -1924,22 +1944,14 @@ Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
   {
     "success": true,
     "data": {
-      "joinRequest": {
-        "id": "uuid",
-        "clubId": "uuid",
-        "requesterUserId": "uuid",
-        "status": "approved",
-        "message": "Optional message",
-        "createdAt": "2026-01-14T00:00:00Z",
-        "updatedAt": "2026-01-14T00:00:00Z"
-      }
+      "success": true,
+      "requesterUserId": "uuid"
     },
     "message": "Заявка на вступление одобрена"
   }
   ```
 - **Side effects:** 
-  - Updates `club_join_requests.status` to 'approved'
-  - Creates `club_members` record with `role='member'`
+  - TRANSACTIONAL: Creates `club_members` record with `role='member'` AND deletes `club_join_requests` row
   - Emits audit event `JOIN_REQUEST_APPROVED`
 
 **Errors:**
@@ -1947,16 +1959,16 @@ Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner | Owner-only action |
+| 403 | Not owner/admin | Owner or Admin required |
 | 403 | Club is archived | Per SSOT_CLUBS_DOMAIN.md §8.3.2 |
 | 404 | Club not found | Invalid club UUID |
-| 404 | Join request not found | Invalid request UUID or doesn't belong to club |
+| 404 | Join request not found | Invalid request UUID, doesn't belong to club, or not pending |
 | 409 | Request already processed | Status is not 'pending' |
 
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Low (owner-only, creates membership)
+- **Spam / Cost abuse risk:** Low (owner/admin only, creates membership)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
@@ -1966,11 +1978,11 @@ Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/join-requests/[requestId]/approve/route.ts`
-- Key functions: `approveClubJoinRequest()`, `requireClubOwner()`, `addMember()`
+- Key functions: `approveClubJoinRequest()`, `requireClubOwnerOrAdmin()`, `approveJoinRequestTransactional()`
 
 ---
 
-#### API-056: Reject Join Request (Owner only)
+#### API-056: Reject Join Request (Owner/Admin)
 
 **Endpoint ID:** API-056  
 **Method:** POST  
@@ -1978,22 +1990,26 @@ Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner only  
+**Authorization:** Owner OR Admin  
 
 **Purpose:**  
-Reject a pending join request. User can retry after rejection (creates new request).
+Reject a pending join request. SILENT: deletes the join request without storing rejection reason. User can retry after rejection (creates new request).
 
-**Added in v1.6.0 (2026-01-14).**
+**Added in v1.6.0 (2026-01-14).**  
+**Updated in v1.7.3 (2026-01-21):** Changed to v1 silent DELETE semantic. Owner OR Admin authorization.
 
-Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
-Per SSOT_CLUBS_DOMAIN.md §6.2: Transitions pending → rejected (terminal state).
-Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
+Per SSOT_CLUBS_DOMAIN.md §6.3 (Membership Requests v1):
+- SILENT: delete join request without storing rejection reason
+- NO messages, NO status stored, NO feedback
+- User can retry after rejection (creates new request)
+- Only Owner/Admin may reject
+- Forbidden when club is archived
 
 **Request:**
 
 - **Path params:** `id` (club UUID), `requestId` (join request UUID)
 - **Body:** None
-- **Idempotency:** No (returns 409 if already processed)
+- **Idempotency:** Yes (returns 404 if already deleted)
 
 **Response:**
 
@@ -2002,38 +2018,31 @@ Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
   {
     "success": true,
     "data": {
-      "joinRequest": {
-        "id": "uuid",
-        "clubId": "uuid",
-        "requesterUserId": "uuid",
-        "status": "rejected",
-        "message": "Optional message",
-        "createdAt": "2026-01-14T00:00:00Z",
-        "updatedAt": "2026-01-14T00:00:00Z"
-      }
+      "success": true,
+      "requesterUserId": "uuid"
     },
     "message": "Заявка на вступление отклонена"
   }
   ```
 - **Side effects:** 
-  - Updates `club_join_requests.status` to 'rejected'
-  - Emits audit event `JOIN_REQUEST_REJECTED`
+  - DELETES `club_join_requests` row (no status update, no history stored)
+  - Emits audit event `JOIN_REQUEST_REJECTED` (history preserved in audit_log only)
 
 **Errors:**
 
 | Status | Condition | Notes |
 |--------|-----------|-------|
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner | Owner-only action |
+| 403 | Not owner/admin | Owner or Admin required |
 | 403 | Club is archived | Per SSOT_CLUBS_DOMAIN.md §8.3.2 |
 | 404 | Club not found | Invalid club UUID |
-| 404 | Join request not found | Invalid request UUID or doesn't belong to club |
+| 404 | Join request not found | Invalid request UUID, doesn't belong to club, not pending, or already deleted |
 | 409 | Request already processed | Status is not 'pending' |
 
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Low (owner-only, no new records)
+- **Spam / Cost abuse risk:** Low (owner/admin only, deletes record)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
@@ -2043,7 +2052,7 @@ Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when club is archived.
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/[id]/join-requests/[requestId]/reject/route.ts`
-- Key functions: `rejectClubJoinRequest()`, `requireClubOwner()`
+- Key functions: `rejectClubJoinRequest()`, `requireClubOwnerOrAdmin()`, `deleteJoinRequest()`
 
 ---
 

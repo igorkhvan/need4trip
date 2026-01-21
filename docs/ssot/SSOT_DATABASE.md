@@ -8,6 +8,12 @@
 
 ## Change Log (SSOT)
 
+### 2026-01-21 (Membership Requests v1)
+- **Reason**: Phase 8A — Backend Enablement for Membership Requests v1.
+- **Updated `club_join_requests` documentation** — Added v1 behavior notes (DELETE semantics, transactional approve).
+- **Added index** — `club_join_requests_club_id_idx` for efficient listing.
+- **SSOT Reference**: SSOT_CLUBS_DOMAIN.md §6.3 "Membership Requests v1"
+
 ### 2026-01-13 (Finalization)
 - **Reason**: SSOT_DATABASE finalized after Clubs domain foundation migrations and audit.
 - **Updated Migration History** to reflect key milestones.
@@ -803,7 +809,17 @@ CREATE TABLE public.club_join_requests (
 
 **Indexes**:
 - `club_join_requests_pkey` (PRIMARY KEY on id)
+- `club_join_requests_club_id_idx` (on club_id)
 - `unique_pending_join_request_per_user` (UNIQUE on club_id, requester_user_id WHERE status = 'pending')
+
+**Notes**:
+- ⚡ **Membership Requests v1 (2026-01-21)**:
+  - Pending state is **implicit**: row exists = pending
+  - Approve = TRANSACTIONAL: INSERT member + DELETE request
+  - Reject = SILENT DELETE (no history stored in this table)
+  - Status column exists but v1 logic uses DELETE semantics
+  - History is preserved only in `club_audit_log`
+  - SSOT Reference: SSOT_CLUBS_DOMAIN.md §6.3
 
 **RLS**: TBD
 

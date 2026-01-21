@@ -348,6 +348,83 @@ Partner directory may onboard "trusted partners" with scoped rights.
 - user can cancel own pending request
 - owner can reject; user can retry after rejection (creates new request)
 
+### 6.3 Membership Requests v1 (NORMATIVE)
+
+**Status:** LOCKED / Production-ready  
+**Version:** v1  
+**Last Updated:** 2026-01-21
+
+This section defines the v1 implementation of membership requests for private clubs.
+
+#### 6.3.1 Definition
+
+A "membership request" is:
+- NOT a role
+- NOT a UI concept  
+- A pending relationship between User and Club
+
+#### 6.3.2 Preconditions (HARD)
+
+A join request MAY be created ONLY IF:
+- User is authenticated
+- User is NOT already a club member (any role)
+- User is NOT owner or admin of the club
+- `club.settings.openJoinEnabled === false`
+
+If `openJoinEnabled === true`:
+- Join requests MUST NOT be used (user joins directly)
+
+#### 6.3.3 Pending State (v1 Semantic)
+
+- Pending state is **implicit**: a row exists in `club_join_requests`
+- Status column exists in DB but v1 logic treats `status='pending'` + row existence as the pending state
+- No explicit status tracking beyond pending in v1
+
+#### 6.3.4 Operations
+
+**User Actions:**
+
+1. **Submit Join Request**
+   - Effect: insert into `club_join_requests`
+   - Errors: 409 if request already exists, 409 if user already a member
+
+2. **Cancel Join Request** (OPTIONAL)
+   - Effect: delete join request
+   - RBAC: requester only
+
+**Admin Actions (Owner | Admin only):**
+
+3. **List Join Requests**
+   - Returns pending requests for the club
+   - Minimal payload only
+
+4. **Approve Join Request**
+   - MUST BE TRANSACTIONAL:
+     1. insert into `club_members` with role='member'
+     2. delete join request
+   - Must be race-safe and idempotent
+
+5. **Reject Join Request** (SILENT)
+   - Effect: delete join request
+   - NO messages, NO status stored, NO feedback
+
+#### 6.3.5 RBAC Rules (HARD)
+
+- Owner/Admin NEVER submit join requests
+- Only Owner/Admin may list, approve, reject
+- RBAC enforced in SERVICE layer ONLY
+- Frontend must NOT decide permissions
+
+#### 6.3.6 v1 Limitations (OUT OF SCOPE)
+
+The following are explicitly NOT supported in v1:
+- Messages or notes on rejection
+- Rejection reasons
+- Notifications
+- History / audit (beyond audit_log)
+- Pagination of requests
+- Status column usage beyond 'pending'
+
 ---
 
 ## 7. Membership Transitions (NORMATIVE)

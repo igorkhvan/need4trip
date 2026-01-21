@@ -42,9 +42,12 @@ import {
 } from "@/lib/db/clubInviteRepo";
 import {
   createJoinRequest as createJoinRequestRepo,
-  updateJoinRequestStatus as updateJoinRequestStatusRepo,
   getJoinRequestById as getJoinRequestByIdRepo,
   listPendingJoinRequestsWithUser as listPendingJoinRequestsWithUserRepo,
+  deleteJoinRequest as deleteJoinRequestRepo,
+  deleteJoinRequestByClubAndUser as deleteJoinRequestByClubAndUserRepo,
+  getPendingJoinRequest as getPendingJoinRequestRepo,
+  approveJoinRequestTransactional as approveJoinRequestTransactionalRepo,
   type DbClubJoinRequest,
 } from "@/lib/db/clubJoinRequestRepo";
 import { addMember } from "@/lib/db/clubMemberRepo";
@@ -339,6 +342,39 @@ export async function requireClubOwner(
       `Только владелец клуба может: ${action}. Текущая роль: ${role ?? "не участник"}`
     );
   }
+}
+
+/**
+ * Require user to be club owner OR admin.
+ * Phase 8A v1: Owner/Admin may list, approve, reject join requests.
+ * 
+ * Per SSOT_ARCHITECTURE.md §20.2:
+ * - 401 UnauthorizedError for unauthenticated (null userId)
+ * - 403 ForbiddenError for authenticated but not owner/admin
+ * 
+ * @throws UnauthorizedError if user is not authenticated
+ * @throws ForbiddenError if user is not owner or admin
+ */
+export async function requireClubOwnerOrAdmin(
+  clubId: string,
+  userId: string | null | undefined,
+  action: string
+): Promise<ClubRole> {
+  // 401: Unauthenticated (SSOT_ARCHITECTURE.md §20.2)
+  if (!userId) {
+    throw new UnauthorizedError(`Требуется авторизация для: ${action}`);
+  }
+  
+  const role = await getUserClubRole(clubId, userId);
+  
+  // 403: Authenticated but not owner/admin (SSOT_ARCHITECTURE.md §20.2)
+  if (role !== "owner" && role !== "admin") {
+    throw new ForbiddenError(
+      `Только владелец или администратор клуба может: ${action}. Текущая роль: ${role ?? "не участник"}`
+    );
+  }
+  
+  return role;
 }
 
 /**
@@ -742,7 +778,15 @@ export async function createClubInvite(
 
 /**
  * Create a join request for a user to join a club.
- * This is used for both public "Request to Join" and "Invite Link" flows.
+ * 
+ * Phase 8A v1 PRECONDITIONS (HARD):
+ * - User is authenticated
+ * - User is NOT already a club member
+ * - User is NOT owner or admin of the club
+ * - club.settings.openJoinEnabled === false
+ * 
+ * If openJoinEnabled === true: join requests MUST NOT be used (user joins directly).
+ * 
  * Per SSOT_CLUBS_DOMAIN.md §5.2, §5.3
  */
 export async function createClubJoinRequest(
@@ -750,29 +794,68 @@ export async function createClubJoinRequest(
   requesterUserId: string,
   message?: string
 ): Promise<ClubJoinRequest> {
+  // PRECONDITION: Club must not be archived
   await assertClubNotArchived(clubId, "отправить запрос на вступление");
 
-  const existingMember = await getMember(clubId, requesterUserId);
-  if (existingMember) {
+  // PRECONDITION: Get club to check settings
+  const club = await getClubById(clubId);
+  if (!club) {
+    throw new NotFoundError("Клуб не найден");
+  }
+
+  // PRECONDITION: openJoinEnabled must be false
+  // If openJoinEnabled === true, join requests are not used (direct join)
+  const settings = club.settings as { open_join_enabled?: boolean } | null;
+  if (settings?.open_join_enabled === true) {
+    throw new ConflictError(
+      "Этот клуб открыт для прямого вступления. Запросы на вступление не требуются."
+    );
+  }
+
+  // PRECONDITION: User must not be owner/admin
+  // Phase 8A: Owner/Admin NEVER submit join requests
+  const existingRole = await getUserClubRole(clubId, requesterUserId);
+  if (existingRole === "owner" || existingRole === "admin") {
+    throw new ConflictError(
+      "Владелец или администратор клуба не может отправить запрос на вступление"
+    );
+  }
+
+  // PRECONDITION: User must not be already a member
+  if (existingRole === "member") {
     throw new ConflictError("Вы уже являетесь участником этого клуба");
+  }
+
+  // Check for pending membership (role='pending' in club_members)
+  if (existingRole === "pending") {
+    throw new ConflictError("У вас уже есть ожидающий запрос на вступление");
   }
 
   await ensureUserExists(requesterUserId);
 
   const dbRequest = await createJoinRequestRepo(clubId, requesterUserId, message);
+  
+  // Audit logging
+  logClubAction({
+    clubId: clubId,
+    actorUserId: requesterUserId,
+    action: 'JOIN_REQUEST_CREATED',
+  });
+  
   return mapDbClubJoinRequestToDomain(dbRequest);
 }
 
 /**
  * List pending join requests for a club.
- * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
+ * 
+ * Phase 8A v1: Only Owner/Admin may list join requests.
  */
 export async function listClubJoinRequests(
   clubId: string,
   currentUser: CurrentUser | null
 ): Promise<ClubJoinRequest[]> {
-  // Owner-only check (SSOT_CLUBS_DOMAIN.md §5.3, §A1)
-  await requireClubOwner(clubId, currentUser?.id, "просмотреть заявки на вступление");
+  // Owner/Admin check (Phase 8A v1)
+  await requireClubOwnerOrAdmin(clubId, currentUser?.id, "просмотреть заявки на вступление");
 
   const dbRequests = await listPendingJoinRequestsWithUserRepo(clubId);
   
@@ -795,17 +878,21 @@ export async function listClubJoinRequests(
 
 /**
  * Approve a club join request.
- * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
- * On approval, creates a `club_members` entry with role='member'.
- * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived.
+ * 
+ * Phase 8A v1:
+ * - MUST BE TRANSACTIONAL: insert into club_members + delete join request
+ * - Must be race-safe and idempotent
+ * - Only Owner/Admin may approve
  * 
  * Emits audit event: JOIN_REQUEST_APPROVED
+ * 
+ * @returns Minimal payload (request was deleted, not updated)
  */
 export async function approveClubJoinRequest(
   clubId: string,
   requestId: string,
   currentUser: CurrentUser | null
-): Promise<ClubJoinRequest> {
+): Promise<{ success: true; requesterUserId: string }> {
   // 401: Require authentication
   if (!currentUser) {
     throw new UnauthorizedError("Требуется авторизация для одобрения заявки");
@@ -833,40 +920,44 @@ export async function approveClubJoinRequest(
   // SSOT §8.3.2: Archived clubs forbid approve/reject
   await assertClubNotArchived(clubId, "одобрить заявку на вступление");
 
-  // SSOT §5.3 + §A1: Owner-only action
-  await requireClubOwner(clubId, currentUser.id, "одобрить заявку на вступление");
+  // Phase 8A v1: Owner/Admin may approve
+  await requireClubOwnerOrAdmin(clubId, currentUser.id, "одобрить заявку на вступление");
 
-  // Update request status to 'approved'
-  const updatedRequest = await updateJoinRequestStatusRepo(requestId, 'approved');
-
-  // Create club membership with role='member'
-  await addMember(clubId, joinRequest.requester_user_id, 'member', currentUser.id);
+  // Phase 8A v1: TRANSACTIONAL approve (insert member + delete request)
+  const { requesterUserId } = await approveJoinRequestTransactionalRepo(
+    requestId,
+    currentUser.id
+  );
 
   // Audit logging
   logClubAction({
     clubId: clubId,
     actorUserId: currentUser.id,
     action: 'JOIN_REQUEST_APPROVED',
-    targetUserId: joinRequest.requester_user_id,
+    targetUserId: requesterUserId,
     meta: { requestId },
   });
 
-  return mapDbClubJoinRequestToDomain(updatedRequest);
+  return { success: true, requesterUserId };
 }
 
 /**
  * Reject a club join request.
- * Per SSOT_CLUBS_DOMAIN.md §5.3: Owner-only.
- * Per SSOT_CLUBS_DOMAIN.md §6.2: Terminal state — user can retry after rejection.
- * Per SSOT_CLUBS_DOMAIN.md §8.3.2: Forbidden when archived.
+ * 
+ * Phase 8A v1:
+ * - SILENT: delete join request without storing rejection reason
+ * - User can retry after rejection (creates new request)
+ * - Only Owner/Admin may reject
  * 
  * Emits audit event: JOIN_REQUEST_REJECTED
+ * 
+ * @returns Minimal payload (request was deleted)
  */
 export async function rejectClubJoinRequest(
   clubId: string,
   requestId: string,
   currentUser: CurrentUser | null
-): Promise<ClubJoinRequest> {
+): Promise<{ success: true; requesterUserId: string }> {
   // 401: Require authentication
   if (!currentUser) {
     throw new UnauthorizedError("Требуется авторизация для отклонения заявки");
@@ -894,22 +985,53 @@ export async function rejectClubJoinRequest(
   // SSOT §8.3.2: Archived clubs forbid approve/reject
   await assertClubNotArchived(clubId, "отклонить заявку на вступление");
 
-  // SSOT §5.3 + §A1: Owner-only action
-  await requireClubOwner(clubId, currentUser.id, "отклонить заявку на вступление");
+  // Phase 8A v1: Owner/Admin may reject
+  await requireClubOwnerOrAdmin(clubId, currentUser.id, "отклонить заявку на вступление");
 
-  // Update request status to 'rejected' (terminal state per §6.2)
-  const updatedRequest = await updateJoinRequestStatusRepo(requestId, 'rejected');
+  const requesterUserId = joinRequest.requester_user_id;
+
+  // Phase 8A v1: SILENT reject = DELETE (no history stored)
+  await deleteJoinRequestRepo(requestId);
+
+  // Audit logging (only record in audit log, not in join_requests)
+  logClubAction({
+    clubId: clubId,
+    actorUserId: currentUser.id,
+    action: 'JOIN_REQUEST_REJECTED',
+    targetUserId: requesterUserId,
+    meta: { requestId },
+  });
+
+  return { success: true, requesterUserId };
+}
+
+/**
+ * Cancel own join request.
+ * 
+ * Phase 8A v1 (OPTIONAL):
+ * - User can cancel their own pending request
+ * - SILENT: delete without storing
+ */
+export async function cancelClubJoinRequest(
+  clubId: string,
+  currentUser: CurrentUser | null
+): Promise<{ success: true }> {
+  // 401: Require authentication
+  if (!currentUser) {
+    throw new UnauthorizedError("Требуется авторизация для отмены заявки");
+  }
+
+  // Delete own pending request
+  await deleteJoinRequestByClubAndUserRepo(clubId, currentUser.id);
 
   // Audit logging
   logClubAction({
     clubId: clubId,
     actorUserId: currentUser.id,
-    action: 'JOIN_REQUEST_REJECTED',
-    targetUserId: joinRequest.requester_user_id,
-    meta: { requestId },
+    action: 'JOIN_REQUEST_CANCELLED',
   });
 
-  return mapDbClubJoinRequestToDomain(updatedRequest);
+  return { success: true };
 }
 
 
