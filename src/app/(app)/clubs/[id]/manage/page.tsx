@@ -1,8 +1,12 @@
 /**
- * Club Management Page
+ * Club Management Page (LEGACY — FROZEN)
  * 
- * Страница управления клубом (только для owner)
+ * Phase 3B: This route is frozen and redirects to canonical /settings route.
+ * 
+ * LEGACY: Страница управления клубом (только для owner)
  * Per SSOT_CLUBS_DOMAIN.md §3.2: club management is owner-only
+ * 
+ * @deprecated Use /clubs/[id]/settings instead
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -31,12 +35,21 @@ async function getClubDetails(id: string) {
 }
 
 interface ClubManagePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ClubManagePage({ params }: ClubManagePageProps) {
+  // Phase 3B: Unconditional redirect to canonical /settings route
+  const { id } = await params;
+  redirect(`/clubs/${id}/settings`);
+
+  // ============================================================================
+  // LEGACY CODE BELOW (UNREACHABLE after redirect)
+  // Preserved per Phase 3B requirement: "Do NOT remove legacy code below redirect"
+  // ============================================================================
+
   const [club, user] = await Promise.all([
-    getClubDetails(params.id),
+    getClubDetails(id),
     getCurrentUser(),
   ]);
 
@@ -45,12 +58,13 @@ export default async function ClubManagePage({ params }: ClubManagePageProps) {
   }
 
   if (!user) {
-    redirect(`/clubs/${params.id}`);
+    redirect(`/clubs/${id}`);
   }
 
   // Проверка прав доступа
+  // Note: user is guaranteed non-null here due to redirect above
   const currentUserMember = club.members?.find(
-    (m: any) => m.userId === user.id
+    (m: any) => m.userId === user!.id
   );
   const userRole = currentUserMember?.role;
   // Per SSOT_CLUBS_EVENTS_ACCESS.md §2: "organizer" role is deprecated
@@ -58,7 +72,7 @@ export default async function ClubManagePage({ params }: ClubManagePageProps) {
   const canManage = userRole === "owner";
 
   if (!canManage) {
-    redirect(`/clubs/${params.id}`);
+    redirect(`/clubs/${id}`);
   }
 
   return (
@@ -66,7 +80,7 @@ export default async function ClubManagePage({ params }: ClubManagePageProps) {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Кнопка назад */}
         <Link
-          href={`/clubs/${params.id}`}
+          href={`/clubs/${id}`}
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -87,7 +101,7 @@ export default async function ClubManagePage({ params }: ClubManagePageProps) {
             mode="edit"
             club={club}
             onCancel={() => {
-              window.location.href = `/clubs/${params.id}`;
+              window.location.href = `/clubs/${id}`;
             }}
           />
         </div>
