@@ -1423,10 +1423,10 @@ Per SSOT_CLUBS_DOMAIN.md §8.3:
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Owner only  
+**Authorization:** Owner or Admin (content fields); Owner only (visibility, settings)  
 
 **Purpose:**  
-Update club details (name, description, logo).
+Update club profile and settings. Partial update — only provided fields are modified.
 
 **Request:**
 
@@ -1435,12 +1435,32 @@ Update club details (name, description, logo).
 - **Body schema:** (Zod: `clubUpdateSchema`)
   ```typescript
   {
+    // Content fields (Owner or Admin)
     name?: string;
-    description?: string;
-    logoUrl?: string;
+    description?: string | null;
+    cityIds?: string[];              // UUID array, min 1, max 10
+    logoUrl?: string | null;
+    telegramUrl?: string | null;
+    websiteUrl?: string | null;
+
+    // Owner-only fields (per SSOT_CLUBS_DOMAIN §8.1)
+    visibility?: 'public' | 'private';
+
+    // Owner-only settings (per SSOT_CLUBS_DOMAIN §8.4)
+    settings?: {
+      publicMembersListEnabled?: boolean;   // §8.4.1
+      publicShowOwnerBadge?: boolean;       // §8.4.2
+      openJoinEnabled?: boolean;            // §8.4.4 (RESERVED / PLANNED)
+    };
   }
   ```
 - **Idempotency:** Yes (PATCH-style update)
+
+**Notes:**
+
+- PATCH is partial: only provided fields are updated, others remain unchanged.
+- `settings` object is **merged** with existing values (not replaced).
+- RBAC enforced server-side: `visibility` and `settings` rejected for non-owners.
 
 **Response:**
 
@@ -1453,7 +1473,7 @@ Update club details (name, description, logo).
     }
   }
   ```
-- **Side effects:** Updates `clubs` table
+- **Side effects:** Updates `clubs` table, optionally `club_cities` table
 
 **Errors:**
 
@@ -1461,7 +1481,8 @@ Update club details (name, description, logo).
 |--------|-----------|-------|
 | 400 | Validation error | Zod schema violation |
 | 401 | Not authenticated | Middleware blocks |
-| 403 | Not owner | Authorization check |
+| 403 | Not owner | Owner-only fields attempted by non-owner |
+| 403 | Club archived | Code: `CLUB_ARCHIVED` |
 | 404 | Club not found | Invalid UUID |
 
 **Security & Abuse:**
@@ -1472,7 +1493,7 @@ Update club details (name, description, logo).
 
 **Dependencies:**
 
-- Supabase (clubs, club_members tables)
+- Supabase (clubs, club_members, club_cities tables)
 
 **Code pointers:**
 
