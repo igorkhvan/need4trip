@@ -2,28 +2,31 @@
  * Club Settings Page (Canonical)
  * 
  * Phase 4: Billing UI v1 implementation.
+ * Phase 7: Visibility & Privacy UI.
  * 
  * Per SSOT_CLUBS_DOMAIN.md §3.2: Club settings is owner-only.
  * Per CLUBS_IMPLEMENTATION_BLUEPRINT v1 §5.7: Administrative configuration.
  * Per CLUBS_UI_VISUAL_CONTRACT v1 — BILLING: Billing section structure.
+ * Per SSOT_CLUBS_DOMAIN.md §4, §5.4, §8.4: Visibility & Join Policy.
  * 
- * Sections:
+ * Sections (STRICT ORDER):
  * 1. General Settings (placeholder)
- * 2. Billing (v1 — per Visual Contract)
+ * 2. Visibility & Privacy (Phase 7)
+ * 3. Billing (v1 — per Visual Contract)
  *    - Current Plan Summary
  *    - Plan Limits (read-only)
  *    - Subscription State & Actions
- * 3. Danger Zone (placeholder)
+ * 4. Danger Zone (placeholder)
  * 
  * States:
  * - Loading → Server Component (no client-side loading)
  * - Forbidden → Redirect to /clubs/[id]
- * - Archived → Banner + read-only notice, Billing hidden
+ * - Archived → Banner + read-only notice, Visibility & Privacy read-only
  */
 
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, CreditCard, AlertTriangle, Archive, Crown, CheckCircle, Users, Calendar, Zap, Clock } from "lucide-react";
+import { ArrowLeft, Settings, CreditCard, AlertTriangle, Archive, Crown, CheckCircle, Users, Calendar, Zap, Clock, Eye } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
@@ -32,6 +35,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { ClubPlan, ClubSubscription, SubscriptionStatus } from "@/lib/types/billing";
+import type { ClubVisibility, ClubSettings } from "@/lib/types/club";
+import { VisibilityPrivacySection } from "./_components/visibility-privacy-section";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +126,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
               Основные настройки
             </CardTitle>
             <CardDescription>
-              Настройки профиля и видимости клуба
+              Настройки профиля клуба
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -134,7 +139,15 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
           </CardContent>
         </Card>
 
-        {/* Section 2: Billing (v1 — per Visual Contract) */}
+        {/* Section 2: Visibility & Privacy (Phase 7) */}
+        <VisibilityPrivacySection
+          clubId={id}
+          initialVisibility={club.visibility}
+          initialOpenJoinEnabled={club.settings?.openJoinEnabled ?? false}
+          isArchived={isArchived}
+        />
+
+        {/* Section 3: Billing (v1 — per Visual Contract) */}
         {/* Per Visual Contract §7: Billing section hidden when archived */}
         {!isArchived && billingData && (
           <BillingSection
@@ -143,7 +156,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
           />
         )}
 
-        {/* Section 3: Danger Zone (Placeholder) */}
+        {/* Section 4: Danger Zone (Placeholder) */}
         <Card className="border-[var(--color-danger-border)] mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[var(--color-danger-text)]">

@@ -13,6 +13,14 @@ export const clubRoleSchema = z.enum(["owner", "admin", "member", "pending"]);
 export type ClubRole = z.infer<typeof clubRoleSchema>;
 
 
+// Club settings stored in JSONB (snake_case in DB, camelCase in domain)
+// Per SSOT_CLUBS_DOMAIN.md §8.4
+export interface ClubSettings {
+  publicMembersListEnabled?: boolean;   // §8.4.1
+  publicShowOwnerBadge?: boolean;       // §8.4.2
+  openJoinEnabled?: boolean;            // §8.4.4 (RESERVED / PLANNED)
+}
+
 export interface Club {
   id: string;
   name: string;
@@ -26,6 +34,9 @@ export interface Club {
   createdAt: string;
   updatedAt: string;
   archivedAt: string | null; // NULL = active, NOT NULL = archived (soft-delete)
+  // Owner-only fields (per SSOT_CLUBS_DOMAIN.md §8.1)
+  visibility: 'public' | 'private';     // §4.1
+  settings: ClubSettings;               // §8.4
 }
 
 // ============================================================================

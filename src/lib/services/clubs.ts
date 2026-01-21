@@ -82,6 +82,22 @@ import { logClubAction } from './clubAuditLog';
 // ============================================================================
 
 function mapDbClubToDomain(db: DbClub): Club {
+  // Map DB settings (snake_case) to domain settings (camelCase)
+  // Per SSOT_CLUBS_DOMAIN.md §8.4
+  const settings: Club['settings'] = {};
+  if (db.settings) {
+    const dbSettings = db.settings as Record<string, unknown>;
+    if (typeof dbSettings.public_members_list_enabled === 'boolean') {
+      settings.publicMembersListEnabled = dbSettings.public_members_list_enabled;
+    }
+    if (typeof dbSettings.public_show_owner_badge === 'boolean') {
+      settings.publicShowOwnerBadge = dbSettings.public_show_owner_badge;
+    }
+    if (typeof dbSettings.open_join_enabled === 'boolean') {
+      settings.openJoinEnabled = dbSettings.open_join_enabled;
+    }
+  }
+
   return {
     id: db.id,
     name: db.name,
@@ -93,6 +109,8 @@ function mapDbClubToDomain(db: DbClub): Club {
     createdAt: db.created_at,
     updatedAt: db.updated_at,
     archivedAt: db.archived_at,
+    visibility: db.visibility,
+    settings,
   };
 }
 
