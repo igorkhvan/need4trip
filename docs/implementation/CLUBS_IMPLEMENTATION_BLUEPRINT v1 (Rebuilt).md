@@ -1,7 +1,8 @@
 # Clubs Implementation Blueprint (v1)
 
 **Status:** LOCKED (Clubs Settings v1 — COMPLETE & FROZEN)  
-**Phase 8 — Membership Requests v1:** COMPLETE & FROZEN
+**Phase 8 — Membership Requests v1:** COMPLETE & FROZEN  
+**Phase 9 — Club Profile v1:** COMPLETE & FROZEN
 **Authority:** SSOT-aligned execution contract
 **Scope:** Clubs domain end-to-end (UI → API → Service → DB)
 
@@ -208,6 +209,11 @@ Each page below defines a **normative contract**. Implementation MUST follow it 
 **Forbidden**
 - Auto-join
 - Content editing
+
+**Implementation status:** COMPLETE (Phase 9B)  
+**Version:** v1  
+**Design note:** Club Profile is a read-only aggregator. Management actions live only in Members (`/clubs/[id]/members`) and Settings (`/clubs/[id]/settings`) pages.  
+**Freeze rule:** Any changes require a new versioned contract (v2) and explicit unlock.
 
 ---
 

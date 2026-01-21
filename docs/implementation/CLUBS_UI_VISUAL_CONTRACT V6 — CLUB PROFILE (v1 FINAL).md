@@ -1,6 +1,7 @@
 # Clubs UI Visual Contract — Club Profile (v1 Final)
 
-**Status:** LOCKED  
+**Status:** LOCKED (Phase 9B — COMPLETE & FROZEN)  
+**Version:** v1 Final  
 **Supersedes:** Public Club Profile (pre-v1)  
 **Aligned with:**
 - SSOT_CLUBS_DOMAIN.md
