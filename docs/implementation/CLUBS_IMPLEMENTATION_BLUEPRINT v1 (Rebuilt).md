@@ -1,6 +1,6 @@
 # Clubs Implementation Blueprint (v1)
 
-**Status:** DRAFT → LOCKED after review
+**Status:** LOCKED (Clubs Settings v1 — COMPLETE & FROZEN)
 **Authority:** SSOT-aligned execution contract
 **Scope:** Clubs domain end-to-end (UI → API → Service → DB)
 
@@ -312,6 +312,9 @@ Each page below defines a **normative contract**. Implementation MUST follow it 
 **States**
 - Loading
 - Archived (limited actions)
+
+**Implementation status:** COMPLETE (Phase 4–7)  
+**Freeze rule:** Any changes require a new versioned contract (v2).
 
 ---
 
