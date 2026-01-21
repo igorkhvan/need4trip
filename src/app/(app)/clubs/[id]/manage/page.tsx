@@ -1,7 +1,8 @@
 /**
  * Club Management Page
  * 
- * Страница управления клубом (только для owner/organizer)
+ * Страница управления клубом (только для owner)
+ * Per SSOT_CLUBS_DOMAIN.md §3.2: club management is owner-only
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -52,7 +53,9 @@ export default async function ClubManagePage({ params }: ClubManagePageProps) {
     (m: any) => m.userId === user.id
   );
   const userRole = currentUserMember?.role;
-  const canManage = userRole === "owner" || userRole === "organizer";
+  // Per SSOT_CLUBS_EVENTS_ACCESS.md §2: "organizer" role is deprecated
+  // Club management page is owner-only (SSOT_CLUBS_DOMAIN.md §3.2)
+  const canManage = userRole === "owner";
 
   if (!canManage) {
     redirect(`/clubs/${params.id}`);
