@@ -190,6 +190,10 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
 
 /**
  * Update club
+ * 
+ * Per SSOT_CLUBS_DOMAIN.md §8.1:
+ * - visibility and settings are owner-only (enforced at service layer)
+ * - settings is merged with existing values to preserve unmodified fields
  */
 export async function updateClub(
   id: string,
@@ -197,14 +201,50 @@ export async function updateClub(
 ): Promise<DbClub | null> {
   const db = getAdminDb();
 
-  const patch = {
+  // Build base patch (content fields)
+  const patch: Record<string, unknown> = {
     ...(payload.name !== undefined ? { name: payload.name } : {}),
     ...(payload.description !== undefined ? { description: payload.description } : {}),
     ...(payload.logoUrl !== undefined ? { logo_url: payload.logoUrl } : {}),
     ...(payload.telegramUrl !== undefined ? { telegram_url: payload.telegramUrl } : {}),
     ...(payload.websiteUrl !== undefined ? { website_url: payload.websiteUrl } : {}),
+    // Owner-only: visibility (direct column)
+    ...(payload.visibility !== undefined ? { visibility: payload.visibility } : {}),
     updated_at: new Date().toISOString(),
   };
+
+  // Owner-only: settings (JSONB merge)
+  // Per SSOT_CLUBS_DOMAIN.md §8.4: Merge with existing to preserve unmodified fields
+  if (payload.settings !== undefined) {
+    // Fetch current settings to merge
+    const { data: current, error: fetchError } = await db
+      .from(table)
+      .select("settings")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) {
+      log.error("Failed to fetch club settings for merge", { clubId: id, error: fetchError });
+      throw new InternalError("Failed to update club settings", fetchError);
+    }
+
+    const existingSettings = (current?.settings as Record<string, unknown>) ?? {};
+    
+    // Map camelCase to snake_case for DB storage
+    const settingsUpdate: Record<string, unknown> = {};
+    if (payload.settings.publicMembersListEnabled !== undefined) {
+      settingsUpdate.public_members_list_enabled = payload.settings.publicMembersListEnabled;
+    }
+    if (payload.settings.publicShowOwnerBadge !== undefined) {
+      settingsUpdate.public_show_owner_badge = payload.settings.publicShowOwnerBadge;
+    }
+    if (payload.settings.openJoinEnabled !== undefined) {
+      settingsUpdate.open_join_enabled = payload.settings.openJoinEnabled;
+    }
+
+    // Merge: existing settings + new updates
+    patch.settings = { ...existingSettings, ...settingsUpdate };
+  }
 
   const { data, error } = await db
     .from(table)

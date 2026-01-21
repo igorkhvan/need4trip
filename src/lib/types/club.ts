@@ -134,7 +134,28 @@ export const clubCreateSchema = z.object({
 
 export type ClubCreateInput = z.infer<typeof clubCreateSchema>;
 
+// Club visibility enum (matches DB enum `club_visibility`)
+// Per SSOT_CLUBS_DOMAIN.md §4.1
+export const clubVisibilitySchema = z.enum(["public", "private"]);
+export type ClubVisibility = z.infer<typeof clubVisibilitySchema>;
+
+// Club settings schema (partial, for updates)
+// Per SSOT_CLUBS_DOMAIN.md §8.4
+export const clubSettingsUpdateSchema = z.object({
+  // §8.4.1: public_members_list_enabled
+  publicMembersListEnabled: z.boolean().optional(),
+  // §8.4.2: public_show_owner_badge
+  publicShowOwnerBadge: z.boolean().optional(),
+  // §8.4.4: open_join_enabled (RESERVED/PLANNED)
+  openJoinEnabled: z.boolean().optional(),
+}).strict();
+
+export type ClubSettingsUpdate = z.infer<typeof clubSettingsUpdateSchema>;
+
 // Update Club
+// Per SSOT_CLUBS_DOMAIN.md §8.1:
+// - Owner + Admin: name, description, cityIds, logoUrl, telegramUrl, websiteUrl
+// - Owner-only: visibility, settings
 export const clubUpdateSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
   description: z.string().trim().max(5000).optional().nullable(),
@@ -142,6 +163,9 @@ export const clubUpdateSchema = z.object({
   logoUrl: z.string().trim().url().max(500).optional().nullable(),
   telegramUrl: z.string().trim().url().max(500).optional().nullable(),
   websiteUrl: z.string().trim().url().max(500).optional().nullable(),
+  // Owner-only fields (per §8.1)
+  visibility: clubVisibilitySchema.optional(),
+  settings: clubSettingsUpdateSchema.optional(),
 });
 
 export type ClubUpdateInput = z.infer<typeof clubUpdateSchema>;
