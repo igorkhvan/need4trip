@@ -1,12 +1,12 @@
 /**
  * ClubProfileHeader Component
  * 
- * Header section for Club Profile (Public) page.
- * Per Visual Contract v2 §5.1: Blocking render.
+ * Header section for Club Profile page.
+ * Per Visual Contract v6 §3: Part of fixed page structure.
  * Data source: GET /api/clubs/[id] (API-016)
  * 
  * Shows: Club name, visibility badge, archived badge, basic meta.
- * MUST NOT show: edit buttons, management controls.
+ * No edit affordances, no management controls.
  */
 
 import { MapPin, Users, Calendar, Send, Globe, Archive } from "lucide-react";
@@ -60,7 +60,7 @@ export function ClubProfileHeader({ club }: ClubProfileHeaderProps) {
               {isPrivate ? "Закрытый" : "Открытый"}
             </Badge>
             
-            {/* Archived badge - per Visual Contract v2 §1.2 */}
+            {/* Archived badge - per Visual Contract v6 §4 */}
             {isArchived && (
               <Badge variant="danger" size="sm" className="flex items-center gap-1">
                 <Archive className="h-3 w-3" />

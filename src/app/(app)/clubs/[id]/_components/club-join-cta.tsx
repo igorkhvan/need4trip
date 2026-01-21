@@ -1,23 +1,22 @@
 /**
  * ClubJoinCTA Component
  * 
- * Join/Request CTA for Club Profile (Public) page.
- * Per Visual Contract v2 §5.6: Blocking render.
+ * Primary CTA Zone for Club Profile page.
+ * Per Visual Contract v6 §5: Maximum one CTA, state-driven.
  * 
- * States (per Visual Contract v2):
- * - unauthenticated → prompt to log in
- * - already member → CTA hidden
- * - pending request → disabled CTA with status
- * - archived → CTA hidden
- * 
- * Action: POST /api/clubs/[id]/join-requests (API-052)
+ * States (per Visual Contract v6 §5):
+ * - Guest + openJoinEnabled=true → "Вступить в клуб" (direct join via API-020)
+ * - Guest + openJoinEnabled=false → "Подать заявку" (join request via API-052)
+ * - Pending request → "Ожидает одобрения" (disabled)
+ * - Member / Owner / Admin → NO CTA (component returns null)
+ * - Archived → NO CTA (handled by parent, but also checked here)
  */
 
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn, UserPlus, Clock, Loader2 } from "lucide-react";
+import { UserPlus, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ClubJoinCTAProps {
@@ -26,6 +25,7 @@ interface ClubJoinCTAProps {
   isMember: boolean;
   isPending: boolean;
   isArchived: boolean;
+  openJoinEnabled: boolean;
 }
 
 export function ClubJoinCTA({
@@ -34,25 +34,73 @@ export function ClubJoinCTA({
   isMember,
   isPending,
   isArchived,
+  openJoinEnabled,
 }: ClubJoinCTAProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  // Per Visual Contract v2 §5.6: Hide CTA if already member or archived
+  // Per Visual Contract v6 §5.3, §5.4: Hide CTA if member, owner, admin, or archived
   if (isMember || isArchived) {
     return null;
   }
 
+  // Per Visual Contract v6 §5.2: Pending state - disabled CTA
+  if (isPending) {
+    return (
+      <Button disabled className="w-full sm:w-auto">
+        <Clock className="h-4 w-4" />
+        <span>Ожидает одобрения</span>
+      </Button>
+    );
+  }
+
   // Handle login redirect for unauthenticated users
   const handleLoginClick = () => {
-    // Redirect to login with return URL
     const returnUrl = encodeURIComponent(`/clubs/${clubId}`);
     router.push(`/login?returnUrl=${returnUrl}`);
   };
 
-  // Handle join request submission
+  // Handle direct join (when openJoinEnabled=true)
+  const handleDirectJoin = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/clubs/${clubId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          handleLoginClick();
+          return;
+        }
+        if (res.status === 409) {
+          setError(data.error?.message || "Вы уже состоите в клубе");
+          return;
+        }
+        if (res.status === 403) {
+          setError("Клуб не принимает новых участников");
+          return;
+        }
+        throw new Error(data.error?.message || "Ошибка вступления в клуб");
+      }
+
+      // Success - refresh page to update state
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle join request (when openJoinEnabled=false)
   const handleJoinRequest = async () => {
     setIsLoading(true);
     setError(null);
@@ -67,13 +115,11 @@ export function ClubJoinCTA({
       const data = await res.json();
 
       if (!res.ok) {
-        // Handle specific error codes per API-052
         if (res.status === 401) {
-          setError("Требуется авторизация");
+          handleLoginClick();
           return;
         }
         if (res.status === 409) {
-          // Already pending or member
           setError(data.error?.message || "Вы уже отправили запрос");
           return;
         }
@@ -84,8 +130,7 @@ export function ClubJoinCTA({
         throw new Error(data.error?.message || "Ошибка отправки запроса");
       }
 
-      setSuccess(true);
-      // Refresh page to update state
+      // Success - refresh page to update state
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Неизвестная ошибка");
@@ -94,74 +139,42 @@ export function ClubJoinCTA({
     }
   };
 
+  // Guest (not authenticated) - prompt to log in
+  if (!isAuthenticated) {
+    return (
+      <Button onClick={handleLoginClick} className="w-full sm:w-auto">
+        <UserPlus className="h-4 w-4" />
+        <span>{openJoinEnabled ? "Вступить в клуб" : "Подать заявку"}</span>
+      </Button>
+    );
+  }
+
+  // Authenticated, not member, not pending
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-      {/* Success state */}
-      {success && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-[#F0FDF4] border border-[#16A34A]/20 mb-4">
-          <Clock className="h-5 w-5 text-[#16A34A]" />
-          <div>
-            <p className="font-medium text-[#16A34A]">Запрос отправлен!</p>
-            <p className="text-sm text-[#166534]">
-              Ожидайте подтверждения от владельца клуба
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Error state */}
+    <div>
       {error && (
-        <div className="p-4 rounded-lg bg-[#FEF2F2] border border-[#DC2626]/20 mb-4">
-          <p className="text-sm text-[#DC2626]">{error}</p>
+        <div className="p-3 mb-3 rounded-lg bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)]">
+          <p className="text-sm text-[var(--color-danger)]">{error}</p>
         </div>
       )}
-
-      {/* Unauthenticated state - per Visual Contract v2 §5.6 */}
-      {!isAuthenticated && !success && (
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">
-            Войдите, чтобы подать заявку на вступление в клуб
-          </p>
-          <Button onClick={handleLoginClick} className="w-full sm:w-auto">
-            <LogIn className="h-4 w-4" />
-            <span>Войти через Telegram</span>
-          </Button>
-        </div>
-      )}
-
-      {/* Pending state - per Visual Contract v2 §5.6 */}
-      {isAuthenticated && isPending && !success && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-[#FFFBEB] border border-[#D97706]/20">
-          <Clock className="h-5 w-5 text-[#D97706]" />
-          <div className="flex-1">
-            <p className="font-medium text-[#92400E]">Заявка на рассмотрении</p>
-            <p className="text-sm text-[#A16207]">
-              Ваш запрос ожидает подтверждения от владельца клуба
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Join request button - for authenticated non-members */}
-      {isAuthenticated && !isPending && !success && (
-        <Button
-          onClick={handleJoinRequest}
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Отправка...</span>
-            </>
-          ) : (
-            <>
-              <UserPlus className="h-4 w-4" />
-              <span>Подать заявку на вступление</span>
-            </>
-          )}
-        </Button>
-      )}
+      
+      <Button
+        onClick={openJoinEnabled ? handleDirectJoin : handleJoinRequest}
+        disabled={isLoading}
+        className="w-full sm:w-auto"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Отправка...</span>
+          </>
+        ) : (
+          <>
+            <UserPlus className="h-4 w-4" />
+            <span>{openJoinEnabled ? "Вступить в клуб" : "Подать заявку"}</span>
+          </>
+        )}
+      </Button>
     </div>
   );
 }

@@ -2,11 +2,11 @@
  * ClubMembersPreviewAsync Component
  * 
  * Async server component for Members Preview section.
- * Per Visual Contract v2 §5.4: Progressive render.
+ * Per Visual Contract v6 §8: Read-only preview.
  * Data source: GET /api/clubs/[id]/members/preview (API-053)
  * 
- * If API not accessible → hide entire section.
- * If zero members → render empty placeholder.
+ * Displays: avatars, total count.
+ * No role badges, no management controls.
  */
 
 import { Users, Crown } from "lucide-react";
@@ -48,7 +48,7 @@ interface ClubMembersPreviewAsyncProps {
 export async function ClubMembersPreviewAsync({ clubId }: ClubMembersPreviewAsyncProps) {
   const data = await getMembersPreview(clubId);
   
-  // Per Visual Contract v2 §5.4: If API not accessible → hide entire section
+  // Per Visual Contract v6 §8: If API not accessible → hide entire section
   if (!data) {
     return null;
   }
@@ -64,7 +64,7 @@ export async function ClubMembersPreviewAsync({ clubId }: ClubMembersPreviewAsyn
       </h2>
       
       {members.length === 0 ? (
-        // Empty placeholder per Visual Contract v2 §5.4
+        // Empty placeholder per Visual Contract v6 §8
         <p className="text-[15px] text-muted-foreground italic">
           В клубе пока нет участников
         </p>
@@ -88,7 +88,7 @@ export async function ClubMembersPreviewAsync({ clubId }: ClubMembersPreviewAsyn
                 
                 {/* Owner badge */}
                 {member.isOwner && (
-                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#F59E0B] text-white shadow">
+                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-warning)] text-white shadow">
                     <Crown className="h-3 w-3" />
                   </div>
                 )}

@@ -1,11 +1,10 @@
 /**
  * ClubAboutSection Component
  * 
- * About section for Club Profile (Public) page.
- * Per Visual Contract v2 §5.2: Blocking render.
- * Data source: GET /api/clubs/[id] (API-016)
- * 
- * If empty → render empty placeholder (NOT hidden).
+ * About section for Club Profile page.
+ * Per Visual Contract v6 §7: Read-only.
+ * Displays: description, cities, external links (handled in header).
+ * No edit affordances.
  */
 
 import { MapPin, Info } from "lucide-react";
@@ -15,15 +14,11 @@ import type { CityHydrated } from "@/lib/types/city";
 interface ClubAboutSectionProps {
   description: string | null;
   cities?: CityHydrated[];
-  rules?: string | null;
 }
 
-export function ClubAboutSection({ description, cities, rules }: ClubAboutSectionProps) {
-  const hasContent = description || (cities && cities.length > 0);
-
+export function ClubAboutSection({ description, cities }: ClubAboutSectionProps) {
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-      {/* About section */}
       <div className="space-y-6">
         {/* Cities */}
         {cities && cities.length > 0 && (
@@ -58,18 +53,6 @@ export function ClubAboutSection({ description, cities, rules }: ClubAboutSectio
             </p>
           )}
         </div>
-
-        {/* Rules / FAQ section - per Visual Contract v2 §5.3 */}
-        {rules && (
-          <div className="border-t border-[var(--color-border)] pt-6">
-            <h2 className="mb-3 text-[18px] font-semibold text-[var(--color-text)]">
-              Правила клуба
-            </h2>
-            <p className="whitespace-pre-wrap text-[15px] text-[var(--color-text)]">
-              {rules}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
  * ClubForbiddenPage Component
  * 
  * Full page forbidden layout.
- * Per Visual Contract v2 §6.1: No sections rendered, no previews.
+ * Per Visual Contract v6 §10: 403/404 → redirect or standard forbidden page.
  * Triggered by 403 from API-016.
  */
 

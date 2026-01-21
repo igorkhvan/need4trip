@@ -1,20 +1,21 @@
 /**
- * Club Profile (Public) Page
+ * Club Profile Page
  * 
- * Per Visual Contract v2 §4: Authoritative contract for Club Profile (Public).
+ * Per Visual Contract v6 — CLUB PROFILE (v1 FINAL):
+ * This page is an aggregation and navigation surface (READ-ONLY).
  * 
- * Layout (STRICT ORDER per Visual Contract v2 §4.1):
- * 1. Header (Blocking)
- * 2. About (Blocking)
- * 3. Rules / FAQ (Blocking)
- * 4. Members Preview (Progressive)
- * 5. Events Preview (Progressive)
- * 6. Join / Request CTA (Blocking)
+ * Layout (STRICT ORDER per Visual Contract v6 §3):
+ * 1. Archived Banner (conditional)
+ * 2. Club Header
+ * 3. Primary CTA Zone
+ * 4. About Section
+ * 5. Members Preview
+ * 6. Events Preview
  * 
  * States:
  * - Loading → Skeletons
- * - Forbidden → Full-page forbidden (403 from API-016)
- * - Archived → Banner + read-only
+ * - Forbidden → Full-page forbidden (403)
+ * - Archived → Banner + CTA hidden + entry points hidden
  * 
  * Data source: GET /api/clubs/[id] (API-016)
  */
@@ -22,7 +23,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users, Settings } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 
@@ -35,7 +36,7 @@ import { ClubJoinCTA } from "./_components/club-join-cta";
 import { ClubArchivedBanner } from "./_components/club-archived-banner";
 import { ClubForbiddenPage } from "./_components/club-forbidden-page";
 
-// Skeletons per Visual Contract v2 §3
+// Skeletons
 import { 
   ClubMembersPreviewSkeleton, 
   ClubEventsPreviewSkeleton 
@@ -50,7 +51,7 @@ interface ClubProfilePageProps {
 export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
   const { id } = await params;
   
-  // Load critical data for blocking render (per Visual Contract v2 §2.1)
+  // Load critical data for blocking render
   const [user, clubResult] = await Promise.all([
     getCurrentUser(),
     getClubBasicInfo(id).catch(() => null),
@@ -66,15 +67,13 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
   // Get user's role in club (if authenticated)
   const userRole = user ? await getUserClubRole(id, user.id) : null;
   
-  // Determine states per Visual Contract v2 §5.6
+  // Determine states per Visual Contract v6 §5
   const isAuthenticated = !!user;
   const isMember = userRole !== null && userRole !== "pending";
   const isPending = userRole === "pending";
   const isArchived = !!club.archivedAt;
-
-  // Per Visual Contract v2 §7: FORBIDDEN UI (not shown on public profile)
-  // - edit buttons, member management, billing, admin controls
-  // This page intentionally does NOT show any management UI
+  const isOwnerOrAdmin = userRole === "owner" || userRole === "admin";
+  const openJoinEnabled = club.settings?.openJoinEnabled ?? false;
 
   return (
     <div className="space-y-6 pb-10 pt-12">
@@ -87,16 +86,16 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
         <span>Все клубы</span>
       </Link>
 
-      {/* Archived Banner - per Visual Contract v2 §6.2 */}
+      {/* SECTION: Archived Banner (conditional) - per Visual Contract v6 §4 */}
       {isArchived && <ClubArchivedBanner />}
 
-      {/* SECTION 1: Header (Blocking) - per Visual Contract v2 §5.1 */}
+      {/* SECTION: Club Header - per Visual Contract v6 §3 */}
       <ClubProfileHeader
         club={{
           id: club.id,
           name: club.name,
           logoUrl: club.logoUrl,
-          visibility: "public", // TODO: Add visibility field to club type
+          visibility: club.visibility ?? "public",
           archivedAt: club.archivedAt,
           cities: club.cities,
           memberCount: club.memberCount,
@@ -106,66 +105,55 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
         }}
       />
 
-      {/* SECTION 2 & 3: About + Rules/FAQ (Blocking) - per Visual Contract v2 §5.2-5.3 */}
+      {/* SECTION: Primary CTA Zone - per Visual Contract v6 §5 */}
+      {/* Hidden when club is archived (§4) or user is member/owner/admin (§5.3, §5.4) */}
+      {!isArchived && (
+        <ClubJoinCTA
+          clubId={club.id}
+          isAuthenticated={isAuthenticated}
+          isMember={isMember}
+          isPending={isPending}
+          isArchived={isArchived}
+          openJoinEnabled={openJoinEnabled}
+        />
+      )}
+
+      {/* SECTION: Owner/Admin Entry Points - per Visual Contract v6 §6 */}
+      {/* Navigation links only, hidden when archived */}
+      {isOwnerOrAdmin && !isArchived && (
+        <div className="flex flex-wrap gap-4">
+          <Link
+            href={`/clubs/${club.id}/members`}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+          >
+            <Users className="h-4 w-4" />
+            <span>Управление участниками</span>
+          </Link>
+          <Link
+            href={`/clubs/${club.id}/settings`}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Настройки клуба</span>
+          </Link>
+        </div>
+      )}
+
+      {/* SECTION: About - per Visual Contract v6 §7 */}
       <ClubAboutSection
         description={club.description}
         cities={club.cities}
-        rules={null} // TODO: Add rules field to club type when available
       />
 
-      {/* SECTION 4: Members Preview (Progressive) - per Visual Contract v2 §5.4 */}
+      {/* SECTION: Members Preview - per Visual Contract v6 §8 */}
       <Suspense fallback={<ClubMembersPreviewSkeleton />}>
         <ClubMembersPreviewAsync clubId={club.id} />
       </Suspense>
 
-      {/* SECTION 5: Events Preview (Progressive) - per Visual Contract v2 §5.5 */}
+      {/* SECTION: Events Preview - per Visual Contract v6 §9 */}
       <Suspense fallback={<ClubEventsPreviewSkeleton />}>
         <ClubEventsPreviewAsync clubId={club.id} />
       </Suspense>
-
-      {/* SECTION 6: Join / Request CTA (Blocking) - per Visual Contract v2 §5.6 */}
-      <ClubJoinCTA
-        clubId={club.id}
-        isAuthenticated={isAuthenticated}
-        isMember={isMember}
-        isPending={isPending}
-        isArchived={isArchived}
-      />
     </div>
   );
 }
-
-/* ===========================================================================
- * DEAD UI CODE REPORT (per implementation instructions)
- * 
- * The following existing code in this directory is FORBIDDEN per Visual 
- * Contract v2 §7 for Club Profile (Public):
- * 
- * 1. _components/members-async.tsx
- *    - Shows full member management UI (add/remove members)
- *    - Uses repository directly instead of API
- *    - Should be moved to Club Members page (Club Home Member View)
- * 
- * 2. _components/members-client.tsx
- *    - Contains management controls (role change, remove)
- *    - FORBIDDEN on public profile
- *    - Should be moved to Club Members page
- * 
- * 3. _components/subscription-async.tsx
- *    - Shows billing/subscription UI
- *    - FORBIDDEN on public profile
- *    - Should be moved to Club Settings page (Club Owner only)
- * 
- * 4. Previous page.tsx code (replaced by this file):
- *    - Showed "Управление" (Manage) button - FORBIDDEN
- *    - Had sidebar with subscription card - FORBIDDEN
- *    - Used canManage to show/hide UI (frontend permission inference) - FORBIDDEN
- *    - Showed user role badge to user - acceptable but not per contract
- * 
- * These files are NOT deleted per instruction "MUST NOT delete any existing 
- * code". They should be migrated to appropriate pages:
- * - members-async.tsx → /clubs/[id]/members/page.tsx (Club Members page)
- * - members-client.tsx → /clubs/[id]/members/page.tsx
- * - subscription-async.tsx → /clubs/[id]/settings/page.tsx (Club Settings)
- * ===========================================================================
- */

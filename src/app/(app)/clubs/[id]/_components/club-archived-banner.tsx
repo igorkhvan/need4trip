@@ -2,21 +2,21 @@
  * ClubArchivedBanner Component
  * 
  * Banner shown when club is archived.
- * Per Visual Contract v2 §6.2: Banner at top of page, all other sections read-only.
+ * Per Visual Contract v6 §4: Banner at top of page, CTA and entry points hidden.
  */
 
-import { Archive, AlertTriangle } from "lucide-react";
+import { Archive } from "lucide-react";
 
 export function ClubArchivedBanner() {
   return (
-    <div className="rounded-xl border border-[#FEF2F2] bg-[#FEF2F2] p-4 shadow-sm">
+    <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DC2626] text-white">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-danger)] text-white">
           <Archive className="h-5 w-5" />
         </div>
         <div>
-          <p className="font-semibold text-[#DC2626]">Клуб в архиве</p>
-          <p className="text-sm text-[#7F1D1D]">
+          <p className="font-semibold text-[var(--color-danger)]">Клуб в архиве</p>
+          <p className="text-sm text-[var(--color-danger-text)]">
             Этот клуб больше не принимает новых участников и не проводит события
           </p>
         </div>

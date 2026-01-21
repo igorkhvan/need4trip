@@ -2,10 +2,11 @@
  * ClubEventsPreviewAsync Component
  * 
  * Async server component for Events Preview section.
- * Per Visual Contract v2 §5.5: Progressive render.
- * Data source: GET /api/events?club_id=...
+ * Per Visual Contract v6 §9: Read-only preview.
+ * Data source: GET /api/events?clubId=...
  * 
- * If zero events → render empty placeholder.
+ * Displays: upcoming events.
+ * No creation or edit controls.
  */
 
 import { Calendar, MapPin, Users } from "lucide-react";
@@ -70,7 +71,7 @@ export async function ClubEventsPreviewAsync({ clubId }: ClubEventsPreviewAsyncP
       </h2>
       
       {eventsList.length === 0 ? (
-        // Empty placeholder per Visual Contract v2 §5.5
+        // Empty placeholder per Visual Contract v6 §9
         <p className="text-[15px] text-muted-foreground italic">
           У клуба пока нет предстоящих событий
         </p>
