@@ -131,7 +131,7 @@ export default async function ClubMembersPage({ params }: ClubMembersPageProps) 
  *      - members-client.tsx: Should be moved here
  *    - These files are NOT deleted per instruction
  * 
- * 2. ../manage/page.tsx - OK, different page (Club Settings)
+ * 2. ../settings/page.tsx - Canonical Club Settings page
  * 
  * Legacy components in ../_components/ that relate to members:
  * - members-async.tsx: Legacy full member management, uses repo directly

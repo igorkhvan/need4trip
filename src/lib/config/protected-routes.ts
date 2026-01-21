@@ -11,7 +11,7 @@
  * Protected pages (требуют авторизации):
  * - /profile, /profile/edit
  * - /events/create, /events/[id]/edit
- * - /clubs/create, /clubs/[id]/manage
+ * - /clubs/create, /clubs/[id]/settings
  * 
  * Public pages (доступны без авторизации):
  * - /, /events, /events/[id], /clubs, /clubs/[id], /pricing
@@ -30,9 +30,9 @@ const PROTECTED_PAGE_PATTERNS = [
   '/events/create',
   '/events/[id]/edit',
   
-  // Club creation and management
+  // Club creation and settings
   '/clubs/create',
-  '/clubs/[id]/manage',
+  '/clubs/[id]/settings',
 ] as const;
 
 /**
@@ -45,7 +45,7 @@ const PROTECTED_PAGE_PATTERNS = [
  * isProtectedPage('/profile') // → true
  * isProtectedPage('/events') // → false
  * isProtectedPage('/events/abc-123/edit') // → true
- * isProtectedPage('/clubs/abc-123/manage') // → true
+ * isProtectedPage('/clubs/abc-123/settings') // → true
  */
 export function isProtectedPage(pathname: string): boolean {
   // Нормализуем путь (убираем trailing slash)

@@ -166,6 +166,6 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
  * code". They should be migrated to appropriate pages:
  * - members-async.tsx → /clubs/[id]/members/page.tsx (Club Members page)
  * - members-client.tsx → /clubs/[id]/members/page.tsx
- * - subscription-async.tsx → /clubs/[id]/manage/page.tsx (Club Settings)
+ * - subscription-async.tsx → /clubs/[id]/settings/page.tsx (Club Settings)
  * ===========================================================================
  */
