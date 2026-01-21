@@ -23,7 +23,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, CreditCard, AlertTriangle, Archive, Crown, CheckCircle, Users, Calendar, Zap, FileSpreadsheet, Clock } from "lucide-react";
+import { ArrowLeft, Settings, CreditCard, AlertTriangle, Archive, Crown, CheckCircle, Users, Calendar, Zap, Clock } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
@@ -218,7 +218,7 @@ function CurrentPlanSummary({ plan }: { plan: ClubPlan }) {
     <div className="p-4 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {isUnlimited && <Crown className="w-6 h-6 text-[#8B5CF6]" />}
+          {isUnlimited && <Crown className="w-6 h-6 text-[var(--color-info)]" />}
           <div>
             <h3 className="text-lg font-semibold text-[var(--color-text)]">
               {plan.title}
@@ -256,12 +256,6 @@ function PlanLimits({ plan }: { plan: ClubPlan }) {
       label: "Платные события",
       value: plan.allowPaidEvents ? "Доступно" : "Недоступно",
       available: plan.allowPaidEvents,
-    },
-    {
-      icon: FileSpreadsheet,
-      label: "Экспорт в CSV",
-      value: plan.allowCsvExport ? "Доступно" : "Недоступно",
-      available: plan.allowCsvExport,
     },
   ];
 
@@ -339,11 +333,11 @@ function SubscriptionStateAndActions({
               </p>
             </div>
           </div>
-          <Link href="/pricing">
-            <Button>
+          <form action={handleBillingAction.bind(null, "upgrade")}>
+            <Button type="submit">
               Выбрать тариф
             </Button>
-          </Link>
+          </form>
         </div>
       </div>
     );
@@ -421,14 +415,44 @@ function SubscriptionStateAndActions({
 
       {/* CTA button - triggers existing billing flow */}
       <div className="flex justify-end">
-        <Link href="/pricing">
-          <Button variant={ctaVariant}>
+        <form action={handleBillingAction.bind(null, getBillingActionType(status))}>
+          <Button type="submit" variant={ctaVariant}>
             {ctaLabel}
           </Button>
-        </Link>
+        </form>
       </div>
     </div>
   );
+}
+
+// =============================================================================
+// Billing Action Handler (Server Action Stub)
+// =============================================================================
+
+/**
+ * Billing action handler stub.
+ * Integration point for billing flow - to be wired to actual billing system.
+ * 
+ * @param action - "upgrade" | "renew" | "complete"
+ */
+async function handleBillingAction(action: string) {
+  "use server";
+  // TODO: Wire to actual billing flow when payment integration is ready
+  // This stub ensures CTA buttons call a function, not a hardcoded route
+  console.log("[Billing] Action triggered:", action);
+}
+
+/**
+ * Maps subscription status to billing action type.
+ */
+function getBillingActionType(status: SubscriptionStatus): "upgrade" | "renew" | "complete" {
+  const actionMap: Record<SubscriptionStatus, "upgrade" | "renew" | "complete"> = {
+    active: "upgrade",
+    pending: "complete",
+    grace: "renew",
+    expired: "renew",
+  };
+  return actionMap[status];
 }
 
 // =============================================================================
