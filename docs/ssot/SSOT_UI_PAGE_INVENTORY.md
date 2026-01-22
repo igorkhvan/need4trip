@@ -1,0 +1,23 @@
+- Marketing
+  - /
+- Auth-gated
+  - /profile
+  - /profile/edit
+- Commerce
+  - /pricing
+- Events
+  - /events
+  - /events/create
+  - /events/[id]
+  - /events/[id]/edit
+- Clubs
+  - /clubs
+  - /clubs/create
+  - /clubs/[id]
+  - /clubs/[id]/members
+  - /clubs/[id]/events
+  - /clubs/[id]/settings
+- System
+  - 403
+  - 404
+  - 500

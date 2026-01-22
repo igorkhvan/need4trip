@@ -82,101 +82,102 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     billingData = await getClubCurrentPlan(id);
   }
 
+  // SSOT: SSOT_UX_GOVERNANCE.md §2.2 — MANAGEMENT pages MUST use STANDARD width
+  // SSOT: SSOT_UX_NORMALIZATION_MATRIX.md §4.4 — MANAGEMENT → max-w-7xl
+  // FIX: Removed narrow max-w-3xl wrapper, page-container provided by (app) layout
   return (
-    <div className="min-h-screen bg-[var(--color-bg-subtle)]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back button */}
-        <Link
-          href={`/clubs/${id}`}
-          className="inline-flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Назад к клубу
-        </Link>
+    <div className="space-y-6">
+      {/* Back button */}
+      <Link
+        href={`/clubs/${id}`}
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-[var(--color-text)] transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        Назад к клубу
+      </Link>
 
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--color-text)]">Настройки клуба</h1>
-          <p className="text-[var(--color-text-muted)] mt-2">
-            Управление настройками клуба
-          </p>
-        </div>
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-[var(--color-text)]">Настройки клуба</h1>
+        <p className="text-muted-foreground mt-2">
+          Управление настройками клуба
+        </p>
+      </div>
 
-        {/* Archived Banner - per SSOT_CLUBS_DOMAIN.md §8.3 */}
-        {isArchived && (
-          <div className="mb-6">
-            <ClubArchivedBanner />
-            <div className="mt-4 p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-[var(--color-warning)] mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-[var(--color-warning-text)]">
-                  Клуб находится в архиве. Большинство настроек недоступны для изменения.
-                  Вы можете только просматривать биллинг и отменить подписку.
-                </p>
-              </div>
+      {/* Archived Banner - per SSOT_CLUBS_DOMAIN.md §8.3 */}
+      {isArchived && (
+        <div>
+          <ClubArchivedBanner />
+          <div className="mt-4 p-4 bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-[var(--color-warning)] mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[var(--color-warning-text)]">
+                Клуб находится в архиве. Большинство настроек недоступны для изменения.
+                Вы можете только просматривать биллинг и отменить подписку.
+              </p>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Section 1: General Settings (Placeholder) */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Основные настройки
-            </CardTitle>
-            <CardDescription>
-              Настройки профиля клуба
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="py-8 text-center text-[var(--color-text-muted)]">
-              <Settings className="w-12 h-12 mx-auto mb-4 text-[var(--color-border)]" />
-              <p className="text-sm">
-                Раздел в разработке
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Section 1: General Settings (Placeholder) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Основные настройки
+          </CardTitle>
+          <CardDescription>
+            Настройки профиля клуба
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="py-8 text-center text-muted-foreground">
+            <Settings className="w-12 h-12 mx-auto mb-4 text-[var(--color-border)]" />
+            <p className="text-sm">
+              Раздел в разработке
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Section 2: Visibility & Privacy (Phase 7) */}
-        <VisibilityPrivacySection
-          clubId={id}
-          initialVisibility={club.visibility}
-          initialOpenJoinEnabled={club.settings?.openJoinEnabled ?? false}
-          isArchived={isArchived}
+      {/* Section 2: Visibility & Privacy (Phase 7) */}
+      <VisibilityPrivacySection
+        clubId={id}
+        initialVisibility={club.visibility}
+        initialOpenJoinEnabled={club.settings?.openJoinEnabled ?? false}
+        isArchived={isArchived}
+      />
+
+      {/* Section 3: Billing (v1 — per Visual Contract) */}
+      {/* Per Visual Contract §7: Billing section hidden when archived */}
+      {!isArchived && billingData && (
+        <BillingSection
+          plan={billingData.plan}
+          subscription={billingData.subscription}
         />
+      )}
 
-        {/* Section 3: Billing (v1 — per Visual Contract) */}
-        {/* Per Visual Contract §7: Billing section hidden when archived */}
-        {!isArchived && billingData && (
-          <BillingSection
-            plan={billingData.plan}
-            subscription={billingData.subscription}
-          />
-        )}
-
-        {/* Section 4: Danger Zone (Placeholder) */}
-        <Card className="border-[var(--color-danger-border)] mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-[var(--color-danger-text)]">
-              <AlertTriangle className="w-5 h-5" />
-              Опасная зона
-            </CardTitle>
-            <CardDescription>
-              Необратимые действия с клубом
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="py-8 text-center text-[var(--color-text-muted)]">
-              <Archive className="w-12 h-12 mx-auto mb-4 text-[var(--color-border)]" />
-              <p className="text-sm">
-                Раздел в разработке
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Section 4: Danger Zone (Placeholder) */}
+      <Card className="border-[var(--color-danger-border)]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-[var(--color-danger-text)]">
+            <AlertTriangle className="w-5 h-5" />
+            Опасная зона
+          </CardTitle>
+          <CardDescription>
+            Необратимые действия с клубом
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="py-8 text-center text-muted-foreground">
+            <Archive className="w-12 h-12 mx-auto mb-4 text-[var(--color-border)]" />
+            <p className="text-sm">
+              Раздел в разработке
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -196,7 +197,7 @@ interface BillingSectionProps {
  */
 function BillingSection({ plan, subscription }: BillingSectionProps) {
   return (
-    <Card className="mb-6">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="w-5 h-5" />

@@ -21,6 +21,8 @@ export {
   ProfileContentSkeleton,
 } from "./profile-skeleton";
 
+export { ProfileEditSkeleton } from "./profile-edit-skeleton";
+
 export {
   FormFieldSkeleton,
   FormTextareaSkeleton,

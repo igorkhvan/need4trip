@@ -3,6 +3,9 @@
  * 
  * Клиентский компонент для создания клуба
  * Оптимизирован с dynamic import для code splitting
+ * 
+ * SSOT: SSOT_UI_ASYNC_PATTERNS.md §3 Pattern C — skeleton MUST match final layout
+ * SSOT: SSOT_UX_GOVERNANCE.md §3.3 — skeletons MUST appear immediately on first load
  */
 
 "use client";
@@ -12,11 +15,16 @@ import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
+import { FormSkeleton } from "@/components/ui/skeletons";
 
-// Динамический импорт формы клуба для code splitting
+// SSOT: SSOT_UI_ASYNC_PATTERNS.md §9 — Spinner-only pages forbidden
+// FIX: Added loading skeleton for dynamic import
 const ClubForm = dynamic(
   () => import("@/components/clubs/club-form").then((mod) => ({ default: mod.ClubForm })),
-  { ssr: false }
+  { 
+    ssr: false,
+    loading: () => <FormSkeleton fieldsCount={6} />,
+  }
 );
 
 export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {

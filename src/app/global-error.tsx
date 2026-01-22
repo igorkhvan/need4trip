@@ -3,8 +3,13 @@
 /**
  * Global Error Handler (Root Level)
  * 
- * Обрабатывает критические ошибки на самом верхнем уровне,
- * включая ошибки в root layout.
+ * Handles critical errors at the root level, including errors in root layout.
+ * Uses inline styles because CSS may not be loaded.
+ * 
+ * SSOT: SSOT_UX_GOVERNANCE.md §2.2 — SYSTEM pages MUST use STANDARD width
+ * SSOT: SSOT_UI_STATES.md §4 — ERROR state with retry action
+ * SSOT: SSOT_UI_COPY.md §4.2 — Canonical error copy
+ * FIX: Unified structure, wider container, guaranteed navigation escape
  */
 
 import { useEffect } from "react";
@@ -23,36 +28,68 @@ export default function GlobalError({
   return (
     <html>
       <body>
+        {/* SSOT: page-container equivalent via inline styles (max-width: 1280px) */}
         <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          minHeight: "100vh",
-          padding: "2rem",
-          fontFamily: "system-ui, sans-serif"
+          maxWidth: "80rem",
+          margin: "0 auto",
+          padding: "4rem 1rem",
+          fontFamily: "system-ui, -apple-system, sans-serif"
         }}>
           <div style={{ 
-            maxWidth: "32rem", 
-            textAlign: "center",
-            padding: "2rem",
-            border: "1px solid #e5e7eb",
-            borderRadius: "0.5rem"
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center"
           }}>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
-              Критическая ошибка
+            {/* Error icon */}
+            <div style={{
+              width: "5rem",
+              height: "5rem",
+              borderRadius: "9999px",
+              backgroundColor: "#FEF2F2",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "1.5rem"
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+
+            <h1 style={{ 
+              fontSize: "1.5rem", 
+              fontWeight: "700", 
+              color: "#111827",
+              marginBottom: "0.75rem" 
+            }}>
+              Произошла ошибка
             </h1>
-            <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-              Произошла критическая ошибка приложения
+            
+            <p style={{ 
+              color: "#6b7280", 
+              marginBottom: "2rem",
+              maxWidth: "28rem"
+            }}>
+              Не удалось загрузить страницу
             </p>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+            
+            {/* SSOT: SSOT_UI_STATES.md §4.2 — Retry + navigation escape */}
+            <div style={{ display: "flex", gap: "0.75rem" }}>
               <button
                 onClick={reset}
                 style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#3b82f6",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1.25rem",
+                  backgroundColor: "#FF6F2C",
                   color: "white",
                   border: "none",
-                  borderRadius: "0.375rem",
+                  borderRadius: "0.75rem",
+                  fontWeight: "500",
                   cursor: "pointer"
                 }}
               >
@@ -61,11 +98,14 @@ export default function GlobalError({
               <a
                 href="/"
                 style={{
-                  padding: "0.5rem 1rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "0.75rem 1.25rem",
                   border: "1px solid #e5e7eb",
-                  borderRadius: "0.375rem",
+                  borderRadius: "0.75rem",
                   textDecoration: "none",
-                  color: "inherit"
+                  color: "#111827",
+                  fontWeight: "500"
                 }}
               >
                 На главную

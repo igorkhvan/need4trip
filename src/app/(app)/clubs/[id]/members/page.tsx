@@ -69,20 +69,12 @@ export default async function ClubMembersPage({ params }: ClubMembersPageProps) 
   // Per V5 §4: Join Requests section visible to Owner OR Admin
   const canManageRequests = isOwner || isAdmin;
 
-  // 403: Not authenticated or not a member (per Visual Contract v4 §1)
-  // Per Visual Contract v4 §5: Visible to member, admin, owner
+  // SSOT: SSOT_UI_STATES.md §5.3 — Forbidden MUST NOT be embedded inline
+  // SSOT: SSOT_UX_GOVERNANCE.md §4.4 — Forbidden MUST use canonical SYSTEM layout
+  // FIX: Removed inline wrapper, ClubForbiddenPage is self-contained with ONE escape action
   if (!user || !isMember) {
     return (
-      <div className="space-y-6 pb-10 pt-12">
-        <Link
-          href={`/clubs/${id}`}
-          className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span>К профилю клуба</span>
-        </Link>
-        <ClubForbiddenPage message="У вас нет доступа к просмотру списка участников. Вступите в клуб, чтобы видеть участников." />
-      </div>
+      <ClubForbiddenPage message="Нет доступа. Вступите в клуб, чтобы видеть участников." />
     );
   }
 

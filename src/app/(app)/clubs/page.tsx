@@ -9,9 +9,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Search, MapPin } from "lucide-react";
+import { Plus, Search, MapPin, AlertCircle, RefreshCw } from "lucide-react";
 import { ClubCard } from "@/components/clubs/club-card";
 import { CreateClubButton } from "@/components/clubs/create-club-button";
+import { Button } from "@/components/ui/button";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { Pagination } from "@/components/ui/pagination";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
@@ -27,6 +28,9 @@ export default function ClubsPage() {
   // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
   const { isAuthenticated } = useAuth();
   const [clubs, setClubs] = useState<(Club & { memberCount?: number; eventCount?: number })[]>([]);
+  // SSOT: SSOT_UI_STATES.md §3.3 — ERROR and EMPTY states MUST be separate
+  // FIX: Added explicit error state tracking
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
@@ -56,6 +60,9 @@ export default function ClubsPage() {
   }, [currentPage]);
 
   const loadClubs = async (page: number) => {
+    // SSOT: SSOT_UI_STATES.md §4.2 — Clear error before new fetch
+    setError(null);
+    
     try {
       let url = `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/clubs`;
       const params = new URLSearchParams();
@@ -76,9 +83,12 @@ export default function ClubsPage() {
       setClubs(data.clubs ?? []);
       setTotalClubs(data.total ?? 0);
     } catch (err) {
+      // SSOT: SSOT_UI_STATES.md §3 — ERROR state MUST be tracked separately
+      // FIX: Set error state instead of silently setting empty array
       if (err instanceof ClientError) {
         log.error("[loadClubs] Failed to load clubs", { code: err.code });
       }
+      setError("Не удалось загрузить данные");
       setClubs([]);
       setTotalClubs(0);
     } finally {
@@ -231,12 +241,37 @@ export default function ClubsPage() {
         )}
 
         {/* Список клубов */}
+        {/* SSOT: SSOT_UI_STATES.md §1.3 — One state at a time */}
         {initialLoad ? (
           // Initial loading skeleton
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <ClubCardSkeleton key={i} />
             ))}
+          </div>
+        ) : error ? (
+          // SSOT: SSOT_UI_STATES.md §4 — ERROR state (distinct from EMPTY)
+          // SSOT: SSOT_UI_COPY.md §4.2 — Canonical error message
+          // FIX: Separated ERROR state with retry action
+          <div className="rounded-xl border border-[var(--color-danger-border)] bg-white py-16 text-center">
+            <div className="mx-auto max-w-md">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2]">
+                <AlertCircle className="h-8 w-8 text-[#DC2626]" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">
+                Не удалось загрузить данные
+              </h3>
+              <p className="mb-6 text-sm text-muted-foreground">
+                Попробуйте обновить страницу
+              </p>
+              <Button
+                onClick={() => loadClubs(currentPage)}
+                className="inline-flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Попробовать снова
+              </Button>
+            </div>
           </div>
         ) : clubs.length > 0 ? (
           <>
@@ -259,23 +294,25 @@ export default function ClubsPage() {
             </div>
           </>
         ) : (
+          // SSOT: SSOT_UI_STATES.md §3 — EMPTY state (distinct from ERROR)
+          // SSOT: SSOT_UI_COPY.md §3.2 — Canonical empty copy
           <div className="rounded-lg border-2 border-dashed border-[#E5E7EB] bg-white py-16 text-center">
             <div className="mx-auto max-w-md">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F9FAFB]">
                 <Search className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="mb-2 text-[18px] font-semibold text-[#1F2937]">
-                {searchQuery || selectedCity ? "Клубы не найдены" : "Пока нет клубов"}
+              <h3 className="mb-2 text-lg font-semibold text-[var(--color-text)]">
+                {searchQuery || selectedCity ? "Ничего не найдено" : "Пока нет клубов"}
               </h3>
-              <p className="mb-6 text-[15px] text-muted-foreground">
+              <p className="mb-6 text-sm text-muted-foreground">
                 {searchQuery || selectedCity
-                  ? "Попробуйте изменить поисковый запрос или фильтр"
-                  : "Создайте первый клуб и соберите единомышленников"}
+                  ? "Попробуйте изменить фильтр"
+                  : "Создайте первый клуб"}
               </p>
               {!searchQuery && !selectedCity && (
                 <CreateClubButton
                   isAuthenticated={isAuthenticated}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
                 >
                   <Plus className="h-4 w-4" />
                   Создать клуб
