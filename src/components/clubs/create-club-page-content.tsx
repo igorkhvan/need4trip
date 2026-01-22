@@ -2,30 +2,21 @@
  * Create Club Page Content
  * 
  * Клиентский компонент для создания клуба
- * Оптимизирован с dynamic import для code splitting
  * 
- * SSOT: SSOT_UI_ASYNC_PATTERNS.md §3 Pattern C — skeleton MUST match final layout
- * SSOT: SSOT_UX_GOVERNANCE.md §3.3 — skeletons MUST appear immediately on first load
+ * SSOT: SSOT_UI_ASYNC_PATTERNS.md — CREATE pages render form immediately
+ * Pattern: Static import for CREATE flow (no skeleton, instant render)
  */
 
 "use client";
 
 import { useEffect } from "react";
-import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
-import { FormSkeleton } from "@/components/ui/skeletons";
 
-// SSOT: SSOT_UI_ASYNC_PATTERNS.md §9 — Spinner-only pages forbidden
-// FIX: Added loading skeleton for dynamic import
-const ClubForm = dynamic(
-  () => import("@/components/clubs/club-form").then((mod) => ({ default: mod.ClubForm })),
-  { 
-    ssr: false,
-    loading: () => <FormSkeleton fieldsCount={6} />,
-  }
-);
+// SSOT_UI_STRUCTURE — CREATE page renders without skeleton
+// Static import for CREATE flow: form renders instantly
+import { ClubForm } from "@/components/clubs/club-form";
 
 export function CreateClubPageContent({ isAuthenticated }: { isAuthenticated: boolean }) {
   const { execute } = useProtectedAction(isAuthenticated);
