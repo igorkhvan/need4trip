@@ -20,6 +20,8 @@ import { LoadingBar } from "@/components/ui/loading-bar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useEventsQuery } from "@/hooks/use-events-query";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 
 export function EventsPageClient() {
   const router = useRouter();
@@ -143,8 +145,22 @@ export function EventsPageClient() {
         {listLoading ? (
           <EventCardSkeletonGrid count={6} />
         ) : listError ? (
-          <div className="py-16 text-center">
-            <p className="text-red-500">{listError}</p>
+          /* SSOT: SSOT_UI_STATES §4.2 — Error container distinct from content */
+          /* SSOT: SSOT_UX_GOVERNANCE §4.3 — Allow retry if recoverable, preserve surrounding layout */
+          <div className="py-16 flex flex-col items-center text-center">
+            {/* Error icon */}
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2]">
+              <AlertCircle className="h-8 w-8 text-[#DC2626]" />
+            </div>
+            {/* SSOT: SSOT_UI_COPY §4.2 — Generic fetch error */}
+            <h3 className="heading-h2 mb-2">Не удалось загрузить данные</h3>
+            <p className="mb-6 text-base text-muted-foreground">
+              Произошла ошибка при загрузке событий
+            </p>
+            {/* SSOT: SSOT_UI_COPY §4.3 — Retry copy */}
+            <Button onClick={() => window.location.reload()}>
+              Попробовать снова
+            </Button>
           </div>
         ) : (
           <EventsGrid
