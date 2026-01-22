@@ -28,6 +28,7 @@ import { formatDateTime } from "@/lib/utils/dates";
 import { isRegistrationClosed, getRegistrationClosedReason } from "@/lib/utils/eventPermissions";
 import { EventParticipantsAsync } from "./_components/participants-async";
 import { EventParticipantsSkeleton } from "@/components/ui/skeletons";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export default async function EventDetails({
   params,
@@ -261,17 +262,20 @@ export default async function EventDetails({
             )}
 
             {/* Participants Card - загружаем через Suspense */}
+            {/* SSOT_EVENTS_UX_V1.1 §3: Section-level failure isolation */}
             <div id="event-participants">
-              <Suspense fallback={<EventParticipantsSkeleton />}>
-                <EventParticipantsAsync
-                  eventId={event.id}
-                  event={event}
-                  isOwner={isOwner}
-                  currentUserId={currentUser?.id}
-                  guestSessionId={guestSessionId ?? undefined}
-                  isPastEvent={isPastEvent}
-                />
-              </Suspense>
+              <SectionErrorBoundary sectionName="Участники">
+                <Suspense fallback={<EventParticipantsSkeleton />}>
+                  <EventParticipantsAsync
+                    eventId={event.id}
+                    event={event}
+                    isOwner={isOwner}
+                    currentUserId={currentUser?.id}
+                    guestSessionId={guestSessionId ?? undefined}
+                    isPastEvent={isPastEvent}
+                  />
+                </Suspense>
+              </SectionErrorBoundary>
             </div>
           </div>
 

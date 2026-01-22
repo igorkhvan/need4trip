@@ -64,3 +64,6 @@ export {
   ClubEventsListSkeleton,
   ClubEventsPageSkeleton,
 } from "./club-events-page-skeleton";
+
+// Event Form skeleton for dynamic import fallback — SSOT_EVENTS_UX_V1.1 §1
+export { EventFormSkeleton } from "./event-form-skeleton";

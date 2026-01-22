@@ -24,11 +24,16 @@ import { CreditConfirmationModal } from "@/components/billing/credit-confirmatio
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
+import { EventFormSkeleton } from "@/components/ui/skeletons";
 
-// Динамический импорт формы события для code splitting
+// SSOT_EVENTS_UX_V1.1 §1: Dynamic imports MUST render a visual placeholder immediately
+// Blank screens during dynamic import resolution are FORBIDDEN
 const EventForm = dynamic(
   () => import("@/components/events/event-form").then((mod) => ({ default: mod.EventForm })),
-  { ssr: false }
+  { 
+    ssr: false,
+    loading: () => <EventFormSkeleton />
+  }
 );
 
 interface CreateEventPageClientProps {

@@ -3,12 +3,14 @@
  * 
  * SSOT: SSOT_UX_GOVERNANCE.md §2.2 — SYSTEM pages MUST use STANDARD width
  * SSOT: SSOT_UI_STATES.md §6.2 — NotFound MUST provide navigation escape
+ * SSOT_EVENTS_UX_V1.1 §4 — Canonical SYSTEM layout with navigation escape
  * FIX: Unified structure with page-container, guaranteed navigation escape
  */
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home, ArrowLeft, Search } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
+import { Home, Search } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -34,13 +36,14 @@ export default function NotFound() {
         </p>
 
         {/* SSOT: SSOT_UI_STATES.md §6.2 — Navigation escape required */}
+        {/* SSOT_EVENTS_UX_V1.1 §4 — Context-aware escape actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button variant="outline" size="lg" asChild>
-            <Link href="javascript:history.back()" className="flex items-center gap-2">
-              <ArrowLeft className="h-5 w-5" />
-              Назад
-            </Link>
-          </Button>
+          <BackButton 
+            variant="outline" 
+            size="lg" 
+            fallbackHref="/"
+            className="flex items-center gap-2"
+          />
           
           <Button size="lg" asChild>
             <Link href="/" className="flex items-center gap-2">
