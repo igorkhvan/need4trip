@@ -1,104 +1,29 @@
 /**
  * Edit Event Page (Server Component)
  * 
- * Архитектура:
- * - Server: загружает event + user + plan limits
- * - Client: рендерит форму с готовыми данными
+ * SSOT_UI_STRUCTURE — EDIT page renders without server-side blocking
+ * SSOT_UI_ASYNC_PATTERNS — data loads client-side, form temporarily disabled
  * 
- * Паттерн: как EventDetails page (SSR → Client Component)
+ * Архитектура:
+ * - Server: НЕТ blocking awaits — страница рендерится мгновенно
+ * - Client: загружает event + user clubs + plan limits асинхронно
+ * - Форма рендерится сразу, поля disabled пока данные загружаются
+ * 
+ * Паттерн: как CREATE page (instant render → client-side data loading)
  */
 
-import { notFound, redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/currentUser";
-import { getEventWithVisibility, hydrateEvent } from "@/lib/services/events";
-import { getPlanById } from "@/lib/db/planRepo";
-import { getClubCurrentPlan } from "@/lib/services/accessControl";
-import { getUserClubs } from "@/lib/services/clubs";
-import { getEffectiveEventEntitlements } from "@/lib/services/eventEntitlements";
 import { EditEventPageClient } from "./edit-event-client";
-import type { ClubPlanLimits } from "@/hooks/use-club-plan";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function EditEventPage({ params }: PageProps) {
+  // SSOT_UI_STRUCTURE — Only extract eventId, no blocking awaits
   const { id } = await params;
   
-  // 1. Load user (required for ownership check)
-  const currentUser = await getCurrentUser();
-  
-  if (!currentUser) {
-    // Redirect to event page, where auth modal will trigger
-    redirect(`/events/${id}`);
-  }
-  
-  // 2. Load event with visibility check
-  const event = await getEventWithVisibility(id, {
-    currentUser,
-    enforceVisibility: true,
-  }).catch(() => null);
-  
-  if (!event) {
-    return notFound();
-  }
-  
-  // 3. Check ownership
-  const isOwner = currentUser.id === event.createdByUserId;
-  
-  if (!isOwner) {
-    // Not owner - redirect to event detail page
-    redirect(`/events/${id}`);
-  }
-  
-  // 4. Hydrate event (load related data)
-  const hydratedEvent = await hydrateEvent(event);
-  
-  // 5. Load manageable clubs (for showing club name in edit mode)
-  const allClubs = await getUserClubs(currentUser.id);
-  const manageableClubs = allClubs
-    .filter(club => club.userRole === "owner" || club.userRole === "admin")
-    .map(club => ({
-      id: club.id,
-      name: club.name,
-      userRole: club.userRole as "owner" | "admin",
-    }));
-  
-  // 6. Load plan limits based on event type
-  let planLimits: ClubPlanLimits;
-  
-  if (event.clubId) {
-    // Club event → load club plan
-    const { plan } = await getClubCurrentPlan(event.clubId);
-    planLimits = {
-      maxMembers: plan.maxMembers,
-      maxEventParticipants: plan.maxEventParticipants,
-      allowPaidEvents: plan.allowPaidEvents,
-      allowCsvExport: plan.allowCsvExport,
-    };
-  } else {
-    // ⚡ NEW: Personal event → use effective entitlements (accounts for consumed credits)
-    const entitlements = await getEffectiveEventEntitlements({
-      userId: currentUser.id,
-      eventId: event.id,
-      clubId: event.clubId,
-    });
-    
-    planLimits = {
-      maxMembers: null, // Personal events don't have member limits
-      maxEventParticipants: entitlements.maxEventParticipants, // 15 or 500 if credit applied
-      allowPaidEvents: false, // Personal events cannot be paid (SSOT §1.3)
-      allowCsvExport: false, // Personal events don't support CSV export
-    };
-  }
-  
-  // 7. Render client component with all data ready
-  return (
-    <EditEventPageClient
-      event={hydratedEvent}
-      planLimits={planLimits}
-      currentUserId={currentUser.id}
-      manageableClubs={manageableClubs}
-    />
-  );
+  // SSOT_UI_ASYNC_PATTERNS — All data fetching moved to client component for instant render
+  return <EditEventPageClient eventId={id} />;
 }
