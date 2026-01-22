@@ -35,10 +35,12 @@ export default function PricingPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // SSOT: SSOT_UI_COPY §2.2 - Page/Section loading: ❌ No text
+  // FIX: Removed text "Загрузка тарифов...", spinner-only
   if (loading) {
     return (
-      <div className="py-16 text-center">
-        <p className="text-muted-foreground">Загрузка тарифов...</p>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" />
       </div>
     );
   }

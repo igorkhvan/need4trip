@@ -166,8 +166,10 @@ export function CityAutocomplete({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
+            {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
+            {/* FIX: Replaced text "Загрузка..." with spinner indicator */}
             <CommandEmpty>
-              {loading ? "Загрузка..." : "Город не найден"}
+              {loading ? "•••" : "Город не найден"}
             </CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-y-auto">
               {cities.map((city) => (

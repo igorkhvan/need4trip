@@ -119,7 +119,7 @@ export function CitySelect({
       placeholder={placeholder}
       searchPlaceholder="Начните печатать название города..."
       emptyMessage="Города не найдены"
-      loadingMessage="Загрузка..."
+      // SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text (uses default)
       
       disabled={disabled}
       error={error}

@@ -806,8 +806,10 @@ export function EventForm({
             cancelText="Продолжить редактирование"
             onConfirm={() => router.push(backHref)}
           />
+          {/* SSOT: SSOT_UI_COPY §2.2 - Button (action): `Сохранение…` */}
+          {/* FIX: Normalized "Сохраняем..." → "Сохранение…" */}
           <Button type="submit" disabled={isSubmitting || isGeneratingRules || disabled} className="px-5">
-            {externalBusyLabel || (isSubmitting ? "Сохраняем..." : submitLabel)}
+            {externalBusyLabel || (isSubmitting ? "Сохранение…" : submitLabel)}
           </Button>
         </div>
       </form>

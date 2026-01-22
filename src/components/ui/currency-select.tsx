@@ -132,9 +132,11 @@ export function CurrencySelect({
           <Command shouldFilter={false}>
             <CommandInput placeholder="Поиск валюты..." className="h-10" />
             <CommandList>
-              {loading ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  Загрузка...
+              {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
+            {/* FIX: Replaced text "Загрузка..." with spinner */}
+            {loading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" />
                 </div>
               ) : (
                 <>

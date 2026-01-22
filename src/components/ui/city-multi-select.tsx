@@ -154,7 +154,7 @@ export function CityMultiSelect({
       placeholder={placeholder}
       searchPlaceholder="Поиск города..."
       emptyMessage="Город не найден"
-      loadingMessage="Загрузка..."
+      // SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text (uses default)
       
       icon={<MapPin className="h-4 w-4" />}
       

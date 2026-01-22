@@ -106,7 +106,9 @@ export function GenericSelect<T>({
   placeholder = "Выберите...",
   searchPlaceholder = "Поиск...",
   emptyMessage = "Не найдено",
-  loadingMessage = "Загрузка...",
+  // SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text
+  // FIX: Default loading changed to spinner-only indicator
+  loadingMessage = "•••",
   icon,
   className,
   disabled = false,

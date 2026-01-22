@@ -110,10 +110,12 @@ export function UserMenuItems({
   }
 
   // Стили для sheet (более крупные, touch-friendly)
+  // SSOT: SSOT_UX_NORMALIZATION_MATRIX §3 - Parent controls spacing
+  // FIX: Removed mb-4 from child, parent space-y-2 handles spacing
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {/* User Info */}
-      <div className="px-4 py-3 mb-4 rounded-lg bg-[var(--color-bg-subtle)]">
+      <div className="px-4 py-3 rounded-lg bg-[var(--color-bg-subtle)]">
         <p className="text-base font-semibold text-[var(--color-text)] truncate">
           {currentUser.name || "Пользователь"}
         </p>

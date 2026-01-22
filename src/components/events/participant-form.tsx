@@ -407,9 +407,11 @@ export function ParticipantForm({
         </p>
       )}
 
+      {/* SSOT: SSOT_UI_COPY §2.2 - Button (action): `Сохранение…` */}
+      {/* FIX: Normalized "Сохраняем..." → "Сохранение…" */}
       <div className="flex justify-end pb-1">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Сохраняем..." : mode === "create" ? "Зарегистрироваться" : "Сохранить"}
+          {isSubmitting ? "Сохранение…" : mode === "create" ? "Зарегистрироваться" : "Сохранить"}
         </Button>
       </div>
     </form>

@@ -884,9 +884,11 @@ export function ProfilePageClient() {
                         <SelectTrigger className={carFieldErrors.type ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                           <SelectValue placeholder="Выберите тип" />
                         </SelectTrigger>
+                        {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
+                        {/* FIX: Replaced "Загрузка..." with visual indicator */}
                         <SelectContent>
                           {vehicleTypes.length === 0 ? (
-                            <SelectItem value="" disabled>Загрузка...</SelectItem>
+                            <SelectItem value="" disabled>•••</SelectItem>
                           ) : (
                             vehicleTypes.map(type => (
                               <SelectItem key={type.value} value={type.value}>
@@ -1001,9 +1003,11 @@ export function ProfilePageClient() {
                               <SelectTrigger className={carFieldErrors.type ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                                 <SelectValue placeholder="Выберите тип" />
                               </SelectTrigger>
+                              {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
+                              {/* FIX: Replaced "Загрузка..." with visual indicator */}
                               <SelectContent>
                                 {vehicleTypes.length === 0 ? (
-                                  <SelectItem value="" disabled>Загрузка...</SelectItem>
+                                  <SelectItem value="" disabled>•••</SelectItem>
                                 ) : (
                                   vehicleTypes.map(type => (
                                     <SelectItem key={type.value} value={type.value}>

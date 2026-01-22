@@ -49,8 +49,10 @@ function DelayedFallback({
   return showFallback ? <>{fallback}</> : <div className="min-h-[1px]" />;
 }
 
+// SSOT: SSOT_UI_COPY §2.2 - Page/Section loading: ❌ No text
+// FIX: Default fallback changed from text to spinner-only
 export function SuspenseWrapper({ 
-  fallback = <div>Загрузка...</div>, 
+  fallback = <div className="flex items-center justify-center p-4"><div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" /></div>, 
   delay = 300,
   children 
 }: SuspenseWrapperProps) {

@@ -96,13 +96,12 @@ function LeafletMapFallback({ lat, lng, title }: { lat: number; lng: number; tit
     });
   }, [lat, lng, title]);
 
+  // SSOT: SSOT_UI_COPY §2.2 - Section loading: ❌ No text
+  // FIX: Removed text "Загрузка карты...", icon-only placeholder
   if (!Map) {
     return (
       <div className="flex h-[300px] sm:h-[400px] items-center justify-center rounded-lg bg-[#F9FAFB]">
-        <div className="text-center">
-          <MapPin className="mx-auto h-12 w-12 text-[#9CA3AF]" />
-          <p className="mt-2 text-sm text-muted-foreground">Загрузка карты...</p>
-        </div>
+        <MapPin className="h-12 w-12 text-[#9CA3AF] animate-pulse" />
       </div>
     );
   }

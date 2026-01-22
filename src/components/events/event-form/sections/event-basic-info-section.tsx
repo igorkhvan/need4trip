@@ -245,6 +245,8 @@ export function EventBasicInfoSection({
           </FormField>
         </div>
 
+        {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
+        {/* FIX: Removed text "Загрузка категорий...", spinner-only */}
         <FormField
           id="category"
           label="Категория события"
@@ -252,8 +254,8 @@ export function EventBasicInfoSection({
           error={fieldErrors.categoryId}
         >
           {loadingCategories ? (
-            <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center text-muted-foreground">
-              Загрузка категорий...
+            <div className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-gray-50 flex items-center justify-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" />
             </div>
           ) : (
             <Select

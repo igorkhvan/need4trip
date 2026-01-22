@@ -106,14 +106,15 @@ export function NotificationSettingsForm() {
     });
   };
 
+  // SSOT: SSOT_UI_COPY §2.2 - Section loading: ❌ No text
+  // FIX: Removed text "Загрузка настроек...", spinner-only
   if (loading) {
     console.log('[NotificationSettingsForm] Rendering loading state');
     return (
       <Card>
         <CardContent className="p-8">
-          <div className="flex flex-col items-center justify-center gap-3">
+          <div className="flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-            <p className="text-sm text-gray-500">Загрузка настроек...</p>
           </div>
         </CardContent>
       </Card>
