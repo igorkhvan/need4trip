@@ -503,8 +503,8 @@ export function EventForm({
       // Parent component handles redirect and state management
     } catch (err: any) {
       // Paywall errors are handled by parent component
-      // If we reach here, show generic error
-      setErrorMessage(getErrorMessage(err, "Не удалось сохранить событие. Попробуйте ещё раз."));
+      // If we reach here, show generic error (SSOT_UI_COPY §4.2)
+      setErrorMessage(getErrorMessage(err, "Не удалось сохранить изменения"));
     }
     // ⚡ REMOVED: finally block that reset isSubmitting
     // Parent ActionController manages state until redirect
@@ -543,8 +543,9 @@ export function EventForm({
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {/* Section 0: Club Selection (SSOT §4)
             - Create mode: shown only if user has manageable clubs
-            - Edit mode: shown if has manageable clubs OR event is club event (to show read-only club info) */}
-        {(manageableClubs.length > 0 || (mode === "edit" && clubId)) && (
+            - Edit mode: shown ONLY if event is club event (clubId !== null) - read-only display
+            SSOT §5.6: clubId is IMMUTABLE after creation - personal events never show this section in edit */}
+        {(mode === "create" ? manageableClubs.length > 0 : clubId !== null) && (
           <Card className="border border-[#E5E7EB] shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3">
