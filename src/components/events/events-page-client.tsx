@@ -13,15 +13,14 @@
 import { useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+// SSOT_UI_STRUCTURE — static page chrome must render immediately
+// SSOT_UI_ASYNC_PATTERNS — skeletons allowed only for dynamic sections
 import { EventsGrid } from "@/components/events/events-grid";
-import { EventCardSkeletonGrid } from "@/components/ui/skeletons/event-card-skeleton";
 import { CreateEventButton } from "@/components/events/create-event-button";
 import { LoadingBar } from "@/components/ui/loading-bar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 import { useEventsQuery } from "@/hooks/use-events-query";
-import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
 
 export function EventsPageClient() {
   const router = useRouter();
@@ -139,43 +138,25 @@ export function EventsPageClient() {
       </div>
 
       {/* Events List Section */}
+      {/* SSOT_UI_STRUCTURE — EventsGrid always renders; page chrome (tabs, search, filters) visible immediately */}
+      {/* SSOT_UI_ASYNC_PATTERNS — loading/error states handled inside EventsGrid, only affecting list section */}
       <div className="relative">
         {listRefetching && events.length > 0 && <LoadingBar position="top" height={3} />}
         
-        {listLoading ? (
-          <EventCardSkeletonGrid count={6} />
-        ) : listError ? (
-          /* SSOT: SSOT_UI_STATES §4.2 — Error container distinct from content */
-          /* SSOT: SSOT_UX_GOVERNANCE §4.3 — Allow retry if recoverable, preserve surrounding layout */
-          <div className="py-16 flex flex-col items-center text-center">
-            {/* Error icon */}
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2]">
-              <AlertCircle className="h-8 w-8 text-[#DC2626]" />
-            </div>
-            {/* SSOT: SSOT_UI_COPY §4.2 — Generic fetch error */}
-            <h3 className="heading-h2 mb-2">Не удалось загрузить данные</h3>
-            <p className="mb-6 text-base text-muted-foreground">
-              Произошла ошибка при загрузке событий
-            </p>
-            {/* SSOT: SSOT_UI_COPY §4.3 — Retry copy */}
-            <Button onClick={() => window.location.reload()}>
-              Попробовать снова
-            </Button>
-          </div>
-        ) : (
-          <EventsGrid
-            events={events}
-            meta={meta}
-            currentUserId={currentUser?.id || null}
-            isAuthenticated={isAuthenticated}
-            onTabChange={handleTabChange}
-            onPageChange={handlePageChange}
-            onSearchChange={handleSearchChange}
-            onSortChange={handleSortChange}
-            onCityChange={handleCityChange}
-            onCategoryChange={handleCategoryChange}
-          />
-        )}
+        <EventsGrid
+          events={events}
+          meta={meta}
+          currentUserId={currentUser?.id || null}
+          isAuthenticated={isAuthenticated}
+          loading={listLoading}
+          error={listError}
+          onTabChange={handleTabChange}
+          onPageChange={handlePageChange}
+          onSearchChange={handleSearchChange}
+          onSortChange={handleSortChange}
+          onCityChange={handleCityChange}
+          onCategoryChange={handleCategoryChange}
+        />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pagination } from "@/components/ui/pagination";
 import { Tabs } from "@/components/ui/tabs";
 import { EventCardDetailed } from "@/components/events/event-card-detailed";
+import { EventCardSkeletonGrid } from "@/components/ui/skeletons/event-card-skeleton";
 import { useLoadingTransition } from "@/hooks/use-loading-transition";
 import { DelayedSpinner } from "@/components/ui/delayed-spinner";
 import { EventCategoryDto } from "@/lib/types/eventCategory";
 import { EventListItemHydrated } from "@/lib/services/events";
 
+// SSOT_UI_STRUCTURE — static page chrome (tabs, search, filters) must render immediately
+// SSOT_UI_ASYNC_PATTERNS — skeletons allowed only for dynamic sections (list)
 interface EventsGridProps {
   events: EventListItemHydrated[];
   meta: {
@@ -26,6 +29,10 @@ interface EventsGridProps {
   } | null;
   currentUserId: string | null;
   isAuthenticated: boolean;
+  /** Initial loading state — shows skeleton in list section only */
+  loading?: boolean;
+  /** Error state — shows error container in list section only */
+  error?: Error | string | null;
   onTabChange: (tab: string) => void;
   onPageChange: (page: number) => void;
   onSearchChange: (search: string) => void;
@@ -42,6 +49,8 @@ export function EventsGrid({
   meta, 
   currentUserId, 
   isAuthenticated,
+  loading = false,
+  error = null,
   onTabChange,
   onPageChange,
   onSearchChange,
@@ -235,11 +244,34 @@ export function EventsGrid({
         </div>
       )}
 
-      {/* Delayed loading spinner */}
+      {/* Delayed loading spinner for refetch/filter transitions */}
       <DelayedSpinner show={showLoading} className="mb-4" />
       
-      {/* Events Grid */}
-      {events.length > 0 ? (
+      {/* Events List Section */}
+      {/* SSOT_UI_ASYNC_PATTERNS — skeleton/error applied only to this dynamic section */}
+      {/* SSOT_UI_STRUCTURE — page chrome (tabs, search, filters above) remains visible */}
+      {error ? (
+        // Error state — canonical error container with retry
+        // SSOT_UI_STATES §4.2 — Error container distinct from content
+        // SSOT_UX_GOVERNANCE §4.3 — Allow retry if recoverable
+        <div className="py-16 flex flex-col items-center text-center">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEF2F2]">
+            <AlertCircle className="h-8 w-8 text-[#DC2626]" />
+          </div>
+          {/* SSOT_UI_COPY §4.2 — Generic fetch error */}
+          <h3 className="heading-h2 mb-2">Не удалось загрузить данные</h3>
+          <p className="mb-6 text-base text-muted-foreground">
+            Произошла ошибка при загрузке событий
+          </p>
+          {/* SSOT_UI_COPY §4.3 — Retry copy */}
+          <Button onClick={() => window.location.reload()}>
+            Попробовать снова
+          </Button>
+        </div>
+      ) : loading ? (
+        // Initial loading state — skeleton cards
+        <EventCardSkeletonGrid count={6} />
+      ) : events.length > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {events.map((event) => (
