@@ -68,7 +68,8 @@ export interface GenericSelectProps<T> {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
-  loadingMessage?: string;
+  // SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text, visual-only
+  loadingMessage?: React.ReactNode;
   icon?: React.ReactNode;
   className?: string;
   
@@ -106,9 +107,8 @@ export function GenericSelect<T>({
   placeholder = "Выберите...",
   searchPlaceholder = "Поиск...",
   emptyMessage = "Не найдено",
-  // SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text
-  // FIX: Default loading changed to spinner-only indicator
-  loadingMessage = "•••",
+  // SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text, visual-only
+  loadingMessage = <div className="flex items-center justify-center py-2"><div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" /></div>,
   icon,
   className,
   disabled = false,

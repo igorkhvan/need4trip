@@ -884,11 +884,12 @@ export function ProfilePageClient() {
                         <SelectTrigger className={carFieldErrors.type ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                           <SelectValue placeholder="Выберите тип" />
                         </SelectTrigger>
-                        {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
-                        {/* FIX: Replaced "Загрузка..." with visual indicator */}
+                        {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text, visual-only */}
                         <SelectContent>
                           {vehicleTypes.length === 0 ? (
-                            <SelectItem value="" disabled>•••</SelectItem>
+                            <div className="flex items-center justify-center py-4">
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" />
+                            </div>
                           ) : (
                             vehicleTypes.map(type => (
                               <SelectItem key={type.value} value={type.value}>
@@ -1003,11 +1004,12 @@ export function ProfilePageClient() {
                               <SelectTrigger className={carFieldErrors.type ? 'border-red-500 focus-visible:ring-red-500' : ''}>
                                 <SelectValue placeholder="Выберите тип" />
                               </SelectTrigger>
-                              {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text */}
-                              {/* FIX: Replaced "Загрузка..." with visual indicator */}
+                              {/* SSOT: SSOT_UI_COPY §2.2 - Inline async: ❌ No text, visual-only */}
                               <SelectContent>
                                 {vehicleTypes.length === 0 ? (
-                                  <SelectItem value="" disabled>•••</SelectItem>
+                                  <div className="flex items-center justify-center py-4">
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-[#FF6F2C] border-r-transparent" />
+                                  </div>
                                 ) : (
                                   vehicleTypes.map(type => (
                                     <SelectItem key={type.value} value={type.value}>
