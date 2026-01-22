@@ -15,7 +15,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { ClientError } from "@/lib/types/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
@@ -24,17 +23,11 @@ import { CreditConfirmationModal } from "@/components/billing/credit-confirmatio
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
 import type { ClubPlanLimits } from "@/hooks/use-club-plan";
-import { EventFormSkeleton } from "@/components/ui/skeletons";
 
-// SSOT_EVENTS_UX_V1.1 §1: Dynamic imports MUST render a visual placeholder immediately
-// Blank screens during dynamic import resolution are FORBIDDEN
-const EventForm = dynamic(
-  () => import("@/components/events/event-form").then((mod) => ({ default: mod.EventForm })),
-  { 
-    ssr: false,
-    loading: () => <EventFormSkeleton />
-  }
-);
+// SSOT_UI_STRUCTURE — CREATE form renders immediately (optimistic UI)
+// SSOT_UI_ASYNC_PATTERNS — reference data loads inline, non-blocking
+// Static import for CREATE flow: form renders instantly, no skeleton
+import { EventForm } from "@/components/events/event-form";
 
 interface CreateEventPageClientProps {
   isAuthenticated: boolean;
