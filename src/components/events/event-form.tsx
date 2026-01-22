@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import {
@@ -522,9 +523,13 @@ export function EventForm({
       <div className="space-y-4">
         <ConfirmDialog
           trigger={
-            <Button variant="ghost" className="w-fit">
-              ← Назад
-            </Button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>Назад</span>
+            </button>
           }
           title="Вернуться назад?"
           description="Все несохранённые данные будут потеряны. Вы уверены, что хотите вернуться?"

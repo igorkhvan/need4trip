@@ -90,10 +90,10 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
       {/* Back button */}
       <Link
         href={`/clubs/${id}`}
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-[var(--color-text)] transition-colors"
+        className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
       >
-        <ArrowLeft className="w-5 h-5" />
-        Назад к клубу
+        <ArrowLeft className="h-5 w-5" />
+        <span>Назад к клубу</span>
       </Link>
 
       {/* Page Header */}

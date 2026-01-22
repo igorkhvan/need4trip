@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Users, Calendar as CalendarIcon, Car, PencilLine, Lock } from "lucide-react";
+import { Users, Calendar as CalendarIcon, Car, PencilLine, Lock, ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -117,9 +117,13 @@ export default async function EventDetails({
   return (
     <ScrollRestorationWrapper storageKey={`event-${id}`}>
       {/* Back button */}
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/events">← Назад к событиям</Link>
-      </Button>
+      <Link
+        href="/events"
+        className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)] mb-6"
+      >
+        <ArrowLeft className="h-5 w-5" />
+        <span>Назад к событиям</span>
+      </Link>
 
       {/* Header Section */}
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">

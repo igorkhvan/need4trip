@@ -161,13 +161,13 @@ export default function ProfileEditPage() {
   return (
     <div className="space-y-6">
       {/* Back button */}
-      <button
-        onClick={() => router.push("/profile")}
-        className="flex items-center gap-2 text-muted-foreground hover:text-[var(--color-text-main)] transition-colors"
+      <Link
+        href="/profile"
+        className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
       >
-        <ArrowLeft className="w-4 h-4" />
-        <span className="text-sm">Назад к профилю</span>
-      </button>
+        <ArrowLeft className="h-5 w-5" />
+        <span>Назад к профилю</span>
+      </Link>
 
       {/* Header */}
       <div>
