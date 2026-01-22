@@ -1,62 +1,128 @@
 /**
  * Create Event Page Client Component
  * 
- * Получает готовые данные от серверного компонента:
- * - manageableClubs (clubs where user has owner/admin role)
- * - defaultPlanLimits (FREE plan, will be updated when club selected)
- * - userCityId (for pre-filling city)
+ * SSOT_UI_STRUCTURE — CREATE page renders without server-side blocking
+ * SSOT_UI_ASYNC_PATTERNS — optimistic client-side data loading
+ * 
+ * Архитектура:
+ * - Форма рендерится СРАЗУ (optimistic UI)
+ * - Данные (clubs, plan limits) загружаются асинхронно после mount
+ * - useAuth() предоставляет user из SSR (мгновенно)
  * 
  * SSOT §4: Implements checkbox + single dropdown for club selection
  * 
- * ⚡ NEW: Uses ActionController for race-condition-free async operations
+ * ⚡ Uses ActionController for race-condition-free async operations
  * SSOT: docs/ssot/SSOT_ARCHITECTURE.md § ActionController Standard
  */
 
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ClientError } from "@/lib/types/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { usePaywall } from "@/components/billing/paywall-modal";
 import { CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
-import type { ClubPlanLimits } from "@/hooks/use-club-plan";
+import { useClubPlan, type ClubPlanLimits } from "@/hooks/use-club-plan";
+import type { CreditCode } from "@/lib/types/billing";
 
 // SSOT_UI_STRUCTURE — CREATE form renders immediately (optimistic UI)
 // SSOT_UI_ASYNC_PATTERNS — reference data loads inline, non-blocking
 // Static import for CREATE flow: form renders instantly, no skeleton
 import { EventForm } from "@/components/events/event-form";
 
-interface CreateEventPageClientProps {
-  isAuthenticated: boolean;
-  userCityId: string | null;
-  manageableClubs: Array<{
-    id: string;
-    name: string;
-    userRole: "owner" | "admin";
-  }>;
-  defaultPlanLimits: ClubPlanLimits;
-  legacyClubId: string | null; // Backward compat for ?clubId=X
+// Type for manageable clubs
+interface ManageableClub {
+  id: string;
+  name: string;
+  userRole: "owner" | "admin";
 }
 
-export function CreateEventPageClient({
-  isAuthenticated,
-  userCityId,
-  manageableClubs,
-  defaultPlanLimits,
-  legacyClubId,
-}: CreateEventPageClientProps) {
+export function CreateEventPageClient() {
   const router = useRouter();
-  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, isAuthenticated } = useAuth();
   const { showPaywall, PaywallModalComponent } = usePaywall();
   const { execute } = useProtectedAction(isAuthenticated);
+  
+  // SSOT_UI_ASYNC_PATTERNS — client-side data loading for clubs
+  const [manageableClubs, setManageableClubs] = useState<ManageableClub[]>([]);
+  const [clubsLoading, setClubsLoading] = useState(true);
+  
+  // Get legacy clubId from URL params (backward compat)
+  const legacyClubId = searchParams.get("clubId") ?? null;
+  
+  // Get user's city from auth context (SSR hydrated)
+  const userCityId = user?.cityId ?? null;
+  
+  // SSOT_UI_ASYNC_PATTERNS — Free plan limits from hook (with fallback)
+  const { limits: freePlanLimits, loading: planLoading } = useClubPlan(null);
+  
+  // Default plan limits (optimistic fallback while loading)
+  const defaultPlanLimits: ClubPlanLimits = freePlanLimits ?? {
+    maxMembers: null,
+    maxEventParticipants: 15, // Safe fallback
+    allowPaidEvents: false,
+    allowCsvExport: false,
+  };
+  
+  // Load user's manageable clubs client-side
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setClubsLoading(false);
+      return;
+    }
+    
+    let mounted = true;
+    
+    const loadClubs = async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          credentials: "include",
+        });
+        
+        if (!res.ok) {
+          if (mounted) setClubsLoading(false);
+          return;
+        }
+        
+        const json = await res.json();
+        const clubs = json.data?.clubs || json.clubs || [];
+        
+        if (!mounted) return;
+        
+        // Filter to only owner/admin clubs (SSOT §4.2)
+        const manageable = clubs
+          .filter((club: { userRole?: string }) => 
+            club.userRole === "owner" || club.userRole === "admin"
+          )
+          .map((club: { id: string; name: string; userRole: string }) => ({
+            id: club.id,
+            name: club.name,
+            userRole: club.userRole as "owner" | "admin",
+          }));
+        
+        setManageableClubs(manageable);
+      } catch (err) {
+        console.error("[CreateEvent] Failed to load clubs:", err);
+      } finally {
+        if (mounted) setClubsLoading(false);
+      }
+    };
+    
+    loadClubs();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated]);
   
   // ⚡ NEW: ActionController for race-condition-free operations
   const controller = useActionController<{
     payload: Record<string, unknown>;
-    creditCode?: string;
+    creditCode?: CreditCode;
     eventId?: string;
     requestedParticipants?: number;
   }>();
@@ -304,7 +370,7 @@ export function CreateEventPageClient({
               controller.reset();
             }
           }}
-          creditCode={controller.state.confirmationPayload.creditCode as any}
+          creditCode={controller.state.confirmationPayload.creditCode as CreditCode}
           eventId={controller.state.confirmationPayload.eventId || ''}
           requestedParticipants={controller.state.confirmationPayload.requestedParticipants || 0}
           onConfirm={handleConfirmCredit}
