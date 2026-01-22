@@ -67,3 +67,12 @@ export {
 
 // Event Form skeleton for dynamic import fallback — SSOT_EVENTS_UX_V1.1 §1
 export { EventFormSkeleton } from "./event-form-skeleton";
+
+// Event Detail page skeleton — SSOT_UI_ASYNC_PATTERNS, SSOT_EVENTS_UX_V1.1 §2
+export {
+  EventDetailHeaderSkeleton,
+  EventDetailProgressSkeleton,
+  EventDetailCardSkeleton,
+  EventDetailSidebarCardSkeleton,
+  EventDetailSkeleton,
+} from "./event-detail-skeleton";
