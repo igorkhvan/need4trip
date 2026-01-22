@@ -287,11 +287,24 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
 }
 
 /**
+ * Options for usePaywall hook
+ */
+interface UsePaywallOptions {
+  /**
+   * Callback when paywall is closed without completing payment (implicit abort).
+   * SSOT_ARCHITECTURE §15: Implicit abort must reset pending/disabled UI state.
+   */
+  onAbort?: () => void;
+}
+
+/**
  * Hook to handle API errors and show paywall modal
  * 
  * Usage:
  * ```tsx
- * const { showPaywall, PaywallModalComponent } = usePaywall();
+ * const { showPaywall, PaywallModalComponent } = usePaywall({
+ *   onAbort: () => controller.reset(), // Reset pending state on implicit abort
+ * });
  * 
  * try {
  *   await createEvent(...);
@@ -304,16 +317,20 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
  * return <>{PaywallModalComponent}</>;
  * ```
  */
-export function usePaywall() {
+export function usePaywall(options: UsePaywallOptions = {}) {
+  const { onAbort } = options;
   const [paywallError, setPaywallError] = React.useState<PaywallErrorType | null>(null);
 
   const showPaywall = (error: PaywallErrorType) => {
     setPaywallError(error);
   };
 
-  const hidePaywall = () => {
+  const hidePaywall = React.useCallback(() => {
     setPaywallError(null);
-  };
+    // SSOT_ARCHITECTURE §15: Implicit abort (paywall close without completion)
+    // must reset pending/disabled UI state
+    onAbort?.();
+  }, [onAbort]);
 
   const PaywallModalComponent = paywallError ? (
     <PaywallModal

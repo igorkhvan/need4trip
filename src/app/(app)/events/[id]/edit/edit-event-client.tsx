@@ -42,7 +42,20 @@ interface EditEventPageClientProps {
 export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { showPaywall, PaywallModalComponent } = usePaywall();
+  
+  // ⚡ ActionController for race-condition-free operations
+  const controller = useActionController<{
+    payload: Record<string, unknown>;
+    creditCode?: CreditCode;
+    eventId?: string;
+    requestedParticipants?: number;
+  }>();
+  
+  // SSOT_ARCHITECTURE §15: Paywall close without completion = implicit abort
+  // Must reset pending/disabled UI state (no error copy)
+  const { showPaywall, PaywallModalComponent } = usePaywall({
+    onAbort: () => controller.reset(),
+  });
   
   // SSOT_UI_ASYNC_PATTERNS — client-side data loading states
   const [event, setEvent] = useState<Event | null>(null);
@@ -54,14 +67,6 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   
   // Plan limits hook - depends on loaded event's clubId
   const { limits: clubPlanLimits, loading: planLoading } = useClubPlan(event?.clubId ?? null);
-  
-  // ⚡ ActionController for race-condition-free operations
-  const controller = useActionController<{
-    payload: Record<string, unknown>;
-    creditCode?: CreditCode;
-    eventId?: string;
-    requestedParticipants?: number;
-  }>();
   
   // Load event data client-side
   useEffect(() => {

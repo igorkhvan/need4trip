@@ -73,34 +73,59 @@ export function EventClubSection({
     }
   }, [manageableClubs, isClubEventMode, clubId, onClubIdChange, mode]);
   
-  // Edit mode: show read-only club info
-  if (mode === "edit" && clubId) {
-    // Try to find club in manageable clubs, fallback to clubName prop
-    const selectedClub = manageableClubs.find((c) => c.id === clubId);
-    const displayName = selectedClub?.name || clubName || "Клуб не найден";
-    
-    return (
-      <div className="space-y-3">
-        <div className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-gray-50 p-4">
-          <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-[var(--color-primary)] bg-[var(--color-primary)]">
-            <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-[var(--color-text)]">
-              Событие создано от клуба
-            </p>
-            <p className="mt-1 text-base font-semibold text-[var(--color-primary)]">
-              {displayName}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Принадлежность к клубу нельзя изменить после создания события
-            </p>
+  // Edit mode: show read-only club info (SSOT §5.6: club_id is IMMUTABLE after creation)
+  // This applies to BOTH club events (clubId exists) AND personal events (clubId is null)
+  if (mode === "edit") {
+    if (clubId) {
+      // Club event: show read-only club info
+      const selectedClub = manageableClubs.find((c) => c.id === clubId);
+      const displayName = selectedClub?.name || clubName || "Клуб не найден";
+      
+      return (
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-gray-50 p-4">
+            <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-[var(--color-primary)] bg-[var(--color-primary)]">
+              <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Событие создано от клуба
+              </p>
+              <p className="mt-1 text-base font-semibold text-[var(--color-primary)]">
+                {displayName}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Принадлежность к клубу нельзя изменить после создания события
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // Personal event (clubId is null): show read-only info that this is personal event
+      // SSOT §5.6: Cannot add club_id to an event that was created without one
+      return (
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-gray-50 p-4">
+            <div className="flex h-5 w-5 items-center justify-center rounded border-2 border-gray-300 bg-gray-100">
+              <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Личное событие
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Принадлежность к клубу нельзя изменить после создания события
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
   
   // Create mode: interactive checkbox + dropdown

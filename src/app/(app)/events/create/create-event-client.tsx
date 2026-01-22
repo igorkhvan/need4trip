@@ -44,8 +44,21 @@ export function CreateEventPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
-  const { showPaywall, PaywallModalComponent } = usePaywall();
   const { execute } = useProtectedAction(isAuthenticated);
+  
+  // ⚡ ActionController for race-condition-free operations
+  const controller = useActionController<{
+    payload: Record<string, unknown>;
+    creditCode?: CreditCode;
+    eventId?: string;
+    requestedParticipants?: number;
+  }>();
+  
+  // SSOT_ARCHITECTURE §15: Paywall close without completion = implicit abort
+  // Must reset pending/disabled UI state (no error copy)
+  const { showPaywall, PaywallModalComponent } = usePaywall({
+    onAbort: () => controller.reset(),
+  });
   
   // SSOT_UI_ASYNC_PATTERNS — client-side data loading for clubs
   const [manageableClubs, setManageableClubs] = useState<ManageableClub[]>([]);
@@ -118,14 +131,6 @@ export function CreateEventPageClient() {
       mounted = false;
     };
   }, [isAuthenticated]);
-  
-  // ⚡ NEW: ActionController for race-condition-free operations
-  const controller = useActionController<{
-    payload: Record<string, unknown>;
-    creditCode?: CreditCode;
-    eventId?: string;
-    requestedParticipants?: number;
-  }>();
   
   // Protect page access
   useEffect(() => {

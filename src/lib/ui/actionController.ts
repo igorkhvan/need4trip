@@ -201,36 +201,38 @@ export interface ActionControllerOptions {
 
 /**
  * Default busy label mapping
+ * SSOT_UI_COPY §2.2: Button (action) must use "Сохранение…" (with ellipsis character)
  */
 function defaultGetBusyLabel(actionName: string, phase: ActionPhase): string {
   // Phase-specific overrides
-  if (phase === 'redirecting') return 'Переход...';
-  if (phase === 'awaiting_confirmation') return 'Ожидание подтверждения...';
-  if (phase === 'running_confirmed') return 'Подтверждение...';
+  if (phase === 'redirecting') return 'Переход…';
+  if (phase === 'awaiting_confirmation') return 'Ожидание подтверждения…';
+  if (phase === 'running_confirmed') return 'Подтверждение…';
   
-  // Action-specific labels
+  // Action-specific labels (SSOT_UI_COPY §2.2 compliant)
   const actionLabels: Record<string, string> = {
-    create_event: 'Создаём событие...',
-    save_changes: 'Сохраняем...',
-    update_event: 'Обновляем...',
-    delete: 'Удаляем...',
-    publish: 'Публикуем...',
-    invite_member: 'Отправляем приглашение...',
-    remove_member: 'Удаляем участника...',
-    export_csv: 'Экспортируем...',
-    purchase: 'Обработка платежа...',
+    create_event: 'Создание…',
+    save_changes: 'Сохранение…',
+    update_event: 'Сохранение…',
+    delete: 'Удаление…',
+    publish: 'Публикация…',
+    invite_member: 'Отправка…',
+    remove_member: 'Удаление…',
+    export_csv: 'Экспорт…',
+    purchase: 'Обработка…',
   };
   
-  return actionLabels[actionName] || 'Обработка...';
+  return actionLabels[actionName] || 'Обработка…';
 }
 
 /**
  * Default error normalizer
+ * SSOT_UI_COPY §4.2: Error copy must be neutral, no "Попробуйте..." suffix
  */
 function defaultNormalizeError(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
-  return 'Произошла ошибка. Попробуйте ещё раз.';
+  return 'Произошла ошибка';
 }
 
 // ============================================================================
