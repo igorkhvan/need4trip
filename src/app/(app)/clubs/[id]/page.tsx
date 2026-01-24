@@ -23,7 +23,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Settings } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 
@@ -90,6 +90,7 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
       {isArchived && <ClubArchivedBanner />}
 
       {/* SECTION: Club Header - per Visual Contract v6 §3 */}
+      {/* P0 FIX: Owner/Admin Entry Points now inline inside Header */}
       <ClubProfileHeader
         club={{
           id: club.id,
@@ -99,10 +100,12 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
           archivedAt: club.archivedAt,
           cities: club.cities,
           memberCount: club.memberCount,
-          eventCount: club.eventCount,
+          upcomingEventCount: club.upcomingEventCount,
           telegramUrl: club.telegramUrl,
           websiteUrl: club.websiteUrl,
         }}
+        isOwnerOrAdmin={isOwnerOrAdmin}
+        isArchived={isArchived}
       />
 
       {/* SECTION: Primary CTA Zone - per Visual Contract v6 §5 */}
@@ -116,27 +119,6 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
           isArchived={isArchived}
           openJoinEnabled={openJoinEnabled}
         />
-      )}
-
-      {/* SECTION: Owner/Admin Entry Points - per Visual Contract v6 §6 */}
-      {/* Navigation links only, hidden when archived */}
-      {isOwnerOrAdmin && !isArchived && (
-        <div className="flex flex-wrap gap-4">
-          <Link
-            href={`/clubs/${club.id}/members`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
-          >
-            <Users className="h-4 w-4" />
-            <span>Управление участниками</span>
-          </Link>
-          <Link
-            href={`/clubs/${club.id}/settings`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
-          >
-            <Settings className="h-4 w-4" />
-            <span>Настройки клуба</span>
-          </Link>
-        </div>
       )}
 
       {/* SECTION: About - per Visual Contract v6 §7 */}

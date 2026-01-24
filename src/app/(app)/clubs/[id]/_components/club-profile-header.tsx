@@ -9,7 +9,8 @@
  * No edit affordances, no management controls.
  */
 
-import { MapPin, Users, Calendar, Send, Globe, Archive } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Users, Calendar, Send, Globe, Archive, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { CityHydrated } from "@/lib/types/city";
 
@@ -22,14 +23,17 @@ interface ClubProfileHeaderProps {
     archivedAt: string | null;
     cities?: CityHydrated[];
     memberCount: number;
-    eventCount: number;
+    upcomingEventCount: number;
     telegramUrl: string | null;
     websiteUrl: string | null;
   };
+  /** P0 FIX: Owner/Admin entry points inline in header */
+  isOwnerOrAdmin?: boolean;
+  isArchived?: boolean;
 }
 
-export function ClubProfileHeader({ club }: ClubProfileHeaderProps) {
-  const isArchived = !!club.archivedAt;
+export function ClubProfileHeader({ club, isOwnerOrAdmin = false, isArchived: isArchivedProp }: ClubProfileHeaderProps) {
+  const isArchived = isArchivedProp ?? !!club.archivedAt;
   const isPrivate = club.visibility === "private";
 
   return (
@@ -89,7 +93,7 @@ export function ClubProfileHeader({ club }: ClubProfileHeaderProps) {
             </div>
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
-              <span>{club.eventCount} событий</span>
+              <span>{club.upcomingEventCount} предстоящих</span>
             </div>
           </div>
 
@@ -118,6 +122,26 @@ export function ClubProfileHeader({ club }: ClubProfileHeaderProps) {
                   <span>Сайт</span>
                 </a>
               )}
+            </div>
+          )}
+
+          {/* P0 FIX: Owner/Admin Entry Points - inline inside Header zone */}
+          {isOwnerOrAdmin && !isArchived && (
+            <div className="mt-4 flex flex-wrap gap-4 border-t border-[var(--color-border)] pt-4">
+              <Link
+                href={`/clubs/${club.id}/members`}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+              >
+                <Users className="h-4 w-4" />
+                <span>Управление участниками</span>
+              </Link>
+              <Link
+                href={`/clubs/${club.id}/settings`}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Настройки клуба</span>
+              </Link>
             </div>
           )}
         </div>

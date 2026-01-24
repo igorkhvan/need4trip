@@ -1,8 +1,8 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.1  
-**Last Updated:** 2026-01-21  
+**Version:** 1.2  
+**Last Updated:** 2026-01-22  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 
 ---
@@ -44,6 +44,10 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-22 (v1.2)
+- Clarified §4.2: private clubs may expose a membership entry CTA to non-members
+  while all descriptive, social, and activity-related content remains hidden.
 
 ### 2026-01-02 (v1.1 — D1–D9 Decisions)
 - **D1:** Added `clubs.settings.public_members_list_enabled` flag (§8.4)
@@ -249,10 +253,24 @@ Admin must never be allowed to perform owner-only actions by any implicit path.
 
 ### 4.2 Public profile data (minimum)
 
-For both public and private, the server may return minimal profile:
-- name, slug, avatar/banner if used.
+For both public and private clubs, the server may return a minimal profile:
+- name,
+- slug,
+- avatar and/or banner (if used),
+- visibility indicator.
 
-For private, any additional content is hidden from non-members.
+For private clubs, non-members may additionally see:
+- a membership entry CTA (request to join).
+
+All descriptive, social, and activity-related content MUST be hidden from non-members
+of private clubs, including but not limited to:
+- description / about text,
+- cities and location metadata,
+- members count and events count,
+- members preview,
+- events preview,
+- external links (e.g., website, club-level Telegram),
+- any other club internal or activity-derived data.
 
 ### 4.3 Access matrix for visibility
 
@@ -352,7 +370,7 @@ Partner directory may onboard "trusted partners" with scoped rights.
 
 **Status:** LOCKED / Production-ready  
 **Version:** v1  
-**Last Updated:** 2026-01-21
+**Last Updated:** 2026-01-22
 
 This section defines the v1 implementation of membership requests for private clubs.
 

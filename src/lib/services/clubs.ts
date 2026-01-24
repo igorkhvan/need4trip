@@ -450,15 +450,16 @@ export async function getClubBasicInfo(id: string) {
   const hydratedClub = await hydrateClubWithCities(club);
 
   // Count stats (быстрые запросы)
-  const [eventCount, memberCount] = await Promise.all([
-    countClubEvents(id),
+  // P0 FIX: Use UPCOMING events count to align with Events Preview semantics
+  const [upcomingEventCount, memberCount] = await Promise.all([
+    countActiveClubEvents(id),
     countMembers(id),
   ]);
 
   return {
     ...hydratedClub,
     memberCount,
-    eventCount,
+    upcomingEventCount,
   };
 }
 
