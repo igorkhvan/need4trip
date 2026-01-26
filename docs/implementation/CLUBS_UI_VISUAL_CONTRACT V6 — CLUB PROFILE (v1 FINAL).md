@@ -1,7 +1,8 @@
-# Clubs UI Visual Contract — Club Profile (v1 Final)
+# Clubs UI Visual Contract — Club Profile (v6.1)
 
 **Status:** LOCKED (Phase 9B — COMPLETE & FROZEN)  
-**Version:** v1 Final  
+**Version:** v6.1  
+**Last Updated:** 2026-01-24  
 **Supersedes:** Public Club Profile (pre-v1)  
 **Aligned with:**
 - SSOT_CLUBS_DOMAIN.md
@@ -18,12 +19,24 @@ It does **NOT** define business logic, RBAC rules, API behavior, or data persist
 
 ---
 
+## Change Log
+
+### v6.1 (2026-01-24)
+- Clarified inline error handling rules for Club Profile (§10): inline errors allowed for data fetch and inline operations; toast reserved for form submission flows
+- Documented Back Button as canonical Club page element (§3.1): required navigation element with standard placement and styling
+- Canonicalized external links placement in Club Header (§7): telegramUrl and websiteUrl rendered in Club Header ONLY
+
+### v6 (v1 Final)
+- Initial locked version for Club Profile
+
+---
+
 ## 1. Role of the Page (Non-Negotiable)
 
 The Club Profile page is an **aggregation and navigation surface**.
 
 It MUST:
-- reflect the user’s current state relative to the club,
+- reflect the user's current state relative to the club,
 - expose navigation entry points for management,
 - remain **read-only**.
 
@@ -49,6 +62,7 @@ It MUST NOT:
 
 Fixed vertical order:
 
+[ Back Button ]
 [ Archived Banner (conditional) ]
 [ Club Header ]
 [ Primary CTA Zone ]
@@ -62,13 +76,26 @@ Fixed vertical order:
 - Order MUST NOT change.
 - No additional sections allowed.
 
+### 3.1 Back Button (Canonical)
+
+Back Button is a **canonical, required** element for Club Profile.
+
+| Property | Value |
+|----------|-------|
+| **Placement** | First element in page container |
+| **Behavior** | Navigational only (no side effects) |
+| **Styling** | Muted text with ArrowLeft icon |
+| **Target** | Context-dependent (e.g., clubs list, previous page) |
+
+Club Profile follows the same Back Button pattern as other Club pages.
+
 ---
 
 ## 4. Archived State
 
 If `club.archivedAt !== null`:
 
-- Archived banner MUST be shown at the top.
+- Archived banner MUST be shown at the top (after Back Button).
 - Primary CTA Zone MUST be hidden.
 - All entry points MUST be hidden or disabled.
 - Page remains fully readable.
@@ -151,8 +178,21 @@ Rules:
 - Displays:
   - description
   - cities
-  - external links (telegram, website)
 - No edit affordances.
+
+### 7.1 External Links Placement (Canonical)
+
+Club-level external links are rendered in **Club Header ONLY**.
+
+| Field | Render Location | Notes |
+|-------|-----------------|-------|
+| `telegramUrl` | Club Header | Icon/link in header actions |
+| `websiteUrl` | Club Header | Icon/link in header actions |
+
+**Canonical placement rule:**
+- External links (telegramUrl, websiteUrl) MUST NOT be rendered in About section.
+- External links MUST NOT be rendered in other sections.
+- Club Header is the single canonical location for club-level external links.
 
 ---
 
@@ -182,9 +222,24 @@ Rules:
 
 ## 10. Error & Edge Handling
 
-- 403 / 404 → redirect or standard forbidden page (existing behavior).
+### 10.1 Error Handling Rules
+
+| Error Type | Handling | Notes |
+|------------|----------|-------|
+| Data fetch errors | Inline error message | Displayed within page content area |
+| Inline operation errors | Inline error message | E.g., membership actions, follow/unfollow |
+| Form submission errors | Toast notification | Create/edit flows only (not applicable to read-only profile) |
+| Unauthorized (401) | Redirect to login | Standard auth flow |
+| Not Found (404) | notFound() | Standard Next.js pattern |
+| Forbidden (403) | Redirect or forbidden page | Existing behavior |
+
+### 10.2 Inline Error Clarification
+
+- **Inline error UI** is the canonical pattern for Club Profile.
+- Data fetching failures MUST display inline error messages.
+- Inline operations (membership actions visible to user) MUST use inline error messages.
+- **Toast notifications are reserved for form submission flows only** (create/edit pages, not Club Profile).
 - Partial data failures MUST NOT break layout.
-- No inline error messaging on this page.
 
 ---
 
@@ -199,7 +254,7 @@ The following are strictly forbidden on Club Profile:
 - Billing actions
 - Role labels
 - Debug or status chips
-- “Coming soon” placeholders
+- "Coming soon" placeholders
 
 ---
 
@@ -227,5 +282,5 @@ Any deviation is an implementation defect.
 ---
 
 **LOCK NOTICE**  
-This document is LOCKED for Club Profile v1 Final.  
-Any changes require a new versioned contract (v2) and SSOT alignment.
+This document is LOCKED for Club Profile v6.1.  
+Any changes require a new versioned contract (v6.2+) and SSOT alignment.

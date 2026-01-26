@@ -1,8 +1,8 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.2  
-**Last Updated:** 2026-01-22  
+**Version:** 1.3  
+**Last Updated:** 2026-01-24  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 
 ---
@@ -44,6 +44,11 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-24 (v1.3)
+- Clarified inline error handling rules for Club Profile (§8.5): inline errors allowed for data fetch and inline operations; toast reserved for form submission flows
+- Documented Back Button as canonical Club page element (§8.6): required navigation element with standard placement and styling
+- Canonicalized external links placement in Club Header (§8.7): telegramUrl and websiteUrl rendered in Club Header ONLY
 
 ### 2026-01-22 (v1.2)
 - Clarified §4.2: private clubs may expose a membership entry CTA to non-members
@@ -602,6 +607,47 @@ When guests view the members list (enabled via `public_members_list_enabled`), t
 | `public_members_list_enabled` | `false` | Owner | — |
 | `public_show_owner_badge` | `false` | Owner | Requires `public_members_list_enabled = true` |
 | `open_join_enabled` | `false` | Owner | RESERVED / PLANNED |
+
+### 8.5 Club Page Error Handling (NORMATIVE)
+
+**Inline error handling** is a canonical pattern across all Club pages, including Club Profile.
+
+| Error Type | Handling | Notes |
+|------------|----------|-------|
+| Data fetch errors | Inline error message | Displayed within page content area |
+| Inline operation errors | Inline error message | E.g., membership actions, follow/unfollow |
+| Form submission errors | Toast notification | Create/edit flows (profile editing, settings) |
+| Unauthorized (401) | Redirect to login | Standard auth flow |
+| Not Found (404) | notFound() | Standard Next.js pattern |
+
+**Clarification:** Club Profile page follows the same error handling patterns as other Club pages.
+
+### 8.6 Back Button (NORMATIVE)
+
+Back Button is a **canonical, required** element for all Club pages.
+
+| Property | Value |
+|----------|-------|
+| **Placement** | First element in page container |
+| **Behavior** | Navigational only (no side effects) |
+| **Styling** | Muted text with ArrowLeft icon |
+| **Target** | Context-dependent (e.g., clubs list, previous page) |
+
+**Club Profile** follows the same Back Button pattern as other Club pages.
+
+### 8.7 External Links Placement (NORMATIVE)
+
+Club-level external links are rendered in **Club Header ONLY**.
+
+| Field | Render Location | Notes |
+|-------|-----------------|-------|
+| `telegramUrl` | Club Header | Icon/link in header actions |
+| `websiteUrl` | Club Header | Icon/link in header actions |
+
+**Canonical placement rule:**
+- External links (telegramUrl, websiteUrl) are NOT rendered in About section.
+- External links are NOT rendered on other Club pages.
+- Club Header is the single canonical location for club-level external links.
 
 ---
 
