@@ -1,8 +1,8 @@
-# Clubs UI Visual Contract — Club Profile (v6.1)
+# Clubs UI Visual Contract — Club Profile (v6.2)
 
 **Status:** LOCKED (Phase 9B — COMPLETE & FROZEN)  
-**Version:** v6.1  
-**Last Updated:** 2026-01-24  
+**Version:** v6.2  
+**Last Updated:** 2026-01-27  
 **Supersedes:** Public Club Profile (pre-v1)  
 **Aligned with:**
 - SSOT_CLUBS_DOMAIN.md
@@ -20,6 +20,11 @@ It does **NOT** define business logic, RBAC rules, API behavior, or data persist
 ---
 
 ## Change Log
+
+### v6.2 (2026-01-27)
+- Clarified access semantics for Members Preview (§8): viewer-dependent rendering based on auth context, club visibility, and club settings
+- Clarified public nature of Events Preview (§9): auth-agnostic, public rendering
+- Added Section Access Model Consistency note (§8.2)
 
 ### v6.1 (2026-01-24)
 - Clarified inline error handling rules for Club Profile (§10): inline errors allowed for data fetch and inline operations; toast reserved for form submission flows
@@ -207,6 +212,36 @@ Club-level external links are rendered in **Club Header ONLY**.
 - No role badges.
 - No management controls.
 
+### 8.1 Access Semantics (Viewer-Dependent)
+
+Members Preview is a **viewer-dependent** section. Rendering depends on:
+
+| Factor | Description |
+|--------|-------------|
+| **Resolved authentication context** | Whether user is authenticated and who they are |
+| **Club visibility** | Public vs private club settings |
+| **Club settings** | e.g., `publicMembersList` or equivalent access controls |
+
+**Access denial behavior:**
+
+- When access to members data is denied, the Members Preview section is **intentionally NOT rendered**.
+- Absence of the section does **NOT** imply zero members.
+- Absence of the section indicates **insufficient access**, not absence of data.
+- No placeholder, no "hidden" indicator, no explanatory text is shown.
+
+**Rationale:** This is a deliberate privacy-preserving design. The UI does not reveal member existence to unauthorized viewers.
+
+### 8.2 Section Access Model Consistency
+
+Members Preview and Events Preview intentionally follow **different access models**.
+
+| Section | Access Model | Rationale |
+|---------|--------------|-----------|
+| Members Preview | Viewer-dependent | Privacy: member list may be restricted |
+| Events Preview | Public, auth-agnostic | Discoverability: events are public content |
+
+This distinction is **by design** and MUST be preserved. Do NOT unify access models across these sections.
+
 ---
 
 ## 9. Events Preview
@@ -217,6 +252,27 @@ Club-level external links are rendered in **Club Header ONLY**.
 - Links to:
   - Club Events page
 - No creation or edit controls.
+
+### 9.1 Access Semantics (Public)
+
+Events Preview is a **public, auth-agnostic** section.
+
+| Property | Value |
+|----------|-------|
+| **Authentication required** | No |
+| **Depends on membership** | No |
+| **Depends on club visibility** | No |
+| **Available to all viewers** | Yes |
+
+**Rendering rules:**
+
+- Events Preview is rendered regardless of user authentication state.
+- Events Preview is rendered regardless of club membership status.
+- Events Preview is rendered regardless of club visibility settings.
+- Empty state (no events shown) indicates **absence of data**, not lack of access.
+- Empty state MAY display a "No upcoming events" message or equivalent.
+
+**Rationale:** Club events are public content intended for discoverability. Access restrictions apply at the event level, not at the preview level.
 
 ---
 
@@ -282,5 +338,5 @@ Any deviation is an implementation defect.
 ---
 
 **LOCK NOTICE**  
-This document is LOCKED for Club Profile v6.1.  
-Any changes require a new versioned contract (v6.2+) and SSOT alignment.
+This document is LOCKED for Club Profile v6.2.  
+Any changes require a new versioned contract (v6.3+) and SSOT alignment.

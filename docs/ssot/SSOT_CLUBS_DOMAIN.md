@@ -1,8 +1,8 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.3  
-**Last Updated:** 2026-01-24  
+**Version:** 1.4  
+**Last Updated:** 2026-01-27  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 
 ---
@@ -44,6 +44,12 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-27 (v1.4)
+- Clarified owner membership invariant: owner is a member with role = `owner` in `club_members` (§3.4)
+- Clarified `club_members` as single source of truth for membership, roles, visibility, and preview eligibility (§2.2)
+- Added Access vs Aggregation Semantics section (§4.4): aggregated fields represent absolute state, viewer-facing data is access-controlled
+- Added Authentication Context dependency for access-controlled data (§0.5)
 
 ### 2026-01-24 (v1.3)
 - Clarified inline error handling rules for Club Profile (§8.5): inline errors allowed for data fetch and inline operations; toast reserved for form submission flows
@@ -95,6 +101,15 @@ If any implementation conflicts with this SSOT, implementation is wrong.
 ### 0.4 Normative vs Planned Sections
 - Sections marked **NORMATIVE** are binding.
 - Sections marked **RESERVED / PLANNED** define future extension slots and invariants, but may not require immediate implementation.
+
+### 0.5 Authentication Context (NORMATIVE)
+
+Access-controlled club data relies on a resolved authentication context.
+
+**Invariants:**
+- Absence of authentication context implies non-member access (guest).
+- Authentication context MUST be resolved consistently for all access-controlled operations.
+- This SSOT does not prescribe transport mechanism (cookies, headers, tokens); only the requirement that authentication context is resolved before evaluating access rules.
 
 ---
 
@@ -165,6 +180,14 @@ Trust badges are per-club labels with scoped permissions limited to partner dire
 - Exactly one owner per club
 - `pending` implies `joined_at IS NULL`
 - non-pending implies `joined_at IS NOT NULL`
+
+**Single Source of Truth:**
+
+`club_members` is the single source of truth for:
+- membership existence (a user is a member iff a record exists with non-pending role)
+- member roles (including owner)
+- member visibility eligibility (who appears in members list)
+- members preview eligibility (who appears in preview)
 
 ### 2.3 club_invites
 
@@ -247,6 +270,15 @@ Admin must never be allowed to perform owner-only actions by any implicit path.
 ### 3.3 Pending has no privileges
 `pending` is treated as non-member for all authorization decisions.
 
+### 3.4 Owner is a member (NORMATIVE)
+
+Owner is not a separate entity from membership. Owner is a role within membership.
+
+**Invariants:**
+- For every club, the owner MUST have a corresponding record in `club_members` with `role = 'owner'`.
+- `clubs.owner_user_id` and the `club_members` record with `role = 'owner'` MUST reference the same user.
+- There is no "ownership without membership" — owner always appears in the members list.
+
 ---
 
 ## 4. Visibility Model (NORMATIVE)
@@ -285,6 +317,28 @@ of private clubs, including but not limited to:
 | Member | ✅ | ✅ | ✅ |
 | Admin | ✅ | ✅ | ✅ |
 | Owner | ✅ | ✅ | ✅ |
+
+### 4.4 Access vs Aggregation Semantics (NORMATIVE)
+
+Aggregated fields and viewer-facing data have different semantics:
+
+**Aggregated fields** (e.g., memberCount, eventsCount):
+- Represent absolute club state
+- Not access-controlled
+- Always reflect the true count
+
+**Viewer-facing data** (e.g., members preview, events preview):
+- Viewer-dependent
+- Subject to access control rules (§4.3)
+- May be hidden or filtered based on viewer's access level
+
+**Valid state:**
+
+It is valid and expected for:
+- `memberCount > 0` while members preview is empty or hidden
+- `eventsCount > 0` while events preview is empty or hidden
+
+This occurs when the viewer lacks access to view member/event details but aggregated counts are exposed. This is an expected and supported state, not an error.
 
 ---
 
