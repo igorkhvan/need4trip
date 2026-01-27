@@ -29,6 +29,7 @@ interface ClubFormProps {
 export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -112,12 +113,16 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       
       if (onSuccess) {
         onSuccess(savedClub);
+        setLoading(false);
       } else {
+        // ✅ Mark as redirecting BEFORE navigation (keeps button disabled)
+        // Pattern: SSOT_ARCHITECTURE § ActionController - prevents race condition
+        setIsRedirecting(true);
         router.push(`/clubs/${savedClub.id}`);
+        // Note: loading stays true, isRedirecting keeps button disabled until unmount
       }
     } catch (err) {
       showError(err, mode === "create" ? "Не удалось создать клуб" : "Не удалось сохранить изменения");
-    } finally {
       setLoading(false);
     }
   };
@@ -137,8 +142,8 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className={fieldErrors.name ? "border-red-500 focus:border-red-500" : ""}
-          placeholder="Например: OFF-ROAD Москва"
-          disabled={loading}
+          placeholder="Например: OFF-ROAD Алматы"
+          disabled={loading || isRedirecting}
         />
       </FormField>
 
@@ -154,7 +159,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           value={formData.description ?? ""}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="Расскажите о вашем клубе..."
-          disabled={loading}
+          disabled={loading || isRedirecting}
         />
       </FormField>
 
@@ -172,7 +177,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
             setFormData({ ...formData, cityIds, cities });
           }}
           placeholder="Выберите города..."
-          disabled={loading}
+          disabled={loading || isRedirecting}
           error={!!fieldErrors.cityIds}
           maxItems={10}
         />
@@ -190,7 +195,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           value={formData.logoUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
           placeholder="https://example.com/logo.png"
-          disabled={loading}
+          disabled={loading || isRedirecting}
         />
         {formData.logoUrl && (
           <div className="mt-2">
@@ -218,7 +223,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           value={formData.telegramUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, telegramUrl: e.target.value })}
           placeholder="https://t.me/your_club"
-          disabled={loading}
+          disabled={loading || isRedirecting}
         />
       </FormField>
 
@@ -234,7 +239,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           value={formData.websiteUrl ?? ""}
           onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
           placeholder="https://yourclub.com"
-          disabled={loading}
+          disabled={loading || isRedirecting}
         />
       </FormField>
 
@@ -249,10 +254,17 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || isRedirecting}
           className="flex-1"
         >
-          {loading ? "Сохранение..." : mode === "create" ? "Создать клуб" : "Сохранить изменения"}
+          {/* SSOT_UI_COPY §2.2: Button action uses ellipsis character (…) */}
+          {isRedirecting 
+            ? "Переход…" 
+            : loading 
+              ? "Сохранение…" 
+              : mode === "create" 
+                ? "Создать клуб" 
+                : "Сохранить изменения"}
         </Button>
 
         {onCancel && (
@@ -260,7 +272,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
             type="button"
             variant="outline"
             onClick={onCancel}
-            disabled={loading}
+            disabled={loading || isRedirecting}
           >
             Отмена
           </Button>
