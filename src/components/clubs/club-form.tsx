@@ -91,14 +91,23 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
         body: JSON.stringify(payload),
       });
 
+      // Parse JSON once for all cases
+      const json = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Ошибка при сохранении клуба");
+        throw new Error(json.error?.message || json.message || "Ошибка при сохранении клуба");
       }
 
-      const { club: savedClub } = await res.json();
+      // SSOT_ARCHITECTURE §10.3: Handle canonical envelope { success, data: { club } }
+      const savedClub = json.data?.club || json.club;
 
-      // Show success toast
+      // Defensive: ensure club was returned with id
+      if (!savedClub?.id) {
+        console.error('[ClubForm] No club.id in response:', json);
+        throw new Error("Не удалось получить данные клуба");
+      }
+
+      // Show success toast only after valid data confirmed
       toast(mode === "create" ? TOAST.club.created : TOAST.club.updated);
       
       if (onSuccess) {
