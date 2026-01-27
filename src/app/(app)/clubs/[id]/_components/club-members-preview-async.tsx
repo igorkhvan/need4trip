@@ -9,6 +9,7 @@
  * No role badges, no management controls.
  */
 
+import { headers } from "next/headers";
 import { Users, Crown } from "lucide-react";
 
 // Fetch members preview from API-053
@@ -25,8 +26,10 @@ async function getMembersPreview(clubId: string): Promise<{
 } | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const requestHeaders = await headers();
     const res = await fetch(`${baseUrl}/api/clubs/${clubId}/members/preview`, {
       cache: "no-store",
+      headers: requestHeaders,
     });
     
     if (!res.ok) {
