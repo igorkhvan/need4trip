@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
 import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
@@ -11,12 +12,22 @@ import { NextRequest } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_: Request, { params }: Params) {
+/**
+ * GET /api/events/[id] - Single event read
+ * 
+ * ADR-001.1 Compliant: Uses resolveCurrentUser() for transport-agnostic auth.
+ * SSOT §4.5 Compliant: Visibility enforcement via canViewEvent() includes
+ * club-scoped visibility rules.
+ * 
+ * Error semantics:
+ * - 404 for club events denied (prevents existence leakage)
+ * - 403 for personal events denied
+ */
+export async function GET(request: Request, { params }: Params) {
   try {
     const { id } = await params;
-    // GET is public, but may need user context for visibility
-    // Use getCurrentUser (not middleware) since GET is not protected
-    const currentUser = await getCurrentUser();
+    // ADR-001.1: Use canonical auth resolver for transport-agnostic auth
+    const currentUser = await resolveCurrentUser(request);
     const event = await getEventWithVisibility(id, {
       currentUser,
       enforceVisibility: true,

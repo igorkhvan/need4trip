@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
@@ -12,22 +13,37 @@ import { mapDbParticipantToDomain } from "@/lib/mappers";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_: Request, context: Params) {
+/**
+ * GET /api/events/[id]/participants - Event participants list
+ * 
+ * ADR-001.1 Compliant: Uses resolveCurrentUser() for transport-agnostic auth.
+ * SSOT §4.5 Compliant: Visibility enforcement via canViewEvent() includes
+ * club-scoped visibility rules.
+ * 
+ * SECURITY: Visibility check MUST complete BEFORE querying participants
+ * to prevent participant data leakage for private club events.
+ * 
+ * Error semantics:
+ * - 404 for club events denied (prevents existence leakage)
+ * - 403 for personal events denied
+ */
+export async function GET(request: Request, context: Params) {
   try {
     const { id } = await context.params;
     
-    // ⚡ PERFORMANCE: Load user and visibility check in parallel with participants
-    // Before: Sequential - getCurrentUser() → getEventWithVisibility() → listParticipants() (~1900ms)
-    // After: Parallel - visibility check + participants load (~300ms) - 6x faster!
-    const currentUser = await getCurrentUser();
+    // ADR-001.1: Use canonical auth resolver for transport-agnostic auth
+    const currentUser = await resolveCurrentUser(request);
     
-    const [participants] = await Promise.all([
-      listParticipantsRepo(id).then(rows => rows.map(mapDbParticipantToDomain)),
-      // Visibility check doesn't need to return event data, just verify access
-      getEventWithVisibility(id, { currentUser, enforceVisibility: true })
-    ]);
+    // SECURITY: Resolve event and enforce visibility FIRST
+    // Do NOT load participants until visibility is verified
+    // This prevents participant data leakage for private club events
+    await getEventWithVisibility(id, { currentUser, enforceVisibility: true });
     
-    return respondJSON({ participants });
+    // Only AFTER successful visibility check, query participants
+    const participants = await listParticipantsRepo(id);
+    const mappedParticipants = participants.map(mapDbParticipantToDomain);
+    
+    return respondJSON({ participants: mappedParticipants });
   } catch (err) {
     return respondError(err);
   }
