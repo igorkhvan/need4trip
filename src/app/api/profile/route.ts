@@ -2,10 +2,12 @@
  * API: /api/profile
  * 
  * GET - Получить профиль текущего пользователя (с клубами)
+ * 
+ * ADR-001.1 Compliant: Uses resolveCurrentUser(req) for transport-agnostic auth.
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getUserClubs } from "@/lib/services/clubs";
 import { getCityById } from "@/lib/db/cityRepo";
 import { respondSuccess, respondError } from "@/lib/api/response";
@@ -20,10 +22,13 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/profile
  * Получить полный профиль текущего пользователя
+ * 
+ * ADR-001.1: Uses resolveCurrentUser(req) for canonical auth resolution.
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // ADR-001.1: Canonical auth resolution
+    const user = await resolveCurrentUser(req);
     
     if (!user) {
       throw new AuthError("Необходима авторизация");
@@ -70,11 +75,13 @@ export async function GET(req: NextRequest) {
 /**
  * PATCH /api/profile
  * Обновить профиль текущего пользователя
+ * 
+ * ADR-001.1: Uses resolveCurrentUser(req) for canonical auth resolution.
  */
 export async function PATCH(req: NextRequest) {
   try {
-    // Get user from middleware (JWT already verified)
-    const user = await getCurrentUserFromMiddleware(req);
+    // ADR-001.1: Canonical auth resolution
+    const user = await resolveCurrentUser(req);
     
     if (!user) {
       throw new AuthError("Необходима авторизация");

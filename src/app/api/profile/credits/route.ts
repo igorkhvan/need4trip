@@ -2,10 +2,12 @@
  * API: /api/profile/credits
  * 
  * GET - Получить детальную информацию о credits (available + consumed history)
+ * 
+ * ADR-001.1 Compliant: Uses resolveCurrentUser(req) for transport-agnostic auth.
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { AuthError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
@@ -16,10 +18,13 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/profile/credits
  * Получить available и consumed credits с деталями
+ * 
+ * ADR-001.1: Uses resolveCurrentUser(req) for canonical auth resolution.
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    // ADR-001.1: Canonical auth resolution
+    const user = await resolveCurrentUser(req);
     
     if (!user) {
       throw new AuthError("Необходима авторизация");

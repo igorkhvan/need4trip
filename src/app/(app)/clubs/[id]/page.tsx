@@ -129,8 +129,9 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
       />
 
       {/* SECTION: Members Preview - per Visual Contract v6 §8 */}
+      {/* ADR-001.5: Pass currentUser to avoid HTTP API middleware issues */}
       <Suspense fallback={<ClubMembersPreviewSkeleton />}>
-        <ClubMembersPreviewAsync clubId={club.id} />
+        <ClubMembersPreviewAsync clubId={club.id} currentUser={user} />
       </Suspense>
 
       {/* SECTION: Events Preview - per Visual Contract v6 §9 */}

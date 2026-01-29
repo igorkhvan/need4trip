@@ -3,51 +3,30 @@
  * 
  * Async server component for Members Preview section.
  * Per Visual Contract v6 §8: Read-only preview.
- * Data source: GET /api/clubs/[id]/members/preview (API-053)
  * 
  * Displays: avatars, total count.
  * No role badges, no management controls.
  * 
- * Auth transport: Uses internalApiFetch for consistent cookie forwarding (ADR-001)
+ * Per ADR-001.5: RSC MUST call service-layer functions directly.
+ * Auth is resolved once per page and passed explicitly to service.
  */
 
 import { Users, Crown } from "lucide-react";
-import { internalApiFetch } from "@/lib/http/internalApiFetch";
-
-// Fetch members preview from API-053
-async function getMembersPreview(clubId: string): Promise<{
-  members: Array<{
-    displayName: string;
-    avatarUrl: string | null;
-    isOwner?: boolean;
-    userId?: string;
-    role?: string;
-  }>;
-  totalCount: number;
-  hasMore: boolean;
-} | null> {
-  try {
-    // ADR-001: Use internalApiFetch for consistent cookie forwarding
-    const res = await internalApiFetch(`/api/clubs/${clubId}/members/preview`);
-    
-    if (!res.ok) {
-      // If 403 or other error, return null to hide section
-      return null;
-    }
-    
-    const json = await res.json();
-    return json.data;
-  } catch {
-    return null;
-  }
-}
+import { getClubMembersPreview } from "@/lib/services/clubs";
+import type { CurrentUser } from "@/lib/auth/currentUser";
 
 interface ClubMembersPreviewAsyncProps {
   clubId: string;
+  currentUser: CurrentUser | null;
 }
 
-export async function ClubMembersPreviewAsync({ clubId }: ClubMembersPreviewAsyncProps) {
-  const data = await getMembersPreview(clubId);
+/**
+ * Per ADR-001.5: currentUser is resolved once at the page level
+ * and passed explicitly to this RSC component.
+ */
+export async function ClubMembersPreviewAsync({ clubId, currentUser }: ClubMembersPreviewAsyncProps) {
+  // ADR-001.5: Call service-layer function directly (no HTTP API)
+  const data = await getClubMembersPreview(clubId, currentUser);
   
   // Per Visual Contract v6 §8: If API not accessible → hide entire section
   if (!data) {

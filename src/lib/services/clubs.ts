@@ -1166,6 +1166,136 @@ export async function getUserRoleInClub(
 }
 
 // ============================================================================
+// MEMBERS PREVIEW (ADR-001.5 Compliant Service-Layer Function)
+// ============================================================================
+
+/**
+ * Public member preview shape (minimal fields per SSOT_CLUBS_DOMAIN.md §8.4.3)
+ */
+export interface PublicMemberPreview {
+  displayName: string;
+  avatarUrl: string | null;
+  isOwner?: boolean;
+}
+
+/**
+ * Extended member preview for authenticated members (includes role)
+ */
+export interface MemberPreview extends PublicMemberPreview {
+  userId: string;
+  role: string;
+}
+
+/**
+ * Members preview result
+ */
+export interface ClubMembersPreviewResult {
+  members: (PublicMemberPreview | MemberPreview)[];
+  totalCount: number;
+  hasMore: boolean;
+  previewLimit: number;
+}
+
+// Maximum number of members to return in preview
+const MEMBERS_PREVIEW_LIMIT = 6;
+
+/**
+ * Get club members preview for RSC.
+ * 
+ * Per ADR-001.5: RSC MUST call service-layer functions directly.
+ * Per SSOT_CLUBS_DOMAIN.md §8.4.1: public_members_list_enabled flag.
+ * Per SSOT_CLUBS_DOMAIN.md §8.4.3: Guest-Visible Member Fields (displayName, avatar only).
+ * Per SSOT_CLUBS_DOMAIN.md §10.4: Data minimization.
+ * 
+ * Authorization logic:
+ * - Club members (non-pending): full preview with userId and role
+ * - Public clubs with public_members_list_enabled: minimal preview (displayName, avatar)
+ * - Private clubs or disabled flag: returns null (caller should hide section)
+ * 
+ * @param clubId - Club ID
+ * @param currentUser - Current user (may be null for guests)
+ * @returns ClubMembersPreviewResult or null if access denied
+ */
+export async function getClubMembersPreview(
+  clubId: string,
+  currentUser: CurrentUser | null
+): Promise<ClubMembersPreviewResult | null> {
+  // Get club
+  const club = await getClubById(clubId);
+  if (!club) {
+    return null;
+  }
+
+  // Check if user is a member (excluding pending)
+  const membership = currentUser ? await getMember(clubId, currentUser.id) : null;
+  const isMember = membership && membership.role !== "pending";
+
+  // Get settings from club
+  const settings = club.settings || {};
+  const publicMembersListEnabled = (settings as Record<string, unknown>).public_members_list_enabled === true;
+  const publicShowOwnerBadge = (settings as Record<string, unknown>).public_show_owner_badge === true;
+
+  // Authorization check for guests/non-members
+  if (!isMember) {
+    // Per SSOT_CLUBS_DOMAIN.md §10.4:
+    // - Private clubs: guests cannot view members list regardless of settings
+    // - Public clubs: only if public_members_list_enabled = true
+    if (club.visibility === "private") {
+      return null;
+    }
+    if (!publicMembersListEnabled) {
+      return null;
+    }
+  }
+
+  // Get total count
+  const totalCount = await countMembers(clubId);
+
+  // Get members with user info
+  const allMembers = await listMembersWithUser(clubId);
+
+  // Filter out pending members and limit to preview
+  const activeMembers = allMembers.filter(m => m.role !== "pending");
+  const previewMembers = activeMembers.slice(0, MEMBERS_PREVIEW_LIMIT);
+
+  // Map to preview shape based on access level
+  let members: (PublicMemberPreview | MemberPreview)[];
+
+  if (isMember) {
+    // Authenticated member: return extended preview with userId and role
+    members = previewMembers.map(m => ({
+      userId: m.user_id,
+      displayName: m.user.name,
+      avatarUrl: m.user.avatar_url,
+      role: m.role,
+      isOwner: m.role === "owner",
+    }));
+  } else {
+    // Guest/non-member: return minimal preview per SSOT_CLUBS_DOMAIN.md §8.4.3
+    members = previewMembers.map(m => {
+      const preview: PublicMemberPreview = {
+        displayName: m.user.name,
+        avatarUrl: m.user.avatar_url,
+      };
+
+      // Add owner badge only if explicitly enabled (SSOT §8.4.2)
+      if (publicShowOwnerBadge && m.role === "owner") {
+        preview.isOwner = true;
+      }
+
+      return preview;
+    });
+  }
+
+  return {
+    members,
+    totalCount,
+    hasMore: totalCount > MEMBERS_PREVIEW_LIMIT,
+    previewLimit: MEMBERS_PREVIEW_LIMIT,
+  };
+}
+
+// ============================================================================
 // CLUB EVENTS
 // ============================================================================
 
