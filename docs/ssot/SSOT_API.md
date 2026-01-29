@@ -1,13 +1,19 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.7.5  
+**Version:** 1.7.6  
 **Last Updated:** 29 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.7.6 (2026-01-29) — Canonical Events Listing Endpoint Clarification
+**Canonical endpoint formalization per architectural decision:**
+- **API-025 (GET /api/events):** Added normative note — this is the CANONICAL listing endpoint for all event listing use cases. All UI components MUST use this endpoint.
+- **API-025:** Added `clubId` query param documentation. When provided, visibility MUST follow SSOT_CLUBS_DOMAIN.md §4.5.
+- **API-057 (GET /api/clubs/[id]/events):** Added normative note — this endpoint MUST NOT be used by UI for event listing (non-canonical for read operations).
 
 ### 1.7.5 (2026-01-29) — Auth Context Types Documentation
 **Platform-wide auth context consolidation:**
@@ -2525,6 +2531,9 @@ Export club members to CSV file (requires plan with `allowCsvExport`).
 **Auth mechanism:** JWT via middleware  
 **Authorization:** Club members only (owner, admin, member). Pending role = DENIED.  
 
+**Non-Canonical Status (NORMATIVE):**  
+This endpoint MUST NOT be used by UI for event listing. It is **non-canonical** for read operations. UI components MUST use the canonical endpoint **API-025 (GET /api/events)** with `clubId` filter parameter instead. This endpoint exists for internal/admin use cases only.
+
 **Purpose:**  
 List events belonging to a specific club with pagination and sorting.
 
@@ -2623,6 +2632,13 @@ List events belonging to a specific club with pagination and sorting.
 **Auth mechanism:** JWT (optional for public tabs)  
 **Authorization:** Visibility-based (public, unlisted, restricted)  
 
+**Canonical Status (NORMATIVE):**  
+This endpoint is the **CANONICAL** listing endpoint for Events. All UI components that display event lists MUST use this endpoint. This includes:
+- Home page event feed
+- Search results
+- Club-filtered event listings
+- Category/city filtered views
+
 **Purpose:**  
 List events with filters, search, pagination. Server-side rendering.
 
@@ -2636,6 +2652,7 @@ List events with filters, search, pagination. Server-side rendering.
   - `search` (optional): Search query (event title)
   - `cityId` (optional): Filter by city UUID
   - `categoryId` (optional): Filter by category UUID
+  - `clubId` (optional): Filter by club UUID. When provided, visibility rules MUST follow SSOT_CLUBS_DOMAIN.md §4.5. Only events visible to the current user (based on club membership) are returned.
 - **Idempotency:** Yes (read-only)
 
 **Response:**
