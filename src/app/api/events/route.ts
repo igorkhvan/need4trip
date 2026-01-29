@@ -21,6 +21,7 @@ const eventsListQuerySchema = z.object({
   search: z.string().trim().optional(),
   cityId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
+  clubId: z.string().uuid().optional(),
 });
 
 /**
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
           search: params.search,
           cityId: params.cityId,
           categoryId: params.categoryId,
+          clubId: params.clubId,
         },
         sort: { sort: params.sort },
         pagination: { page: params.page, limit: params.limit },

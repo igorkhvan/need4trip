@@ -615,6 +615,7 @@ export interface EventListFilters {
   search?: string;
   cityId?: string;
   categoryId?: string;
+  clubId?: string;
 }
 
 export interface EventListSort {
@@ -684,6 +685,10 @@ export async function queryEventsPaginated(
 
   if (filters.categoryId) {
     query = query.eq('category_id', filters.categoryId);
+  }
+
+  if (filters.clubId) {
+    query = query.eq('club_id', filters.clubId);
   }
 
   // Sort (stable tie-breaker REQUIRED)
@@ -764,6 +769,10 @@ export async function queryEventsByIdsPaginated(
     query = query.eq('category_id', filters.categoryId);
   }
 
+  if (filters.clubId) {
+    query = query.eq('club_id', filters.clubId);
+  }
+
   // Sort (stable tie-breaker)
   if (sort.sort === 'date') {
     query = query.order('date_time', { ascending: false }).order('id', { ascending: false });
@@ -825,6 +834,10 @@ export async function countEventsByFilters(filters: EventListFilters): Promise<n
     query = query.eq('category_id', filters.categoryId);
   }
 
+  if (filters.clubId) {
+    query = query.eq('club_id', filters.clubId);
+  }
+
   const { count, error } = await query;
 
   if (error) {
@@ -858,6 +871,10 @@ export async function countEventsByIds(
 
   if (filters.categoryId) {
     query = query.eq('category_id', filters.categoryId);
+  }
+
+  if (filters.clubId) {
+    query = query.eq('club_id', filters.clubId);
   }
 
   const { count, error } = await query;
