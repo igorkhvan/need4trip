@@ -17,6 +17,7 @@ import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { UnauthorizedError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
+import { getUserClubRole } from "@/lib/db/clubMemberRepo";
 import { logger } from "@/lib/utils/logger";
 
 export async function GET(req: NextRequest) {
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
     const db = getAdminDb();
     let query = db
       .from("billing_transactions")
-      .select("id, status, product_code, amount, currency_code, created_at, updated_at");
+      .select("id, status, product_code, amount, currency_code, created_at, updated_at, user_id, club_id");
 
     if (transactionId) {
       query = query.eq("id", transactionId);
@@ -60,9 +61,31 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. Authorization check (user must own the transaction)
-    // For one-off: user_id must match
-    // For club: club owner must match (simplified: skip for MVP, rely on transaction_id secrecy)
-    // TODO: Add proper authorization check
+    // Security: Return 404 on ownership mismatch to avoid existence leakage
+    // Per BILLING_AUDIT_REPORT.md GAP-1 and SSOT_ARCHITECTURE.md §8.4
+    
+    // For one-off credits: user_id must match
+    if (transaction.user_id && transaction.user_id !== currentUser.id) {
+      logger.warn("Transaction ownership mismatch (user_id)", {
+        transactionId: transaction.id,
+        requestingUserId: currentUser.id,
+      });
+      throw new NotFoundError("Transaction not found");
+    }
+    
+    // For club subscriptions: only club owner can view
+    if (transaction.club_id) {
+      const role = await getUserClubRole(transaction.club_id, currentUser.id);
+      if (role !== "owner") {
+        logger.warn("Transaction ownership mismatch (club_id)", {
+          transactionId: transaction.id,
+          clubId: transaction.club_id,
+          requestingUserId: currentUser.id,
+          userRole: role,
+        });
+        throw new NotFoundError("Transaction not found");
+      }
+    }
 
     logger.info("Transaction status queried", {
       transactionId: transaction.id,

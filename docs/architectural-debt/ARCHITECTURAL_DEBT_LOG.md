@@ -184,53 +184,58 @@ Open
 **Area:** Authorization / Data access
 **Type:** Security / Authorization debt
 **Introduced:** 2026-01-29
-**Related:** SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_ARCHITECTURE.md §8.3
+**Partially Resolved:** 2026-01-29
+**Related:** SSOT_BILLING_SYSTEM_ANALYSIS.md, SSOT_ARCHITECTURE.md §8.3, BILLING_AUDIT_REPORT.md
 
 ### Description
 
-Billing endpoints have been audited and confirmed to operate in User Context (all operations are user-initiated). However, certain authorization checks are incomplete:
+Billing endpoints have been audited and confirmed to operate in User Context (all operations are user-initiated). However, certain authorization checks were incomplete:
 
 1. **Transaction ownership verification** — No explicit check that the requesting user owns the transaction they are querying or modifying.
 2. **Credit ownership verification** — No explicit check that the requesting user owns the credit they are consuming.
+3. **Club subscription purchase authorization** — Any authenticated user could initiate subscription purchase for any club.
 
 These are **authorization** gaps, not **authentication** gaps. Authentication is correctly resolved via `resolveCurrentUser(req)`.
 
-### Why this is debt
+### Why this was debt
 
 * Potential for horizontal privilege escalation (user A accessing user B's transactions)
 * Relies on implicit constraints (e.g., UI only shows own transactions) rather than explicit backend enforcement
 * Violates defense-in-depth principle
 
-### Why it is NOT fixed now
+### Resolution Progress
 
-* No known exploitation vector in production (UI scoping provides first-line protection)
-* Billing domain was not the focus of auth resolution work
-* Fix requires careful audit of all billing endpoints and service layer changes
-* Risk assessment: Low (transactions are user-scoped at creation time)
+**2026-01-29 (Phase B1):**
 
-### Resolution Criteria
+| Gap | Status | Fix |
+|-----|--------|-----|
+| GAP-1: Transaction ownership | ✅ FIXED | `GET /api/billing/transactions/status` now verifies: user_id match OR club owner for club_id transactions. Returns 404 on mismatch (no existence leakage). |
+| GAP-2: Club subscription purchase | ✅ FIXED | `POST /api/billing/purchase-intent` now requires club owner role for club subscription purchases. Returns 403 on unauthorized. |
+| Credit ownership | ⚠️ MITIGATED | Repository functions trust caller; all callers pass `currentUser.id`. No exploitable path found. |
 
-This debt should be addressed when **any** of the following becomes true:
+**Files changed:**
+- `src/app/api/billing/transactions/status/route.ts`
+- `src/app/api/billing/purchase-intent/route.ts`
 
-* Billing API is exposed to third-party integrations
-* Admin tooling allows cross-user transaction operations
-* Security audit mandates explicit ownership checks
-* Any incident involving unauthorized billing access
+### Remaining Items
 
-### Expected resolution approach
+* Credit ownership verification at repository level (defense-in-depth) — Low priority, no exploitable path
 
-1. Add `user_id` ownership check in `billingTransactionsRepo.ts` queries
-2. Add `user_id` ownership check in `billingCreditsRepo.ts` queries
-3. Add explicit ownership verification in billing service layer
-4. Add test coverage for authorization boundaries
+### Resolution Criteria for Full Closure
+
+This debt can be marked CLOSED when:
+
+* ~~GAP-1 (Transaction ownership) is fixed~~ ✅
+* ~~GAP-2 (Club subscription purchase) is fixed~~ ✅
+* Credit repo functions add explicit user_id scoping (optional, defense-in-depth)
 
 ### Priority
 
-Medium — authorization gap with implicit mitigation
+~~Medium~~ → Low — confirmed gaps fixed, remaining item is defense-in-depth
 
 ### Status
 
-Open
+**PARTIALLY RESOLVED** — GAP-1 and GAP-2 fixed. Credit ownership remains implicit but safe.
 
 ---
 

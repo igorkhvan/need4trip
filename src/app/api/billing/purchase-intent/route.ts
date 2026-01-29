@@ -17,10 +17,11 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { respondSuccess, respondError } from "@/lib/api/response";
-import { UnauthorizedError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
+import { UnauthorizedError, ValidationError, NotFoundError, InternalError, ForbiddenError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
 import { getPlanById } from "@/lib/db/planRepo";
+import { getUserClubRole } from "@/lib/db/clubMemberRepo";
 import { logger } from "@/lib/utils/logger";
 import type { ProductCode } from "@/lib/types/billing";
 
@@ -103,6 +104,22 @@ export async function POST(req: NextRequest) {
       // For clubs, quantity must be 1 (one month)
       if (quantity !== 1) {
         throw new ValidationError("Club subscriptions must have quantity=1");
+      }
+
+      // Authorization: Only club owner can purchase subscription
+      // Per BILLING_AUDIT_REPORT.md GAP-2 and SSOT_ARCHITECTURE.md §8.4
+      if (!context?.clubId) {
+        throw new ValidationError("clubId is required for club subscription purchase");
+      }
+
+      const role = await getUserClubRole(context.clubId, currentUser.id);
+      if (role !== "owner") {
+        logger.warn("Club subscription purchase denied: not owner", {
+          clubId: context.clubId,
+          requestingUserId: currentUser.id,
+          userRole: role,
+        });
+        throw new ForbiddenError("Only club owner can purchase subscription");
       }
     }
 
