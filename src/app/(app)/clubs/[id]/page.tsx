@@ -24,7 +24,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 
 // Section components
@@ -52,8 +52,9 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
   const { id } = await params;
   
   // Load critical data for blocking render
+  // ADR-001: Use resolveCurrentUser for canonical auth resolution in RSC
   const [user, clubResult] = await Promise.all([
-    getCurrentUser(),
+    resolveCurrentUser(),
     getClubBasicInfo(id).catch(() => null),
   ]);
 
@@ -133,8 +134,9 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
       </Suspense>
 
       {/* SECTION: Events Preview - per Visual Contract v6 §9 */}
+      {/* ADR-001.4: Pass currentUser to avoid HTTP API middleware issues */}
       <Suspense fallback={<ClubEventsPreviewSkeleton />}>
-        <ClubEventsPreviewAsync clubId={club.id} />
+        <ClubEventsPreviewAsync clubId={club.id} currentUser={user} />
       </Suspense>
     </div>
   );

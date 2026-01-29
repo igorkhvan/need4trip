@@ -3,44 +3,68 @@
  * 
  * Async server component for Events Preview section.
  * Per Visual Contract v6 §9: Read-only preview.
- * Data source: GET /api/events?clubId=...
  * 
  * Displays: upcoming events.
  * No creation or edit controls.
  * 
- * Auth transport: Uses internalApiFetch for consistent cookie forwarding (ADR-001)
+ * Architecture (ADR-001.4):
+ * - RSC calls service layer DIRECTLY (no HTTP API)
+ * - Receives currentUser from parent page (auth already resolved)
+ * - Avoids middleware x-user-id stripping issue on public routes
+ * - Uses SSOT §4.5 visibility rules via listVisibleEventsForUserPaginated
  */
 
 import { Calendar, MapPin, Users } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { internalApiFetch } from "@/lib/http/internalApiFetch";
+import { listVisibleEventsForUserPaginated } from "@/lib/services/events";
+import type { CurrentUser } from "@/lib/auth/currentUser";
+import { log } from "@/lib/utils/logger";
 
 interface EventPreview {
   id: string;
   title: string;
   dateTime: string;
-  city?: { name: string } | null;
+  city?: { id: string; name: string; countryCode: string } | null;
   participantsCount: number;
   maxParticipants: number;
 }
 
-// Fetch club events from API
-async function getClubEvents(clubId: string): Promise<EventPreview[] | null> {
+/**
+ * Fetch club events directly from service layer (no HTTP API).
+ * 
+ * This bypasses the HTTP API to avoid middleware stripping x-user-id
+ * on public routes. Service layer correctly implements SSOT §4.5.
+ */
+async function getClubEvents(
+  clubId: string,
+  currentUser: CurrentUser | null
+): Promise<EventPreview[]> {
   try {
-    // ADR-001: Use internalApiFetch for consistent cookie forwarding
-    const res = await internalApiFetch(
-      `/api/events?clubId=${clubId}&tab=upcoming&limit=3`
+    const result = await listVisibleEventsForUserPaginated(
+      {
+        filters: {
+          tab: 'upcoming',
+          clubId,
+        },
+        sort: { sort: 'date' },
+        pagination: { page: 1, limit: 3 },
+      },
+      currentUser
     );
     
-    if (!res.ok) {
-      return null;
-    }
-    
-    const json = await res.json();
-    return json.events || [];
-  } catch {
-    return null;
+    // Map to EventPreview format with safe defaults
+    return result.events.map(event => ({
+      id: event.id,
+      title: event.title,
+      dateTime: event.dateTime,
+      city: event.city ?? null,
+      participantsCount: event.participantsCount ?? 0,
+      maxParticipants: event.maxParticipants ?? 0,
+    }));
+  } catch (err) {
+    log.errorWithStack("ClubEventsPreviewAsync: Failed to load events", err, { clubId });
+    return [];
   }
 }
 
@@ -57,13 +81,11 @@ function formatEventDate(dateTime: string): string {
 
 interface ClubEventsPreviewAsyncProps {
   clubId: string;
+  currentUser: CurrentUser | null;
 }
 
-export async function ClubEventsPreviewAsync({ clubId }: ClubEventsPreviewAsyncProps) {
-  const events = await getClubEvents(clubId);
-  
-  // If fetch failed, still show section with empty state
-  const eventsList = events || [];
+export async function ClubEventsPreviewAsync({ clubId, currentUser }: ClubEventsPreviewAsyncProps) {
+  const events = await getClubEvents(clubId, currentUser);
 
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
@@ -72,14 +94,14 @@ export async function ClubEventsPreviewAsync({ clubId }: ClubEventsPreviewAsyncP
         <span>Предстоящие события</span>
       </h2>
       
-      {eventsList.length === 0 ? (
+      {events.length === 0 ? (
         // Empty placeholder per Visual Contract v6 §9
         <p className="text-[15px] text-muted-foreground italic">
           У клуба пока нет предстоящих событий
         </p>
       ) : (
         <div className="space-y-3">
-          {eventsList.map((event) => (
+          {events.map((event) => (
             <Link
               key={event.id}
               href={`/events/${event.id}`}
