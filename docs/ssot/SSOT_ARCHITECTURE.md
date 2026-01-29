@@ -2,7 +2,7 @@
 
 **Status:** 🟢 Production Ready  
 **Last Updated:** 2026-01-29  
-**Version:** 5.2  
+**Version:** 5.3  
 **Authority:** This document is the ONLY authoritative source for architectural decisions in Need4Trip.
 
 ---
@@ -131,6 +131,8 @@ Client Components are allowed only when you need:
 - event handlers
 - hooks/state
 - context providers
+
+> **RSC Access Rule:** Server Components MUST call service-layer functions directly and MUST NOT call authenticated HTTP API routes. See ADR-001.5 for rationale and enforcement.
 
 ### 4.3 Server-Only Modules (Mandatory)
 Modules that MUST include `import 'server-only'` (directly or via boundary):
@@ -585,6 +587,7 @@ A PR is non-compliant if any item is violated.
 ---
 
 ## 21. Document History (Compressed)
+- v5.3 (2026-01-29): Added RSC Access Rule reference in §4.2. RSC MUST call service layer directly (ADR-001.5).
 - v5.2 (2026-01-29): Added §8.3 Auth Context Types (NORMATIVE). Defined platform-level auth context taxonomy (User, Admin, System). Renumbered §8.4 Authorization. Cross-referenced ARCHITECTURAL_DEBT_LOG.md for deferred context formalization.
 - v5.1 (2026-01-27): Added §8.2 Canonical Auth Resolver (NORMATIVE). Locked `resolveCurrentUser(req?)` as the single transport-agnostic auth entry point.
 - v5.0 (2026-01-13): Full SSOT rewrite, consolidation, explicit NFRs, governance, and canonical models.

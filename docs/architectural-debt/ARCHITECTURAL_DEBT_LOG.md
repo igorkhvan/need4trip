@@ -399,6 +399,10 @@ Low — no functional impact, cosmetic architectural debt
 
 Open
 
+### Follow-up Note (2026-01-29)
+
+**ADR-001.5** formally resolves the architectural risk of RSC → HTTP API calls going forward. The rule states that RSC MUST call service-layer functions directly and MUST NOT call authenticated HTTP API routes. This eliminates the class of auth failures that could occur when RSC attempted to fetch viewer-dependent data via internal HTTP. The duplicate endpoint remains as API surface debt, but RSC code paths are now architecturally constrained to use the service layer.
+
 ---
 
 ## Rules for this document
