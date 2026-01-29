@@ -1,7 +1,7 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.5  
+**Version:** 1.5.1  
 **Last Updated:** 2026-01-29  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 
@@ -44,6 +44,9 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-29 (v1.5.1)
+- Added API cross-reference in §4.5: club-scoped event listings served via canonical Events API (SSOT_API.md)
 
 ### 2026-01-29 (v1.5)
 - Added §4.5 Event Visibility Within Club Context (NORMATIVE): explicit rules for event read access by viewer type
@@ -384,6 +387,8 @@ This section defines how events associated with a club are visible to different 
 | Guest | public | non-public | ❌ |
 
 **Cross-Reference:** Event creation and management RBAC is governed by SSOT_CLUBS_EVENTS_ACCESS.md.
+
+**API Surface:** Club-scoped event listings are served via the canonical Events API. Refer to SSOT_API.md for the API surface definition.
 
 ---
 
