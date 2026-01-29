@@ -352,80 +352,42 @@ Open
 **Area:** API surface / SSOT compliance
 **Type:** Duplication debt / Architectural clarity
 **Introduced:** 2026-01-29
+**Closed:** 2026-01-29
 **Related:** SSOT_API.md §4.5, SSOT_ARCHITECTURE.md
 
 ### Description
 
-The endpoint `GET /api/clubs/[id]/events` provides club-scoped event listing, duplicating read responsibility that canonically belongs to `GET /api/events`.
+The endpoint `GET /api/clubs/[id]/events` provided club-scoped event listing, duplicating read responsibility that canonically belongs to `GET /api/events`.
 
-The canonical events listing endpoint `GET /api/events` supports query parameters for filtering (including potential club-scoping), making the club-specific endpoint redundant as a read surface.
+The canonical events listing endpoint `GET /api/events` supports query parameters for filtering (including club-scoping), making the club-specific endpoint redundant as a read surface.
 
-### Why this is debt
+### Why this was debt
 
-* **Duplicated read surface** — Two endpoints serve overlapping event-read responsibility, violating the single-responsibility principle for API design
-* **Risk of divergence** — Filtering logic, pagination, visibility rules, and response format may drift between the two endpoints over time
-* **SSOT violation risk** — SSOT §4.5 establishes canonical data access patterns; duplicate endpoints increase the risk of inconsistent behavior
-* **Maintenance burden** — Changes to event listing behavior must be synchronized across both endpoints
+* **Duplicated read surface** — Two endpoints served overlapping event-read responsibility, violating the single-responsibility principle for API design
+* **Risk of divergence** — Filtering logic, pagination, visibility rules, and response format could drift between the two endpoints over time
+* **SSOT violation risk** — SSOT §4.5 establishes canonical data access patterns; duplicate endpoints increased the risk of inconsistent behavior
+* **Maintenance burden** — Changes to event listing behavior had to be synchronized across both endpoints
 
-### Why it is NOT removed now
+### Resolution
 
-* Endpoint may be consumed by existing client code or integrations
-* Immediate removal could break dependent functionality
-* Requires audit of all call sites before deprecation
-* No active incident or functional failure caused by the duplication
+**Phase L2.1 (2026-01-29):**
+1. Usage audit confirmed zero runtime callers
+2. All UI components were already using canonical endpoint `GET /api/events?clubId=...`
+3. Route handler `src/app/api/clubs/[id]/events/route.ts` permanently deleted
+4. SSOT_API.md updated — API-057 marked as ⛔ REMOVED
 
-### Resolution Criteria
-
-This debt should be addressed when **any** of the following becomes true:
-
-* API surface audit is performed as part of a versioning effort
-* Event listing logic in `GET /api/events` is extended to support club-scoping via query parameter
-* A dedicated API cleanup cycle is planned
-* Divergence between the two endpoints causes a bug or inconsistency
-
-### Expected resolution approach
-
-1. Audit all call sites of `GET /api/clubs/[id]/events`
-2. Migrate consumers to use `GET /api/events?clubId=<id>` (if club-scoping is added)
-3. Mark endpoint as deprecated with appropriate response headers
-4. Optionally: restrict endpoint to internal usage only
-5. Remove endpoint in a future API version
+**Canonical replacement:**
+- `GET /api/events?clubId=<id>&tab=all&limit=<limit>` (API-025)
 
 ### Priority
 
-Low — no functional impact, cosmetic architectural debt
+~~Low~~ — Resolved
 
 ### Status
 
-Open
+**CLOSED** ✅
 
-### Follow-up Note (2026-01-29)
-
-**ADR-001.5** formally resolves the architectural risk of RSC → HTTP API calls going forward. The rule states that RSC MUST call service-layer functions directly and MUST NOT call authenticated HTTP API routes. This eliminates the class of auth failures that could occur when RSC attempted to fetch viewer-dependent data via internal HTTP. The duplicate endpoint remains as API surface debt, but RSC code paths are now architecturally constrained to use the service layer.
-
-### Deprecation Note (2026-01-29) — Phase L2
-
-**API-057 is now explicitly deprecated in code and header-marked:**
-
-1. **Route handler** (`src/app/api/clubs/[id]/events/route.ts`):
-   - `@deprecated` JSDoc comment added at top
-   - Deprecation headers added to response:
-     - `Deprecation: true`
-     - `Sunset: Sat, 28 Feb 2026 23:59:59 GMT` (30 days from today)
-     - `Link: </api/events?clubId={id}>; rel="successor-version"`
-
-2. **Usage audit result:**
-   - No runtime callers found in frontend code
-   - `ClubEventsContent.tsx` already uses canonical endpoint `/api/events?clubId=...`
-   - Only stale comment in `page.tsx` was referencing API-057 (fixed)
-
-3. **Canonical endpoint:**
-   - `GET /api/events?clubId=<id>&tab=all&limit=<limit>` (per SSOT_API.md)
-
-4. **Next step:**
-   - Monitor for 30 days
-   - If zero usage confirmed, remove endpoint entirely
-   - Update SSOT_API.md to mark API-057 as removed
+API-057 removed in Phase L2.1 after zero-usage verification. Debt eliminated by endpoint removal rather than maintenance.
 
 ---
 

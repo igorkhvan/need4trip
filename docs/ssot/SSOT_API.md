@@ -1,13 +1,20 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.7.6  
+**Version:** 1.7.7  
 **Last Updated:** 29 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.7.7 (2026-01-29) — API-057 Removed (Phase L2.1)
+**Deprecated endpoint permanently removed after zero-usage verification:**
+- **API-057 (GET /api/clubs/[id]/events):** REMOVED. Non-canonical club-scoped events endpoint deleted.
+- **Canonical replacement:** `GET /api/events?clubId=<id>&tab=all&limit=<limit>` (API-025)
+- **Reference:** ARCHITECTURAL_DEBT_LOG.md DEBT-007 (CLOSED)
+- **Rationale:** Endpoint was non-canonical (SSOT_API.md v1.7.6), zero runtime usage confirmed, violates single-responsibility API design.
 
 ### 1.7.6 (2026-01-29) — Canonical Events Listing Endpoint Clarification
 **Canonical endpoint formalization per architectural decision:**
@@ -2521,102 +2528,26 @@ Export club members to CSV file (requires plan with `allowCsvExport`).
 
 ---
 
-#### API-057: List Club Events
+#### API-057: List Club Events — ⛔ REMOVED
 
 **Endpoint ID:** API-057  
-**Method:** GET  
-**Path:** `/api/clubs/[id]/events`  
-**Runtime:** Node.js  
-**Auth:** Required (JWT)  
-**Auth mechanism:** JWT via middleware  
-**Authorization:** Club members only (owner, admin, member). Pending role = DENIED.  
+**Status:** ⛔ **REMOVED** (2026-01-29)  
+**Removal Phase:** L2.1  
 
-**Non-Canonical Status (NORMATIVE):**  
-This endpoint MUST NOT be used by UI for event listing. It is **non-canonical** for read operations. UI components MUST use the canonical endpoint **API-025 (GET /api/events)** with `clubId` filter parameter instead. This endpoint exists for internal/admin use cases only.
+**Reason for removal:**  
+This endpoint was deprecated and removed as part of architectural cleanup. It violated the single-responsibility principle for API design by duplicating event listing functionality already available through the canonical endpoint.
 
-**Purpose:**  
-List events belonging to a specific club with pagination and sorting.
+**History:**
+- **Introduced:** v1.7.0 (2026-01-14)
+- **Deprecated:** v1.7.6 (2026-01-29) — Marked non-canonical, usage audit showed zero runtime callers
+- **Removed:** v1.7.7 (2026-01-29) — Permanently deleted after verification window
 
-**Authorization matrix:**
-| Role in Club | Access |
-|--------------|--------|
-| owner | ✅ Full list |
-| admin | ✅ Full list |
-| member | ✅ Full list |
-| pending | ❌ DENIED (403) |
-| non-member | ❌ DENIED (403) |
+**Canonical replacement:**  
+`GET /api/events?clubId=<id>&tab=all&limit=<limit>` (API-025)
 
-**Archived clubs:** Listing is ALLOWED (read-only semantics per SSOT_CLUBS_DOMAIN.md §8.3 whitelist).
-
-**Request:**
-
-- **Path params:** `id` (club UUID)
-- **Query params:**
-  - `page` (optional): Page number (default: 1)
-  - `limit` (optional): Items per page (min: 1, max: 50, default: 12)
-- **Idempotency:** Yes (read-only)
-
-**Response:**
-
-- **Success:** 200
-  ```json
-  {
-    "events": [
-      {
-        "id": "uuid",
-        "title": "Event Title",
-        "description": "...",
-        "dateTime": "ISO 8601",
-        "cityId": "uuid",
-        "city": { "id": "uuid", "name": "Москва", "countryCode": "RU" },
-        "categoryId": "uuid",
-        "category": { "id": "uuid", "name": "Автопробег", "icon": "🚗" },
-        "maxParticipants": 50,
-        "visibility": "public",
-        "isPaid": false,
-        "clubId": "uuid"
-      }
-    ],
-    "meta": {
-      "total": 42,
-      "page": 1,
-      "limit": 12,
-      "totalPages": 4,
-      "hasMore": true
-    },
-    "club": {
-      "id": "uuid",
-      "name": "Club Name",
-      "isArchived": false
-    }
-  }
-  ```
-- **Side effects:** None (read-only)
-
-**Errors:**
-
-| Status | Condition | Notes |
-|--------|-----------|-------|
-| 400 | Validation error | Invalid query params (Zod) |
-| 401 | Not authenticated | Auth required |
-| 403 | Not club member | Non-members denied |
-| 403 | Pending role | Pending = no access (same as non-member) |
-| 404 | Club not found | Invalid UUID |
-
-**Security & Abuse:**
-
-- **Rate limit:** read tier (300 req/5min)
-- **Spam / Cost abuse risk:** Low (read-only, paginated)
-- **Sensitive data exposure:** No (event data visible to members)
-
-**Dependencies:**
-
-- Supabase (events, clubs, club_members tables)
-
-**Code pointers:**
-
-- Route handler: `/src/app/api/clubs/[id]/events/route.ts`
-- Key functions: `listClubEvents()`, `getUserClubRole()`
+**Reference:**
+- ARCHITECTURAL_DEBT_LOG.md — DEBT-007 (CLOSED)
+- ADR-001.5 — RSC must not use HTTP API routes
 
 ---
 
@@ -4341,7 +4272,7 @@ Total route handlers discovered: **37 files**
 | 11 | `/src/app/api/clubs/[id]/members/[userId]/route.ts` | PATCH, DELETE | API-021, API-022 |
 | 12 | `/src/app/api/clubs/[id]/current-plan/route.ts` | GET | API-023 |
 | 13 | `/src/app/api/clubs/[id]/export/route.ts` | GET | API-024 |
-| 13.1 | `/src/app/api/clubs/[id]/events/route.ts` | GET | API-057 |
+| ~~13.1~~ | ~~`/src/app/api/clubs/[id]/events/route.ts`~~ | ~~GET~~ | ~~API-057~~ ⛔ REMOVED |
 | 14 | `/src/app/api/events/route.ts` | GET, POST | API-025, API-026 |
 | 15 | `/src/app/api/events/[id]/route.ts` | GET, PUT, DELETE | API-027 to API-029 |
 | 16 | `/src/app/api/events/[id]/registration/route.ts` | PATCH | API-030 |
@@ -4364,8 +4295,9 @@ Total route handlers discovered: **37 files**
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 38
-- **Total endpoints documented:** 57 (API-001 to API-057, excluding API-050)
+- **Total route handler files:** 37 (was 38; API-057 removed in v1.7.7)
+- **Total endpoints documented:** 56 (API-001 to API-056, excluding API-050; API-057 removed)
+- **Removed endpoints:** 1 (API-057 — removed 2026-01-29)
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -4374,6 +4306,7 @@ Total route handlers discovered: **37 files**
 ✅ Every endpoint has unique `Endpoint ID`  
 ✅ Every endpoint has `Security & Abuse` section  
 ✅ No endpoint is missing
+✅ Removed endpoints explicitly marked with ⛔
 
 ### 10.3 Security Sanity Check
 

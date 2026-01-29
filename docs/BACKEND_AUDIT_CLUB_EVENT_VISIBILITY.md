@@ -7,6 +7,17 @@
 
 ---
 
+> **⚠️ PARTIAL OBSOLESCENCE NOTE (2026-01-29):**
+> 
+> **API-057 (`GET /api/clubs/[id]/events`) has been REMOVED** in Phase L2.1.
+> 
+> All references to this endpoint in this document are now historical. The endpoint no longer exists.
+> Canonical replacement: `GET /api/events?clubId=<id>&tab=all&limit=<limit>` (API-025).
+> 
+> See: SSOT_API.md v1.7.7, ARCHITECTURAL_DEBT_LOG.md DEBT-007 (CLOSED)
+
+---
+
 ## Summary
 
 ### High-Level Findings

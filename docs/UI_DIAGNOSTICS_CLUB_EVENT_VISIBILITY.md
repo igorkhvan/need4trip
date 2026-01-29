@@ -7,6 +7,19 @@
 
 ---
 
+> **⚠️ PARTIAL OBSOLESCENCE NOTE (2026-01-29):**
+> 
+> **API-057 (`GET /api/clubs/[id]/events`) has been REMOVED** in Phase L2.1.
+> 
+> All findings related to "non-canonical endpoint" usage in this document are now RESOLVED.
+> The endpoint no longer exists — UI cannot use it.
+> 
+> **Issue #1 (CRITICAL)** in this audit is CLOSED by endpoint removal.
+> 
+> See: SSOT_API.md v1.7.7, ARCHITECTURAL_DEBT_LOG.md DEBT-007 (CLOSED)
+
+---
+
 ## Summary
 
 | Metric | Value |

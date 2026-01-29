@@ -98,7 +98,8 @@ Behavior:
 ### 4.4 Events List Section
 
 **Data Source:**
-- API-057 `GET /api/clubs/[id]/events`
+- ~~API-057 `GET /api/clubs/[id]/events`~~ **REMOVED (2026-01-29)**
+- **Canonical:** API-025 `GET /api/events?clubId=<id>&tab=all&limit=<limit>`
 
 **Rendering Rules:**
 - Sorted by `startAt`

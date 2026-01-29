@@ -6,6 +6,16 @@
 
 ---
 
+> **⚠️ PARTIAL OBSOLESCENCE NOTE (2026-01-29):**
+> 
+> **API-057 (`/api/clubs/[id]/events`)** referenced in this document has been **REMOVED** in Phase L2.1.
+> 
+> References to `src/app/api/clubs/[id]/events/route.ts` are now historical — the file no longer exists.
+> 
+> See: SSOT_API.md v1.7.7, ARCHITECTURAL_DEBT_LOG.md DEBT-007 (CLOSED)
+
+---
+
 ## 1. Middleware
 
 ### Расположение и конфигурация
