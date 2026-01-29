@@ -15,7 +15,7 @@
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { UnauthorizedError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
@@ -45,8 +45,8 @@ type PurchaseIntentRequest = z.infer<typeof purchaseIntentSchema>;
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authentication required (via middleware)
-    const currentUser = await getCurrentUserFromMiddleware(req);
+    // 1. Authentication required (canonical auth resolution per ADR-001)
+    const currentUser = await resolveCurrentUser(req);
     if (!currentUser) {
       throw new UnauthorizedError("Authentication required");
     }
