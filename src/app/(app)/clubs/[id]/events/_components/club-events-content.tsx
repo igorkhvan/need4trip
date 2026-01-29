@@ -2,7 +2,7 @@
  * ClubEventsContent Component
  * 
  * Client component that fetches and displays Club Events.
- * Data source: GET /api/clubs/[id]/events (API-057)
+ * Data source: GET /api/events?clubId=... (canonical listing endpoint, SSOT_API.md)
  * 
  * Per Visual Contract v1 — EVENTS:
  * - No optimistic UI
@@ -34,7 +34,7 @@ interface ClubEventsContentProps {
   isArchived: boolean;
 }
 
-interface ClubEventsResponse {
+interface EventsListResponse {
   events: Event[];
   meta: {
     total: number;
@@ -42,11 +42,6 @@ interface ClubEventsResponse {
     limit: number;
     totalPages: number;
     hasMore: boolean;
-  };
-  club: {
-    id: string;
-    name: string;
-    isArchived: boolean;
   };
 }
 
@@ -63,13 +58,13 @@ export function ClubEventsContent({
   // Per Visual Contract v1 — EVENTS §4.2: owner/admin can create
   const canCreate = userRole === "owner" || userRole === "admin";
 
-  // Fetch events (API-057)
+  // Fetch events using canonical /api/events endpoint (SSOT_API.md)
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/clubs/${clubId}/events?limit=50`);
+      const response = await fetch(`/api/events?clubId=${encodeURIComponent(clubId)}&tab=all&limit=50`);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -83,7 +78,7 @@ export function ClubEventsContent({
         throw new Error("Не удалось загрузить события");
       }
 
-      const data: ClubEventsResponse = await response.json();
+      const data: EventsListResponse = await response.json();
       setEvents(data.events || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка");
