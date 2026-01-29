@@ -1,5 +1,6 @@
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { createEvent, listVisibleEventsForUserPaginated } from "@/lib/services/events";
 import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
@@ -52,8 +53,8 @@ export async function GET(req: NextRequest) {
 
     const params = parsed.data;
 
-    // 2. Get current user (or null for anonymous)
-    const currentUser = await getCurrentUser();
+    // 2. Get current user (or null for anonymous) — ADR-001.1
+    const currentUser = await resolveCurrentUser(req);
 
     // 3. Call service layer (throws AuthError if tab=my without auth)
     const result = await listVisibleEventsForUserPaginated(
