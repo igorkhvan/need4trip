@@ -346,6 +346,61 @@ Open
 
 ---
 
+## DEBT-007: Duplicate club-scoped events read endpoint
+
+**Domain:** Events / Clubs
+**Area:** API surface / SSOT compliance
+**Type:** Duplication debt / Architectural clarity
+**Introduced:** 2026-01-29
+**Related:** SSOT_API.md §4.5, SSOT_ARCHITECTURE.md
+
+### Description
+
+The endpoint `GET /api/clubs/[id]/events` provides club-scoped event listing, duplicating read responsibility that canonically belongs to `GET /api/events`.
+
+The canonical events listing endpoint `GET /api/events` supports query parameters for filtering (including potential club-scoping), making the club-specific endpoint redundant as a read surface.
+
+### Why this is debt
+
+* **Duplicated read surface** — Two endpoints serve overlapping event-read responsibility, violating the single-responsibility principle for API design
+* **Risk of divergence** — Filtering logic, pagination, visibility rules, and response format may drift between the two endpoints over time
+* **SSOT violation risk** — SSOT §4.5 establishes canonical data access patterns; duplicate endpoints increase the risk of inconsistent behavior
+* **Maintenance burden** — Changes to event listing behavior must be synchronized across both endpoints
+
+### Why it is NOT removed now
+
+* Endpoint may be consumed by existing client code or integrations
+* Immediate removal could break dependent functionality
+* Requires audit of all call sites before deprecation
+* No active incident or functional failure caused by the duplication
+
+### Resolution Criteria
+
+This debt should be addressed when **any** of the following becomes true:
+
+* API surface audit is performed as part of a versioning effort
+* Event listing logic in `GET /api/events` is extended to support club-scoping via query parameter
+* A dedicated API cleanup cycle is planned
+* Divergence between the two endpoints causes a bug or inconsistency
+
+### Expected resolution approach
+
+1. Audit all call sites of `GET /api/clubs/[id]/events`
+2. Migrate consumers to use `GET /api/events?clubId=<id>` (if club-scoping is added)
+3. Mark endpoint as deprecated with appropriate response headers
+4. Optionally: restrict endpoint to internal usage only
+5. Remove endpoint in a future API version
+
+### Priority
+
+Low — no functional impact, cosmetic architectural debt
+
+### Status
+
+Open
+
+---
+
 ## Rules for this document
 
 * Only **intentional** technical or architectural debt belongs here
