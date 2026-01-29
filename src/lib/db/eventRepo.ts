@@ -616,6 +616,16 @@ export interface EventListFilters {
   cityId?: string;
   categoryId?: string;
   clubId?: string;
+  /**
+   * SSOT_CLUBS_DOMAIN.md §4.5: Visibility filter for club-scoped queries.
+   * 
+   * - If undefined: no visibility filter applied (member sees all)
+   * - If ['public']: only public events (non-member in public club, or global listing)
+   * - If []: empty array means "no events match" (handled by caller returning empty result)
+   * 
+   * Service layer controls this based on viewer's club membership role.
+   */
+  visibilityIn?: string[];
 }
 
 export interface EventListSort {
@@ -637,7 +647,11 @@ export interface EventListResult {
 }
 
 /**
- * Query public events with filters, sort, pagination (tab=all, tab=upcoming)
+ * Query events with filters, sort, pagination (tab=all, tab=upcoming)
+ * 
+ * SSOT_CLUBS_DOMAIN.md §4.5: Visibility filtering is controlled by service layer via visibilityIn.
+ * - Repo applies visibilityIn filter if provided
+ * - Repo does NOT hardcode visibility='public' (moved to service layer responsibility)
  * 
  * SSOT: Explicit columns (EVENT_LIST_COLUMNS), stable sort (date_time+id or title+id).
  */
@@ -667,13 +681,20 @@ export async function queryEventsPaginated(
     .from(table)
     .select(EVENT_LIST_COLUMNS, { count: "exact" });
 
-  // Filters
-  if (filters.tab === 'all') {
-    query = query.eq('visibility', 'public');
-  } else if (filters.tab === 'upcoming') {
+  // Tab-based date filter ONLY (visibility handled by visibilityIn)
+  if (filters.tab === 'upcoming') {
     const now = new Date().toISOString();
-    query = query.eq('visibility', 'public').gte('date_time', now);
+    query = query.gte('date_time', now);
   }
+  // tab='all' has no date filter
+
+  // SSOT §4.5: Visibility filter (controlled by service layer)
+  // - undefined = no filter (member sees all visibilities)
+  // - ['public'] = only public events (non-member sees public only)
+  if (filters.visibilityIn !== undefined && filters.visibilityIn.length > 0) {
+    query = query.in('visibility', filters.visibilityIn);
+  }
+  // Note: empty visibilityIn array is handled by service layer (returns empty result before querying)
 
   if (filters.search) {
     query = query.ilike('title', `%${filters.search}%`);
@@ -807,6 +828,8 @@ export async function queryEventsByIdsPaginated(
 
 /**
  * Count events matching filters (for stats endpoint)
+ * 
+ * SSOT_CLUBS_DOMAIN.md §4.5: Visibility filtering via visibilityIn (same as queryEventsPaginated).
  */
 export async function countEventsByFilters(filters: EventListFilters): Promise<number> {
   const db = getAdminDbSafe();
@@ -814,12 +837,16 @@ export async function countEventsByFilters(filters: EventListFilters): Promise<n
 
   let query = db.from(table).select('*', { count: 'exact', head: true });
 
-  // Filters
-  if (filters.tab === 'all') {
-    query = query.eq('visibility', 'public');
-  } else if (filters.tab === 'upcoming') {
+  // Tab-based date filter ONLY (visibility handled by visibilityIn)
+  if (filters.tab === 'upcoming') {
     const now = new Date().toISOString();
-    query = query.eq('visibility', 'public').gte('date_time', now);
+    query = query.gte('date_time', now);
+  }
+  // tab='all' has no date filter
+
+  // SSOT §4.5: Visibility filter (controlled by service layer)
+  if (filters.visibilityIn !== undefined && filters.visibilityIn.length > 0) {
+    query = query.in('visibility', filters.visibilityIn);
   }
 
   if (filters.search) {

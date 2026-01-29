@@ -1061,7 +1061,13 @@ export interface ListVisibleEventsResult {
 /**
  * List visible events for user with pagination, filters, sort
  * 
- * SSOT: tab=all/upcoming → public only, tab=my → owner/participant/access (requires auth).
+ * SSOT_CLUBS_DOMAIN.md §4.5: Club-scoped visibility rules:
+ * - Member/Admin/Owner see ALL club events regardless of event visibility
+ * - Non-member of private club sees NO events
+ * - Non-member of public club sees ONLY public events
+ * - pending role = non-member for visibility purposes
+ * 
+ * Global listing (no clubId): public events only
  * 
  * @param params Filters, sort, pagination params
  * @param currentUser Current user (or null for anonymous)
@@ -1132,8 +1138,31 @@ export async function listVisibleEventsForUserPaginated(
     };
   }
 
-  // tab=all or tab=upcoming: public events only
-  const result = await queryEventsPaginated(filters, sort, pagination);
+  // tab=all or tab=upcoming: apply SSOT §4.5 visibility rules
+  const visibilityResult = await resolveClubEventVisibility(filters.clubId, currentUser);
+  
+  // SSOT §4.5: Private club + non-member = NO events (return empty immediately)
+  if (visibilityResult.emptyResult) {
+    return {
+      events: [],
+      meta: {
+        total: 0,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: 0,
+        hasMore: false,
+        nextCursor: null,
+      },
+    };
+  }
+  
+  // Apply visibility filter to repo query
+  const filtersWithVisibility: EventListFilters = {
+    ...filters,
+    visibilityIn: visibilityResult.visibilityIn,
+  };
+  
+  const result = await queryEventsPaginated(filtersWithVisibility, sort, pagination);
 
   // Hydrate results
   const hydrated = await hydrateEventListItems(result.data);
@@ -1149,6 +1178,67 @@ export async function listVisibleEventsForUserPaginated(
       nextCursor: null,
     },
   };
+}
+
+/**
+ * Resolve event visibility rules for club-scoped or global listings.
+ * 
+ * SSOT_CLUBS_DOMAIN.md §4.5 Decision Table:
+ * | Viewer              | Club Visibility | Sees Events              |
+ * |---------------------|-----------------|--------------------------|
+ * | Member/Admin/Owner  | any             | ALL (no filter)          |
+ * | Pending             | private         | NONE (empty result)      |
+ * | Pending             | public          | public only              |
+ * | Guest               | private         | NONE (empty result)      |
+ * | Guest               | public          | public only              |
+ * 
+ * @param clubId Club ID from filters (or undefined for global listing)
+ * @param currentUser Current user (or null for guest)
+ * @returns { visibilityIn, emptyResult }
+ */
+async function resolveClubEventVisibility(
+  clubId: string | undefined,
+  currentUser: CurrentUser | null
+): Promise<{ visibilityIn?: string[]; emptyResult: boolean }> {
+  // Global listing (no clubId): public events only
+  if (!clubId) {
+    return { visibilityIn: ['public'], emptyResult: false };
+  }
+  
+  // Club-scoped listing: load club and check membership
+  const { getClubById } = await import("@/lib/db/clubRepo");
+  const club = await getClubById(clubId);
+  
+  if (!club) {
+    // Club not found: return empty result (treat as no access)
+    log.warn("Club not found for event visibility check", { clubId });
+    return { visibilityIn: undefined, emptyResult: true };
+  }
+  
+  // Determine viewer's role in the club
+  let viewerRole: 'owner' | 'admin' | 'member' | 'pending' | null = null;
+  
+  if (currentUser) {
+    const { getMember } = await import("@/lib/db/clubMemberRepo");
+    const membership = await getMember(clubId, currentUser.id);
+    viewerRole = membership?.role ?? null;
+  }
+  
+  // SSOT §4.5: Member/Admin/Owner see ALL events (no visibility filter)
+  if (viewerRole === 'owner' || viewerRole === 'admin' || viewerRole === 'member') {
+    return { visibilityIn: undefined, emptyResult: false };
+  }
+  
+  // Non-member (guest, pending, or no membership record)
+  // SSOT §4.5: pending is treated as non-member for visibility purposes
+  
+  if (club.visibility === 'private') {
+    // Private club + non-member = NO events
+    return { visibilityIn: undefined, emptyResult: true };
+  }
+  
+  // Public club + non-member = public events only
+  return { visibilityIn: ['public'], emptyResult: false };
 }
 
 /**

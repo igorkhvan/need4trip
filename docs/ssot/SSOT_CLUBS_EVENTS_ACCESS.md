@@ -1,7 +1,7 @@
 # Need4Trip — Clubs & Events Access Model (SSOT)
 **Status:** LOCKED / Production-target  
-**Version:** 1.7  
-**Last Updated:** 2026-01-01  
+**Version:** 1.7.1  
+**Last Updated:** 2026-01-29  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 - Club roles & permissions
 - Club selection rules for events
@@ -22,6 +22,10 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-29 (v1.7.1 — Scope Clarification)
+- Added §1.4 Scope Limitation: Event Read Access — explicit note that this SSOT governs write operations only
+- Event read access and visibility is governed by SSOT_CLUBS_DOMAIN.md §4.5
 
 ### 2026-01-01 (v1.7 — SSOT-Linter Compliance)
 - **Clarified Appendix A intro** — Added explicit NON-NORMATIVE label for HTTP status codes (per SSOT_ARCHITECTURE.md § 27)
@@ -102,6 +106,12 @@ B) Club paid (subscription):
 No mixing is allowed:
 - Club event cannot use personal credits.
 - Personal event cannot use club subscription.
+
+### 1.4 Scope Limitation: Event Read Access
+
+This SSOT governs event **creation, update, and save-time enforcement** (write operations).
+
+**Event read access and visibility** (who can see which events) is governed by **SSOT_CLUBS_DOMAIN.md § 4.5**.
 
 ---
 

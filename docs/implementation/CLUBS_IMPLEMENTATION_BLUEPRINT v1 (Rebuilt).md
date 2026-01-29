@@ -201,6 +201,14 @@ Each page below defines a **normative contract**. Implementation MUST follow it 
 5. Events Preview
 6. Join / Request CTA
 
+**Events Preview — Viewer-Dependent Behavior:**
+- **Members** (authenticated club members with role ∈ {owner, admin, member}) see all upcoming club events regardless of event visibility settings.
+- **Guests and non-members** viewing a **private club**: Events Preview is hidden or empty (no events shown).
+- **Guests and non-members** viewing a **public club**: Events Preview shows only events with `visibility = 'public'`.
+- Pending members are treated as non-members for this purpose.
+
+**Canonical reference:** SSOT_CLUBS_DOMAIN.md § 4.5 (Event Visibility Within Club Context)
+
 **States**
 - Loading
 - Forbidden (private visibility)

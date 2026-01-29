@@ -1,7 +1,7 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.4.1  
+**Version:** 1.5  
 **Last Updated:** 2026-01-29  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 
@@ -44,6 +44,12 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-29 (v1.5)
+- Added §4.5 Event Visibility Within Club Context (NORMATIVE): explicit rules for event read access by viewer type
+- Club members see ALL club events regardless of event visibility flags
+- Non-members of private clubs see NO events; non-members of public clubs see ONLY public events
+- Decision table added for event read access by viewer/club/event visibility combination
 
 ### 2026-01-29 (v1.4.1)
 - Updated §0.5 reference to include SSOT_ARCHITECTURE.md §8.3 (Auth Context Types)
@@ -346,6 +352,38 @@ It is valid and expected for:
 - `eventsCount > 0` while events preview is empty or hidden
 
 This occurs when the viewer lacks access to view member/event details but aggregated counts are exposed. This is an expected and supported state, not an error.
+
+### 4.5 Event Visibility Within Club Context (NORMATIVE)
+
+This section defines how events associated with a club are visible to different viewers.
+
+**Club Members (non-pending):**
+- Club members (role ∈ {owner, admin, member}) MUST see ALL events of their club regardless of event-level visibility flags.
+- Event visibility settings (e.g., `public`, `members_only`) apply ONLY to non-member viewers.
+- Membership in the club grants implicit access to all club events — no additional visibility checks apply.
+
+**Non-Members (including guests and pending):**
+- For **private clubs**: non-members MUST NOT see any club events (events preview is empty/hidden).
+- For **public clubs**: non-members see ONLY events with `visibility = 'public'`; non-public events MUST be hidden.
+
+**Invariants:**
+- Event visibility is viewer-dependent and resolved at read time.
+- Club membership is the primary access gate; event-level visibility is a secondary filter for non-members only.
+- `pending` role is treated as non-member for event visibility purposes.
+
+**Decision Table (Event Read Access):**
+
+| Viewer | Club Visibility | Event Visibility | Sees Event |
+|--------|-----------------|------------------|------------|
+| Member/Admin/Owner | any | any | ✅ |
+| Pending | private | any | ❌ |
+| Pending | public | public | ✅ |
+| Pending | public | non-public | ❌ |
+| Guest | private | any | ❌ |
+| Guest | public | public | ✅ |
+| Guest | public | non-public | ❌ |
+
+**Cross-Reference:** Event creation and management RBAC is governed by SSOT_CLUBS_EVENTS_ACCESS.md.
 
 ---
 
