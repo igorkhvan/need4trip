@@ -1,9 +1,12 @@
 /**
  * Notification Service
  * Handles queuing and processing of notifications
+ * 
+ * @see docs/adr/ADR-001.3.md - SystemContext for cron operations
  */
 
 import { NotificationType } from "@/lib/constants/notificationTypes";
+import type { SystemContext } from "@/lib/auth/systemContext";
 import type {
   EventUpdatedPayload,
   NewEventPublishedPayload,
@@ -325,8 +328,13 @@ export interface ProcessQueueResult {
 
 /**
  * Process pending notifications (called by cron)
+ * 
+ * @param ctx - SystemContext from cron route (ADR-001.3 §3.4)
+ * @param batchSize - Number of notifications to process per batch
+ * @param workerId - Unique worker identifier
  */
 export async function processNotificationQueue(
+  ctx: SystemContext,
   batchSize: number = 50,
   workerId: string = `worker-${Date.now()}`
 ): Promise<ProcessQueueResult> {
@@ -413,8 +421,12 @@ export async function processNotificationQueue(
 /**
  * Reset stuck notifications (recovery)
  * Should be called periodically (e.g., every 30 minutes)
+ * 
+ * @param ctx - SystemContext from cron route (ADR-001.3 §3.4)
+ * @param timeoutMinutes - Minutes after which processing notifications are considered stuck
  */
 export async function resetStuckNotificationsTask(
+  ctx: SystemContext,
   timeoutMinutes: number = 30
 ): Promise<{ reset: number }> {
   try {
