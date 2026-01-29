@@ -10,7 +10,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { createClubJoinRequest, listClubJoinRequests } from "@/lib/services/clubs";
 import { getClubById } from "@/lib/db/clubRepo";
 import { getMember } from "@/lib/db/clubMemberRepo";
@@ -63,7 +63,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const { id: clubId } = await params;
     
     // 401: Require authentication
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     if (!user) {
       throw new UnauthorizedError("Требуется авторизация для отправки запроса на вступление");
     }
@@ -140,7 +141,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     }
     
     // Auth and owner check is done in service layer
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     
     // Get pending join requests (owner-only check inside)
     const joinRequests = await listClubJoinRequests(clubId, user);

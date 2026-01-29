@@ -15,7 +15,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubById } from "@/lib/db/clubRepo";
 import { getMember, listMembersWithUser, countMembers } from "@/lib/db/clubMemberRepo";
 import { respondSuccess, respondError } from "@/lib/api/response";
@@ -73,8 +73,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const { id: clubId } = await params;
     
     // Get current user (optional - may be null for guests)
-    // Per ADR-001: Use canonical auth resolution via middleware for consistent SSR/fetch behavior
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     
     // 404: Check club exists
     const club = await getClubById(clubId);

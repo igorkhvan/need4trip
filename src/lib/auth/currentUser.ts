@@ -173,6 +173,9 @@ export async function getCurrentUserFromMiddleware(request: Request): Promise<Cu
 /**
  * Get CurrentUser with fallback strategy (recommended for API routes)
  * 
+ * @deprecated Use `resolveCurrentUser(req)` from `@/lib/auth/resolveCurrentUser` instead.
+ * This function is superseded by the canonical auth resolver per ADR-001.
+ * 
  * Tries middleware first (fast, edge-compatible), falls back to cookie check.
  * Use this in protected routes where middleware headers might not propagate correctly
  * (e.g., Safari, some proxy configurations).

@@ -7,11 +7,14 @@
  * 
  * Displays: upcoming events.
  * No creation or edit controls.
+ * 
+ * Auth transport: Uses internalApiFetch for consistent cookie forwarding (ADR-001)
  */
 
 import { Calendar, MapPin, Users } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { internalApiFetch } from "@/lib/http/internalApiFetch";
 
 interface EventPreview {
   id: string;
@@ -25,10 +28,9 @@ interface EventPreview {
 // Fetch club events from API
 async function getClubEvents(clubId: string): Promise<EventPreview[] | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const res = await fetch(
-      `${baseUrl}/api/events?clubId=${clubId}&tab=upcoming&limit=3`,
-      { cache: "no-store" }
+    // ADR-001: Use internalApiFetch for consistent cookie forwarding
+    const res = await internalApiFetch(
+      `/api/events?clubId=${clubId}&tab=upcoming&limit=3`
     );
     
     if (!res.ok) {

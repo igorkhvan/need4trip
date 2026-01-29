@@ -436,8 +436,16 @@ export async function middleware(request: NextRequest) {
   
   if (!needsAuth) {
     // Public route, no auth needed
+    // SECURITY (ADR-001): Strip incoming x-user-id to prevent spoofing on public routes
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.delete('x-user-id');
+    
     // But still add rate limit headers if available
-    const response = NextResponse.next();
+    const response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
     if (request.rateLimitHeaders) {
       Object.entries(request.rateLimitHeaders).forEach(([key, value]) => {
         response.headers.set(key, value);
@@ -468,7 +476,9 @@ export async function middleware(request: NextRequest) {
   // =========================================================================
   
   // Clone request headers and add user ID
+  // SECURITY (ADR-001): Strip incoming x-user-id to prevent spoofing
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete('x-user-id');
   requestHeaders.set('x-user-id', payload.userId);
   
   // Pass modified request to route handler with rate limit headers

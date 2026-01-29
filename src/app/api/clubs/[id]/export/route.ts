@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClub } from "@/lib/services/clubs";
 import { listMembers } from "@/lib/db/clubMemberRepo";
 import { getUserById } from "@/lib/db/userRepo";
@@ -26,8 +26,8 @@ export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id: clubId } = await params;
     
-    // Get user from middleware (JWT already verified)
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
 
     if (!user) {
       throw new AuthError("Необходима авторизация");

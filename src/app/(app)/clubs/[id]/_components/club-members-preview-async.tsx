@@ -7,10 +7,12 @@
  * 
  * Displays: avatars, total count.
  * No role badges, no management controls.
+ * 
+ * Auth transport: Uses internalApiFetch for consistent cookie forwarding (ADR-001)
  */
 
-import { headers } from "next/headers";
 import { Users, Crown } from "lucide-react";
+import { internalApiFetch } from "@/lib/http/internalApiFetch";
 
 // Fetch members preview from API-053
 async function getMembersPreview(clubId: string): Promise<{
@@ -25,12 +27,8 @@ async function getMembersPreview(clubId: string): Promise<{
   hasMore: boolean;
 } | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const requestHeaders = await headers();
-    const res = await fetch(`${baseUrl}/api/clubs/${clubId}/members/preview`, {
-      cache: "no-store",
-      headers: requestHeaders,
-    });
+    // ADR-001: Use internalApiFetch for consistent cookie forwarding
+    const res = await internalApiFetch(`/api/clubs/${clubId}/members/preview`);
     
     if (!res.ok) {
       // If 403 or other error, return null to hide section

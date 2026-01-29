@@ -7,7 +7,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUser, getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubWithDetails, updateClub, archiveClub } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
@@ -26,7 +26,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     // GET is public, but may need user context for membership check
-    const user = await getCurrentUser();
+    // Canonical auth resolution (ADR-001): uses cookie fallback for GET
+    const user = await resolveCurrentUser(req);
     const club = await getClubWithDetails(id, user);
 
     return respondSuccess({ club });
@@ -45,8 +46,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     
-    // Get user from middleware (JWT already verified)
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     const body = await req.json();
 
     const club = await updateClub(id, body, user);
@@ -70,8 +71,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     
-    // Get user from middleware (JWT already verified)
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     await archiveClub(id, user);
 
     return respondSuccess({ success: true });

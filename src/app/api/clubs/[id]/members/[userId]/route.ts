@@ -11,7 +11,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { updateClubMemberRole, removeClubMember } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
@@ -42,7 +42,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     const { id, userId } = await params;
     
     // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     if (!user) {
       throw new UnauthorizedError("Требуется авторизация для изменения роли");
     }
@@ -81,7 +82,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const { id, userId } = await params;
     
     // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     if (!user) {
       throw new UnauthorizedError("Требуется авторизация для удаления участника");
     }

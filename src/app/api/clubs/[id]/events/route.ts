@@ -13,7 +13,7 @@
  */
 
 import { respondError, respondJSON } from "@/lib/api/response";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { ForbiddenError, NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { getUserClubRole } from "@/lib/db/clubMemberRepo";
 import { getClubById } from "@/lib/db/clubRepo";
@@ -70,7 +70,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { page, limit } = parsed.data;
 
     // 2. Authentication required
-    const currentUser = await getCurrentUserFromMiddleware(request);
+    // Canonical auth resolution (ADR-001)
+    const currentUser = await resolveCurrentUser(request);
     if (!currentUser) {
       throw new UnauthorizedError("Авторизация обязательна для просмотра событий клуба");
     }

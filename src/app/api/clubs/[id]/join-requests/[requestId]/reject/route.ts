@@ -13,7 +13,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { rejectClubJoinRequest } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
@@ -45,7 +45,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const { id: clubId, requestId } = await params;
     
     // Auth check is done in service layer
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     
     // Reject join request (owner/admin check inside)
     // Phase 8A v1: silent DELETE

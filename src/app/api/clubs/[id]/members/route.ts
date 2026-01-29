@@ -9,7 +9,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
+import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubMembers, requireClubMember } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { log } from "@/lib/utils/logger";
@@ -39,7 +39,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const { id } = await params;
     
     // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
-    const user = await getCurrentUserFromMiddleware(req);
+    // Canonical auth resolution (ADR-001)
+    const user = await resolveCurrentUser(req);
     if (!user) {
       throw new UnauthorizedError("Требуется авторизация для просмотра списка участников");
     }

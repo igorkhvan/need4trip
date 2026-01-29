@@ -1,8 +1,8 @@
 # Need4Trip — Clubs Domain (SSOT)
 
 **Status:** LOCKED / Production-target  
-**Version:** 1.4  
-**Last Updated:** 2026-01-27  
+**Version:** 1.4.1  
+**Last Updated:** 2026-01-29  
 **Owner SSOT:** This document defines the ONLY authoritative rules for:
 
 ---
@@ -44,6 +44,10 @@ Related SSOTs:
 ---
 
 ## Change Log (SSOT)
+
+### 2026-01-29 (v1.4.1)
+- Updated §0.5 reference to include SSOT_ARCHITECTURE.md §8.3 (Auth Context Types)
+- No behavioral changes; alignment with platform auth context taxonomy
 
 ### 2026-01-27 (v1.4)
 - Clarified owner membership invariant: owner is a member with role = `owner` in `club_members` (§3.4)
@@ -110,6 +114,9 @@ Access-controlled club data relies on a resolved authentication context.
 - Absence of authentication context implies non-member access (guest).
 - Authentication context MUST be resolved consistently for all access-controlled operations.
 - This SSOT does not prescribe transport mechanism (cookies, headers, tokens); only the requirement that authentication context is resolved before evaluating access rules.
+- Authentication resolution is provided by canonical infrastructure (`lib/auth`), not by the Clubs domain.
+
+**Reference:** SSOT_ARCHITECTURE.md §8.2 (canonical auth resolver), §8.3 (auth context types).
 
 ---
 

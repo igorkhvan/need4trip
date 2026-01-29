@@ -1,13 +1,27 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.7.1  
-**Last Updated:** 14 января 2026  
+**Version:** 1.7.5  
+**Last Updated:** 29 января 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.7.5 (2026-01-29) — Auth Context Types Documentation
+**Platform-wide auth context consolidation:**
+- Extended §2.3 to cover all three auth context types (User, Admin, System).
+- Added §2.3.1–§2.3.4 subsections for context-specific rules.
+- Added explicit Forbidden Patterns table — direct cookie/header parsing is architecturally forbidden.
+- **Reference:** SSOT_ARCHITECTURE.md §8.2–§8.3, ADR-001.1.
+
+### 1.7.4 (2026-01-27) — Canonical Auth Resolver Documentation
+**Auth resolution standardization per ADR-001.1:**
+- Added §2.3 "API Route Auth Resolution (NORMATIVE)" — All API routes MUST use `resolveCurrentUser(req)`.
+- API routes MUST NOT read cookies or auth headers directly.
+- Renumbered §2.4 Protected vs Public Routes, §2.5 Guest Sessions.
+- **Reference:** SSOT_ARCHITECTURE.md §8.2, ADR-001.1.
 
 ### 1.7.3 (2026-01-21) — Membership Requests v1 Backend Enablement
 **Phase 8A: Membership Requests v1 backend implementation.**
@@ -180,7 +194,58 @@ Development: http://localhost:3000
 4. **User ID injection:** Middleware adds `x-user-id` header for route handlers
 5. **Logout:** `POST /api/auth/logout` (clears cookie)
 
-### 2.3 Protected vs Public Routes
+### 2.3 API Route Auth Resolution (NORMATIVE)
+
+**All API routes MUST explicitly resolve an auth context.** The resolution method depends on the context type.
+
+#### 2.3.1 User-Facing Routes (User Context)
+
+User-facing routes MUST use the canonical resolver:
+
+```
+const user = await resolveCurrentUser(req);
+```
+
+**Rules:**
+- MUST use `resolveCurrentUser(req)` for auth resolution.
+- MUST NOT read cookies directly.
+- MUST NOT read `x-user-id` or other auth headers directly.
+- MUST NOT rely on implicit auth via middleware alone — explicit resolution is mandatory.
+
+**Applies uniformly to:**
+- Protected routes (required auth): resolver returns `CurrentUser`, route enforces non-null.
+- Public routes with optional auth: resolver returns `CurrentUser | null`, route handles both cases.
+
+#### 2.3.2 Admin Routes (Admin Context)
+
+Admin routes (`/api/admin/*`) MUST NOT use user auth:
+
+- MUST authenticate via `x-admin-secret` header.
+- MUST NOT call `resolveCurrentUser()`.
+- MUST NOT perform user-scoped mutations.
+
+#### 2.3.3 System Routes (System Context)
+
+System routes (`/api/cron/*`) MUST NOT use user auth:
+
+- MUST authenticate via `CRON_SECRET` or `x-vercel-cron` header.
+- MUST NOT call `resolveCurrentUser()`.
+- MUST explicitly identify system context in service calls.
+
+#### 2.3.4 Forbidden Patterns
+
+The following patterns are **FORBIDDEN** in all API routes:
+
+| Pattern | Why Forbidden |
+|---------|---------------|
+| `req.cookies.get('auth_token')` | Direct cookie parsing bypasses canonical resolver |
+| `req.headers.get('x-user-id')` | Direct header reading bypasses canonical resolver |
+| Implicit auth via middleware only | Auth MUST be explicitly resolved in route handler |
+| Mixing user auth in Admin/System routes | Context types MUST NOT be mixed |
+
+**Reference:** SSOT_ARCHITECTURE.md §8.2–§8.3, ADR-001.1.
+
+### 2.4 Protected vs Public Routes
 
 **Protected (requires auth):**
 - All `/api/profile/*` endpoints
@@ -201,7 +266,7 @@ Development: http://localhost:3000
 - Admin: `/api/admin/*` (requires `x-admin-secret` header)
 - Cron: `/api/cron/*` (requires `x-vercel-cron` OR `Authorization: Bearer CRON_SECRET`)
 
-### 2.4 Guest Sessions
+### 2.5 Guest Sessions
 
 - **For:** Event participant registration/management without login
 - **Mechanism:** Cookie `guest_session_id` (UUID)

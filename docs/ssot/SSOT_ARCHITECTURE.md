@@ -1,8 +1,8 @@
 # Need4Trip — SSOT_ARCHITECTURE (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Last Updated:** 2026-01-13  
-**Version:** 5.0  
+**Last Updated:** 2026-01-29  
+**Version:** 5.2  
 **Authority:** This document is the ONLY authoritative source for architectural decisions in Need4Trip.
 
 ---
@@ -237,7 +237,91 @@ Auth mechanism: Telegram OAuth → JWT in HTTP-only cookie.
 - Server obtains `CurrentUser` through canonical server-side resolver.
 - Client obtains `CurrentUser` from AuthContext only (no mixing approaches).
 
-### 8.2 Authorization Source of Truth
+### 8.2 Canonical Auth Resolver (NORMATIVE)
+
+There is exactly ONE canonical server-side auth resolver:
+
+```
+resolveCurrentUser(req?) → CurrentUser | null
+```
+
+**Location:** `lib/auth/resolveCurrentUser.ts`
+
+**Invariants:**
+- Auth resolution MUST be transport-agnostic.
+- The resolver encapsulates a deterministic fallback chain (middleware headers → cookies → null).
+- API routes and RSC MUST NOT resolve auth manually.
+- Direct reading of cookies or `x-user-id` headers outside `lib/auth` is FORBIDDEN.
+
+**Usage:**
+- API route handlers: `resolveCurrentUser(req)`
+- RSC / Server Components: `resolveCurrentUser()` (no argument)
+
+**Ownership:**
+- Auth resolution logic is owned exclusively by `lib/auth`.
+- No other module may implement or duplicate auth resolution logic.
+
+> **ADR Reference:** See ADR-001.1 for architectural decision and rationale.
+
+### 8.3 Auth Context Types (NORMATIVE)
+
+This section defines platform-level authentication context taxonomy. One domain MUST use exactly one auth context type.
+
+**User Context**
+
+Represents authenticated end users interacting with the platform.
+
+| Property | Value |
+|----------|-------|
+| **Resolution** | ONLY via `resolveCurrentUser(req?)` |
+| **Identity** | `CurrentUser` type (user_id, profile data) |
+| **Domains** | Clubs, Billing, Events, Profile |
+| **Audit** | Full audit trail via user_id |
+
+**User Context** is the default for all user-initiated domains:
+- Any action triggered by a user in the UI
+- Any API request from a browser or mobile client
+- Billing operations (purchases, subscription changes)
+
+**Admin Context**
+
+Represents internal administrative actions, NOT an end user.
+
+| Property | Value |
+|----------|-------|
+| **Resolution** | Explicit, isolated mechanism (NOT user auth resolver) |
+| **Identity** | No user identity; secret-based authentication |
+| **Domains** | Admin tools (`/api/admin/*`) |
+| **Audit** | Action logged, but no user attribution |
+
+**Admin Context** is explicitly NOT a user:
+- MUST NOT use `resolveCurrentUser()`
+- MUST authenticate via `x-admin-secret` header
+- MUST NOT have access to user-scoped data without explicit audit
+- Identity and audit trail formalization is deferred (see ARCHITECTURAL_DEBT_LOG.md)
+
+**System Context**
+
+Represents background jobs, cron tasks, and system-triggered actions.
+
+| Property | Value |
+|----------|-------|
+| **Resolution** | Explicit system identity passed to services |
+| **Identity** | No user identity; task/job identifier |
+| **Domains** | Cron jobs (`/api/cron/*`), background workers |
+| **Audit** | Task execution logged, no user attribution |
+
+**System Context** is explicitly NOT a user:
+- MUST NOT use `resolveCurrentUser()`
+- MUST authenticate via `CRON_SECRET` or equivalent
+- MUST NOT perform user-scoped mutations without explicit design
+- Explicit SystemContext type is deferred (see ARCHITECTURAL_DEBT_LOG.md)
+
+**Cross-Reference:**
+- ADR-001.1: Canonical user auth model and rationale
+- ARCHITECTURAL_DEBT_LOG.md: Admin and System context formalization debt
+
+### 8.4 Authorization Source of Truth
 - RBAC and club/event access rules are owned by `SSOT_CLUBS_EVENTS_ACCESS.md`.
 - Architecture rule: authorization decisions must live in Service layer (or canonical utilities invoked by Service).
 - RLS is mandatory but not sufficient: Service must still enforce app policies.
@@ -501,6 +585,8 @@ A PR is non-compliant if any item is violated.
 ---
 
 ## 21. Document History (Compressed)
+- v5.2 (2026-01-29): Added §8.3 Auth Context Types (NORMATIVE). Defined platform-level auth context taxonomy (User, Admin, System). Renumbered §8.4 Authorization. Cross-referenced ARCHITECTURAL_DEBT_LOG.md for deferred context formalization.
+- v5.1 (2026-01-27): Added §8.2 Canonical Auth Resolver (NORMATIVE). Locked `resolveCurrentUser(req?)` as the single transport-agnostic auth entry point.
 - v5.0 (2026-01-13): Full SSOT rewrite, consolidation, explicit NFRs, governance, and canonical models.
 - v4.6 (2026-01-01): SSOT-linter checklist introduced.
 - v4.3–v4.4 (2026-01-01): Aborted/incomplete actions rules finalized (explicit vs implicit abort).
