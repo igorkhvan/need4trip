@@ -1,5 +1,18 @@
 /**
- * API-057: List Club Events
+ * @deprecated NON-CANONICAL ENDPOINT (API-057)
+ * 
+ * DEPRECATION NOTICE:
+ * This endpoint is NON-CANONICAL and should NOT be used by new code.
+ * 
+ * Canonical replacement: GET /api/events?clubId=<id>&tab=all&limit=<limit>
+ * Reference: docs/ssot/SSOT_API.md
+ * 
+ * Planned removal: After verification window (30 days from 2026-01-29)
+ * See: docs/architectural-debt/ARCHITECTURAL_DEBT_LOG.md (DEBT-007)
+ * 
+ * ---
+ * 
+ * API-057: List Club Events (DEPRECATED)
  * 
  * SSOT_API.md v1.7.0:
  * - GET /api/clubs/[id]/events
@@ -118,6 +131,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     const totalPages = Math.ceil(result.total / limit);
     const hasMore = page < totalPages;
 
+    // Deprecation headers (non-breaking, per RFC 8594)
+    const deprecationHeaders = {
+      'Deprecation': 'true',
+      'Sunset': 'Sat, 28 Feb 2026 23:59:59 GMT', // 30 days from 2026-01-29
+      'Link': '</api/events?clubId={id}>; rel="successor-version"',
+    };
+
     return respondJSON({
       events: hydratedEvents,
       meta: {
@@ -132,7 +152,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         name: club.name,
         isArchived: club.archived_at !== null,
       },
-    });
+    }, undefined, 200, deprecationHeaders);
   } catch (err) {
     return respondError(err);
   }

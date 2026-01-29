@@ -403,6 +403,30 @@ Open
 
 **ADR-001.5** formally resolves the architectural risk of RSC → HTTP API calls going forward. The rule states that RSC MUST call service-layer functions directly and MUST NOT call authenticated HTTP API routes. This eliminates the class of auth failures that could occur when RSC attempted to fetch viewer-dependent data via internal HTTP. The duplicate endpoint remains as API surface debt, but RSC code paths are now architecturally constrained to use the service layer.
 
+### Deprecation Note (2026-01-29) — Phase L2
+
+**API-057 is now explicitly deprecated in code and header-marked:**
+
+1. **Route handler** (`src/app/api/clubs/[id]/events/route.ts`):
+   - `@deprecated` JSDoc comment added at top
+   - Deprecation headers added to response:
+     - `Deprecation: true`
+     - `Sunset: Sat, 28 Feb 2026 23:59:59 GMT` (30 days from today)
+     - `Link: </api/events?clubId={id}>; rel="successor-version"`
+
+2. **Usage audit result:**
+   - No runtime callers found in frontend code
+   - `ClubEventsContent.tsx` already uses canonical endpoint `/api/events?clubId=...`
+   - Only stale comment in `page.tsx` was referencing API-057 (fixed)
+
+3. **Canonical endpoint:**
+   - `GET /api/events?clubId=<id>&tab=all&limit=<limit>` (per SSOT_API.md)
+
+4. **Next step:**
+   - Monitor for 30 days
+   - If zero usage confirmed, remove endpoint entirely
+   - Update SSOT_API.md to mark API-057 as removed
+
 ---
 
 ## Rules for this document

@@ -16,7 +16,7 @@
  * 
  * Data sources:
  * - Club context: GET /api/clubs/[id] (API-016)
- * - Events: GET /api/clubs/[id]/events (API-057)
+ * - Events: GET /api/events?clubId=... (canonical endpoint per SSOT_API.md)
  * 
  * Authorization:
  * - Owner/Admin: create, edit, delete events
