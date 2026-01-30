@@ -10,6 +10,8 @@
  * - Explicit refresh after mutations
  * - Section-level loading states
  * - Requests section visible to Owner OR Admin (V5 §4)
+ * 
+ * B5.3: Billing wiring for members mutations (402 PAYWALL handling)
  */
 
 "use client";
@@ -22,6 +24,9 @@ import {
   ClubPendingJoinRequestsSkeleton,
 } from "@/components/ui/skeletons";
 import type { ClubRole } from "@/lib/types/club";
+
+// B5.3: Billing modal infrastructure
+import { BillingModalHost, useHandleApiError } from "@/components/billing/BillingModalHost";
 
 interface MemberUser {
   id: string;
@@ -63,13 +68,32 @@ interface ClubMembersContentProps {
   isArchived: boolean;
 }
 
-export function ClubMembersContent({
+/**
+ * B5.3: Wrapper component providing BillingModalHost context.
+ * Pattern per PHASE_B5-1_EVENT_CREATE_EDIT_IMPLEMENTATION.md
+ */
+export function ClubMembersContent(props: ClubMembersContentProps) {
+  return (
+    <BillingModalHost>
+      <ClubMembersContentImpl {...props} />
+    </BillingModalHost>
+  );
+}
+
+/**
+ * Inner implementation with access to billing modal context.
+ */
+function ClubMembersContentImpl({
   clubId,
   currentUserId,
   currentUserRole,
   canManageRequests,
   isArchived,
 }: ClubMembersContentProps) {
+  // B5.3: Initialize billing error handling
+  // No onConfirmCredit — credit confirmation doesn't apply to members
+  // per B3-3 matrix: MAX_CLUB_MEMBERS_EXCEEDED is 402 PAYWALL, not 409
+  const { handleError } = useHandleApiError({ clubId });
   // Members state
   const [members, setMembers] = useState<ClubMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -186,6 +210,7 @@ export function ClubMembersContent({
           isArchived={isArchived}
           clubId={clubId}
           onMemberRemoved={handleMemberRemoved}
+          handleBillingError={handleError}
         />
       )}
 
@@ -215,6 +240,7 @@ export function ClubMembersContent({
             isArchived={isArchived}
             clubId={clubId}
             onRequestProcessed={handleRequestProcessed}
+            handleBillingError={handleError}
           />
         )
       )}

@@ -19,6 +19,10 @@
  * Archived behavior:
  * - Remove action is disabled
  * - Tooltip: "Клуб в архиве"
+ * 
+ * B5.3: Billing wiring for Remove member action
+ * - 402 PAYWALL errors handled via BillingModalHost
+ * - Archived state short-circuits BEFORE billing handling
  */
 
 "use client";
@@ -58,6 +62,8 @@ interface ClubMembersListProps {
   isArchived: boolean;
   clubId: string;
   onMemberRemoved?: () => void;
+  /** B5.3: Handler for billing errors (402 PAYWALL) */
+  handleBillingError?: (error: unknown) => { handled: boolean };
 }
 
 export function ClubMembersList({
@@ -67,6 +73,7 @@ export function ClubMembersList({
   isArchived,
   clubId,
   onMemberRemoved,
+  handleBillingError,
 }: ClubMembersListProps) {
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +92,7 @@ export function ClubMembersList({
   };
 
   const handleRemoveMember = async (memberId: string) => {
+    // B5.3: Archived state short-circuits BEFORE any API call or billing handling
     if (!isOwner || isArchived) return;
     
     setRemovingMemberId(memberId);
@@ -98,7 +106,26 @@ export function ClubMembersList({
       if (!response.ok) {
         const data = await response.json();
         
-        // Per Visual Contract v4 §6 Error → UI Mapping
+        // B5.3: Try billing error handling first (402 PAYWALL)
+        // Create error object with shape expected by handleApiError
+        if (handleBillingError) {
+          const errorObj = {
+            status: response.status,
+            statusCode: response.status,
+            code: data.error?.code,
+            error: data.error,
+            details: data.error?.details,
+            ...(data.error?.details || {}),
+          };
+          
+          const { handled } = handleBillingError(errorObj);
+          if (handled) {
+            // Modal shown via BillingModalHost, no further action
+            return;
+          }
+        }
+        
+        // Non-billing errors: per Visual Contract v4 §6 Error → UI Mapping
         if (response.status === 401) {
           // Redirect to login - handled by middleware typically
           window.location.href = "/login";

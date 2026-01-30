@@ -31,6 +31,10 @@
  * Archived Club Rules (V5 §11):
  * - Both buttons disabled
  * - Inline hint: "Club is archived. Membership changes are disabled."
+ * 
+ * B5.3: Billing wiring for Approve/Reject actions
+ * - 402 PAYWALL errors handled via BillingModalHost
+ * - Archived state short-circuits BEFORE billing handling
  */
 
 "use client";
@@ -63,6 +67,8 @@ interface ClubPendingJoinRequestsProps {
   isArchived: boolean;
   clubId: string;
   onRequestProcessed?: () => void;
+  /** B5.3: Handler for billing errors (402 PAYWALL) */
+  handleBillingError?: (error: unknown) => { handled: boolean };
 }
 
 export function ClubPendingJoinRequests({
@@ -70,12 +76,14 @@ export function ClubPendingJoinRequests({
   isArchived,
   clubId,
   onRequestProcessed,
+  handleBillingError,
 }: ClubPendingJoinRequestsProps) {
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleApprove = async (requestId: string) => {
+    // B5.3: Archived state short-circuits BEFORE any API call or billing handling
     if (isArchived) return;
     
     setProcessingRequestId(requestId);
@@ -91,7 +99,26 @@ export function ClubPendingJoinRequests({
       if (!response.ok) {
         const data = await response.json();
         
-        // Per Visual Contract v4 §6 Error → UI Mapping
+        // B5.3: Try billing error handling first (402 PAYWALL)
+        // MAX_CLUB_MEMBERS_EXCEEDED can occur on approve
+        if (handleBillingError) {
+          const errorObj = {
+            status: response.status,
+            statusCode: response.status,
+            code: data.error?.code,
+            error: data.error,
+            details: data.error?.details,
+            ...(data.error?.details || {}),
+          };
+          
+          const { handled } = handleBillingError(errorObj);
+          if (handled) {
+            // Modal shown via BillingModalHost, no further action
+            return;
+          }
+        }
+        
+        // Non-billing errors: per Visual Contract v5 §9 Error → UI Mapping
         if (response.status === 401) {
           window.location.href = "/login";
           return;
@@ -125,6 +152,7 @@ export function ClubPendingJoinRequests({
   };
 
   const handleReject = async (requestId: string) => {
+    // B5.3: Archived state short-circuits BEFORE any API call or billing handling
     if (isArchived) return;
     
     setProcessingRequestId(requestId);
@@ -140,7 +168,25 @@ export function ClubPendingJoinRequests({
       if (!response.ok) {
         const data = await response.json();
         
-        // Per Visual Contract v4 §6 Error → UI Mapping
+        // B5.3: Try billing error handling first (402 PAYWALL)
+        if (handleBillingError) {
+          const errorObj = {
+            status: response.status,
+            statusCode: response.status,
+            code: data.error?.code,
+            error: data.error,
+            details: data.error?.details,
+            ...(data.error?.details || {}),
+          };
+          
+          const { handled } = handleBillingError(errorObj);
+          if (handled) {
+            // Modal shown via BillingModalHost, no further action
+            return;
+          }
+        }
+        
+        // Non-billing errors: per Visual Contract v5 §9 Error → UI Mapping
         if (response.status === 401) {
           window.location.href = "/login";
           return;
