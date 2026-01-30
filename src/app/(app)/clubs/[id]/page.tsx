@@ -136,9 +136,12 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
 
       {/* SECTION: Events Preview - per Visual Contract v6 §9 */}
       {/* ADR-001.4: Pass currentUser to avoid HTTP API middleware issues */}
-      <Suspense fallback={<ClubEventsPreviewSkeleton />}>
-        <ClubEventsPreviewAsync clubId={club.id} currentUser={user} />
-      </Suspense>
+      {/* SSOT_CLUBS_DOMAIN §4.5: Private club + non-member → Events preview NOT rendered */}
+      {(club.visibility !== "private" || isMember) && (
+        <Suspense fallback={<ClubEventsPreviewSkeleton />}>
+          <ClubEventsPreviewAsync clubId={club.id} currentUser={user} />
+        </Suspense>
+      )}
     </div>
   );
 }
