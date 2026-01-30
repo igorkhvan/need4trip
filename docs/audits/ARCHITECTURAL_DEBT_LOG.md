@@ -450,7 +450,7 @@ The local mounting was introduced intentionally during Phase B5.1 and B5.3.
 
 **CLOSED** ✅
 
-Debt eliminated in Phase B5.D1. `BillingModalHost` now follows the canonical "global modal host" pattern alongside `AuthModalHost`.
+Debt eliminated in Phase B5.D1 (commit `8b0aea2`). `BillingModalHost` now follows the canonical "global modal host" pattern alongside `AuthModalHost`.
 
 ---
 
