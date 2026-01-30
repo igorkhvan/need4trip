@@ -1,13 +1,19 @@
 # 💳 Анализ системы биллинга Need4Trip
 
 > **Living Document** — обновляется по мере развития системы  
-> **Версия:** 5.9.1  
+> **Версия:** 5.9.2  
 > **Дата:** 29 января 2026  
-> **Статус:** Production (v5.9.1 - Auth Context Clarification)
+> **Статус:** Production (v5.9.2 - Club Plan Visibility Policy)
 
 ---
 
 ## 🆕 Changelog
+
+**v5.9.2 (29 January 2026) — Club Plan Visibility Policy:**
+- 📝 Added NORMATIVE subsection "Club Plan Visibility" (§ Ключевые концепции)
+- ✅ Documented: plan metadata visible to any auth user, billing authority remains owner-only
+- 🔗 Cross-referenced SSOT_API.md API-023 and SSOT_ARCHITECTURE.md §8.3
+- ✅ No behavioral changes; documentation alignment only (Phase B2)
 
 **v5.9.1 (29 January 2026) — Auth Context Clarification:**
 - 📝 Clarified that Billing is a user-initiated domain (§ Основные принципы)
@@ -98,6 +104,31 @@
 | **Limits** | Лимиты тарифа (max_members, max_event_participants, paid events, CSV export) |
 | **Actions** | Операции, которые могут быть разрешены/запрещены в зависимости от подписки |
 | **Billing policy** | Правила grace и разрешённые actions при pending/grace/expired |
+
+### Club Plan Visibility (NORMATIVE)
+
+This section defines the canonical visibility rules for club plan information.
+
+| Aspect | Rule |
+|--------|------|
+| **Who can view** | Any authenticated user |
+| **Membership required** | ❌ No |
+| **Data type** | Read-only, non-financial metadata |
+| **Billing authority** | Owner-only (unchanged) |
+
+**Rationale:**
+- Club plan limits (maxMembers, maxEventParticipants) are non-sensitive operational metadata
+- Subscription status (`active`/`grace`/`expired`) does not expose financial details
+- Frontend requires this data for UX (form validation, feature availability badges)
+- This separation aligns with SSOT_ARCHITECTURE.md §8.3 (Auth Context Types)
+
+**Boundary:**
+- **Visibility** (read-only plan metadata): Any authenticated user
+- **Billing authority** (purchase, cancel, transactions): Owner-only
+
+**Cross-References:**
+- SSOT_API.md API-023 (GET `/api/clubs/[id]/current-plan`) — full visibility policy
+- SSOT_CLUBS_DOMAIN.md §14.1 — Owner billing authority
 
 ---
 

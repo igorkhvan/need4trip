@@ -2458,11 +2458,59 @@ Get club's current plan and limits (for frontend form validation).
 | 401 | Not authenticated | Middleware blocks |
 | 404 | Club not found | Invalid UUID |
 
+**Visibility Policy (NORMATIVE):**
+
+This section defines the canonical visibility rules for club plan information.
+
+| Aspect | Rule |
+|--------|------|
+| **Authentication** | Required (JWT) |
+| **Authorization** | Any authenticated user |
+| **Club Membership** | NOT required |
+| **Data Classification** | Read-only, non-financial billing metadata |
+
+**Intended Use Cases:**
+- UX feature availability display (e.g., "paid events allowed")
+- Form validation (e.g., max participants slider)
+- Frontend plan badge/indicator display
+
+**Billing Authority:** Remains owner-only. This endpoint provides read-only visibility, NOT billing control.
+
+**ALLOWED Fields (Non-Financial Metadata):**
+
+| Field | Description | Sensitive |
+|-------|-------------|-----------|
+| `planId` | Plan identifier (e.g., `club_50`) | ❌ No |
+| `planTitle` | Human-readable plan name | ❌ No |
+| `limits.maxMembers` | Plan limit | ❌ No |
+| `limits.maxEventParticipants` | Plan limit | ❌ No |
+| `limits.allowPaidEvents` | Feature flag | ❌ No |
+| `limits.allowCsvExport` | Feature flag | ❌ No |
+| `subscription.status` | Subscription state | ❌ No (non-financial) |
+| `subscription.currentPeriodStart` | Period metadata | ❌ No (non-financial) |
+| `subscription.currentPeriodEnd` | Period metadata | ❌ No (non-financial) |
+| `subscription.graceUntil` | Grace period end | ❌ No (non-financial) |
+
+**FORBIDDEN Fields (MUST NOT be exposed via this endpoint):**
+
+| Field Type | Reason |
+|------------|--------|
+| Invoice identifiers | Financial-sensitive |
+| Payment provider references | Financial-sensitive |
+| Transaction identifiers | Financial-sensitive |
+| Payment amounts | Financial-sensitive |
+| Payment timestamps | Financial-sensitive |
+| Card/payment method details | PII / Financial-sensitive |
+
+**Cross-References:**
+- SSOT_BILLING_SYSTEM_ANALYSIS.md § Club Plan Visibility
+- SSOT_ARCHITECTURE.md §8.3 (Auth Context Types)
+
 **Security & Abuse:**
 
 - **Rate limit:** read tier (300 req/5min)
 - **Spam / Cost abuse risk:** Low (read-only)
-- **Sensitive data exposure:** No (public plan info)
+- **Sensitive data exposure:** No (non-financial metadata only)
 
 **Dependencies:**
 
