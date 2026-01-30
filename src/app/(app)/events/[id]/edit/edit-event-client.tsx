@@ -22,7 +22,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
-import { BillingModalHost, useHandleApiError } from "@/components/billing/BillingModalHost";
+import { useHandleApiError } from "@/components/billing/BillingModalHost";
 import { ClientError } from "@/lib/types/errors";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
@@ -41,24 +41,12 @@ interface EditEventPageClientProps {
 }
 
 /**
- * EditEventPageClient - Wrapper with BillingModalHost
+ * EditEventPageClient - Main component with billing modal support
  * 
- * B5.1: Wraps content with BillingModalHost to enable useHandleApiError()
+ * B5.1: Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
+ * B5.D1: BillingModalHost now provided globally via root layout
  */
 export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
-  return (
-    <BillingModalHost>
-      <EditEventContent eventId={eventId} />
-    </BillingModalHost>
-  );
-}
-
-/**
- * EditEventContent - Inner component with all business logic
- * 
- * Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
- */
-function EditEventContent({ eventId }: EditEventPageClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
@@ -318,7 +306,7 @@ function EditEventContent({ eventId }: EditEventPageClientProps) {
           throw err;
         }
         
-        // If handled (402 or 409), modal is shown via BillingModalHost
+        // If handled (402 or 409), modal is shown via global BillingModalHost
         // SSOT_ARCHITECTURE §15: Modal shown = action is pending, reset controller
         controller.reset();
       }
@@ -400,7 +388,7 @@ function EditEventContent({ eventId }: EditEventPageClientProps) {
         externalError={controller.state.lastError}
       />
       
-      {/* B5.1: Modals are rendered globally by BillingModalHost */}
+      {/* B5.D1: Modals rendered by global BillingModalHost in root layout */}
     </div>
   );
 }

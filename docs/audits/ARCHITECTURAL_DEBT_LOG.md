@@ -402,69 +402,55 @@ API-057 removed in Phase L2.1 after zero-usage verification. Debt eliminated by 
 **Area:** UI Architecture / Composition  
 **Type:** Architectural compromise / Scope-induced debt  
 **Introduced:** 2026-01-30  
+**Closed:** 2026-01-30  
 **Related:** PHASE_B5-0_UI_FOUNDATION_IMPLEMENTATION.md, PHASE_B5-1_EVENT_CREATE_EDIT_IMPLEMENTATION.md
 
 ### Description
 
-`BillingModalHost` is mounted **locally** inside the following page-level client components:
+`BillingModalHost` was mounted **locally** inside the following page-level client components:
 
 - `src/app/(app)/events/create/create-event-client.tsx`
 - `src/app/(app)/events/[id]/edit/edit-event-client.tsx`
+- `src/app/(app)/clubs/[id]/members/_components/club-members-content.tsx`
 
-This deviates from the intended architecture where `BillingModalHost` is mounted **once at the application layout or global provider level** and shared across all pages.
+This deviated from the intended architecture where `BillingModalHost` is mounted **once at the application layout or global provider level** and shared across all pages.
 
-The local mounting was introduced intentionally during Phase B5.1.
+The local mounting was introduced intentionally during Phase B5.1 and B5.3.
 
-### Why this is debt
+### Why this was debt
 
-- Violates the "single global modal host" architectural invariant
-- Introduces page-level responsibility for global UI infrastructure
-- Breaks the mental model that billing UI is app-scoped, not page-scoped
-- Creates a risk of accidental pattern copying to other pages
+- Violated the "single global modal host" architectural invariant
+- Introduced page-level responsibility for global UI infrastructure
+- Broke the mental model that billing UI is app-scoped, not page-scoped
+- Created a risk of accidental pattern copying to other pages
 
-### Why it is NOT fixed now
+### Resolution
 
-- Phase B5.1 explicitly forbade changes outside Event Create / Edit files
-- Modifying `layout.tsx` or global providers was out of scope by design
-- `BillingModalHost` is idempotent and self-contained, limiting blast radius
-- This approach allowed correct B5.0 infrastructure consumption without scope violation
+**Phase B5.D1 (2026-01-30):**
 
-### Why this is acceptable short-term
+1. `BillingModalHost` moved to global root layout (`src/app/layout.tsx`)
+2. Placed inside `AuthModalProvider`, wrapping the main app container
+3. Removed local wrappers from all three page-level components:
+   - `create-event-client.tsx` — wrapper removed, `useHandleApiError` retained
+   - `edit-event-client.tsx` — wrapper removed, `useHandleApiError` retained
+   - `club-members-content.tsx` — wrapper removed, `useHandleApiError` retained
+4. All billing modals continue to work correctly (402 PAYWALL, 409 CREDIT_CONFIRMATION)
+5. No behavioral or UX changes
 
-- The host does not leak state outside the page
-- No duplication of business logic or infra code exists
-- The deviation is explicit, localized, and documented
-- It unblocks validation of B5.0 infrastructure in real flows
-
-### Explicit Non-Solutions
-
-The following are explicitly forbidden while this debt is open:
-
-- Copying local `BillingModalHost` mounting to other pages
-- Introducing additional page-level billing modal hosts
-- "Fixing" this opportunistically during unrelated UI work
-
-### Resolution Criteria
-
-This debt should be addressed when:
-
-- A phase explicitly allows global layout/provider changes, AND
-- Billing UI usage expands beyond Event Create / Edit, OR
-- A dedicated cleanup / architecture-hardening phase is scheduled
-
-### Expected Resolution Approach
-
-- Mount `BillingModalHost` once at the app layout or global provider level
-- Remove local page-level wrappers
-- Verify no behavior changes in existing billing flows
+**Verification:**
+- TypeScript strict mode: ✅
+- Production build: ✅
+- Single BillingModalHost in runtime tree: ✅
 
 ### Priority
 
-Low–Medium (architectural hygiene)
+~~Low–Medium~~ — Resolved
 
 ### Status
 
-Open
+**CLOSED** ✅
+
+Debt eliminated in Phase B5.D1. `BillingModalHost` now follows the canonical "global modal host" pattern alongside `AuthModalHost`.
 
 ---
 

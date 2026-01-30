@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/skeletons";
 import type { ClubRole } from "@/lib/types/club";
 
-// B5.3: Billing modal infrastructure
-import { BillingModalHost, useHandleApiError } from "@/components/billing/BillingModalHost";
+// B5.3: Billing modal infrastructure (B5.D1: BillingModalHost now global)
+import { useHandleApiError } from "@/components/billing/BillingModalHost";
 
 interface MemberUser {
   id: string;
@@ -69,21 +69,12 @@ interface ClubMembersContentProps {
 }
 
 /**
- * B5.3: Wrapper component providing BillingModalHost context.
- * Pattern per PHASE_B5-1_EVENT_CREATE_EDIT_IMPLEMENTATION.md
+ * ClubMembersContent - Main component with billing modal support
+ * 
+ * B5.3: Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
+ * B5.D1: BillingModalHost now provided globally via root layout
  */
-export function ClubMembersContent(props: ClubMembersContentProps) {
-  return (
-    <BillingModalHost>
-      <ClubMembersContentImpl {...props} />
-    </BillingModalHost>
-  );
-}
-
-/**
- * Inner implementation with access to billing modal context.
- */
-function ClubMembersContentImpl({
+export function ClubMembersContent({
   clubId,
   currentUserId,
   currentUserRole,

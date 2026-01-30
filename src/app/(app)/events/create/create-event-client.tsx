@@ -24,7 +24,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientError } from "@/lib/types/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
-import { BillingModalHost, useHandleApiError } from "@/components/billing/BillingModalHost";
+import { useHandleApiError } from "@/components/billing/BillingModalHost";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
 import { useClubPlan, type ClubPlanLimits } from "@/hooks/use-club-plan";
@@ -42,24 +42,12 @@ interface ManageableClub {
 }
 
 /**
- * CreateEventPageClient - Wrapper with BillingModalHost
+ * CreateEventPageClient - Main component with billing modal support
  * 
- * B5.1: Wraps content with BillingModalHost to enable useHandleApiError()
+ * B5.1: Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
+ * B5.D1: BillingModalHost now provided globally via root layout
  */
 export function CreateEventPageClient() {
-  return (
-    <BillingModalHost>
-      <CreateEventContent />
-    </BillingModalHost>
-  );
-}
-
-/**
- * CreateEventContent - Inner component with all business logic
- * 
- * Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
- */
-function CreateEventContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
@@ -275,7 +263,7 @@ function CreateEventContent() {
           throw err;
         }
         
-        // If handled (402 or 409), modal is shown via BillingModalHost
+        // If handled (402 or 409), modal is shown via global BillingModalHost
         // SSOT_ARCHITECTURE §15: Modal shown = action is pending, reset controller
         controller.reset();
       }
@@ -346,7 +334,7 @@ function CreateEventContent() {
         externalError={controller.state.lastError}
       />
       
-      {/* B5.1: Modals are rendered globally by BillingModalHost */}
+      {/* B5.D1: Modals rendered by global BillingModalHost in root layout */}
     </div>
   );
 }
