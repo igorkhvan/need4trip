@@ -1,8 +1,14 @@
 /**
- * Paywall Modal Component v4
+ * Paywall Modal Component v5
  * 
  * Shows when user hits billing limit (402 Payment Required)
- * Updated: 2024-12-26 - v4 unified purchase-intent + polling
+ * 
+ * v5 Changes (B5.0):
+ * - Uses canonical reason mapping from lib/billing/ui/reasonMapping
+ * - Implements fallback behavior per B3-3 matrix
+ * - Supports both legacy props API and new PaywallDetails API
+ * 
+ * SSOT: PHASE_B3-3_REASON_MESSAGE_CTA_MATRIX.md
  */
 
 "use client";
@@ -21,63 +27,72 @@ import {
 import { Button } from "@/components/ui/button";
 import { CreditCard, Users, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import type { PaywallError as PaywallErrorType, PaywallOption } from "@/lib/types/billing";
+import type { PaywallDetails, PaywallOptionParsed } from "@/lib/billing/ui/types";
+import { getPaywallUiConfig } from "@/lib/billing/ui/reasonMapping";
 import { getClubPlanLabel } from "@/lib/types/club";
 
-interface PaywallModalProps {
+// ============================================================================
+// Props Types
+// ============================================================================
+
+/**
+ * Legacy props interface (backward compatible with existing usage)
+ */
+interface PaywallModalPropsLegacy {
   open: boolean;
   onClose: () => void;
   error: PaywallErrorType;
 }
 
-const REASON_MESSAGES: Record<string, { title: string; description: string }> = {
-  PAID_EVENTS_NOT_ALLOWED: {
-    title: "Для платных событий требуется тариф",
-    description: "Создание платных событий доступно на тарифе Club 50 и выше.",
-  },
-  CSV_EXPORT_NOT_ALLOWED: {
-    title: "Экспорт в CSV доступен на расширенном тарифе",
-    description: "Экспорт списка участников в CSV доступен на тарифе Club 50 и выше.",
-  },
-  MAX_EVENT_PARTICIPANTS_EXCEEDED: {
-    title: "Превышен лимит участников текущего тарифа",
-    description: "Текущий тариф не поддерживает выбранное количество участников.",
-  },
-  MAX_CLUB_MEMBERS_EXCEEDED: {
-    title: "Превышен лимит организаторов",
-    description: "Для текущего тарифа достигнут лимит организаторов.",
-  },
-  SUBSCRIPTION_NOT_ACTIVE: {
-    title: "Подписка не активна",
-    description: "Для этого действия требуется активная подписка.",
-  },
-  SUBSCRIPTION_EXPIRED: {
-    title: "Срок подписки истёк",
-    description: "Срок вашей подписки истёк. Продлите её, чтобы продолжить работу.",
-  },
-  CLUB_CREATION_REQUIRES_PLAN: {
-    title: "Требуется тарифный план",
-    description: "Для создания клуба необходимо выбрать тарифный план.",
-  },
-  PUBLISH_REQUIRES_PAYMENT: {
-    title: "Требуется оплата",
-    description: "Для публикации события выберите удобный вариант оплаты.",
-  },
-  CLUB_REQUIRED_FOR_LARGE_EVENT: {
-    title: "Требуется клуб",
-    description: "События с более чем 500 участниками доступны в рамках клуба.",
-  },
-};
+/**
+ * New props interface using PaywallDetails
+ */
+interface PaywallModalPropsNew {
+  open: boolean;
+  onClose: () => void;
+  details: PaywallDetails;
+  context?: { clubId?: string };
+}
 
-export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
+type PaywallModalProps = PaywallModalPropsLegacy | PaywallModalPropsNew;
+
+function isNewProps(props: PaywallModalProps): props is PaywallModalPropsNew {
+  return 'details' in props;
+}
+
+export function PaywallModal(props: PaywallModalProps) {
+  const { open, onClose } = props;
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(false);
   const [paymentStatus, setPaymentStatus] = React.useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
   const [transactionId, setTransactionId] = React.useState<string | null>(null);
   
-  const message = REASON_MESSAGES[error.reason] || {
-    title: "Ограничение текущего тарифа",
-    description: "Эта функция недоступна на текущем тарифе.",
-  };
+  // Normalize props to PaywallDetails
+  const details: PaywallDetails = isNewProps(props) 
+    ? props.details 
+    : {
+        reason: props.error.reason,
+        currentPlanId: props.error.currentPlanId,
+        requiredPlanId: props.error.requiredPlanId,
+        meta: props.error.meta,
+        options: props.error.options?.map(o => ({
+          type: o.type,
+          ...(o.type === 'ONE_OFF_CREDIT' ? {
+            productCode: (o as PaywallOption & { productCode?: string }).productCode,
+            price: (o as PaywallOption & { price?: number }).price,
+            currencyCode: (o as PaywallOption & { currencyCode?: string }).currencyCode,
+            provider: (o as PaywallOption & { provider?: string }).provider,
+          } : {
+            recommendedPlanId: (o as PaywallOption & { recommendedPlanId?: string }).recommendedPlanId,
+          }),
+        })) as PaywallOptionParsed[] | undefined,
+        cta: props.error.cta,
+      };
+  
+  const context = isNewProps(props) ? props.context : undefined;
+  
+  // Get normalized UI config using B3-3 mapping
+  const uiConfig = getPaywallUiConfig(details, context);
 
   // Poll transaction status
   React.useEffect(() => {
@@ -108,10 +123,10 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
     return () => clearInterval(pollInterval);
   }, [transactionId, paymentStatus]);
 
-  const handleOptionClick = async (option: PaywallOption) => {
+  const handleOptionClick = async (option: PaywallOptionParsed) => {
     setIsLoading(true);
     
-    if (option.type === "ONE_OFF_CREDIT") {
+    if (option.type === "ONE_OFF_CREDIT" && option.productCode) {
       // v4: Use unified purchase-intent
       try {
         const response = await fetch("/api/billing/purchase-intent", {
@@ -148,62 +163,65 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
         setIsLoading(false);
       }
     } else if (option.type === "CLUB_ACCESS") {
-      // Navigate to pricing page
+      // Navigate to pricing page with context
       onClose();
-      router.push("/pricing");
+      const pricingUrl = uiConfig.primaryCta.href || "/pricing";
+      router.push(pricingUrl);
     }
   };
 
-  const handleLegacyUpgrade = () => {
+  const handleFallbackUpgrade = () => {
     onClose();
-    router.push(error.cta?.href || "/pricing");
+    // Use uiConfig fallback CTA or legacy cta
+    const href = uiConfig.primaryCta.href || details.cta?.href || "/pricing";
+    router.push(href);
   };
 
-  // Use new options[] if available, fallback to legacy cta
-  const hasOptions = error.options && error.options.length > 0;
+  // Use uiConfig.options (already filtered and normalized)
+  const hasOptions = uiConfig.options.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="heading-h3">{message.title}</DialogTitle>
-          <DialogDescription className="text-body-small">{message.description}</DialogDescription>
+          <DialogTitle className="heading-h3">{uiConfig.title}</DialogTitle>
+          <DialogDescription className="text-body-small">{uiConfig.message}</DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-4">
-          {/* Current plan info */}
-          {(error.currentPlanId || error.requiredPlanId || error.meta) && (
+          {/* Current plan info - using normalized meta from uiConfig */}
+          {(uiConfig.meta.currentPlanLabel || uiConfig.meta.requiredPlanLabel || uiConfig.meta.limit) && (
             <div className="space-y-2 text-sm">
-              {error.currentPlanId && (
+              {uiConfig.meta.currentPlanLabel && (
                 <p>
                   <strong>Текущий план:</strong>{" "}
-                  <span>{getClubPlanLabel(error.currentPlanId)}</span>
+                  <span>{uiConfig.meta.currentPlanLabel}</span>
                 </p>
               )}
               
-              {error.requiredPlanId && (
+              {uiConfig.meta.requiredPlanLabel && (
                 <p>
                   <strong>Требуется:</strong>{" "}
-                  <span>{getClubPlanLabel(error.requiredPlanId)}</span> или выше
+                  <span>{uiConfig.meta.requiredPlanLabel}</span> или выше
                 </p>
               )}
 
-              {error.meta && "limit" in error.meta && "requested" in error.meta && (
+              {uiConfig.meta.limit !== undefined && uiConfig.meta.requested !== undefined && (
                 <p className="text-muted-foreground">
-                  Запрошено: {error.meta.requested as number} / Лимит: {error.meta.limit as number}
+                  Запрошено: {uiConfig.meta.requested} / Лимит: {uiConfig.meta.limit}
                 </p>
               )}
             </div>
           )}
 
           {hasOptions ? (
-            // NEW: Multiple payment options with status
+            // Multiple payment options with status
             <>
               {paymentStatus === 'idle' && (
                 <>
                   <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
                   <div className="space-y-3">
-                    {error.options!.map((option, idx) => (
+                    {uiConfig.options.map((option, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleOptionClick(option)}
@@ -270,13 +288,13 @@ export function PaywallModal({ open, onClose, error }: PaywallModalProps) {
               Отмена
             </Button>
           ) : (
-            // LEGACY: Single CTA buttons
+            // Fallback: Single CTA button using uiConfig
             <>
               <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Отмена
               </Button>
-              <Button onClick={handleLegacyUpgrade} className="w-full sm:w-auto">
-                Посмотреть тарифы и варианты
+              <Button onClick={handleFallbackUpgrade} className="w-full sm:w-auto">
+                {uiConfig.primaryCta.label}
               </Button>
             </>
           )}
