@@ -77,6 +77,7 @@ import {
   type ClubJoinRequest,
 } from "@/lib/types/club";
 import { AuthError, ClubArchivedError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { enforceClubAction } from "@/lib/services/accessControl";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 import { logClubAction } from './clubAuditLog';
 
@@ -923,6 +924,16 @@ export async function approveClubJoinRequest(
 
   // Phase 8A v1: Owner/Admin may approve
   await requireClubOwnerOrAdmin(clubId, currentUser.id, "одобрить заявку на вступление");
+
+  // GAP-B3.5-1 FIX: Enforce member limit before adding new member
+  const currentMemberCount = await countMembers(clubId);
+  await enforceClubAction({
+    clubId,
+    action: "CLUB_INVITE_MEMBER",
+    context: {
+      clubMembersCount: currentMemberCount,
+    },
+  });
 
   // Phase 8A v1: TRANSACTIONAL approve (insert member + delete request)
   const { requesterUserId } = await approveJoinRequestTransactionalRepo(
