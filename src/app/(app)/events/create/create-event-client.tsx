@@ -13,20 +13,21 @@
  * 
  * ⚡ Uses ActionController for race-condition-free async operations
  * SSOT: docs/ssot/SSOT_ARCHITECTURE.md § ActionController Standard
+ * 
+ * B5.1: Integrated with useHandleApiError() for 402/409 handling
+ * SSOT: docs/phase/b5/PHASE_B5-0_UI_FOUNDATION_IMPLEMENTATION.md
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientError } from "@/lib/types/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
-import { usePaywall } from "@/components/billing/paywall-modal";
-import { CreditConfirmationModal } from "@/components/billing/credit-confirmation-modal";
+import { BillingModalHost, useHandleApiError } from "@/components/billing/BillingModalHost";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
 import { useClubPlan, type ClubPlanLimits } from "@/hooks/use-club-plan";
-import type { CreditCode } from "@/lib/types/billing";
 
 // SSOT_UI_STRUCTURE — CREATE form renders immediately (optimistic UI)
 // SSOT_UI_ASYNC_PATTERNS — reference data loads inline, non-blocking
@@ -40,7 +41,25 @@ interface ManageableClub {
   userRole: "owner" | "admin";
 }
 
+/**
+ * CreateEventPageClient - Wrapper with BillingModalHost
+ * 
+ * B5.1: Wraps content with BillingModalHost to enable useHandleApiError()
+ */
 export function CreateEventPageClient() {
+  return (
+    <BillingModalHost>
+      <CreateEventContent />
+    </BillingModalHost>
+  );
+}
+
+/**
+ * CreateEventContent - Inner component with all business logic
+ * 
+ * Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
+ */
+function CreateEventContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
@@ -49,16 +68,13 @@ export function CreateEventPageClient() {
   // ⚡ ActionController for race-condition-free operations
   const controller = useActionController<{
     payload: Record<string, unknown>;
-    creditCode?: CreditCode;
-    eventId?: string;
-    requestedParticipants?: number;
   }>();
   
-  // SSOT_ARCHITECTURE §15: Paywall close without completion = implicit abort
-  // Must reset pending/disabled UI state (no error copy)
-  const { showPaywall, PaywallModalComponent } = usePaywall({
-    onAbort: () => controller.reset(),
-  });
+  // B5.1: Store last submitted payload for credit confirmation retry
+  const lastSubmitPayloadRef = useRef<Record<string, unknown> | null>(null);
+  
+  // Get clubId from form state (updated on each submit)
+  const currentClubIdRef = useRef<string | null>(null);
   
   // SSOT_UI_ASYNC_PATTERNS — client-side data loading for clubs
   const [manageableClubs, setManageableClubs] = useState<ManageableClub[]>([]);
@@ -80,6 +96,103 @@ export function CreateEventPageClient() {
     allowPaidEvents: false,
     allowCsvExport: false,
   };
+  
+  // B5.1: Submit with optional confirm_credit flag
+  const submitEvent = useCallback(async (
+    payload: Record<string, unknown>,
+    options?: { confirmCredit?: boolean }
+  ) => {
+    const url = options?.confirmCredit ? "/api/events?confirm_credit=1" : "/api/events";
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    // Add Idempotency-Key header (prevents duplicates)
+    if (controller.correlationId) {
+      headers["Idempotency-Key"] = controller.correlationId;
+    }
+    
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    
+    // Parse JSON once for all cases
+    const json = await res.json();
+    
+    // B5.1: For 402/409, throw an error object that handleError() can process
+    if (res.status === 402) {
+      // Throw error with structure that isPaywallApiError() recognizes
+      const errorObj = {
+        status: 402,
+        statusCode: 402,
+        code: json.error?.code || "PAYWALL",
+        error: json.error,
+        details: json.error?.details,
+        ...json.error?.details, // Spread for reason extraction
+      };
+      throw errorObj;
+    }
+    
+    if (res.status === 409) {
+      // DEFENSIVE: Club events should not get 409 CREDIT_CONFIRMATION
+      const clubId = payload.clubId as string | null;
+      if (clubId && json.error?.code === "CREDIT_CONFIRMATION_REQUIRED") {
+        console.error("[BUG] Backend returned 409 for club event");
+        throw new ClientError(
+          "Ошибка биллинга. Клубные события не используют кредиты.",
+          "BILLING_ERROR",
+          500
+        );
+      }
+      
+      // Throw error with structure that isCreditConfirmationApiError() recognizes
+      const errorObj = {
+        status: 409,
+        statusCode: 409,
+        code: json.error?.code || "CREDIT_CONFIRMATION_REQUIRED",
+        error: json.error,
+        details: json.error?.details || json.error,
+        ...(json.error?.details || json.error), // Spread for meta extraction
+      };
+      throw errorObj;
+    }
+    
+    // Handle other errors
+    if (!res.ok) {
+      throw new ClientError(
+        json.error?.message || `Request failed with status ${res.status}`,
+        json.error?.code || "REQUEST_FAILED",
+        res.status,
+        json.error?.details
+      );
+    }
+    
+    // ✅ Success - mark as redirecting BEFORE navigation
+    const createdEvent = json.data?.event || json.event;
+    
+    controller.setRedirecting();
+    
+    if (createdEvent?.id) {
+      router.push(`/events/${createdEvent.id}`);
+    } else {
+      console.error('[CreateEvent] No event.id in response:', json);
+      router.push('/events');
+    }
+    router.refresh();
+  }, [controller, router]);
+  
+  // B5.1: Initialize useHandleApiError with onConfirmCredit callback
+  const { handleError } = useHandleApiError({
+    clubId: currentClubIdRef.current ?? undefined,
+    onConfirmCredit: async () => {
+      // Re-submit with confirm_credit=1 using stored payload
+      if (lastSubmitPayloadRef.current) {
+        await submitEvent(lastSubmitPayloadRef.current, { confirmCredit: true });
+      }
+    },
+  });
   
   // Load user's manageable clubs client-side
   useEffect(() => {
@@ -146,152 +259,26 @@ export function CreateEventPageClient() {
   }, [isAuthenticated, execute]);
   
   const handleSubmit = async (payload: Record<string, unknown>) => {
-    // DEFENSIVE: Prevent credit retry for club events (SSOT §1.3 No Mixing)
-    const clubId = payload.clubId as string | null;
+    // B5.1: Store payload for potential credit confirmation retry
+    lastSubmitPayloadRef.current = payload;
+    currentClubIdRef.current = payload.clubId as string | null;
     
     await controller.start("create_event", async () => {
-      // Build request URL and headers
-      const url = "/api/events";
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      
-      // ⚡ NEW: Add Idempotency-Key header (prevents duplicates)
-      if (controller.correlationId) {
-        headers["Idempotency-Key"] = controller.correlationId;
-      }
-      
-      const res = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
-      
-      // Parse JSON once for all cases
-      const json = await res.json();
-      
-      // Handle 409 CREDIT_CONFIRMATION_REQUIRED
-      if (res.status === 409) {
-        const meta = json.error?.meta || json.error?.details?.meta;
+      try {
+        await submitEvent(payload);
+      } catch (err) {
+        // B5.1: Use handleError for 402/409 handling
+        const { handled } = handleError(err);
         
-        // DEFENSIVE: Do not show credit confirmation for club events
-        if (meta && !clubId) {
-          // ⚡ NEW: Store payload in controller and await confirmation
-          controller.awaitConfirmation({
-            payload,
-            creditCode: meta.creditCode,
-            eventId: meta.eventId,
-            requestedParticipants: meta.requestedParticipants,
-          });
-          return;
+        if (!handled) {
+          // Re-throw for controller to handle (existing behavior)
+          throw err;
         }
         
-        // If 409 for club event, treat as error
-        if (meta && clubId) {
-          console.error("[BUG] Backend returned 409 for club event");
-          throw new Error("Ошибка биллинга. Клубные события не используют кредиты.");
-        }
-        
-        // Generic 409 error
-        throw new ClientError(
-          json.error?.message || "Conflict",
-          json.error?.code || "CONFLICT",
-          409,
-          json.error?.details
-        );
+        // If handled (402 or 409), modal is shown via BillingModalHost
+        // SSOT_ARCHITECTURE §15: Modal shown = action is pending, reset controller
+        controller.reset();
       }
-      
-      // Handle 402 PAYWALL
-      if (res.status === 402) {
-        const paywallError = json.error?.details || json.error;
-        
-        if (paywallError) {
-          showPaywall(paywallError);
-          return;
-        }
-      }
-      
-      // Handle other errors
-      if (!res.ok) {
-        throw new ClientError(
-          json.error?.message || `Request failed with status ${res.status}`,
-          json.error?.code || "REQUEST_FAILED",
-          res.status,
-          json.error?.details
-        );
-      }
-      
-      // ✅ Success - mark as redirecting BEFORE navigation
-      const createdEvent = json.data?.event || json.event;
-      
-      controller.setRedirecting();
-      
-      if (createdEvent?.id) {
-        router.push(`/events/${createdEvent.id}`);
-      } else {
-        console.error('[CreateEvent] No event.id in response:', json);
-        router.push('/events');
-      }
-      router.refresh();
-    });
-  };
-  
-  // ⚡ NEW: Handle credit confirmation
-  const handleConfirmCredit = async () => {
-    await controller.confirm(async (stored) => {
-      const { payload, creditCode } = stored;
-      
-      // Build confirmed request
-      const url = "/api/events?confirm_credit=1";
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      
-      // ⚡ CRITICAL: Reuse SAME Idempotency-Key for retry
-      if (controller.correlationId) {
-        headers["Idempotency-Key"] = controller.correlationId;
-      }
-      
-      const res = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
-      
-      // Parse JSON once
-      const json = await res.json();
-      
-      // Handle 402 PAYWALL (fallback if credit was consumed by another request)
-      if (res.status === 402) {
-        const paywallError = json.error?.details || json.error;
-        
-        if (paywallError) {
-          showPaywall(paywallError);
-          throw new Error('Paywall required');
-        }
-      }
-      
-      // Handle other errors
-      if (!res.ok) {
-        throw new ClientError(
-          json.error?.message || `Request failed with status ${res.status}`,
-          json.error?.code || "REQUEST_FAILED",
-          res.status,
-          json.error?.details
-        );
-      }
-      
-      // ✅ Success - mark as redirecting BEFORE navigation
-      const createdEvent = json.data?.event || json.event;
-      
-      controller.setRedirecting();
-      
-      if (createdEvent?.id) {
-        router.push(`/events/${createdEvent.id}`);
-      } else {
-        router.push('/events');
-      }
-      router.refresh();
     });
   };
   
@@ -352,37 +339,14 @@ export function CreateEventPageClient() {
         initialValues={{
           cityId: initialCityId || "",
         }}
-        // ⚡ NEW: Pass ActionController state
+        // Pass ActionController state
         isBusy={controller.isBusy}
         busyLabel={controller.busyLabel}
         actionPhase={controller.phase}
         externalError={controller.state.lastError}
       />
       
-      {/* Paywall Modal */}
-      {PaywallModalComponent}
-      
-      {/* ⚡ NEW: Credit Confirmation Modal (controlled by ActionController) */}
-      {(controller.phase === 'awaiting_confirmation' 
-        || controller.phase === 'running_confirmed'
-        || controller.phase === 'redirecting') 
-        && controller.state.confirmationPayload && (
-        <CreditConfirmationModal
-          open={true}
-          onOpenChange={(open) => {
-            // Allow close only if awaiting_confirmation (not during running_confirmed or redirecting)
-            if (!open && controller.phase === 'awaiting_confirmation') {
-              controller.reset();
-            }
-          }}
-          creditCode={controller.state.confirmationPayload.creditCode as CreditCode}
-          eventId={controller.state.confirmationPayload.eventId || ''}
-          requestedParticipants={controller.state.confirmationPayload.requestedParticipants || 0}
-          onConfirm={handleConfirmCredit}
-          onCancel={() => controller.reset()}
-          isLoading={controller.phase === 'running_confirmed' || controller.phase === 'redirecting'}
-        />
-      )}
+      {/* B5.1: Modals are rendered globally by BillingModalHost */}
     </div>
   );
 }
