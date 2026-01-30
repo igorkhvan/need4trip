@@ -18,6 +18,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
 
 interface ClubJoinCTAProps {
   clubId: string;
@@ -37,6 +38,7 @@ export function ClubJoinCTA({
   openJoinEnabled,
 }: ClubJoinCTAProps) {
   const router = useRouter();
+  const { openModal } = useAuthModalContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,10 +57,14 @@ export function ClubJoinCTA({
     );
   }
 
-  // Handle login redirect for unauthenticated users
-  const handleLoginClick = () => {
-    const returnUrl = encodeURIComponent(`/clubs/${clubId}`);
-    router.push(`/login?returnUrl=${returnUrl}`);
+  // Handle auth modal for unauthenticated users (canonical pattern)
+  const handleAuthRequired = () => {
+    openModal({
+      reason: "REQUIRED",
+      title: "Войти в Need4Trip",
+      description: "Чтобы вступить в клуб, войдите через Telegram.",
+      afterLoginRedirectTo: `/clubs/${clubId}`,
+    });
   };
 
   // Handle direct join (when openJoinEnabled=true)
@@ -77,7 +83,7 @@ export function ClubJoinCTA({
 
       if (!res.ok) {
         if (res.status === 401) {
-          handleLoginClick();
+          handleAuthRequired();
           return;
         }
         if (res.status === 409) {
@@ -116,7 +122,7 @@ export function ClubJoinCTA({
 
       if (!res.ok) {
         if (res.status === 401) {
-          handleLoginClick();
+          handleAuthRequired();
           return;
         }
         if (res.status === 409) {
@@ -139,10 +145,10 @@ export function ClubJoinCTA({
     }
   };
 
-  // Guest (not authenticated) - prompt to log in
+  // Guest (not authenticated) - prompt to log in via AuthModal
   if (!isAuthenticated) {
     return (
-      <Button onClick={handleLoginClick} className="w-full sm:w-auto">
+      <Button onClick={handleAuthRequired} className="w-full sm:w-auto">
         <UserPlus className="h-4 w-4" />
         <span>{openJoinEnabled ? "Вступить в клуб" : "Подать заявку"}</span>
       </Button>
