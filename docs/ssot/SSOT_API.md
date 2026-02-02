@@ -1,13 +1,25 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.7.7  
-**Last Updated:** 29 января 2026  
+**Version:** 1.8.0  
+**Last Updated:** 2 февраля 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.8.0 (2026-02-02) — Admin API Surface (Phase A1.1 STEP 5)
+**New Admin API endpoints for Admin V0 scope (READ + GRANT ONLY):**
+- **API-058 (GET /api/admin/health):** NEW endpoint. Admin auth sanity check. Returns `{ ok: true }`.
+- **API-059 (GET /api/admin/users):** NEW endpoint. List users with optional search by email. Pagination via cursor.
+- **API-060 (GET /api/admin/users/[userId]):** NEW endpoint. User billing detail — identity, credits (with source), transactions.
+- **API-061 (POST /api/admin/users/[userId]/grant-credit):** NEW endpoint. Grant one-off credit to user. Calls `adminGrantOneOffCredit` service.
+- **API-062 (GET /api/admin/clubs):** NEW endpoint. List clubs with subscription state. Pagination via cursor.
+- **API-063 (GET /api/admin/clubs/[clubId]):** NEW endpoint. Club subscription detail — plan, limits, audit records.
+- **API-064 (POST /api/admin/clubs/[clubId]/extend-subscription):** NEW endpoint. Extend subscription expiration. Calls `adminExtendSubscriptionExpiration` service.
+- **API-065 (GET /api/admin/audit):** NEW endpoint. List admin audit records with filtering.
+- **SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0, SSOT_BILLING_ADMIN_RULES v1.0, SSOT_ADMIN_AUDIT_RULES v1.0, SSOT_ADMIN_UI_PAGE_INVENTORY v1.0
 
 ### 1.7.7 (2026-01-29) — API-057 Removed (Phase L2.1)
 **Deprecated endpoint permanently removed after zero-usage verification:**
@@ -4159,6 +4171,613 @@ Manually clear all in-memory static caches (plans, currencies, car brands, etc).
 
 ---
 
+#### API-058: Admin Health Check
+
+**Endpoint ID:** API-058  
+**Method:** GET  
+**Path:** `/api/admin/health`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header (must match `ADMIN_SECRET` env)  
+**Authorization:** Admin only  
+
+**Purpose:**  
+Sanity check for admin authentication. Verifies admin context resolution.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Body:** None
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "ok": true,
+      "timestamp": "2026-02-02T00:00:00Z"
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only, secret-protected)
+- **Spam / Cost abuse risk:** Low
+- **Sensitive data exposure:** No
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/health/route.ts`
+- Auth: `resolveAdminContext()`
+
+**SSOT Reference:** SSOT_ADMIN_UI_PAGE_INVENTORY v1.0 §2.1
+
+---
+
+#### API-059: List Users (Admin)
+
+**Endpoint ID:** API-059  
+**Method:** GET  
+**Path:** `/api/admin/users`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+List users with optional search by email for admin billing view.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Query params:**
+  - `q`: Email substring filter (optional)
+  - `limit`: Max records, default 50, max 200 (optional)
+  - `cursor`: User ID to start after (optional)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "users": [
+        {
+          "id": "uuid",
+          "name": "string",
+          "email": "string | null",
+          "telegramHandle": "string | null",
+          "createdAt": "ISO8601"
+        }
+      ],
+      "pagination": {
+        "hasMore": true,
+        "nextCursor": "uuid | null",
+        "count": 50
+      }
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid limit parameter | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 500 | Database error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only)
+- **Spam / Cost abuse risk:** Low
+- **Sensitive data exposure:** User email visible to admin (intended)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/users/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0 §4.1, SSOT_ADMIN_UI_PAGE_INVENTORY v1.0 §2.2
+
+---
+
+#### API-060: Get User Detail (Admin)
+
+**Endpoint ID:** API-060  
+**Method:** GET  
+**Path:** `/api/admin/users/[userId]`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+Get detailed user billing view including identity, credits (with source), and transactions.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Path params:** `userId` (required, UUID)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": "uuid",
+        "name": "string",
+        "email": "string | null",
+        "telegramHandle": "string | null",
+        "createdAt": "ISO8601"
+      },
+      "billing": {
+        "availableCreditsCount": 2,
+        "credits": [
+          {
+            "id": "uuid",
+            "creditCode": "EVENT_UPGRADE_500",
+            "status": "available | consumed",
+            "source": "user | admin | system",
+            "consumedEventId": "uuid | null",
+            "consumedAt": "ISO8601 | null",
+            "createdAt": "ISO8601"
+          }
+        ],
+        "transactions": [
+          {
+            "id": "uuid",
+            "productCode": "EVENT_UPGRADE_500",
+            "provider": "kaspi | admin-grant",
+            "amount": 5000,
+            "currencyCode": "KZT",
+            "status": "pending | paid | failed",
+            "createdAt": "ISO8601"
+          }
+        ]
+      }
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Missing/empty userId | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 404 | User not found | NOT_FOUND |
+| 500 | Database error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only)
+- **Sensitive data exposure:** User billing data visible to admin (intended)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/users/[userId]/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0 §4.1, SSOT_ADMIN_UI_PAGE_INVENTORY v1.0 §2.3
+
+---
+
+#### API-061: Grant Credit (Admin)
+
+**Endpoint ID:** API-061  
+**Method:** POST  
+**Path:** `/api/admin/users/[userId]/grant-credit`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+Grant a one-off credit to a user via admin action. Creates credit with `source = 'admin'`.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Path params:** `userId` (required, UUID)
+- **Body:**
+  ```json
+  {
+    "creditCode": "EVENT_UPGRADE_500",
+    "reason": "Customer support compensation"
+  }
+  ```
+  - `creditCode`: Required, must be valid credit code
+  - `reason`: Required, human-readable justification (mandatory per SSOT_ADMIN_AUDIT_RULES)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "credit": {
+        "id": "uuid",
+        "userId": "uuid",
+        "creditCode": "EVENT_UPGRADE_500",
+        "status": "available",
+        "source": "admin",
+        "createdAt": "ISO8601"
+      },
+      "auditId": 123
+    },
+    "message": "Credit granted successfully"
+  }
+  ```
+
+**Side effects:**
+
+- Creates `billing_credits` record with `source = 'admin'`
+- Creates `billing_transactions` record with `provider = 'admin-grant'`
+- Creates `admin_audit_log` record (atomic with mutation)
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid body / missing creditCode / missing reason | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 404 | User not found | NOT_FOUND |
+| 500 | Service error / audit failure | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only, audit logged)
+- **Audit:** Every grant creates immutable audit record
+
+**Dependencies:**
+
+- Service: `adminGrantOneOffCredit` (`/lib/billing/admin/adminGrantOneOffCredit.ts`)
+- Audit: `adminAtomicMutation` (`/lib/audit/adminAtomic.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/users/[userId]/grant-credit/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0 §5.1, SSOT_BILLING_ADMIN_RULES v1.0 §3, SSOT_ADMIN_AUDIT_RULES v1.0 §4.1
+
+---
+
+#### API-062: List Clubs (Admin)
+
+**Endpoint ID:** API-062  
+**Method:** GET  
+**Path:** `/api/admin/clubs`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+List clubs with subscription state for admin subscription view.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Query params:**
+  - `q`: Name substring filter (optional)
+  - `limit`: Max records, default 50, max 200 (optional)
+  - `cursor`: Club ID to start after (optional)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "clubs": [
+        {
+          "id": "uuid",
+          "name": "string",
+          "ownerUserId": "uuid | null",
+          "isArchived": false,
+          "createdAt": "ISO8601",
+          "subscription": {
+            "planId": "club_50 | club_500 | club_unlimited | free",
+            "status": "active | grace | expired | pending",
+            "expiresAt": "ISO8601 | null"
+          }
+        }
+      ],
+      "pagination": {
+        "hasMore": true,
+        "nextCursor": "uuid | null",
+        "count": 50
+      }
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid limit parameter | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 500 | Database error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/clubs/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0 §4.2, SSOT_ADMIN_UI_PAGE_INVENTORY v1.0 §2.4
+
+---
+
+#### API-063: Get Club Detail (Admin)
+
+**Endpoint ID:** API-063  
+**Method:** GET  
+**Path:** `/api/admin/clubs/[clubId]`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+Get detailed club subscription view including plan limits and audit records.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Path params:** `clubId` (required, UUID)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "club": {
+        "id": "uuid",
+        "name": "string",
+        "ownerUserId": "uuid | null",
+        "isArchived": false,
+        "createdAt": "ISO8601"
+      },
+      "subscription": {
+        "planId": "club_50",
+        "status": "active",
+        "currentPeriodStart": "ISO8601 | null",
+        "currentPeriodEnd": "ISO8601 | null",
+        "graceUntil": "ISO8601 | null",
+        "createdAt": "ISO8601",
+        "updatedAt": "ISO8601"
+      },
+      "planLimits": {
+        "planId": "club_50",
+        "title": "Club 50",
+        "maxMembers": 50,
+        "maxEventParticipants": 100,
+        "allowPaidEvents": false,
+        "allowCsvExport": false
+      },
+      "auditRecords": [
+        {
+          "id": 123,
+          "actionType": "ADMIN_EXTEND_SUBSCRIPTION",
+          "actorId": "admin-default",
+          "reason": "string",
+          "result": "success | rejected",
+          "metadata": {},
+          "createdAt": "ISO8601"
+        }
+      ]
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Missing/empty clubId | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 404 | Club not found | NOT_FOUND |
+| 500 | Database error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/clubs/[clubId]/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0 §4.2, SSOT_ADMIN_UI_PAGE_INVENTORY v1.0 §2.5
+
+---
+
+#### API-064: Extend Subscription (Admin)
+
+**Endpoint ID:** API-064  
+**Method:** POST  
+**Path:** `/api/admin/clubs/[clubId]/extend-subscription`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+Extend a club subscription's expiration date. Modifies ONLY `expires_at` (current_period_end).
+
+**Constraints (SSOT_BILLING_ADMIN_RULES v1.0 §4):**
+- Extension does NOT change plan
+- Extension does NOT change subscription state
+- Extension does NOT reset usage counters
+- Eligible states: `active`, `grace`, `expired`
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Path params:** `clubId` (required, UUID)
+- **Body:**
+  ```json
+  {
+    "days": 30,
+    "reason": "Grace extension due to payment issue"
+  }
+  ```
+  - `days`: Required, positive integer (days to extend)
+  - `reason`: Required, human-readable justification
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "subscription": {
+        "clubId": "uuid",
+        "planId": "club_50",
+        "status": "active",
+        "currentPeriodStart": "ISO8601 | null",
+        "currentPeriodEnd": "ISO8601",
+        "graceUntil": "ISO8601 | null"
+      },
+      "previousExpiresAt": "ISO8601 | null",
+      "newExpiresAt": "ISO8601",
+      "auditId": 124
+    },
+    "message": "Subscription extended successfully"
+  }
+  ```
+
+**Side effects:**
+
+- Updates `club_subscriptions.current_period_end` ONLY
+- Creates `admin_audit_log` record (atomic with mutation)
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid body / days not positive / missing reason | VALIDATION_ERROR |
+| 400 | Subscription state not eligible | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 404 | Club not found / No subscription | NOT_FOUND |
+| 500 | Service error / audit failure | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only, audit logged)
+- **Audit:** Every extension creates immutable audit record
+
+**Dependencies:**
+
+- Service: `adminExtendSubscriptionExpiration` (`/lib/billing/admin/adminExtendSubscriptionExpiration.ts`)
+- Audit: `adminAtomicMutation` (`/lib/audit/adminAtomic.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/clubs/[clubId]/extend-subscription/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_DOMAIN v1.0 §5.2, SSOT_BILLING_ADMIN_RULES v1.0 §4, SSOT_ADMIN_AUDIT_RULES v1.0 §4.1
+
+---
+
+#### API-065: List Audit Records (Admin)
+
+**Endpoint ID:** API-065  
+**Method:** GET  
+**Path:** `/api/admin/audit`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+List admin audit records with optional filtering. Read-only access to audit log.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Query params:**
+  - `actionType`: Filter by action type (optional)
+  - `targetType`: Filter by target type (`user` | `club`) (optional)
+  - `targetId`: Filter by target ID (optional)
+  - `actorId`: Filter by actor ID (optional)
+  - `result`: Filter by result (`success` | `rejected`) (optional)
+  - `limit`: Max records, default 100, max 500 (optional)
+  - `cursor`: Audit record ID to start after (optional)
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "records": [
+        {
+          "id": 123,
+          "actorType": "admin",
+          "actorId": "admin-default",
+          "actionType": "ADMIN_GRANT_CREDIT",
+          "targetType": "user",
+          "targetId": "uuid",
+          "reason": "string",
+          "result": "success | rejected",
+          "metadata": {},
+          "relatedEntityId": "uuid | null",
+          "errorCode": "string | null",
+          "createdAt": "ISO8601"
+        }
+      ],
+      "pagination": {
+        "hasMore": true,
+        "nextCursor": "123",
+        "count": 100
+      }
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid limit / targetType / result | VALIDATION_ERROR |
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 500 | Database error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only)
+- **Audit logs are read-only:** No modifications allowed
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/audit/route.ts`
+
+**SSOT Reference:** SSOT_ADMIN_AUDIT_RULES v1.0 §6, SSOT_ADMIN_UI_PAGE_INVENTORY v1.0 §2.6
+
+---
+
 ### 9.9 Cron
 
 #### API-048: Process Notifications Queue
@@ -4298,7 +4917,7 @@ Get current notification queue stats without triggering processing (for monitori
 
 ### 10.1 Route Handler Files Found
 
-Total route handlers discovered: **37 files**
+Total route handlers discovered: **45 files**
 
 | # | Path | Methods | API IDs |
 |---|------|---------|---------|
@@ -4339,13 +4958,22 @@ Total route handlers discovered: **37 files**
 | 29 | `/src/app/api/vehicle-types/route.ts` | GET | API-045 |
 | 30 | `/src/app/api/ai/events/generate-rules/route.ts` | POST | API-046 |
 | 31 | `/src/app/api/admin/cache/clear/route.ts` | POST | API-047 |
-| 32 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
+| 32 | `/src/app/api/admin/health/route.ts` | GET | API-058 |
+| 33 | `/src/app/api/admin/users/route.ts` | GET | API-059 |
+| 34 | `/src/app/api/admin/users/[userId]/route.ts` | GET | API-060 |
+| 35 | `/src/app/api/admin/users/[userId]/grant-credit/route.ts` | POST | API-061 |
+| 36 | `/src/app/api/admin/clubs/route.ts` | GET | API-062 |
+| 37 | `/src/app/api/admin/clubs/[clubId]/route.ts` | GET | API-063 |
+| 38 | `/src/app/api/admin/clubs/[clubId]/extend-subscription/route.ts` | POST | API-064 |
+| 39 | `/src/app/api/admin/audit/route.ts` | GET | API-065 |
+| 40 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 37 (was 38; API-057 removed in v1.7.7)
-- **Total endpoints documented:** 56 (API-001 to API-056, excluding API-050; API-057 removed)
+- **Total route handler files:** 45 (was 37; +8 Admin API routes in v1.8.0)
+- **Total endpoints documented:** 64 (API-001 to API-065, excluding API-050; API-057 removed)
 - **Removed endpoints:** 1 (API-057 — removed 2026-01-29)
+- **Admin endpoints (new in v1.8.0):** 9 (API-047, API-058 to API-065)
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -4393,7 +5021,7 @@ Total route handlers discovered: **37 files**
 
 **Missing from code analysis:**
 - Webhook endpoints (if Kaspi/Telegram webhooks exist, they're not in `/api/*` folder)
-- Health check endpoint (no `/api/health` found)
+- ~~Health check endpoint (no `/api/health` found)~~ ✅ Admin health check added: API-058 `/api/admin/health`
 - Metrics endpoint (no `/api/metrics` found)
 
 ---
@@ -4450,10 +5078,10 @@ Verified: TypeScript ✅, Build ✅
 ## 12. Metadata
 
 **Document Stats:**
-- Total endpoints: 56
-- Total route handlers: 37
-- Lines: ~4200
-- Last audit: 14 January 2026
+- Total endpoints: 64
+- Total route handlers: 45
+- Lines: ~5100
+- Last audit: 2 February 2026
 
 **Maintenance:**
 - Review quarterly (every 3 months)
