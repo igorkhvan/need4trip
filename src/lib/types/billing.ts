@@ -221,11 +221,16 @@ export type CreditCode = typeof CREDIT_CODES[number];
 export const CREDIT_STATUSES = ["available", "consumed"] as const;
 export type CreditStatus = typeof CREDIT_STATUSES[number];
 
+// Credit creation source (SSOT_BILLING_ADMIN_RULES v1.0 §1.3)
+export const CREDIT_SOURCES = ["user", "admin", "system"] as const;
+export type CreditSource = typeof CREDIT_SOURCES[number];
+
 export interface BillingCredit {
   id: string;
   userId: string;
   creditCode: CreditCode;
   status: CreditStatus;
+  source: CreditSource;  // Credit creation source (user purchase, admin grant, system)
   consumedEventId: string | null;
   consumedAt: string | null;
   sourceTransactionId: string;
@@ -238,6 +243,7 @@ export const BillingCreditSchema = z.object({
   userId: z.string().uuid(),
   creditCode: z.enum(CREDIT_CODES),
   status: z.enum(CREDIT_STATUSES),
+  source: z.enum(CREDIT_SOURCES),  // Credit creation source
   consumedEventId: z.string().uuid().nullable(),
   consumedAt: z.string().nullable(),
   sourceTransactionId: z.string().uuid(),

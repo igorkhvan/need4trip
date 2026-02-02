@@ -8,6 +8,15 @@
 
 ## Change Log (SSOT)
 
+### 2026-02-02 (Billing Credits Source Column)
+- **Reason**: Phase A1.1 — Billing Data Invariants (STEP 3, GAP-4).
+- **Added `billing_credits.source` column** — Explicit source attribution (user/admin/system).
+- **Added CHECK constraint** — `billing_credits_source_check` for closed set of values.
+- **Added index** — `idx_billing_credits_source` for admin queries.
+- **Backfill** — Existing rows set to `source='user'` (safe historical default).
+- **SSOT Reference**: SSOT_BILLING_ADMIN_RULES v1.0 §1.3, SSOT_ADMIN_DOMAIN v1.0 §5.1.
+- **Migration:** `supabase/migrations/20260202_add_billing_credits_source.sql`
+
 ### 2026-02-02 (Admin Audit Log)
 - **Reason**: Phase A1.1 — Admin Identity & Audit Foundation (STEP 1).
 - **Added `admin_audit_log` table** — Immutable audit trail for admin actions (SSOT_ADMIN_AUDIT_RULES v1.0 §3).
@@ -1111,6 +1120,7 @@ CREATE TABLE public.billing_credits (
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   credit_code TEXT NOT NULL CHECK (credit_code IN ('EVENT_UPGRADE_500')),
   status TEXT NOT NULL CHECK (status IN ('available', 'consumed')),
+  source TEXT NOT NULL DEFAULT 'user' CHECK (source IN ('user', 'admin', 'system')),  -- ⚡ Credit creation source
   consumed_event_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
   consumed_at TIMESTAMPTZ,
   source_transaction_id UUID NOT NULL REFERENCES public.billing_transactions(id) ON DELETE CASCADE,
@@ -1124,12 +1134,18 @@ CREATE TABLE public.billing_credits (
 - `idx_billing_credits_user_status` (on user_id, status) -- ⚡ Find available credits
 - `idx_billing_credits_consumed_event_id` (on consumed_event_id)
 - `uix_billing_credits_source_transaction_id` (UNIQUE on source_transaction_id) -- ⚡ Idempotency
+- `idx_billing_credits_source` (on source) -- ⚡ Filter by creation source (admin queries)
 
 **Notes**:
 - ⚡ **Perpetual credits**: не привязаны к событию при покупке
 - ⚡ **Consumed once**: после `publish?confirm_credit=1` → `status='consumed'`
 - ⚡ **Idempotency**: `source_transaction_id` гарантирует одну credit per transaction
 - Поддерживаемые коды: `EVENT_UPGRADE_500` (max_participants <= 500)
+- ⚡ **Source attribution** (добавлено 2026-02-02):
+  - `user` — standard user purchase via billing flow
+  - `admin` — admin grant (per SSOT_BILLING_ADMIN_RULES v1.0 §1.3)
+  - `system` — reserved for future automated issuance
+  - SSOT Reference: SSOT_BILLING_ADMIN_RULES v1.0, SSOT_ADMIN_DOMAIN v1.0 §5.1
 
 **RLS**: TBD (предполагается `authenticated_read_own_credits`)
 

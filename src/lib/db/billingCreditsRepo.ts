@@ -294,6 +294,7 @@ function mapDbRowToCredit(row: any): BillingCredit {
     userId: row.user_id,
     creditCode: row.credit_code,
     status: row.status,
+    source: row.source,  // Credit creation source (user/admin/system)
     consumedEventId: row.consumed_event_id,
     consumedAt: row.consumed_at,
     sourceTransactionId: row.source_transaction_id,
