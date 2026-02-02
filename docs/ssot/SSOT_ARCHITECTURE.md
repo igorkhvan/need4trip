@@ -292,29 +292,48 @@ Represents internal administrative actions, NOT an end user.
 | Property | Value |
 |----------|-------|
 | **Resolution** | `resolveAdminContext(req)` in `lib/auth/resolveAdminContext.ts` |
-| **Identity** | Stable `actorId` (from `ADMIN_ACTOR_ID` env or `'admin-default'`) |
+| **Identity** | Stable `actorId` (see Phase 3 below) |
 | **Domains** | Admin tools (`/api/admin/*`) |
 | **Audit** | Full attribution via `admin_audit_log` table |
 
 **Admin Context** is explicitly NOT a user:
-- MUST NOT use `resolveCurrentUser()`
-- MUST authenticate via `x-admin-secret` header
+- MUST NOT use `resolveCurrentUser()` (admin has its own resolver)
+- MUST authenticate via one of two paths (see Phase 3 below)
 - MUST NOT have access to user-scoped data without explicit audit
 - Admin actions MUST be logged to `admin_audit_log` with actor attribution
 
-**AdminContext Type (Phase 2):**
+**AdminContext Type (Phase 3 — User-based Admin Extension):**
 ```typescript
 interface AdminContext {
   type: 'admin';
   actorType: 'admin';
-  actorId: string;  // Stable, non-null
-  authenticatedVia: 'shared-secret';
+  actorId: string;  // Stable, non-null (see paths below)
+  authenticatedVia: 'user-session' | 'shared-secret';
 }
 ```
+
+**Two Explicit Authentication Paths:**
+
+| Path | Mechanism | actorId | authenticatedVia | Use Case |
+|------|-----------|---------|------------------|----------|
+| **User-based Admin** (PRIMARY) | Cookie/JWT session + `ADMIN_USER_EMAILS` allowlist | `user:<userId>` | `'user-session'` | Admin UI (browser) |
+| **Machine-based Admin** (FALLBACK) | `x-admin-secret` header | `ADMIN_ACTOR_ID` env or `'admin-default'` | `'shared-secret'` | CLI, scripts, ops |
+
+**Resolution Order:**
+1. Check user session + email allowlist (user-based admin)
+2. If no valid admin user → check `x-admin-secret` header
+3. Return null if neither path succeeds
+
+**Security Invariants:**
+- Admin UI does NOT own, store, inject, or proxy secrets
+- User auth and admin auth remain distinct contexts
+- No admin login UI, no admin JWTs, no new auth endpoints
+- Email allowlist is server-side only (client cannot bypass)
 
 **Cross-Reference:**
 - SSOT_ADMIN_AUDIT_RULES v1.0: Audit requirements and structure
 - SSOT_ADMIN_DOMAIN v1.0: Admin scope and allowed operations
+- ADMIN_UI_CONTRACT v1.0: Admin UI non-authoritative rules
 
 **System Context**
 
@@ -601,6 +620,7 @@ A PR is non-compliant if any item is violated.
 ---
 
 ## 21. Document History (Compressed)
+- v5.5 (2026-02-02): Updated §8.3 Admin Context — Phase 3 (User-based Admin Extension). Added dual-path authentication: user-session (PRIMARY for Admin UI) and shared-secret (FALLBACK for ops). Cross-referenced ADMIN_UI_CONTRACT v1.0.
 - v5.4 (2026-02-02): Updated §8.3 Admin Context — Phase 2 with stable `actorId` and `admin_audit_log` attribution. Cross-referenced SSOT_ADMIN_AUDIT_RULES v1.0.
 - v5.3 (2026-01-29): Added RSC Access Rule reference in §4.2. RSC MUST call service layer directly (ADR-001.5).
 - v5.2 (2026-01-29): Added §8.3 Auth Context Types (NORMATIVE). Defined platform-level auth context taxonomy (User, Admin, System). Renumbered §8.4 Authorization. Cross-referenced ARCHITECTURAL_DEBT_LOG.md for deferred context formalization.

@@ -36,7 +36,7 @@ export async function GET(
   // =========================================================================
   // 1. Resolve Admin Context (MANDATORY)
   // =========================================================================
-  const adminContext = resolveAdminContext(request);
+  const adminContext = await resolveAdminContext(request);
   
   if (!adminContext) {
     return NextResponse.json(

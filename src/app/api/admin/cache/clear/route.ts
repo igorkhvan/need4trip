@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   // =========================================================================
   // 1. Explicit AdminContext resolution (ADR-001.2 §3.3)
   // =========================================================================
-  const adminContext = resolveAdminContext(request);
+  const adminContext = await resolveAdminContext(request);
   
   if (!adminContext) {
     // Do NOT audit failed auth attempts to avoid log flooding
