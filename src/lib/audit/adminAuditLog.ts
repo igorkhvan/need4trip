@@ -2,30 +2,51 @@
  * Admin Audit Log Service
  * 
  * Service layer for recording admin audit events.
- * This is the canonical entry point for admin audit logging.
  * 
  * @see SSOT_ADMIN_AUDIT_RULES v1.0 §3 (Audit Record Structure)
- * @see SSOT_ADMIN_AUDIT_RULES v1.0 §5 (Atomicity - deferred to STEP 2)
+ * @see SSOT_ADMIN_AUDIT_RULES v1.0 §5 (Atomicity)
  * 
  * RULES:
  * - Accepts AdminContext (from resolveAdminContext)
  * - Uses typed action codes (from adminAuditActions.ts)
  * - THROWS on failure (no fire-and-forget)
- * - Atomicity with mutations is deferred to STEP 2
  * 
- * USAGE:
+ * ATOMICITY (SSOT §5.1):
+ * For mutations that require atomic audit logging, use `adminAtomicMutation()`
+ * from `@/lib/audit/adminAtomic` instead of calling `logAdminAction()` directly.
+ * 
+ * The functions in this file are suitable for:
+ * - Logging rejected actions (validation failures before mutation)
+ * - Standalone audit records not tied to mutations
+ * 
+ * USAGE (non-atomic):
  * ```typescript
- * import { logAdminAction } from '@/lib/audit/adminAuditLog';
- * import type { AdminContext } from '@/lib/auth/resolveAdminContext';
+ * import { logAdminRejection } from '@/lib/audit/adminAuditLog';
  * 
- * await logAdminAction({
+ * // For validation failures (no mutation occurred)
+ * await logAdminRejection({
  *   adminContext,
- *   action: 'ADMIN_GRANT_CREDIT',
+ *   action: 'ADMIN_GRANT_CREDIT_REJECTED',
  *   targetType: 'user',
  *   targetId: userId,
+ *   reason: 'Invalid credit code',
+ *   result: 'rejected',
+ *   errorCode: 'INVALID_CREDIT_CODE',
+ * });
+ * ```
+ * 
+ * USAGE (atomic - use adminAtomic.ts instead):
+ * ```typescript
+ * import { adminAtomicMutation } from '@/lib/audit/adminAtomic';
+ * 
+ * // For mutations that must be atomic with audit
+ * await adminAtomicMutation({
+ *   adminContext,
+ *   actionType: 'ADMIN_GRANT_CREDIT',
+ *   target: { type: 'user', id: userId },
  *   reason: 'Customer support compensation',
- *   result: 'success',
- *   metadata: { creditCode: 'EVENT_UPGRADE_500' },
+ *   mutation: async () => { ... },
+ *   rollback: async () => { ... },
  * });
  * ```
  */
@@ -127,14 +148,18 @@ export interface LogAdminRejectedParams extends Omit<LogAdminActionParams, 'resu
 /**
  * Log an admin action to the audit log
  * 
- * This is the canonical entry point for admin audit logging.
- * 
  * CRITICAL: This function THROWS on failure.
  * Admin audit is mandatory and cannot be fire-and-forget.
  * 
- * NOTE: Atomicity with mutations is deferred to STEP 2.
- * Currently this function persists the audit record but does not
- * participate in a transaction with the mutation.
+ * ATOMICITY NOTE (SSOT §5.1):
+ * This function writes audit records but does NOT provide atomicity
+ * with mutations. For mutations that require atomic audit logging:
+ * 
+ *   USE: adminAtomicMutation() from @/lib/audit/adminAtomic
+ * 
+ * This function is appropriate for:
+ * - Rejected actions (validation failures before mutation)
+ * - Standalone audit records not tied to mutations
  * 
  * @param params - Action parameters
  * @returns Created audit record

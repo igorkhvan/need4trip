@@ -14,7 +14,7 @@ export {
   isValidAdminAuditActionCode,
 } from './adminAuditActions';
 
-// Audit service
+// Audit service (non-atomic)
 export {
   logAdminAction,
   logAdminSuccess,
@@ -26,3 +26,14 @@ export {
   type AdminAuditTargetType,
   type AdminAuditRecord,
 } from './adminAuditLog';
+
+// Atomic mutations (SSOT_ADMIN_AUDIT_RULES v1.0 §5.1)
+export {
+  adminAtomicMutation,
+  logAdminValidationRejection,
+  type AdminAtomicMutationParams,
+  type AdminAtomicMutationResult,
+  type AdminMutationTarget,
+  type MutationResult,
+  type RollbackContext,
+} from './adminAtomic';
