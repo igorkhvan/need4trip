@@ -66,6 +66,7 @@ export type Database = {
           created_at: string
           credit_code: string
           id: string
+          source: string
           source_transaction_id: string
           status: string
           updated_at: string
@@ -77,6 +78,7 @@ export type Database = {
           created_at?: string
           credit_code: string
           id?: string
+          source?: string
           source_transaction_id: string
           status: string
           updated_at?: string
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           credit_code?: string
           id?: string
+          source?: string
           source_transaction_id?: string
           status?: string
           updated_at?: string
