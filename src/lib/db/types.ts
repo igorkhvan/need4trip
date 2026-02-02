@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action_type: string
+          actor_id: string
+          actor_type: string
+          created_at: string
+          error_code: string | null
+          id: number
+          metadata: Json | null
+          reason: string
+          related_entity_id: string | null
+          result: Database["public"]["Enums"]["admin_audit_result"]
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action_type: string
+          actor_id: string
+          actor_type?: string
+          created_at?: string
+          error_code?: string | null
+          id?: number
+          metadata?: Json | null
+          reason: string
+          related_entity_id?: string | null
+          result: Database["public"]["Enums"]["admin_audit_result"]
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action_type?: string
+          actor_id?: string
+          actor_type?: string
+          created_at?: string
+          error_code?: string | null
+          id?: number
+          metadata?: Json | null
+          reason?: string
+          related_entity_id?: string | null
+          result?: Database["public"]["Enums"]["admin_audit_result"]
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       billing_credits: {
         Row: {
           consumed_at: string | null
@@ -1768,6 +1813,7 @@ export type Database = {
       }
     }
     Enums: {
+      admin_audit_result: "success" | "rejected"
       club_invite_status: "pending" | "accepted" | "expired" | "cancelled"
       club_join_request_status:
         | "pending"
@@ -1917,6 +1963,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_audit_result: ["success", "rejected"],
       club_invite_status: ["pending", "accepted", "expired", "cancelled"],
       club_join_request_status: [
         "pending",

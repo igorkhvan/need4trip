@@ -245,53 +245,60 @@ This debt can be marked CLOSED when:
 **Area:** Authentication / Authorization / Audit
 **Type:** Security / Architectural debt
 **Introduced:** 2026-01-29
-**Related:** SSOT_ARCHITECTURE.md §8.3, ADR-001.1 §10.2
+**Partially Resolved:** 2026-02-02
+**Related:** SSOT_ARCHITECTURE.md §8.3, ADR-001.1 §10.2, SSOT_ADMIN_AUDIT_RULES v1.0
 
 ### Description
 
 Admin endpoints (`/api/admin/*`) use shared-secret authentication (`x-admin-secret` header) without:
 
-1. **Admin identity** — No way to distinguish which admin performed an action
-2. **Audit trail** — No logging of who accessed admin endpoints (only that they were accessed)
+1. ~~**Admin identity** — No way to distinguish which admin performed an action~~ ✅ RESOLVED
+2. ~~**Audit trail** — No logging of who accessed admin endpoints (only that they were accessed)~~ ✅ RESOLVED
 3. **Granular permissions** — All-or-nothing access; no role differentiation
 
-### Why this is debt
+### Why this was debt
 
 * Violates principle of individual accountability
 * Makes incident investigation difficult ("who did this?")
 * No path to granular admin permissions without architectural change
 * Single shared secret is a single point of compromise
 
-### Why it is acceptable short-term
+### Resolution Progress
 
-* Very limited admin surface (few endpoints, rarely used)
-* Admin access is highly restricted (secret known only to system operators)
-* No multi-admin team requiring differentiation
-* Operational simplicity prioritized for early product stage
+**2026-02-02 (Phase A1.1 STEP 1):**
 
-### Resolution Criteria
+| Item | Status | Resolution |
+|------|--------|------------|
+| Admin identity | ✅ FIXED | `AdminContext` now includes stable `actorId` (from `ADMIN_ACTOR_ID` env or default) |
+| Audit trail | ✅ FIXED | New `admin_audit_log` table with full actor attribution |
+| Granular permissions | ⚠️ DEFERRED | All-or-nothing access remains; acceptable for single-admin model |
 
-This debt should be addressed when **any** of the following becomes true:
+**Files changed:**
+- `src/lib/auth/resolveAdminContext.ts` — Extended `AdminContext` with `actorId`
+- `src/lib/audit/adminAuditActions.ts` — Canonical admin action codes
+- `src/lib/audit/adminAuditLog.ts` — Admin audit service
+- `src/lib/db/adminAuditLogRepo.ts` — Admin audit repository
+- `supabase/migrations/20260202_create_admin_audit_log.sql` — New audit table
 
-* Multiple admins need differentiated access
-* Compliance requirements mandate individual admin audit
-* Admin tooling expands significantly
-* Any incident requiring admin action attribution
+### Remaining Items
 
-### Expected resolution approach
+* Granular admin permissions (RBAC) — Deferred, not needed for single-admin model
 
-1. Define `AdminContext` type with admin identity
-2. Introduce admin authentication mechanism (e.g., admin JWT, SSO)
-3. Add admin audit log with actor identity
-4. Optionally: introduce admin roles/permissions
+### Resolution Criteria for Full Closure
+
+This debt can be marked CLOSED when:
+
+* ~~Admin identity is implemented~~ ✅
+* ~~Admin audit log exists with actor attribution~~ ✅
+* Granular permissions are implemented (optional, deferred)
 
 ### Priority
 
-Low — acceptable for current operational model
+~~Low~~ → Low — Core items resolved, granular permissions remain deferred
 
 ### Status
 
-Open
+**PARTIALLY RESOLVED** — Admin identity and audit trail implemented. Granular permissions deferred.
 
 ---
 

@@ -1,12 +1,20 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2026-01-13
+> Последнее обновление: 2026-02-02
 > PostgreSQL + Supabase
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-02-02 (Admin Audit Log)
+- **Reason**: Phase A1.1 — Admin Identity & Audit Foundation (STEP 1).
+- **Added `admin_audit_log` table** — Immutable audit trail for admin actions (SSOT_ADMIN_AUDIT_RULES v1.0 §3).
+- **Added `admin_audit_result` ENUM** — `success | rejected`.
+- **Added indexes** — actor_id, target, action_type, created_at, result.
+- **SSOT Reference**: SSOT_ADMIN_AUDIT_RULES v1.0, SSOT_ADMIN_DOMAIN v1.0 §7.
+- **Migration:** `supabase/migrations/20260202_create_admin_audit_log.sql`
 
 ### 2026-01-21 (Membership Requests v1)
 - **Reason**: Phase 8A — Backend Enablement for Membership Requests v1.
@@ -858,6 +866,53 @@ CREATE TABLE public.club_audit_log (
 - → `clubs` (club_id)
 - → `users` (actor_user_id)
 - → `users` (target_user_id)
+
+---
+
+### 5.1 `admin_audit_log` ⚡ NEW (2026-02-02)
+
+**Назначение**: Журнал аудита всех административных действий (SSOT_ADMIN_AUDIT_RULES v1.0 §3)
+
+```sql
+CREATE TABLE public.admin_audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    actor_type TEXT NOT NULL DEFAULT 'admin' CHECK (actor_type = 'admin'),
+    actor_id TEXT NOT NULL,
+    action_type TEXT NOT NULL CHECK (action_type IN (
+        'ADMIN_GRANT_CREDIT',
+        'ADMIN_EXTEND_SUBSCRIPTION',
+        'ADMIN_GRANT_CREDIT_REJECTED',
+        'ADMIN_EXTEND_SUBSCRIPTION_REJECTED'
+    )),
+    target_type TEXT NOT NULL CHECK (target_type IN ('user', 'club')),
+    target_id TEXT NOT NULL,
+    reason TEXT NOT NULL CHECK (length(trim(reason)) > 0),
+    result admin_audit_result NOT NULL,
+    metadata JSONB,
+    related_entity_id TEXT,
+    error_code TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+**Notes**:
+- ⚡ **Append-only**: No UPDATE or DELETE operations allowed (immutable audit).
+- ⚡ **Separate from club_audit_log**: Admin actions may target users without club context.
+- ⚡ **actor_id**: Stable admin identifier from `AdminContext.actorId` (not a user_id).
+- ⚡ **reason**: Human-readable justification, MANDATORY per SSOT §3.1.
+- ⚡ **ENUM**: `admin_audit_result` = `success | rejected`.
+
+**Indexes**:
+- `admin_audit_log_pkey` (PRIMARY KEY on id)
+- `idx_admin_audit_log_actor_id` (on actor_id)
+- `idx_admin_audit_log_target` (on target_type, target_id)
+- `idx_admin_audit_log_action_type` (on action_type)
+- `idx_admin_audit_log_created_at` (on created_at DESC)
+- `idx_admin_audit_log_result` (on result, created_at DESC)
+
+**RLS**: Service role only (admin-only access)
+
+**Migration**: `supabase/migrations/20260202_create_admin_audit_log.sql`
 
 ---
 

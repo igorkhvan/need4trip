@@ -1,8 +1,8 @@
 # Need4Trip — SSOT_ARCHITECTURE (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Last Updated:** 2026-01-29  
-**Version:** 5.3  
+**Last Updated:** 2026-02-02  
+**Version:** 5.4  
 **Authority:** This document is the ONLY authoritative source for architectural decisions in Need4Trip.
 
 ---
@@ -291,16 +291,30 @@ Represents internal administrative actions, NOT an end user.
 
 | Property | Value |
 |----------|-------|
-| **Resolution** | Explicit, isolated mechanism (NOT user auth resolver) |
-| **Identity** | No user identity; secret-based authentication |
+| **Resolution** | `resolveAdminContext(req)` in `lib/auth/resolveAdminContext.ts` |
+| **Identity** | Stable `actorId` (from `ADMIN_ACTOR_ID` env or `'admin-default'`) |
 | **Domains** | Admin tools (`/api/admin/*`) |
-| **Audit** | Action logged, but no user attribution |
+| **Audit** | Full attribution via `admin_audit_log` table |
 
 **Admin Context** is explicitly NOT a user:
 - MUST NOT use `resolveCurrentUser()`
 - MUST authenticate via `x-admin-secret` header
 - MUST NOT have access to user-scoped data without explicit audit
-- Identity and audit trail formalization is deferred (see ARCHITECTURAL_DEBT_LOG.md)
+- Admin actions MUST be logged to `admin_audit_log` with actor attribution
+
+**AdminContext Type (Phase 2):**
+```typescript
+interface AdminContext {
+  type: 'admin';
+  actorType: 'admin';
+  actorId: string;  // Stable, non-null
+  authenticatedVia: 'shared-secret';
+}
+```
+
+**Cross-Reference:**
+- SSOT_ADMIN_AUDIT_RULES v1.0: Audit requirements and structure
+- SSOT_ADMIN_DOMAIN v1.0: Admin scope and allowed operations
 
 **System Context**
 
@@ -587,6 +601,7 @@ A PR is non-compliant if any item is violated.
 ---
 
 ## 21. Document History (Compressed)
+- v5.4 (2026-02-02): Updated §8.3 Admin Context — Phase 2 with stable `actorId` and `admin_audit_log` attribution. Cross-referenced SSOT_ADMIN_AUDIT_RULES v1.0.
 - v5.3 (2026-01-29): Added RSC Access Rule reference in §4.2. RSC MUST call service layer directly (ADR-001.5).
 - v5.2 (2026-01-29): Added §8.3 Auth Context Types (NORMATIVE). Defined platform-level auth context taxonomy (User, Admin, System). Renumbered §8.4 Authorization. Cross-referenced ARCHITECTURAL_DEBT_LOG.md for deferred context formalization.
 - v5.1 (2026-01-27): Added §8.2 Canonical Auth Resolver (NORMATIVE). Locked `resolveCurrentUser(req?)` as the single transport-agnostic auth entry point.
