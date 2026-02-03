@@ -25,9 +25,10 @@ import { formatDateTime } from "@/lib/utils/dates";
 
 /**
  * Page states per SSOT_UI_STATES.md
- * - forbidden: 401/403 auth error (distinct from generic error)
+ * Note: forbidden state is handled by global admin gate (layout.tsx)
+ * Admin pages assume admin access is already granted.
  */
-type PageState = "loading" | "ready" | "error" | "empty" | "forbidden";
+type PageState = "loading" | "ready" | "error" | "empty";
 
 export function AdminUsersClient() {
   const [state, setState] = useState<PageState>("loading");
@@ -40,7 +41,7 @@ export function AdminUsersClient() {
   
   /**
    * Fetch users from API
-   * Handles auth errors (401/403) per SSOT_UI_STATES.md §5 (Forbidden State)
+   * Auth is handled by global admin gate (layout.tsx)
    */
   const fetchUsers = useCallback(async (cursor?: string) => {
     if (cursor) {
@@ -66,14 +67,10 @@ export function AdminUsersClient() {
       setPagination(result.data.pagination);
       setState(result.data.users.length === 0 && !cursor ? "empty" : "ready");
     } else {
-      // Handle auth errors distinctly (SSOT_UI_STATES.md §5)
-      if (result.error.code === "UNAUTHORIZED" || result.error.code === "FORBIDDEN") {
-        setError(result.error);
-        setState("forbidden");
-      } else {
-        setError(result.error);
-        setState("error");
-      }
+      // All errors (including 401/403) treated as generic error
+      // Auth is handled by global admin gate (layout.tsx)
+      setError(result.error);
+      setState("error");
     }
     
     setIsLoadingMore(false);
@@ -135,17 +132,7 @@ export function AdminUsersClient() {
         </div>
       )}
       
-      {/* Forbidden State - Auth Error (SSOT_UI_STATES.md §5) */}
-      {state === "forbidden" && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
-          <AlertCircle className="h-10 w-10 text-amber-600 mx-auto mb-3" />
-          <p className="text-sm font-medium text-amber-800">
-            You are not authorized to access Admin UI.
-          </p>
-        </div>
-      )}
-      
-      {/* Generic Error State */}
+      {/* Error State */}
       {state === "error" && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
