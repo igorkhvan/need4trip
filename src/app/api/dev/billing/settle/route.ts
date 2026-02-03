@@ -19,7 +19,9 @@ import { respondSuccess, respondError } from "@/lib/api/response";
 import { ForbiddenError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
 import { createBillingCredit } from "@/lib/db/billingCreditsRepo";
+import { activateSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { logger } from "@/lib/utils/logger";
+import type { PlanId } from "@/lib/types/billing";
 
 // ============================================================================
 // Request Schema
@@ -103,13 +105,41 @@ export async function POST(req: NextRequest) {
         }
 
       } else if (transaction.club_id && transaction.plan_id) {
-        // Club subscription settlement (existing logic)
-        // TODO: Implement club subscription activation/extension
-        logger.info("Club subscription settlement (TODO)", {
-          transactionId: transaction_id,
-          clubId: transaction.club_id,
-          planId: transaction.plan_id,
-        });
+        // PHASE_P0_1: Club subscription settlement
+        // Ref: PHASE_P0_D, ARCHITECT decision: REPLACE semantics, 30-day period
+        
+        // Idempotency: if transaction was already completed before this call, skip
+        // (transaction.status contains ORIGINAL status before step 3 update)
+        if (transaction.status === 'completed') {
+          logger.info("Subscription settlement skipped (idempotent - already completed)", {
+            transactionId: transaction_id,
+            clubId: transaction.club_id,
+            planId: transaction.plan_id,
+          });
+        } else {
+          // Calculate period: NOW → NOW + 30 days (REPLACE semantics)
+          const periodStart = new Date().toISOString();
+          const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          
+          // Activate subscription via repo (upsert with onConflict: 'club_id')
+          // graceUntil = NULL per ARCHITECT decision (admin extension logic OUT OF SCOPE)
+          const subscription = await activateSubscription(
+            transaction.club_id,
+            transaction.plan_id as PlanId,
+            periodStart,
+            periodEnd,
+            null
+          );
+          
+          logger.info("Subscription activated after settlement (PHASE_P0_1)", {
+            transactionId: transaction_id,
+            clubId: transaction.club_id,
+            planId: transaction.plan_id,
+            periodStart,
+            periodEnd,
+            subscriptionStatus: subscription.status,
+          });
+        }
       }
     }
 
