@@ -12,16 +12,14 @@
  * 3. If already completed → 200 OK (idempotent NO-OP)
  * 4. Otherwise → mark completed, issue entitlements, return 200 OK
  * 
- * Settlement logic mirrors DEV settle endpoint behavior.
+ * Phase P1.1: Refactored to use Settlement Orchestrator
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getTransactionByProviderPaymentId } from "@/lib/db/billingTransactionsRepo";
 import { getAdminDb } from "@/lib/db/client";
-import { createBillingCredit } from "@/lib/db/billingCreditsRepo";
-import { activateSubscription } from "@/lib/db/clubSubscriptionRepo";
+import { settleTransaction } from "@/lib/payments";
 import { logger } from "@/lib/utils/logger";
-import type { PlanId } from "@/lib/types/billing";
 
 // ============================================================================
 // POST Handler
@@ -67,7 +65,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Idempotency: if already completed, return success (NO-OP)
+    // 4. Capture original status for idempotency check
+    const originalStatus = transaction.status;
+
+    // 5. Idempotency: if already completed, return success (NO-OP)
     if (transaction.status === "completed") {
       logger.info("Webhook: transaction already completed (idempotent)", {
         transactionId: transaction.id,
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 5. Mark transaction as completed
+    // 6. Mark transaction as completed
     const db = getAdminDb();
     const { error: updateError } = await db
       .from("billing_transactions")
@@ -97,58 +98,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Issue entitlements (same logic as DEV settle)
-    const isOneOff = transaction.productCode === "EVENT_UPGRADE_500";
-
-    if (isOneOff && transaction.userId) {
-      // One-off credit: create billing credit
-      try {
-        const credit = await createBillingCredit({
-          userId: transaction.userId,
-          creditCode: transaction.productCode as "EVENT_UPGRADE_500",
-          sourceTransactionId: transaction.id,
-        });
-
-        logger.info("Webhook: credit issued", {
-          transactionId: transaction.id,
-          creditId: credit.id,
-          userId: transaction.userId,
-        });
-
-      } catch (error: unknown) {
-        // Idempotency: if duplicate, ignore (source_transaction_id UNIQUE constraint)
-        const err = error as { message?: string; code?: string };
-        if (err.message?.includes("duplicate") || err.code === "23505") {
-          logger.warn("Webhook: credit already issued (idempotent)", {
-            transactionId: transaction.id,
-          });
-        } else {
-          throw error;
-        }
-      }
-
-    } else if (transaction.clubId && transaction.planId) {
-      // Club subscription: activate with 30-day period (REPLACE semantics)
-      const periodStart = new Date().toISOString();
-      const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-      const subscription = await activateSubscription(
-        transaction.clubId,
-        transaction.planId as PlanId,
-        periodStart,
-        periodEnd,
-        null // graceUntil = NULL
-      );
-
-      logger.info("Webhook: subscription activated", {
-        transactionId: transaction.id,
-        clubId: transaction.clubId,
-        planId: transaction.planId,
-        periodStart,
-        periodEnd,
-        subscriptionStatus: subscription.status,
-      });
-    }
+    // 7. Issue entitlements via Settlement Orchestrator (P1.1)
+    // Update transaction status in domain object before passing to orchestrator
+    const updatedTransaction = { ...transaction, status: 'completed' as const };
+    
+    await settleTransaction(updatedTransaction, originalStatus, { caller: 'webhook' });
 
     logger.info("Webhook: transaction settled", {
       transactionId: transaction.id,
@@ -156,7 +110,7 @@ export async function POST(req: NextRequest) {
       productCode: transaction.productCode,
     });
 
-    // 7. Return success
+    // 8. Return success
     return NextResponse.json({ ok: true });
 
   } catch (error) {

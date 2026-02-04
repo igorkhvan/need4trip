@@ -11,6 +11,8 @@
  *   "transaction_id": "uuid",
  *   "status": "completed" | "failed" | "refunded"
  * }
+ * 
+ * Phase P1.1: Refactored to use Settlement Orchestrator
  */
 
 import { NextRequest } from "next/server";
@@ -18,10 +20,9 @@ import { z } from "zod";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { ForbiddenError, ValidationError, NotFoundError, InternalError } from "@/lib/errors";
 import { getAdminDb } from "@/lib/db/client";
-import { createBillingCredit } from "@/lib/db/billingCreditsRepo";
-import { activateSubscription } from "@/lib/db/clubSubscriptionRepo";
+import { settleTransaction } from "@/lib/payments";
 import { logger } from "@/lib/utils/logger";
-import type { PlanId } from "@/lib/types/billing";
+import type { BillingTransaction, PlanId, TransactionStatus, ProductCode } from "@/lib/types/billing";
 
 // ============================================================================
 // Request Schema
@@ -53,22 +54,28 @@ export async function POST(req: NextRequest) {
 
     const { transaction_id, status } = parsed.data;
 
-    // 2. Get transaction
+    // 2. Get transaction (before update to capture original status)
     const db = getAdminDb();
-    const { data: transaction, error: fetchError } = await db
+    const { data: dbTransaction, error: fetchError } = await db
       .from("billing_transactions")
       .select("*")
       .eq("id", transaction_id)
       .single();
 
-    if (fetchError || !transaction) {
+    if (fetchError || !dbTransaction) {
       throw new NotFoundError("Transaction not found");
     }
+
+    // Capture original status for idempotency check
+    const originalStatus = dbTransaction.status;
 
     // 3. Update transaction status
     const { error: updateError } = await db
       .from("billing_transactions")
-      .update({ status })
+      .update({ 
+        status,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", transaction_id);
 
     if (updateError) {
@@ -76,77 +83,33 @@ export async function POST(req: NextRequest) {
       throw new InternalError("Failed to update transaction status");
     }
 
-    // 4. Settlement logic (same as webhook would do)
+    // 4. Settlement logic via orchestrator (P1.1)
     if (status === "completed") {
-      const isOneOff = transaction.product_code === "EVENT_UPGRADE_500";
+      // Map DB row to domain type for orchestrator
+      const transaction: BillingTransaction = {
+        id: dbTransaction.id,
+        clubId: dbTransaction.club_id,
+        planId: dbTransaction.plan_id as PlanId | null,
+        userId: dbTransaction.user_id,
+        productCode: dbTransaction.product_code as ProductCode,
+        provider: dbTransaction.provider,
+        providerPaymentId: dbTransaction.provider_payment_id,
+        amount: Number(dbTransaction.amount),
+        currencyCode: dbTransaction.currency_code,
+        status: status as TransactionStatus,
+        periodStart: dbTransaction.period_start,
+        periodEnd: dbTransaction.period_end,
+        createdAt: dbTransaction.created_at,
+        updatedAt: dbTransaction.updated_at,
+      };
 
-      if (isOneOff && transaction.user_id) {
-        // Create credit (idempotent via source_transaction_id UNIQUE constraint)
-        try {
-          const credit = await createBillingCredit({
-            userId: transaction.user_id,
-            creditCode: transaction.product_code as "EVENT_UPGRADE_500", // Fixed: type cast
-            sourceTransactionId: transaction_id,
-          });
-
-          logger.info("Credit issued after settlement", {
-            transactionId: transaction_id,
-            creditId: credit.id,
-            userId: transaction.user_id,
-          });
-
-        } catch (error: any) {
-          // If duplicate (idempotency), ignore
-          if (error.message?.includes("duplicate") || error.code === "23505") {
-            logger.warn("Credit already issued (idempotent)", { transactionId: transaction_id });
-          } else {
-            throw error;
-          }
-        }
-
-      } else if (transaction.club_id && transaction.plan_id) {
-        // PHASE_P0_1: Club subscription settlement
-        // Ref: PHASE_P0_D, ARCHITECT decision: REPLACE semantics, 30-day period
-        
-        // Idempotency: if transaction was already completed before this call, skip
-        // (transaction.status contains ORIGINAL status before step 3 update)
-        if (transaction.status === 'completed') {
-          logger.info("Subscription settlement skipped (idempotent - already completed)", {
-            transactionId: transaction_id,
-            clubId: transaction.club_id,
-            planId: transaction.plan_id,
-          });
-        } else {
-          // Calculate period: NOW → NOW + 30 days (REPLACE semantics)
-          const periodStart = new Date().toISOString();
-          const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-          
-          // Activate subscription via repo (upsert with onConflict: 'club_id')
-          // graceUntil = NULL per ARCHITECT decision (admin extension logic OUT OF SCOPE)
-          const subscription = await activateSubscription(
-            transaction.club_id,
-            transaction.plan_id as PlanId,
-            periodStart,
-            periodEnd,
-            null
-          );
-          
-          logger.info("Subscription activated after settlement (PHASE_P0_1)", {
-            transactionId: transaction_id,
-            clubId: transaction.club_id,
-            planId: transaction.plan_id,
-            periodStart,
-            periodEnd,
-            subscriptionStatus: subscription.status,
-          });
-        }
-      }
+      await settleTransaction(transaction, originalStatus, { caller: 'dev_settle' });
     }
 
     logger.info("Transaction settled (DEV)", {
       transactionId: transaction_id,
       status,
-      productCode: transaction.product_code,
+      productCode: dbTransaction.product_code,
     });
 
     return respondSuccess({

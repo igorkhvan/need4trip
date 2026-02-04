@@ -8,9 +8,11 @@
  * - EVENT_UPGRADE_500 (one-off credit)
  * - CLUB_50, CLUB_500, CLUB_UNLIMITED (club subscriptions)
  * 
- * Returns: transaction details + Kaspi payment info (stub)
+ * Returns: transaction details + payment provider info
  * 
  * Protected by middleware - requires valid JWT
+ * 
+ * Phase P1.1: Refactored to use Payment Provider Abstraction
  */
 
 import { NextRequest } from "next/server";
@@ -22,6 +24,7 @@ import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
 import { getPlanById } from "@/lib/db/planRepo";
 import { getUserClubRole } from "@/lib/db/clubMemberRepo";
+import { getPaymentProvider } from "@/lib/payments";
 import { logger } from "@/lib/utils/logger";
 import type { ProductCode } from "@/lib/types/billing";
 
@@ -123,9 +126,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Create billing_transaction (pending)
+    // 5. Get payment provider (P1.1: Provider Abstraction)
+    const provider = await getPaymentProvider('kaspi');
+    
+    // 6. Create payment intent via provider
+    // Note: We need transactionId for provider, but DB generates it.
+    // So we generate provider payment ID first, then create transaction.
+    const tempTransactionId = crypto.randomUUID(); // Temporary for provider call
+    
+    const paymentIntent = await provider.createPaymentIntent({
+      transactionId: tempTransactionId, // Will be replaced with real ID
+      amount,
+      currencyCode: "KZT",
+      title,
+    });
+
+    // 7. Create billing_transaction (pending) with provider details
     const db = getAdminDb();
-    const transactionReference = generateTransactionReference();
 
     const { data: transaction, error: txError } = await db
       .from("billing_transactions")
@@ -137,8 +154,8 @@ export async function POST(req: NextRequest) {
         amount: amount,
         currency_code: "KZT",
         status: "pending",
-        provider: "kaspi",
-        provider_payment_id: transactionReference,
+        provider: paymentIntent.provider,
+        provider_payment_id: paymentIntent.providerPaymentId,
       })
       .select()
       .single();
@@ -148,26 +165,31 @@ export async function POST(req: NextRequest) {
       throw new InternalError("Failed to create transaction");
     }
 
-    // 6. Generate Kaspi payment details (STUB)
-    const kaspiPayment = generateKaspiPaymentStub({
-      transactionId: transaction.id,
-      transactionReference,
-      amount,                         // ⚡ Normalized
-      title,
-    });
-
     logger.info("Purchase intent created", {
       transactionId: transaction.id,
       productCode: product_code,
-      amount,                         // ⚡ Normalized
+      amount,
+      provider: paymentIntent.provider,
       userId: currentUser.id,
     });
 
-    // 7. Return transaction + payment details
+    // 8. Build payment response (compatible with existing format)
+    const paymentResponse = {
+      provider: paymentIntent.provider,
+      invoice_url: paymentIntent.paymentUrl,
+      qr_payload: paymentIntent.payload?.qr_payload,
+      instructions: paymentIntent.instructions,
+      dev_note: paymentIntent.payload?.dev_note?.toString().replace(
+        tempTransactionId,
+        transaction.id
+      ),
+    };
+
+    // 9. Return transaction + payment details
     return respondSuccess({
       transaction_id: transaction.id,
-      transaction_reference: transactionReference,
-      payment: kaspiPayment,
+      transaction_reference: paymentIntent.providerPaymentId,
+      payment: paymentResponse,
     });
 
   } catch (error) {
@@ -177,46 +199,6 @@ export async function POST(req: NextRequest) {
 }
 
 // ============================================================================
-// Helpers: Kaspi Stub
+// Note: Kaspi stub helpers moved to src/lib/payments/providers/stubProvider.ts
+// as part of Phase P1.1 Payment Provider Abstraction
 // ============================================================================
-
-function generateTransactionReference(): string {
-  return `KASPI_${Date.now()}_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-}
-
-interface KaspiPaymentStub {
-  provider: "kaspi";
-  invoice_url?: string;
-  qr_payload?: string;
-  instructions: string;
-  dev_note: string;
-}
-
-function generateKaspiPaymentStub(params: {
-  transactionId: string;
-  transactionReference: string;
-  amount: number;                     // ⚡ Normalized
-  title: string;
-}): KaspiPaymentStub {
-  const { transactionId, transactionReference, amount, title } = params;
-
-  return {
-    provider: "kaspi",
-    invoice_url: `https://kaspi.kz/pay/${transactionReference}`, // STUB URL
-    qr_payload: `kaspi://pay/${transactionReference}`, // STUB QR
-    instructions: [
-      `1. Откройте приложение Kaspi.kz`,
-      `2. Перейдите в раздел "Платежи"`,
-      `3. Найдите платёж: ${title}`,
-      `4. Оплатите ${amount} ₸`,          // ⚡ Normalized
-      ``,
-      `Или используйте QR-код для быстрой оплаты.`,
-    ].join("\n"),
-    dev_note: [
-      `DEV MODE: This is a stub payment.`,
-      `To complete: POST /api/dev/billing/settle`,
-      `Body: { "transaction_id": "${transactionId}", "status": "completed" }`,
-    ].join(" "),
-  };
-}
-
