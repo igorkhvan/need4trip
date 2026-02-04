@@ -2,6 +2,7 @@
 
 **Status:** ✅ COMPLETED  
 **Date:** 2026-02-04  
+**Updated:** P1.2A Hotfix  
 **Type:** IMPLEMENTATION (BACKEND ONLY)  
 **Author:** AI Executor (per WORKING CONTRACT — ARCHITECT × EXECUTOR PROCESS)
 
@@ -47,13 +48,25 @@ This enables end-to-end testing of the payment flow without external provider in
 | Mode | Provider | Behavior | Use Case |
 |------|----------|----------|----------|
 | `"stub"` | StubProvider | Creates pending transaction, manual settlement via `/api/dev/billing/settle` | DEV testing with manual control |
-| `"simulated"` | SimulatedProvider | Creates transaction and immediately auto-settles | End-to-end flow testing |
+| `"simulated"` | SimulatedProvider | Creates transaction and immediately auto-settles (provider-internal) | End-to-end flow testing |
 
 ### Server-Side Only
 
 - Environment variable is read only on the server (Node.js runtime)
 - NOT user-controlled (cannot be passed via request)
 - Selection happens in `getPaymentProvider()` function
+
+### Production Guard (P1.2A)
+
+**SAFETY:** Simulated mode is **FORBIDDEN** in production.
+
+```typescript
+if (mode === 'simulated' && process.env.NODE_ENV === 'production') {
+  throw new SimulatedModeInProductionError();
+}
+```
+
+If `PAYMENT_PROVIDER_MODE=simulated` is set in production, the system will throw an error to prevent accidental misuse.
 
 ---
 
@@ -69,10 +82,10 @@ This enables end-to-end testing of the payment flow without external provider in
 
 | File | Change |
 |------|--------|
-| `src/lib/payments/providers/paymentProvider.ts` | Added `shouldAutoSettle` to output, env-based provider selection |
+| `src/lib/payments/providers/paymentProvider.ts` | Env-based provider selection, production guard, extended input for settlement context |
 | `src/lib/payments/settlementOrchestrator.ts` | Added `simulated_provider` to caller type |
 | `src/lib/payments/index.ts` | Updated exports, added `PaymentProviderMode` type |
-| `src/app/api/billing/purchase-intent/route.ts` | Added auto-settle logic for simulation mode |
+| `src/app/api/billing/purchase-intent/route.ts` | Restructured flow: create transaction FIRST, then call provider |
 
 ---
 
@@ -85,12 +98,14 @@ This enables end-to-end testing of the payment flow without external provider in
 │  Frontend    │───▶│ POST /api/billing/       │───▶│  billing_transactions   │
 │  Paywall     │    │   purchase-intent        │    │  status='pending'       │
 └──────────────┘    │   ↓                      │    │  provider='kaspi'       │
-                    │ getPaymentProvider()     │    └─────────────────────────┘
-                    │   ↓ (PAYMENT_PROVIDER_   │
-                    │      MODE='stub')        │
+                    │ 1. Create transaction    │    └─────────────────────────┘
+                    │    (status='pending')    │
                     │   ↓                      │
-                    │ StubProvider             │
-                    │   .createPaymentIntent() │
+                    │ 2. StubProvider          │
+                    │    .createPaymentIntent()│
+                    │   ↓                      │
+                    │ 3. Update provider_      │
+                    │    payment_id            │
                     └──────────────────────────┘
                                                               │
                                 Manual settlement required:   │
@@ -99,27 +114,24 @@ This enables end-to-end testing of the payment flow without external provider in
                                 settleTransaction()           │
 ```
 
-### 5.2 Purchase Intent in Simulated Mode (Auto-Settle)
+### 5.2 Purchase Intent in Simulated Mode (Provider-Internal Settlement)
 
 ```
 ┌──────────────┐    ┌──────────────────────────┐    ┌─────────────────────────┐
 │  Frontend    │───▶│ POST /api/billing/       │───▶│  billing_transactions   │
 │  Paywall     │    │   purchase-intent        │    │  status='pending'→      │
 └──────────────┘    │   ↓                      │    │  status='completed'     │
-                    │ getPaymentProvider()     │    │  provider='simulated'   │
-                    │   ↓ (PAYMENT_PROVIDER_   │    └─────────────────────────┘
-                    │      MODE='simulated')   │              │
+                    │ 1. Create transaction    │    │  provider='simulated'   │
+                    │    (status='pending')    │    └─────────────────────────┘
                     │   ↓                      │              │
-                    │ SimulatedProvider        │              │
-                    │   .createPaymentIntent() │              │
-                    │   (shouldAutoSettle=true)│              │
-                    │   ↓                      │              │
-                    │ [Auto-settle flow]       │              │
-                    │   1. Update status       │◀─────────────┘
-                    │      → 'completed'       │
-                    │   2. settleTransaction() │
-                    │      ↓                   │
-                    │   Issue entitlement      │
+                    │ 2. SimulatedProvider     │              │
+                    │    .createPaymentIntent()│              │
+                    │    [PROVIDER-INTERNAL:]  │              │
+                    │    a. markTransaction    │◀─────────────┘
+                    │       Completed()        │
+                    │    b. settleTransaction()│
+                    │   ↓                      │
+                    │ Entitlement Issued       │
                     └──────────────────────────┘
                               │
                               ▼
@@ -129,6 +141,8 @@ This enables end-to-end testing of the payment flow without external provider in
                     │ - OR Subscription (active)│
                     └───────────────────────────┘
 ```
+
+**Key difference (P1.2A):** Settlement is now entirely **provider-internal**. The API route does NOT contain any settlement logic.
 
 ---
 
@@ -141,9 +155,9 @@ This enables end-to-end testing of the payment flow without external provider in
 | `providerId` | `'kaspi'` | `'simulated'` |
 | `providerPaymentId` format | `KASPI_{ts}_{random}` | `SIM_{ts}_{random}` |
 | `paymentUrl` | `https://kaspi.kz/pay/{id}` | `undefined` |
-| `shouldAutoSettle` | `undefined` (false) | `true` |
-| Settlement | Manual via DEV endpoint | Automatic in request |
+| Settlement | Manual via DEV endpoint | **Provider-internal** (P1.2A) |
 | Entitlement | After manual settle | Immediate |
+| Production allowed | ✅ Yes | ❌ No (guard throws error) |
 
 ### 6.2 purchase-intent Response Shape
 
@@ -161,7 +175,7 @@ This enables end-to-end testing of the payment flow without external provider in
 
 | Scenario | Behavior |
 |----------|----------|
-| First purchase-intent call (simulated) | Creates transaction → auto-settle → entitlement issued |
+| First purchase-intent call (simulated) | Creates transaction → provider-internal settle → entitlement issued |
 | Same transaction settle again (webhook) | `settleTransaction()` returns `idempotentSkip: true` |
 | Credit idempotency | `source_transaction_id` UNIQUE constraint (DB level) |
 | Subscription idempotency | Status check + upsert on `club_id` |
@@ -170,14 +184,18 @@ This enables end-to-end testing of the payment flow without external provider in
 
 ## 7. Technical Details
 
-### 7.1 Provider Selection Logic
+### 7.1 Provider Selection Logic (with Production Guard)
 
 ```typescript
-// In getPaymentProvider()
 function getPaymentProviderMode(): PaymentProviderMode {
   const mode = process.env.PAYMENT_PROVIDER_MODE;
+  const isProduction = process.env.NODE_ENV === 'production';
   
   if (mode === 'simulated') {
+    // SAFETY GUARD: Simulated mode must NOT run in production
+    if (isProduction) {
+      throw new SimulatedModeInProductionError();
+    }
     return 'simulated';
   }
   
@@ -186,40 +204,55 @@ function getPaymentProviderMode(): PaymentProviderMode {
 }
 ```
 
-### 7.2 Auto-Settlement Logic
+### 7.2 Provider-Internal Settlement (P1.2A)
+
+Settlement is now **entirely inside** `SimulatedProvider.createPaymentIntent()`:
 
 ```typescript
-// In purchase-intent route, after transaction creation
-if (paymentIntent.shouldAutoSettle === true) {
-  // 1. Update transaction status to 'completed'
-  await db.from("billing_transactions")
-    .update({ status: "completed" })
-    .eq("id", transaction.id);
+// Inside SimulatedProvider.createPaymentIntent()
+async createPaymentIntent(input: CreatePaymentIntentInput): Promise<CreatePaymentIntentOutput> {
+  // 1. Generate providerPaymentId
+  const providerPaymentId = this.generateProviderPaymentId();
   
-  // 2. Settle via Settlement Orchestrator
-  await settleTransaction(
-    transactionForSettlement,
-    "pending",  // originalStatus
-    { caller: "simulated_provider" }
-  );
+  // 2. Mark transaction completed via canonical repo function
+  await markTransactionCompleted(input.transactionId, providerPaymentId);
+  
+  // 3. Build BillingTransaction from input.transactionContext
+  const transactionForSettlement: BillingTransaction = { ... };
+  
+  // 4. Call settleTransaction via SettlementOrchestrator
+  await settleTransaction(transactionForSettlement, "pending", { caller: "simulated_provider" });
+  
+  // 5. Return output
+  return { provider: 'simulated', providerPaymentId, ... };
 }
 ```
 
-### 7.3 SimulatedProvider Output
+**API route has NO settlement logic.** This ensures:
+- Clean separation of concerns
+- Provider contract doesn't leak policy
+- No direct DB updates in API route (except transaction creation)
+
+### 7.3 Extended Input for Settlement Context
 
 ```typescript
-{
-  provider: 'simulated',
-  providerPaymentId: 'SIM_1738665600000_A7BX3K2',
-  paymentUrl: undefined,  // No external URL
-  payload: {
-    simulation_note: "This is a simulated payment. Auto-settling immediately.",
-    auto_settle: true,
-  },
-  instructions: "[SIMULATION MODE]\n\nThis payment is simulated...",
-  shouldAutoSettle: true,
+interface CreatePaymentIntentInput {
+  transactionId: string;       // The REAL transaction ID (after DB insert)
+  amount: number;
+  currencyCode: string;
+  title: string;
+  
+  // P1.2A: Required for SimulatedProvider settlement
+  transactionContext?: {
+    clubId: string | null;
+    userId: string | null;
+    productCode: string;
+    planId: string | null;
+  };
 }
 ```
+
+StubProvider ignores `transactionContext`. SimulatedProvider requires it.
 
 ---
 
@@ -272,6 +305,8 @@ npm run build     # ✅ Passed
 - ✅ **API response shape unchanged** — same fields, different values
 - ✅ **Server-side only env switch** — not user-controlled
 - ✅ **Idempotent settlement** — via SettlementOrchestrator guarantees
+- ✅ **Production guard** — throws error if simulated in prod (P1.2A)
+- ✅ **No direct DB updates in route** — settlement is provider-internal (P1.2A)
 
 ---
 
@@ -293,7 +328,7 @@ curl -X POST http://localhost:3000/api/billing/purchase-intent \
 ### Test Simulated Mode
 
 ```bash
-# Set env var
+# Set env var (ONLY in non-production!)
 PAYMENT_PROVIDER_MODE=simulated npm run dev
 
 # Or in .env.local:
@@ -309,9 +344,29 @@ curl -X POST http://localhost:3000/api/billing/purchase-intent \
 # Credit is already issued (status='available')
 ```
 
+### Test Production Guard
+
+```bash
+# If PAYMENT_PROVIDER_MODE=simulated in production environment:
+# → Throws SimulatedModeInProductionError
+# → Request fails with 500 Internal Server Error
+# → Log: "PAYMENT_PROVIDER_MODE='simulated' is NOT allowed in production"
+```
+
 ---
 
-## 12. Next Steps
+## 12. P1.2A Hotfix Summary
+
+| Issue | Fix |
+|-------|-----|
+| `shouldAutoSettle` leaked policy into provider interface | **Removed** from `CreatePaymentIntentOutput` |
+| Direct DB update in purchase-intent route | **Moved** settlement into `SimulatedProvider` |
+| No production safety | **Added** `SimulatedModeInProductionError` guard |
+| Flow order mismatch | **Restructured** to create transaction FIRST, then call provider |
+
+---
+
+## 13. Next Steps
 
 | Phase | Task | Dependency |
 |-------|------|------------|

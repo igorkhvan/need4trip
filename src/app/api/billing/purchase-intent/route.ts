@@ -13,6 +13,7 @@
  * Protected by middleware - requires valid JWT
  * 
  * Phase P1.1: Refactored to use Payment Provider Abstraction
+ * Phase P1.2A: Settlement moved into provider (no direct DB updates in route)
  */
 
 import { NextRequest } from "next/server";
@@ -24,9 +25,9 @@ import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
 import { getPlanById } from "@/lib/db/planRepo";
 import { getUserClubRole } from "@/lib/db/clubMemberRepo";
-import { getPaymentProvider, settleTransaction } from "@/lib/payments";
+import { getPaymentProvider } from "@/lib/payments";
 import { logger } from "@/lib/utils/logger";
-import type { ProductCode, BillingTransaction, PlanId } from "@/lib/types/billing";
+import type { ProductCode } from "@/lib/types/billing";
 
 // ============================================================================
 // Request Schema
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
     // 4. Load product details and calculate amount
     let amount: number;
     let title: string;
+    let planId: string | null = null;
 
     if (isOneOff) {
       // One-off credit from billing_products
@@ -94,7 +96,7 @@ export async function POST(req: NextRequest) {
 
     } else {
       // Club subscription from club_plans
-      const planId = product_code.toLowerCase().replace("club_", "club_");
+      planId = product_code.toLowerCase().replace("club_", "club_");
       const plan = await getPlanById(planId as any);
 
       if (!plan) {
@@ -126,23 +128,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Get payment provider (P1.2: Env-based selection via PAYMENT_PROVIDER_MODE)
-    // Provider selection is automatic based on env var (stub/simulated)
+    // 5. Get payment provider (P1.2A: Env-based selection with production guard)
     const provider = await getPaymentProvider();
-    
-    // 6. Create payment intent via provider
-    // Note: We need transactionId for provider, but DB generates it.
-    // So we generate provider payment ID first, then create transaction.
-    const tempTransactionId = crypto.randomUUID(); // Temporary for provider call
-    
-    const paymentIntent = await provider.createPaymentIntent({
-      transactionId: tempTransactionId, // Will be replaced with real ID
-      amount,
-      currencyCode: "KZT",
-      title,
-    });
 
-    // 7. Create billing_transaction (pending) with provider details
+    // 6. Create billing_transaction FIRST with status='pending'
+    // P1.2A: Transaction must exist before calling provider
+    // provider_payment_id will be set by provider (for SimulatedProvider via markTransactionCompleted)
     const db = getAdminDb();
 
     const { data: transaction, error: txError } = await db
@@ -151,12 +142,12 @@ export async function POST(req: NextRequest) {
         club_id: context?.clubId ?? null,
         user_id: isOneOff ? currentUser.id : null,
         product_code: product_code as ProductCode,
-        plan_id: isClub ? product_code.toLowerCase().replace("club_", "club_") : null,
+        plan_id: planId,
         amount: amount,
         currency_code: "KZT",
         status: "pending",
-        provider: paymentIntent.provider,
-        provider_payment_id: paymentIntent.providerPaymentId,
+        provider: provider.providerId,
+        provider_payment_id: null, // Will be set by provider or updated after
       })
       .select()
       .single();
@@ -166,87 +157,66 @@ export async function POST(req: NextRequest) {
       throw new InternalError("Failed to create transaction");
     }
 
-    logger.info("Purchase intent created", {
+    logger.info("Purchase intent: transaction created", {
       transactionId: transaction.id,
       productCode: product_code,
       amount,
-      provider: paymentIntent.provider,
+      provider: provider.providerId,
       userId: currentUser.id,
-      autoSettle: paymentIntent.shouldAutoSettle ?? false,
     });
 
-    // P1.2: Auto-settlement for SimulatedProvider
-    // When shouldAutoSettle is true, immediately settle the transaction
-    // without waiting for external webhook/callback.
-    if (paymentIntent.shouldAutoSettle === true) {
-      logger.info("SimulatedProvider: Auto-settling transaction", {
-        transactionId: transaction.id,
-      });
-      
-      // Step 1: Update transaction status to 'completed'
+    // 7. Call provider.createPaymentIntent() with real transaction ID
+    // P1.2A: For SimulatedProvider, this will also settle the transaction internally
+    const paymentIntent = await provider.createPaymentIntent({
+      transactionId: transaction.id,
+      amount,
+      currencyCode: "KZT",
+      title,
+      // P1.2A: Transaction context for provider-internal settlement
+      transactionContext: {
+        clubId: context?.clubId ?? null,
+        userId: isOneOff ? currentUser.id : null,
+        productCode: product_code,
+        planId: planId,
+      },
+    });
+
+    // 8. For StubProvider: update transaction with providerPaymentId
+    // (SimulatedProvider already updated via markTransactionCompleted)
+    if (provider.providerId !== 'simulated' && paymentIntent.providerPaymentId) {
       const { error: updateError } = await db
         .from("billing_transactions")
-        .update({ 
-          status: "completed",
+        .update({
+          provider_payment_id: paymentIntent.providerPaymentId,
           updated_at: new Date().toISOString(),
         })
         .eq("id", transaction.id);
       
       if (updateError) {
-        logger.error("SimulatedProvider: Failed to update transaction status", {
+        logger.warn("Failed to update provider_payment_id", {
           transactionId: transaction.id,
           error: updateError,
         });
-        throw new InternalError("Failed to complete simulated payment");
+        // Non-fatal: transaction exists, just missing provider_payment_id
       }
-      
-      // Step 2: Settle the transaction via Settlement Orchestrator
-      // Map DB row to BillingTransaction type for settleTransaction()
-      const transactionForSettlement: BillingTransaction = {
-        id: transaction.id,
-        clubId: transaction.club_id ?? null,
-        userId: transaction.user_id ?? null,
-        productCode: transaction.product_code as ProductCode,
-        planId: (transaction.plan_id as PlanId | null) ?? null,
-        amount: Number(transaction.amount),
-        currencyCode: transaction.currency_code,
-        status: "completed", // Updated status
-        provider: transaction.provider,
-        providerPaymentId: transaction.provider_payment_id ?? null,
-        periodStart: transaction.period_start ?? null,
-        periodEnd: transaction.period_end ?? null,
-        createdAt: transaction.created_at,
-        updatedAt: new Date().toISOString(),
-      };
-      
-      // originalStatus = 'pending' because the transaction was just created
-      const settlementResult = await settleTransaction(
-        transactionForSettlement,
-        "pending", // Original status before our update
-        { caller: "simulated_provider" as const }
-      );
-      
-      logger.info("SimulatedProvider: Settlement complete", {
-        transactionId: transaction.id,
-        settled: settlementResult.settled,
-        entitlementType: settlementResult.entitlementType,
-        idempotentSkip: settlementResult.idempotentSkip,
-      });
     }
 
-    // 8. Build payment response (compatible with existing format)
+    logger.info("Purchase intent completed", {
+      transactionId: transaction.id,
+      provider: paymentIntent.provider,
+      providerPaymentId: paymentIntent.providerPaymentId,
+    });
+
+    // 9. Build payment response (compatible with existing format)
     const paymentResponse = {
       provider: paymentIntent.provider,
       invoice_url: paymentIntent.paymentUrl,
       qr_payload: paymentIntent.payload?.qr_payload,
       instructions: paymentIntent.instructions,
-      dev_note: paymentIntent.payload?.dev_note?.toString().replace(
-        tempTransactionId,
-        transaction.id
-      ),
+      dev_note: paymentIntent.payload?.dev_note,
     };
 
-    // 9. Return transaction + payment details
+    // 10. Return transaction + payment details
     return respondSuccess({
       transaction_id: transaction.id,
       transaction_reference: paymentIntent.providerPaymentId,
@@ -260,6 +230,7 @@ export async function POST(req: NextRequest) {
 }
 
 // ============================================================================
-// Note: Kaspi stub helpers moved to src/lib/payments/providers/stubProvider.ts
-// as part of Phase P1.1 Payment Provider Abstraction
+// Note: Settlement logic is now provider-internal (P1.2A)
+// - StubProvider: No settlement (manual via /api/dev/billing/settle)
+// - SimulatedProvider: Settlement inside createPaymentIntent()
 // ============================================================================

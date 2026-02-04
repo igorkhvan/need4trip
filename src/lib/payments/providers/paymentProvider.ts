@@ -18,10 +18,10 @@ import "server-only";
 /**
  * Input for creating a payment intent
  * 
- * Note: This is intentionally minimal. Do NOT extend without explicit GO.
+ * Note: Extended in P1.2A to support provider-internal settlement.
  */
 export interface CreatePaymentIntentInput {
-  /** Transaction ID (UUID) - used for reference */
+  /** Transaction ID (UUID) - the REAL transaction ID after DB insert */
   transactionId: string;
   
   /** Amount in currency units */
@@ -32,12 +32,28 @@ export interface CreatePaymentIntentInput {
   
   /** Human-readable payment title */
   title: string;
+  
+  /**
+   * Transaction context for provider-internal settlement (P1.2A)
+   * 
+   * Required for SimulatedProvider to perform settlement.
+   * StubProvider ignores this field.
+   */
+  transactionContext?: {
+    clubId: string | null;
+    userId: string | null;
+    productCode: string;
+    planId: string | null;
+  };
 }
 
 /**
  * Output from creating a payment intent
  * 
  * Note: This is intentionally minimal. Do NOT extend without explicit GO.
+ * 
+ * P1.2A: Removed shouldAutoSettle - settlement is provider-internal behavior,
+ * not a signal to the API layer.
  */
 export interface CreatePaymentIntentOutput {
   /** Provider identifier (e.g., "kaspi", "simulated") */
@@ -54,16 +70,6 @@ export interface CreatePaymentIntentOutput {
   
   /** Human-readable instructions */
   instructions: string;
-  
-  /**
-   * Signal for immediate settlement (P1.2)
-   * 
-   * When true, the API layer should immediately settle the transaction
-   * after creation, without waiting for external webhook/callback.
-   * 
-   * Used by SimulatedProvider for auto-settlement.
-   */
-  shouldAutoSettle?: boolean;
 }
 
 // ============================================================================
@@ -133,14 +139,36 @@ export type ProviderId = 'kaspi' | 'simulated';
 export type PaymentProviderMode = 'stub' | 'simulated';
 
 /**
+ * Error thrown when simulated mode is attempted in production
+ */
+export class SimulatedModeInProductionError extends Error {
+  constructor() {
+    super(
+      "PAYMENT_PROVIDER_MODE='simulated' is NOT allowed in production. " +
+      "This is a safety guard to prevent accidental use of simulation mode in prod."
+    );
+    this.name = "SimulatedModeInProductionError";
+  }
+}
+
+/**
  * Get current payment provider mode from environment
  * 
+ * SAFETY GUARD (P1.2A): Simulated mode is FORBIDDEN in production.
+ * If PAYMENT_PROVIDER_MODE='simulated' and NODE_ENV='production', throws error.
+ * 
  * @returns PaymentProviderMode based on PAYMENT_PROVIDER_MODE env var
+ * @throws SimulatedModeInProductionError if simulated mode in production
  */
 function getPaymentProviderMode(): PaymentProviderMode {
   const mode = process.env.PAYMENT_PROVIDER_MODE;
+  const isProduction = process.env.NODE_ENV === 'production';
   
   if (mode === 'simulated') {
+    // SAFETY GUARD: Simulated mode must NOT run in production
+    if (isProduction) {
+      throw new SimulatedModeInProductionError();
+    }
     return 'simulated';
   }
   
