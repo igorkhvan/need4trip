@@ -40,7 +40,7 @@ export interface CreatePaymentIntentInput {
  * Note: This is intentionally minimal. Do NOT extend without explicit GO.
  */
 export interface CreatePaymentIntentOutput {
-  /** Provider identifier (e.g., "kaspi", "simulation") */
+  /** Provider identifier (e.g., "kaspi", "simulated") */
   provider: string;
   
   /** Provider-specific payment reference ID */
@@ -54,6 +54,16 @@ export interface CreatePaymentIntentOutput {
   
   /** Human-readable instructions */
   instructions: string;
+  
+  /**
+   * Signal for immediate settlement (P1.2)
+   * 
+   * When true, the API layer should immediately settle the transaction
+   * after creation, without waiting for external webhook/callback.
+   * 
+   * Used by SimulatedProvider for auto-settlement.
+   */
+  shouldAutoSettle?: boolean;
 }
 
 // ============================================================================
@@ -95,26 +105,83 @@ export interface PaymentProvider {
 }
 
 // ============================================================================
-// Provider Registry (for future use)
+// Provider Registry (P1.2: Env-based selection)
 // ============================================================================
 
 /**
  * Available provider IDs
  * 
- * Current: Only 'kaspi' (stub)
- * Future: 'simulation', 'kaspi_real' (OUT OF SCOPE for P1.1)
+ * Current (P1.2):
+ * - 'kaspi' (stub provider for DEV testing)
+ * - 'simulated' (auto-settle provider for simulation mode)
+ * 
+ * Future: 'kaspi_real' (OUT OF SCOPE)
  */
-export type ProviderId = 'kaspi';
+export type ProviderId = 'kaspi' | 'simulated';
 
 /**
- * Get provider instance by ID
+ * Payment provider mode (env-based)
  * 
- * Note: For P1.1, this always returns StubProvider.
- * Provider selection logic will be added in future phases.
+ * Controlled by PAYMENT_PROVIDER_MODE env variable.
+ * 
+ * Values:
+ * - "stub" (default): Use StubProvider (manual settlement via DEV endpoint)
+ * - "simulated": Use SimulatedProvider (auto-settlement, no external interaction)
+ * 
+ * Server-side only. NOT user-controlled.
  */
-export async function getPaymentProvider(providerId: ProviderId): Promise<PaymentProvider> {
-  // P1.1: Only stub provider exists
-  // Future phases will add provider selection logic
+export type PaymentProviderMode = 'stub' | 'simulated';
+
+/**
+ * Get current payment provider mode from environment
+ * 
+ * @returns PaymentProviderMode based on PAYMENT_PROVIDER_MODE env var
+ */
+function getPaymentProviderMode(): PaymentProviderMode {
+  const mode = process.env.PAYMENT_PROVIDER_MODE;
+  
+  if (mode === 'simulated') {
+    return 'simulated';
+  }
+  
+  // Default to stub mode
+  return 'stub';
+}
+
+/**
+ * Get provider instance (env-based selection)
+ * 
+ * Provider selection is based on PAYMENT_PROVIDER_MODE env variable:
+ * - "stub" (default) → StubProvider
+ * - "simulated" → SimulatedProvider
+ * 
+ * @param providerId - Optional override (for future use). If not provided,
+ *                     selection is based on env var.
+ * @returns PaymentProvider instance
+ */
+export async function getPaymentProvider(providerId?: ProviderId): Promise<PaymentProvider> {
+  // If explicit providerId is passed, use it (for testing/future use)
+  const effectiveProviderId = providerId ?? mapModeToProviderId(getPaymentProviderMode());
+  
+  if (effectiveProviderId === 'simulated') {
+    const { SimulatedProvider } = await import('./simulatedProvider');
+    return new SimulatedProvider();
+  }
+  
+  // Default: stub provider
   const { StubProvider } = await import('./stubProvider');
   return new StubProvider();
+}
+
+/**
+ * Map PaymentProviderMode to ProviderId
+ */
+function mapModeToProviderId(mode: PaymentProviderMode): ProviderId {
+  switch (mode) {
+    case 'simulated':
+      return 'simulated';
+    case 'stub':
+    default:
+      return 'kaspi';
+  }
 }

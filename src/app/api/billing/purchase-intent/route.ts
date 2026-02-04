@@ -24,9 +24,9 @@ import { getAdminDb } from "@/lib/db/client";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
 import { getPlanById } from "@/lib/db/planRepo";
 import { getUserClubRole } from "@/lib/db/clubMemberRepo";
-import { getPaymentProvider } from "@/lib/payments";
+import { getPaymentProvider, settleTransaction } from "@/lib/payments";
 import { logger } from "@/lib/utils/logger";
-import type { ProductCode } from "@/lib/types/billing";
+import type { ProductCode, BillingTransaction, PlanId } from "@/lib/types/billing";
 
 // ============================================================================
 // Request Schema
@@ -126,8 +126,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Get payment provider (P1.1: Provider Abstraction)
-    const provider = await getPaymentProvider('kaspi');
+    // 5. Get payment provider (P1.2: Env-based selection via PAYMENT_PROVIDER_MODE)
+    // Provider selection is automatic based on env var (stub/simulated)
+    const provider = await getPaymentProvider();
     
     // 6. Create payment intent via provider
     // Note: We need transactionId for provider, but DB generates it.
@@ -171,7 +172,67 @@ export async function POST(req: NextRequest) {
       amount,
       provider: paymentIntent.provider,
       userId: currentUser.id,
+      autoSettle: paymentIntent.shouldAutoSettle ?? false,
     });
+
+    // P1.2: Auto-settlement for SimulatedProvider
+    // When shouldAutoSettle is true, immediately settle the transaction
+    // without waiting for external webhook/callback.
+    if (paymentIntent.shouldAutoSettle === true) {
+      logger.info("SimulatedProvider: Auto-settling transaction", {
+        transactionId: transaction.id,
+      });
+      
+      // Step 1: Update transaction status to 'completed'
+      const { error: updateError } = await db
+        .from("billing_transactions")
+        .update({ 
+          status: "completed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", transaction.id);
+      
+      if (updateError) {
+        logger.error("SimulatedProvider: Failed to update transaction status", {
+          transactionId: transaction.id,
+          error: updateError,
+        });
+        throw new InternalError("Failed to complete simulated payment");
+      }
+      
+      // Step 2: Settle the transaction via Settlement Orchestrator
+      // Map DB row to BillingTransaction type for settleTransaction()
+      const transactionForSettlement: BillingTransaction = {
+        id: transaction.id,
+        clubId: transaction.club_id ?? null,
+        userId: transaction.user_id ?? null,
+        productCode: transaction.product_code as ProductCode,
+        planId: (transaction.plan_id as PlanId | null) ?? null,
+        amount: Number(transaction.amount),
+        currencyCode: transaction.currency_code,
+        status: "completed", // Updated status
+        provider: transaction.provider,
+        providerPaymentId: transaction.provider_payment_id ?? null,
+        periodStart: transaction.period_start ?? null,
+        periodEnd: transaction.period_end ?? null,
+        createdAt: transaction.created_at,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // originalStatus = 'pending' because the transaction was just created
+      const settlementResult = await settleTransaction(
+        transactionForSettlement,
+        "pending", // Original status before our update
+        { caller: "simulated_provider" as const }
+      );
+      
+      logger.info("SimulatedProvider: Settlement complete", {
+        transactionId: transaction.id,
+        settled: settlementResult.settled,
+        entitlementType: settlementResult.entitlementType,
+        idempotentSkip: settlementResult.idempotentSkip,
+      });
+    }
 
     // 8. Build payment response (compatible with existing format)
     const paymentResponse = {

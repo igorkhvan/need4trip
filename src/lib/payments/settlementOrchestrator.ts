@@ -49,7 +49,7 @@ export interface SettlementResult {
  */
 interface SettlementContext {
   /** Caller identifier for logging */
-  caller: 'webhook' | 'dev_settle';
+  caller: 'webhook' | 'dev_settle' | 'simulated_provider';
 }
 
 // ============================================================================
