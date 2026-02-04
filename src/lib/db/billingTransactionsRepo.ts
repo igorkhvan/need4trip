@@ -173,3 +173,34 @@ export async function getClubTransactions(
 
   return (data as DbBillingTransaction[]).map(mapDbTransactionToDomain);
 }
+
+/**
+ * Get transaction by provider payment ID (for webhook processing)
+ * PHASE_P0_2: Added to support webhook entrypoint
+ */
+export async function getTransactionByProviderPaymentId(
+  providerPaymentId: string
+): Promise<BillingTransaction | null> {
+  const db = getAdminDb();
+
+  const { data, error } = await db
+    .from('billing_transactions')
+    .select('*')
+    .eq('provider_payment_id', providerPaymentId)
+    .single();
+
+  if (error) {
+    // PGRST116 = "Row not found" - expected when no match
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    log.error("Failed to get transaction by provider_payment_id", { providerPaymentId, error });
+    throw new InternalError("Failed to get transaction by provider_payment_id", error);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return mapDbTransactionToDomain(data as DbBillingTransaction);
+}
