@@ -102,16 +102,19 @@ export async function createPendingTransaction(params: {
 }
 
 /**
- * Mark transaction as paid
+ * Mark transaction as completed
+ * 
+ * Note: Renamed from markTransactionPaid (P1.0 fix - INC-003)
+ * DB CHECK constraint requires 'completed', not 'paid'.
  */
-export async function markTransactionPaid(
+export async function markTransactionCompleted(
   transactionId: string,
   providerPaymentId?: string
 ): Promise<void> {
   const db = getAdminDb();
 
   const updates: Record<string, unknown> = {
-    status: 'paid',
+    status: 'completed',
     updated_at: new Date().toISOString(),
   };
 
@@ -125,8 +128,8 @@ export async function markTransactionPaid(
     .eq('id', transactionId);
 
   if (error) {
-    log.error("Failed to mark transaction as paid", { transactionId, error });
-    throw new InternalError("Failed to mark transaction as paid", error);
+    log.error("Failed to mark transaction as completed", { transactionId, error });
+    throw new InternalError("Failed to mark transaction as completed", error);
   }
 }
 

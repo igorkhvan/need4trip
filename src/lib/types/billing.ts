@@ -165,7 +165,7 @@ export const BillingPolicyActionSchema = z.object({
 // Transaction Types
 // ============================================================================
 
-export const TRANSACTION_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
+export const TRANSACTION_STATUSES = ["pending", "completed", "failed", "refunded"] as const;
 export type TransactionStatus = typeof TRANSACTION_STATUSES[number];
 
 // Product codes for billing transactions

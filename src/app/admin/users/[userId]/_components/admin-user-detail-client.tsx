@@ -278,7 +278,7 @@ export function AdminUserDetailClient({ userId }: AdminUserDetailClientProps) {
                         {tx.amount.toLocaleString()} {tx.currencyCode}
                       </span>
                       <Badge 
-                        variant={tx.status === "paid" ? "default" : "secondary"}
+                        variant={tx.status === "completed" ? "default" : "secondary"}
                       >
                         {tx.status}
                       </Badge>

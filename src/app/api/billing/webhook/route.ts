@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Idempotency: if already completed, return success (NO-OP)
-    if (transaction.status === "paid") {
+    if (transaction.status === "completed") {
       logger.info("Webhook: transaction already completed (idempotent)", {
         transactionId: transaction.id,
         providerPaymentId,
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     const { error: updateError } = await db
       .from("billing_transactions")
       .update({ 
-        status: "paid",
+        status: "completed",
         updated_at: new Date().toISOString(),
       })
       .eq("id", transaction.id);
