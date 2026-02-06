@@ -77,7 +77,7 @@ import {
   type ClubJoinRequest,
 } from "@/lib/types/club";
 import { AuthError, ClubArchivedError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
-import { enforceClubAction } from "@/lib/services/accessControl";
+import { enforceClubAction, enforceClubCreation } from "@/lib/services/accessControl";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 import { logClubAction } from './clubAuditLog';
 
@@ -553,9 +553,8 @@ export async function getUserClubs(userId: string): Promise<ClubWithMembership[]
 
 /**
  * Создать клуб
- * Any authenticated user can create a club (becomes owner)
- * 
- * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated
+ * Requires active club subscription (402 PaywallError if not).
+ * Per SSOT_ARCHITECTURE.md §20.2: 401 for unauthenticated.
  */
 export async function createClub(
   input: unknown,
@@ -565,6 +564,9 @@ export async function createClub(
   if (!currentUser) {
     throw new UnauthorizedError("Требуется авторизация для создания клуба");
   }
+
+  // 402: Require active club subscription (backend guard)
+  await enforceClubCreation({ userId: currentUser.id });
 
   // Валидация данных
   const parsed = clubCreateSchema.parse(input);

@@ -10,7 +10,8 @@
  */
 
 import { PaywallError, AuthError, ValidationError, CreditConfirmationRequiredError, type CreditConfirmationPayload } from "@/lib/errors";
-import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
+import { getClubSubscription, getClubSubscriptionsByClubIds } from "@/lib/db/clubSubscriptionRepo";
+import { listUserClubsWithRole } from "@/lib/db/clubMemberRepo";
 import { 
   getPlanById,
   getRequiredPlanForParticipants,
@@ -219,35 +220,36 @@ async function enforcePlanLimits(
 }
 
 // ============================================================================
-// Club Creation Check (special case - no existing subscription)
+// Club Creation Check (no club yet - require active club subscription)
 // ============================================================================
 
 /**
- * Check if user can create a club
- * 
- * Per spec: User must have active subscription or be on Free plan.
- * If creating first club - Free is allowed.
- * If user already has clubs - must have paid plan.
+ * Enforce that user has an ACTIVE CLUB SUBSCRIPTION before creating a club.
+ * Creating a club is a paid action; user must have at least one club where
+ * they are a member and that club has an active subscription.
+ *
+ * Throws PaywallError (402) with reason CLUB_CREATION_REQUIRES_PLAN if not allowed.
  */
-export async function enforceClubCreation(params: {
-  userId: string;
-  existingClubsCount: number;
-}): Promise<void> {
-  const { existingClubsCount } = params;
+export async function enforceClubCreation(params: { userId: string }): Promise<void> {
+  const { userId } = params;
 
-  // First club - always allowed (Free plan)
-  if (existingClubsCount === 0) {
-    return;
+  const memberships = await listUserClubsWithRole(userId);
+  if (memberships.length === 0) {
+    throw new PaywallError({
+      message: "Создание клуба требует активной клубной подписки",
+      reason: "CLUB_CREATION_REQUIRES_PLAN",
+    });
   }
 
-  // Additional clubs require paid plan
-  // Note: This is simplified logic. Full implementation would:
-  // 1. Check user's subscription to ANY club
-  // 2. Verify they have organizer role
-  // 3. Check if that club's plan allows multiple clubs
-  
-  // For MVP: Allow multiple clubs (enforce limits at event level)
-  log.warn("Club creation enforcement: MVP allows multiple clubs", { userId: params.userId });
+  const clubIds = memberships.map((m) => m.club_id);
+  const subscriptions = await getClubSubscriptionsByClubIds(clubIds);
+  const hasActive = Array.from(subscriptions.values()).some((s) => s.status === "active");
+  if (!hasActive) {
+    throw new PaywallError({
+      message: "Создание клуба требует активной клубной подписки",
+      reason: "CLUB_CREATION_REQUIRES_PLAN",
+    });
+  }
 }
 
 // ============================================================================
