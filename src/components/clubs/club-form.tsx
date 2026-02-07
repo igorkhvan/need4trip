@@ -18,6 +18,7 @@ import { scrollToFirstError } from "@/lib/utils/form-validation";
 import type { Club, ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
 import type { City } from "@/lib/types/city";
 import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
+import { usePaywall } from "@/components/billing/paywall-modal";
 
 interface ClubFormProps {
   mode: "create" | "edit";
@@ -32,6 +33,9 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
+  // ⚡ Billing v2.0: Paywall hook (only for club creation)
+  const { showPaywall, PaywallModalComponent } = usePaywall();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -96,6 +100,17 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
       const json = await res.json();
 
       if (!res.ok) {
+        // ⚡ Billing v2.0: Handle 402 Paywall for club creation
+        if (res.status === 402 && mode === "create") {
+          const errorData = json.error || json;
+          // PaywallError format: { success: false, error: { code, message, details } }
+          // details contains full PaywallError payload (reason, currentPlanId, etc.)
+          if (errorData.details?.code === 'PAYWALL' || errorData.code === 'PAYWALL') {
+            showPaywall(errorData.details || errorData);
+            setLoading(false);
+            return;
+          }
+        }
         throw new Error(json.error?.message || json.message || "Ошибка при сохранении клуба");
       }
 
@@ -278,6 +293,9 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
           </Button>
         )}
       </div>
+      
+      {/* ⚡ Billing v2.0: PaywallModal for club creation 402 */}
+      {PaywallModalComponent}
     </form>
   );
 }

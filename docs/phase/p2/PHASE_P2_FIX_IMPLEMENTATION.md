@@ -114,4 +114,91 @@ Therefore, **no unlinked subscription can exist** in the current schema. The fun
 
 ---
 
-**END OF STEP 2 IMPLEMENTATION NOTE**
+## STEP 3 — UI Handling: 402 → Paywall
+
+### What Was Added
+
+- **402 Paywall handling** in `ClubForm` component
+- **Location:** `src/components/clubs/club-form.tsx` — `handleSubmit` function
+- **Hook:** `usePaywall()` from `@/components/billing/paywall-modal`
+
+### Implementation Details
+
+**Handler Logic:**
+1. After `fetch()` response, check `res.status === 402` AND `mode === "create"`
+2. Parse error response: `json.error || json`
+3. Verify paywall code: `errorData.details?.code === 'PAYWALL' || errorData.code === 'PAYWALL'`
+4. Call `showPaywall(errorData.details || errorData)` — passes full PaywallError payload
+5. Return early (no generic error toast)
+
+**Component Changes:**
+- Added `usePaywall()` hook import and initialization
+- Added `PaywallModalComponent` to JSX (renders conditionally when paywall is shown)
+- 402 handling only applies to `mode === "create"` (edit mode unchanged)
+
+### Alignment with UX_CONTRACT_CLUB_CREATION
+
+| State | Expected UX | Implementation |
+|-------|-------------|----------------|
+| S1 — No subscription | PaywallModal | ✅ 402 → showPaywall() |
+| S2 — Active entitlement | Club creation form | ✅ Success flow (no 402) |
+| S3 — Entitlement used | PaywallModal | ✅ 402 → showPaywall() |
+| S4 — Expired entitlement | PaywallModal | ✅ 402 → showPaywall() |
+
+**Per UX_CONTRACT §6:**
+> HTTP 402 MUST always trigger PaywallModal
+
+**Per UX_CONTRACT §5.1, 5.5, 5.6:**
+> Paywall reason: `CLUB_CREATION_REQUIRES_PLAN`
+
+### Error Response Format
+
+Backend returns (via `respondError()`):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PAYWALL",
+    "message": "...",
+    "details": {
+      "reason": "CLUB_CREATION_REQUIRES_PLAN",
+      "code": "PAYWALL",
+      "currentPlanId": "...",
+      "requiredPlanId": "...",
+      ...
+    }
+  }
+}
+```
+
+UI extracts `errorData.details || errorData` and passes to `showPaywall()`.
+
+### Reference Implementation
+
+Pattern matches existing 402 handling in:
+- `src/components/clubs/club-members-list.tsx` (lines 49-57)
+
+### Verification
+
+**S1 — No entitlement:**
+- Submit create club → HTTP 402 → PaywallModal shown ✅
+
+**S2 — Active entitlement:**
+- Submit create club → HTTP 201 → Success redirect ✅
+
+**S3 — Entitlement already used:**
+- Submit create club → HTTP 402 → PaywallModal shown ✅
+
+**S4 — Expired entitlement:**
+- Submit create club → HTTP 402 → PaywallModal shown ✅
+
+### Compliance
+
+- ✅ UI reacts to backend decision (no client-side eligibility checks)
+- ✅ Generic error NOT shown on 402
+- ✅ PaywallModal shown with canonical reason mapping
+- ✅ Only applies to club creation (edit mode unchanged)
+
+---
+
+**END OF STEP 3 IMPLEMENTATION NOTE**
