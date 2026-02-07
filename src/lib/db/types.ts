@@ -732,6 +732,74 @@ export type Database = {
           },
         ]
       }
+      club_subscription_entitlements: {
+        Row: {
+          club_id: string | null
+          consumed_at: string | null
+          created_at: string
+          id: string
+          plan_id: string
+          status: string
+          updated_at: string
+          user_id: string
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          club_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          plan_id: string
+          status: string
+          updated_at?: string
+          user_id: string
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          club_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          plan_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_subscription_entitlements_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_subscription_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "club_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_subscription_entitlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_subscription_entitlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_subscriptions: {
         Row: {
           club_id: string
@@ -776,67 +844,6 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "club_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      club_subscription_entitlements: {
-        Row: {
-          id: string
-          user_id: string
-          plan_id: string
-          status: string
-          valid_from: string
-          valid_until: string
-          consumed_at: string | null
-          club_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          plan_id: string
-          status: string
-          valid_from: string
-          valid_until: string
-          consumed_at?: string | null
-          club_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          plan_id?: string
-          status?: string
-          valid_from?: string
-          valid_until?: string
-          consumed_at?: string | null
-          club_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "club_subscription_entitlements_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "club_subscription_entitlements_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "club_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "club_subscription_entitlements_club_id_fkey"
-            columns: ["club_id"]
-            isOneToOne: false
-            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
         ]
@@ -1829,15 +1836,30 @@ export type Database = {
       cleanup_old_idempotency_keys: { Args: never; Returns: undefined }
       create_club_consuming_entitlement: {
         Args: {
-          p_user_id: string
-          p_name: string
-          p_description?: string | null
-          p_logo_url?: string | null
-          p_telegram_url?: string | null
-          p_website_url?: string | null
           p_city_ids?: string[]
+          p_description?: string
+          p_logo_url?: string
+          p_name: string
+          p_telegram_url?: string
+          p_user_id: string
+          p_website_url?: string
         }
-        Returns: Database["public"]["Tables"]["clubs"]["Row"][]
+        Returns: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          owner_user_id: string | null
+          settings: Json
+          slug: string
+          telegram_url: string | null
+          updated_at: string
+          visibility: Database["public"]["Enums"]["club_visibility"]
+          website_url: string | null
+        }[]
         SetofOptions: {
           from: "*"
           to: "clubs"

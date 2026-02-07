@@ -29,11 +29,10 @@ CREATE INDEX idx_entitlements_unlinked_active
   ON public.club_subscription_entitlements(user_id, valid_from, valid_until)
   WHERE status = 'active' AND club_id IS NULL;
 
--- Index for FOR UPDATE queries
+-- Index for FOR UPDATE queries (time filter applied at query time, not in predicate)
 CREATE INDEX idx_entitlements_user_active_unlinked
   ON public.club_subscription_entitlements(user_id)
-  WHERE status = 'active' AND club_id IS NULL
-    AND valid_from <= NOW() AND valid_until > NOW();
+  WHERE status = 'active' AND club_id IS NULL;
 
 COMMENT ON TABLE public.club_subscription_entitlements IS
   'Pre-club subscription entitlements. 1 entitlement → 1 club. Consumed exactly once at club creation. ADR-002.';

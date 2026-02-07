@@ -204,10 +204,10 @@ export async function createClubConsumingEntitlement(
   const { data, error } = await db.rpc("create_club_consuming_entitlement", {
     p_user_id: userId,
     p_name: payload.name.trim(),
-    p_description: payload.description?.trim() ?? null,
-    p_logo_url: payload.logoUrl?.trim() ?? null,
-    p_telegram_url: payload.telegramUrl?.trim() ?? null,
-    p_website_url: payload.websiteUrl?.trim() ?? null,
+    p_description: payload.description?.trim() ?? undefined,
+    p_logo_url: payload.logoUrl?.trim() ?? undefined,
+    p_telegram_url: payload.telegramUrl?.trim() ?? undefined,
+    p_website_url: payload.websiteUrl?.trim() ?? undefined,
     p_city_ids: payload.cityIds ?? [],
   });
 
