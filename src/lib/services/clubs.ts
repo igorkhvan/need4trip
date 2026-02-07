@@ -5,7 +5,7 @@
  */
 
 import {
-  createClub as createClubRepo,
+  createClubConsumingEntitlement as createClubConsumingEntitlementRepo,
   getClubById,
   getClubWithOwner,
   updateClub as updateClubRepo,
@@ -52,7 +52,7 @@ import {
 } from "@/lib/db/clubJoinRequestRepo";
 import { addMember } from "@/lib/db/clubMemberRepo";
 // NEW: Use billing v2.0 system
-import { getClubSubscription as getClubSubscriptionV2, hasUnlinkedActiveSubscriptionForUser } from "@/lib/db/clubSubscriptionRepo";
+import { getClubSubscription as getClubSubscriptionV2 } from "@/lib/db/clubSubscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { 
   countClubEvents, 
@@ -566,27 +566,35 @@ export async function createClub(
     throw new UnauthorizedError("Требуется авторизация для создания клуба");
   }
 
-  // Billing enforcement (UX_CONTRACT_CLUB_CREATION, SSOT_BILLING)
-  // Policy: Club may be created ONLY if user has active/grace subscription NOT yet linked to a club.
-  const hasEntitlement = await hasUnlinkedActiveSubscriptionForUser(currentUser.id);
-  if (!hasEntitlement) {
-    throw new PaywallError({
-      reason: "CLUB_CREATION_REQUIRES_PLAN",
-      message: "Для создания клуба требуется тарифный план",
-    });
-  }
-
   // Валидация данных
   const parsed = clubCreateSchema.parse(input);
 
   // Ensure user exists in DB
   await ensureUserExists(currentUser.id, currentUser.name ?? undefined);
 
-  // Создать клуб
-  const dbClub = await createClubRepo({
-    ...parsed,
-    createdBy: currentUser.id,
-  });
+  // Atomic: claim entitlement + create club + consume entitlement (ADR-002)
+  // RPC throws on missing/expired entitlement → map to PaywallError
+  let dbClub;
+  try {
+    dbClub = await createClubConsumingEntitlementRepo(currentUser.id, {
+      ...parsed,
+      createdBy: currentUser.id,
+    });
+  } catch (err: unknown) {
+    const msg = err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : "";
+    const code = err && typeof err === "object" && "code" in err ? (err as { code: unknown }).code : "";
+    if (
+      msg?.includes("CLUB_CREATION_REQUIRES_PLAN") ||
+      code === "23514" ||
+      code === "P0001"
+    ) {
+      throw new PaywallError({
+        reason: "CLUB_CREATION_REQUIRES_PLAN",
+        message: "Для создания клуба требуется тарифный план",
+      });
+    }
+    throw err;
+  }
 
   // Триггеры БД автоматически:
   // 1. Создадут club_subscription (v2.0 format, status='active')

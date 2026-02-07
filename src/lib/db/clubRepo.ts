@@ -147,7 +147,8 @@ export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | nu
 }
 
 /**
- * Create new club
+ * Create new club (legacy path — no entitlement consumption).
+ * Used when entitlement check is bypassed (e.g. admin) or for backwards compatibility.
  */
 export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
   const db = getAdminDb();
@@ -179,10 +180,46 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
   }
 
   const club = data as DbClub;
-  
+
   // Insert city associations
   if (payload.cityIds && payload.cityIds.length > 0) {
     await updateClubCities(club.id, payload.cityIds);
+  }
+
+  return club;
+}
+
+/**
+ * Create club by consuming a pre-club subscription entitlement (atomic).
+ * ADR-002: Claims entitlement, creates club, consumes entitlement, creates club_subscriptions.
+ *
+ * @throws PostgrestError with code/message when entitlement not found (map to PaywallError)
+ */
+export async function createClubConsumingEntitlement(
+  userId: string,
+  payload: ClubCreateInput
+): Promise<DbClub> {
+  const db = getAdminDb();
+
+  const { data, error } = await db.rpc("create_club_consuming_entitlement", {
+    p_user_id: userId,
+    p_name: payload.name.trim(),
+    p_description: payload.description?.trim() ?? null,
+    p_logo_url: payload.logoUrl?.trim() ?? null,
+    p_telegram_url: payload.telegramUrl?.trim() ?? null,
+    p_website_url: payload.websiteUrl?.trim() ?? null,
+    p_city_ids: payload.cityIds ?? [],
+  });
+
+  if (error) {
+    log.error("create_club_consuming_entitlement failed", { userId, error });
+    throw error;
+  }
+
+  const club = Array.isArray(data) && data.length > 0 ? (data[0] as DbClub) : null;
+  if (!club) {
+    log.error("create_club_consuming_entitlement returned no club", { userId });
+    throw new InternalError("Failed to create club");
   }
 
   return club;

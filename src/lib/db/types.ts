@@ -780,6 +780,67 @@ export type Database = {
           },
         ]
       }
+      club_subscription_entitlements: {
+        Row: {
+          id: string
+          user_id: string
+          plan_id: string
+          status: string
+          valid_from: string
+          valid_until: string
+          consumed_at: string | null
+          club_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_id: string
+          status: string
+          valid_from: string
+          valid_until: string
+          consumed_at?: string | null
+          club_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_id?: string
+          status?: string
+          valid_from?: string
+          valid_until?: string
+          consumed_at?: string | null
+          club_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_subscription_entitlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_subscription_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "club_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_subscription_entitlements_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clubs: {
         Row: {
           archived_at: string | null
@@ -1766,6 +1827,24 @@ export type Database = {
         }
       }
       cleanup_old_idempotency_keys: { Args: never; Returns: undefined }
+      create_club_consuming_entitlement: {
+        Args: {
+          p_user_id: string
+          p_name: string
+          p_description?: string | null
+          p_logo_url?: string | null
+          p_telegram_url?: string | null
+          p_website_url?: string | null
+          p_city_ids?: string[]
+        }
+        Returns: Database["public"]["Tables"]["clubs"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "clubs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_club_invite: {
         Args: {
           p_club_id: string

@@ -59,4 +59,59 @@ Therefore, **no unlinked subscription can exist** in the current schema. The fun
 
 ---
 
-**END OF STEP 1 IMPLEMENTATION NOTE**
+## STEP 2 — Pre-Club Subscription Entitlements
+
+### Schema Summary
+
+**New table:** `club_subscription_entitlements`
+
+| Column      | Type        | Constraint                          |
+|-------------|-------------|-------------------------------------|
+| id          | UUID        | PK, default gen_random_uuid()       |
+| user_id     | UUID        | NOT NULL, FK → users.id             |
+| plan_id     | TEXT        | NOT NULL, FK → club_plans.id        |
+| status      | TEXT        | CHECK IN (active, consumed, expired, cancelled) |
+| valid_from  | TIMESTAMPTZ | NOT NULL                            |
+| valid_until | TIMESTAMPTZ | NOT NULL                            |
+| consumed_at | TIMESTAMPTZ | NULL                                |
+| club_id     | UUID        | NULL, FK → clubs.id, UNIQUE         |
+| created_at  | TIMESTAMPTZ | NOT NULL                            |
+| updated_at  | TIMESTAMPTZ | NOT NULL                            |
+
+**Constraints:**
+- One entitlement → one club (club_id UNIQUE when set)
+- Consumed exactly once (status = consumed, consumed_at set, club_id set)
+- No cascading delete that could "free" an entitlement
+
+**Migration:** `supabase/migrations/20260207_create_club_subscription_entitlements.sql`
+
+### Eligibility Query Semantics
+
+`hasUnlinkedActiveSubscriptionForUser(userId)`:
+- user_id matches
+- status = 'active'
+- valid_from <= now < valid_until
+- club_id IS NULL
+
+**Location:** `src/lib/db/clubSubscriptionEntitlementRepo.ts`
+
+### Atomicity Guarantees
+
+- **RPC:** `create_club_consuming_entitlement(p_user_id, p_name, ...)`
+- Single transaction:
+  1. SELECT entitlement FOR UPDATE SKIP LOCKED (row lock, race-safe)
+  2. If none → RAISE EXCEPTION 'CLUB_CREATION_REQUIRES_PLAN'
+  3. INSERT clubs
+  4. Trigger adds owner to club_members
+  5. UPDATE entitlement (status=consumed, consumed_at, club_id)
+  6. INSERT club_subscriptions
+  7. INSERT club_cities
+- Parallel create attempts → only one succeeds; others get PaywallError
+
+### Reference
+
+- ADR-002: docs/adr/active/ADR-002_PRE_CLUB_SUBSCRIPTION_ENTITLEMENTS.md
+
+---
+
+**END OF STEP 2 IMPLEMENTATION NOTE**
