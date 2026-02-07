@@ -162,6 +162,28 @@ export async function setClubSubscriptionStatus(
 }
 
 /**
+ * Check if user has an unlinked active/grace subscription (entitlement to create a club).
+ *
+ * Policy (UX_CONTRACT_CLUB_CREATION, Architect decision):
+ * - A club may be created ONLY if there exists an active or grace subscription
+ *   that is NOT yet linked to a club (club_id IS NULL).
+ * - Each subscription grants the right to create EXACTLY ONE club.
+ *
+ * Current schema limitation: club_subscriptions.club_id is NOT NULL (PK).
+ * No unlinked subscriptions can exist until Step 2 adds schema support
+ * (e.g. club_id nullable + user_id for pre-club entitlements).
+ *
+ * Until then, this function returns false — no user has unlinked entitlement.
+ * Step 2 will add the schema and update this implementation to query actual data.
+ *
+ * @returns true if user has at least one active/grace subscription with club_id IS NULL
+ */
+export async function hasUnlinkedActiveSubscriptionForUser(_userId: string): Promise<boolean> {
+  // Schema does not support unlinked subscriptions yet. Always false.
+  return false;
+}
+
+/**
  * Activate subscription (after successful payment)
  */
 export async function activateSubscription(

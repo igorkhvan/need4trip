@@ -52,7 +52,7 @@ import {
 } from "@/lib/db/clubJoinRequestRepo";
 import { addMember } from "@/lib/db/clubMemberRepo";
 // NEW: Use billing v2.0 system
-import { getClubSubscription as getClubSubscriptionV2 } from "@/lib/db/clubSubscriptionRepo";
+import { getClubSubscription as getClubSubscriptionV2, hasUnlinkedActiveSubscriptionForUser } from "@/lib/db/clubSubscriptionRepo";
 import { ensureUserExists } from "@/lib/db/userRepo";
 import { 
   countClubEvents, 
@@ -76,7 +76,7 @@ import {
   type ClubInvite,
   type ClubJoinRequest,
 } from "@/lib/types/club";
-import { AuthError, ClubArchivedError, ConflictError, ForbiddenError, InternalError, NotFoundError, UnauthorizedError, ValidationError } from "@/lib/errors";
+import { AuthError, ClubArchivedError, ConflictError, ForbiddenError, InternalError, NotFoundError, PaywallError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import { enforceClubAction } from "@/lib/services/accessControl";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 import { logClubAction } from './clubAuditLog';
@@ -564,6 +564,16 @@ export async function createClub(
   // 401: Require authentication (SSOT_ARCHITECTURE.md §20.2)
   if (!currentUser) {
     throw new UnauthorizedError("Требуется авторизация для создания клуба");
+  }
+
+  // Billing enforcement (UX_CONTRACT_CLUB_CREATION, SSOT_BILLING)
+  // Policy: Club may be created ONLY if user has active/grace subscription NOT yet linked to a club.
+  const hasEntitlement = await hasUnlinkedActiveSubscriptionForUser(currentUser.id);
+  if (!hasEntitlement) {
+    throw new PaywallError({
+      reason: "CLUB_CREATION_REQUIRES_PLAN",
+      message: "Для создания клуба требуется тарифный план",
+    });
   }
 
   // Валидация данных
