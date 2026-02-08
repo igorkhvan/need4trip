@@ -192,6 +192,9 @@ CREATE TABLE public.events (
   registration_manually_closed BOOLEAN NOT NULL DEFAULT false,  -- ⚡ Manual override to close reg
   registration_deadline TIMESTAMPTZ,
   
+  -- Soft delete (added 2026-02-08)
+  deleted_at TIMESTAMPTZ NULL DEFAULT NULL,  -- ⚡ NULL = active, timestamp = soft-deleted
+  
   -- ⚡ Constraints (added 2024-12-12)
   CONSTRAINT events_club_consistency_check CHECK (
     (is_club_event = TRUE AND club_id IS NOT NULL) OR
@@ -226,6 +229,12 @@ CREATE TABLE public.events (
 - ⚡ **Registration controls** (добавлены 2024-12-20):
   - `allow_anonymous_registration`: разрешить гостевые регистрации
   - `registration_manually_closed`: ручное закрытие регистрации (приоритет над deadline)
+- ⚡ **Soft delete** (добавлено 2026-02-08):
+  - `deleted_at`: NULL = active event, timestamp = soft-deleted
+  - Hard delete used ONLY for compensating transaction rollback (credit consumption failure)
+  - Rationale: preserves billing_credits FK integrity (consumed_event_id stays valid)
+  - All SELECT queries in eventRepo filter `.is('deleted_at', null)`
+  - Partial indexes: `idx_events_not_deleted`, `idx_events_not_deleted_datetime`, `idx_events_deleted`
 - ⚠️ **Deprecated columns**:
   - `category` (TEXT) — заменено на `category_id` (FK). Будет удалено в будущей миграции.
   - `currency` (TEXT) — заменено на `currency_code` (FK). Будет удалено в будущей миграции.

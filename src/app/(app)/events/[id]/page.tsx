@@ -54,7 +54,18 @@ export default async function EventDetails({
     enforceVisibility: true
   }).catch(() => null);
   
-  if (!event) return notFound();
+  if (!event) {
+    // Check if event was soft-deleted → show specific UX instead of generic 404
+    const { isEventSoftDeleted } = await import("@/lib/db/eventRepo");
+    const wasDeleted = await isEventSoftDeleted(id);
+    
+    if (wasDeleted) {
+      const { EventDeletedPage } = await import("./_components/event-deleted");
+      return <EventDeletedPage />;
+    }
+    
+    return notFound();
+  }
   
   const isOwner = currentUser?.id === event.createdByUserId;
   

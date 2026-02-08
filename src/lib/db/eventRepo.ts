@@ -80,6 +80,7 @@ export async function listEvents(page = 1, limit = 12): Promise<{
   const { data, error, count} = await db
     .from(table)
     .select("*", { count: "exact" })
+    .is("deleted_at", null)
     .order("date_time", { ascending: false })
     .range(from, to);
 
@@ -115,6 +116,7 @@ export async function listEventsWithOwner(page = 1, limit = 12): Promise<{
   const { data, error, count } = await db
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
+    .is("deleted_at", null)
     .order("date_time", { ascending: false })
     .range(from, to);
 
@@ -149,6 +151,7 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
     .from(table)
     .select("*")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
@@ -396,7 +399,51 @@ export async function getAllowedBrandsByEventIds(
   return result;
 }
 
-export async function deleteEvent(id: string): Promise<boolean> {
+/**
+ * Soft delete event (set deleted_at timestamp)
+ * 
+ * Used for user-initiated deletion. Event row remains in DB for:
+ * - billing_credits FK integrity (consumed_event_id stays valid)
+ * - Audit trail / history of paid events
+ * - Potential future restore capability
+ */
+export async function softDeleteEvent(id: string): Promise<boolean> {
+  const db = getAdminDb();
+  
+  // Note: deleted_at column added in migration 20260208_add_events_soft_delete.sql
+  // Supabase generated types may not include it yet — use type assertion
+  const { data, error } = await db
+    .from(table)
+    .update({ deleted_at: new Date().toISOString() } as any)
+    .eq("id", id)
+    .is("deleted_at" as any, null) // Only delete active events (idempotent)
+    .select("id");
+
+  if (error) {
+    log.error("Failed to soft delete event", { eventId: id, error });
+    throw new InternalError("Failed to soft delete event", error);
+  }
+
+  if (!data || data.length === 0) {
+    throw new NotFoundError("Event not found");
+  }
+
+  return true;
+}
+
+/**
+ * Hard delete event (physical removal)
+ * 
+ * ONLY for compensating transaction rollback in creditTransaction.ts:
+ * When event creation succeeds but credit consumption fails,
+ * the newly created event must be physically deleted.
+ * 
+ * This is safe because:
+ * - Event was never "live" (just created in the same transaction)
+ * - No billing_credits reference it (credit consumption failed)
+ * - No participants registered yet
+ */
+export async function hardDeleteEvent(id: string): Promise<boolean> {
   const db = getAdminDb();
   
   const { error, count } = await db
@@ -405,8 +452,8 @@ export async function deleteEvent(id: string): Promise<boolean> {
     .eq("id", id);
 
   if (error) {
-    log.error("Failed to delete event", { eventId: id, error });
-    throw new InternalError("Failed to delete event", error);
+    log.error("Failed to hard delete event", { eventId: id, error });
+    throw new InternalError("Failed to hard delete event", error);
   }
 
   if ((count ?? 0) === 0) {
@@ -426,7 +473,8 @@ export async function countClubEvents(clubId: string): Promise<number> {
   const { count, error } = await db
     .from(table)
     .select("*", { count: "exact", head: true })
-    .eq("club_id", clubId);
+    .eq("club_id", clubId)
+    .is("deleted_at", null);
 
   if (error) {
     log.error("Failed to count club events", { clubId, error });
@@ -449,6 +497,7 @@ export async function countActiveClubEvents(clubId: string): Promise<number> {
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
+    .is("deleted_at", null)
     .gte("date_time", now);
 
   if (error) {
@@ -472,6 +521,7 @@ export async function countPastClubEvents(clubId: string): Promise<number> {
     .from(table)
     .select("*", { count: "exact", head: true })
     .eq("club_id", clubId)
+    .is("deleted_at", null)
     .lt("date_time", now);
 
   if (error) {
@@ -504,6 +554,7 @@ export async function listClubEvents(
     .from(table)
     .select("*", { count: "exact" })
     .eq("club_id", clubId)
+    .is("deleted_at", null)
     .order("date_time", { ascending: true })
     .range(from, to);
 
@@ -542,6 +593,7 @@ export async function listPublicEvents(page = 1, limit = 100): Promise<{
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
     .eq("visibility", "public")
+    .is("deleted_at", null)
     .order("date_time", { ascending: true })
     .range(from, to);
 
@@ -584,6 +636,7 @@ export async function listEventsByCreator(
     .from(table)
     .select("*, created_by_user:users(id, name, telegram_handle)", { count: "exact" })
     .eq("created_by_user_id", userId)
+    .is("deleted_at", null)
     .order("date_time", { ascending: true })
     .range(from, to);
 
@@ -676,10 +729,11 @@ export async function queryEventsPaginated(
   const limit = Math.max(1, Math.min(50, pagination.limit));
   const offset = (pagination.page - 1) * limit;
 
-  // Base query
+  // Base query (exclude soft-deleted events)
   let query = db
     .from(table)
-    .select(EVENT_LIST_COLUMNS, { count: "exact" });
+    .select(EVENT_LIST_COLUMNS, { count: "exact" })
+    .is("deleted_at", null);
 
   // Tab-based date filter ONLY (visibility handled by visibilityIn)
   if (filters.tab === 'upcoming') {
@@ -771,11 +825,12 @@ export async function queryEventsByIdsPaginated(
   const limit = Math.max(1, Math.min(50, pagination.limit));
   const offset = (pagination.page - 1) * limit;
 
-  // Base query: filter by IDs
+  // Base query: filter by IDs (exclude soft-deleted events)
   let query = db
     .from(table)
     .select(EVENT_LIST_COLUMNS, { count: "exact" })
-    .in('id', eventIds);
+    .in('id', eventIds)
+    .is("deleted_at", null);
 
   // Additional filters (search, city, category)
   if (filters.search) {
@@ -835,7 +890,8 @@ export async function countEventsByFilters(filters: EventListFilters): Promise<n
   const db = getAdminDbSafe();
   if (!db) return 0;
 
-  let query = db.from(table).select('*', { count: 'exact', head: true });
+  let query = db.from(table).select('*', { count: 'exact', head: true })
+    .is("deleted_at", null);
 
   // Tab-based date filter ONLY (visibility handled by visibilityIn)
   if (filters.tab === 'upcoming') {
@@ -885,7 +941,9 @@ export async function countEventsByIds(
   const db = getAdminDbSafe();
   if (!db || eventIds.length === 0) return 0;
 
-  let query = db.from(table).select('*', { count: 'exact', head: true }).in('id', eventIds);
+  let query = db.from(table).select('*', { count: 'exact', head: true })
+    .in('id', eventIds)
+    .is("deleted_at", null);
 
   // Additional filters
   if (filters.search) {
@@ -912,4 +970,31 @@ export async function countEventsByIds(
   }
 
   return count ?? 0;
+}
+
+/**
+ * Check if an event exists but has been soft-deleted
+ * 
+ * Used for UX: show "Event was deleted" page instead of generic 404
+ * when user follows a link to a deleted event.
+ */
+export async function isEventSoftDeleted(id: string): Promise<boolean> {
+  const db = getAdminDbSafe();
+  if (!db) return false;
+  
+  if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) return false;
+
+  const { data, error } = await db
+    .from(table)
+    .select("id")
+    .eq("id", id)
+    .not("deleted_at", "is", null)
+    .maybeSingle();
+
+  if (error) {
+    log.warn("Failed to check if event is soft deleted", { eventId: id, error });
+    return false;
+  }
+
+  return !!data;
 }

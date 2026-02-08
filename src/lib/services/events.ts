@@ -1,6 +1,6 @@
 import {
   createEvent as createEventRecord,
-  deleteEvent as deleteEventRecord,
+  softDeleteEvent as softDeleteEventRecord,
   getEventById,
   listEventsWithOwner,
   listPublicEvents,
@@ -1024,7 +1024,7 @@ export async function deleteEvent(id: string, currentUser: CurrentUser | null): 
     }
   }
   
-  return deleteEventRecord(id);
+  return softDeleteEventRecord(id);
 }
 
 /**
