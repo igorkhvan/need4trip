@@ -410,13 +410,11 @@ export async function getAllowedBrandsByEventIds(
 export async function softDeleteEvent(id: string): Promise<boolean> {
   const db = getAdminDb();
   
-  // Note: deleted_at column added in migration 20260208_add_events_soft_delete.sql
-  // Supabase generated types may not include it yet — use type assertion
   const { data, error } = await db
     .from(table)
-    .update({ deleted_at: new Date().toISOString() } as any)
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", id)
-    .is("deleted_at" as any, null) // Only delete active events (idempotent)
+    .is("deleted_at", null) // Only delete active events (idempotent)
     .select("id");
 
   if (error) {

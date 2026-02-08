@@ -1191,6 +1191,7 @@ export type Database = {
           currency_code: string | null
           custom_fields_schema: Json
           date_time: string
+          deleted_at: string | null
           description: string
           id: string
           is_club_event: boolean
@@ -1217,6 +1218,7 @@ export type Database = {
           currency_code?: string | null
           custom_fields_schema?: Json
           date_time: string
+          deleted_at?: string | null
           description: string
           id?: string
           is_club_event?: boolean
@@ -1243,6 +1245,7 @@ export type Database = {
           currency_code?: string | null
           custom_fields_schema?: Json
           date_time?: string
+          deleted_at?: string | null
           description?: string
           id?: string
           is_club_event?: boolean
