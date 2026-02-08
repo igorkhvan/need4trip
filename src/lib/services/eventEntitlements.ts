@@ -16,7 +16,6 @@ import { getPlanById } from "@/lib/db/planRepo";
 import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { getConsumedCreditsForEvent } from "@/lib/db/billingCreditsRepo";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
-import type { ClubPlan } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
 
 // ============================================================================
@@ -147,39 +146,4 @@ export async function getEffectiveEventEntitlements(params: {
   };
 }
 
-/**
- * Check if event entitlements allow a given participant count
- * 
- * @param entitlements Event entitlements
- * @param requestedParticipants Requested participant count
- * @returns True if allowed
- */
-export function isParticipantCountAllowed(
-  entitlements: EventEntitlements,
-  requestedParticipants: number
-): boolean {
-  return requestedParticipants <= entitlements.maxEventParticipants;
-}
-
-/**
- * Get user-friendly description of entitlements
- * 
- * @param entitlements Event entitlements
- * @returns Human-readable description
- */
-export function describeEntitlements(entitlements: EventEntitlements): string {
-  switch (entitlements.paidMode) {
-    case 'club_subscription':
-      return `Клубная подписка ${entitlements.clubPlan?.planTitle} (до ${entitlements.maxEventParticipants} участников)`;
-    
-    case 'personal_credit':
-      return `Апгрейд до ${entitlements.maxEventParticipants} участников применён`;
-    
-    case 'free':
-      return `Бесплатный план (до ${entitlements.maxEventParticipants} участников)`;
-    
-    default:
-      return `До ${entitlements.maxEventParticipants} участников`;
-  }
-}
 

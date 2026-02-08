@@ -72,7 +72,7 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   const [clubsLoading, setClubsLoading] = useState(true);
   
   // Plan limits hook - depends on loaded event's clubId
-  const { limits: clubPlanLimits, loading: planLoading } = useClubPlan(event?.clubId ?? null);
+  const { limits: clubPlanLimits } = useClubPlan(event?.clubId ?? null);
   
   // B5.1: Submit with optional confirm_credit flag
   const submitEvent = useCallback(async (

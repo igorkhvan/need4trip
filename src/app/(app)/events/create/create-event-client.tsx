@@ -80,7 +80,7 @@ export function CreateEventPageClient() {
   const userCityId = user?.cityId ?? null;
   
   // SSOT_UI_ASYNC_PATTERNS — Free plan limits from hook (with fallback)
-  const { limits: freePlanLimits, loading: planLoading } = useClubPlan(null);
+  const { limits: freePlanLimits } = useClubPlan(null);
   
   // Default plan limits (optimistic fallback while loading)
   const defaultPlanLimits: ClubPlanLimits = freePlanLimits ?? {
