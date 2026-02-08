@@ -201,6 +201,39 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 ---
 
+### 3.6 Paid Events Hidden (UI)
+
+**Status:** HIDDEN
+
+**Area:**
+- UI
+- Event Form (create & edit)
+
+**What changed:**
+- In `SOFT_BETA_STRICT` mode, the "Тип участия" (participation type) field — along with the dependent "Цена" (price) and "Валюта" (currency) fields — is hidden from the event creation and editing forms.
+- `isPaid` is forced to `false` in beta mode, regardless of `initialValues`.
+- The payload always sends `isPaid: false`, `price: null`, `currencyCode: null` in beta mode.
+- All events created during beta are free.
+
+**Original behavior:**
+- "Тип участия" select is always visible with "Бесплатное" (free) and "Платное" (paid) options.
+- When "Платное" is selected, price and currency fields appear.
+
+**Reason for beta gate:**
+- Monetization is explicitly out of scope for beta (BETA_SCOPE §4).
+- Payment collection is not available during beta.
+- Showing a paid event option that cannot be used would confuse beta users.
+
+**Restoration condition:**
+- Post-beta: monetization decision made, payment collection enabled.
+
+**Post-beta action:**
+- Set `PAYWALL_MODE=hard` to restore "Тип участия" field visibility.
+- Remove `isBetaMode` conditional from `EventBasicInfoSection`.
+- Remove `isPaid` force-override from `EventForm`.
+
+---
+
 ## 4. Temporary Behavior Deviations
 
 ### 4.1 Billing Enforcement Runs But Does Not Block
@@ -370,7 +403,7 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 ## 8. Review Checklist (Post-Beta)
 
-- [ ] All feature gates reviewed (§3.1–3.5)
+- [ ] All feature gates reviewed (§3.1–3.6)
 - [ ] All behavior deviations reviewed (§4.1–4.2)
 - [ ] All UX/copy changes reviewed (§5.1)
 - [ ] All relaxed limits reviewed (§6.1)

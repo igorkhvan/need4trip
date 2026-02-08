@@ -104,6 +104,9 @@ export type EventFormProps = {
   busyLabel?: string;
   actionPhase?: ActionPhase;
   externalError?: string; // Error from controller
+  /** Beta mode: hides paid event fields, forces isPaid=false
+   *  SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.6 */
+  isBetaMode?: boolean;
 };
 
 function buildEmptyField(order: number): EventCustomFieldSchema {
@@ -134,6 +137,7 @@ export function EventForm({
   busyLabel: externalBusyLabel,
   actionPhase,
   externalError,
+  isBetaMode = false,
 }: EventFormProps) {
   const router = useRouter();
   
@@ -174,7 +178,9 @@ export function EventForm({
   const [clubId, setClubId] = useState<string | null>(initialValues?.clubId ?? null);
   const [clubName] = useState<string | undefined>(initialValues?.clubName); // Read-only for edit mode
   const [isClubEventMode, setIsClubEventMode] = useState<boolean>(Boolean(initialValues?.clubId)); // UI state for checkbox
-  const [isPaid, setIsPaid] = useState<boolean>(initialValues?.isPaid ?? false);
+  // Beta mode: force isPaid=false (paid events hidden during beta)
+  // SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.6
+  const [isPaid, setIsPaid] = useState<boolean>(isBetaMode ? false : (initialValues?.isPaid ?? false));
   const [price, setPrice] = useState<string>(initialValues?.price ?? "");
   const [currencyCode, setCurrencyCode] = useState<string | null>(initialValues?.currencyCode ?? null);
   const [allowAnonymousRegistration, setAllowAnonymousRegistration] = useState<boolean>(initialValues?.allowAnonymousRegistration ?? true); // NEW
@@ -644,6 +650,7 @@ export function EventForm({
                 });
               }}
               disabled={disabled}
+              isBetaMode={isBetaMode}
             />
           </CardContent>
         </Card>

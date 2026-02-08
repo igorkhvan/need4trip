@@ -378,6 +378,8 @@ export function CreateEventPageClient({ isBetaMode = false }: { isBetaMode?: boo
         busyLabel={controller.busyLabel}
         actionPhase={controller.phase}
         externalError={controller.state.lastError}
+        // Beta: hide paid event fields (SOFT_BETA_STRICT)
+        isBetaMode={isBetaMode}
       />
       
       {/* B5.D1: Modals rendered by global BillingModalHost in root layout */}

@@ -75,6 +75,9 @@ interface EventBasicInfoSectionProps {
   
   // UI state
   disabled?: boolean;
+  /** Beta mode: hide paid event fields (Тип участия, Цена, Валюта)
+   *  SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.6 */
+  isBetaMode?: boolean;
 }
 
 export function EventBasicInfoSection({
@@ -107,6 +110,7 @@ export function EventBasicInfoSection({
   fieldErrors,
   clearFieldError,
   disabled,
+  isBetaMode = false,
 }: EventBasicInfoSectionProps) {
   return (
     <div className="space-y-4">
@@ -340,81 +344,85 @@ export function EventBasicInfoSection({
         </FormField>
       </div>
 
-      {/* Тип участия & Price/Currency - grid layout */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField
-          id="participationType"
-          label="Тип участия"
-          required
-        >
-          <Select
-            value={isPaid ? "paid" : "free"}
-            onValueChange={(val) => onIsPaidChange(val === "paid")}
-            disabled={disabled}
+      {/* Тип участия & Price/Currency - grid layout
+          Beta mode: entire block hidden (paid events not available during beta)
+          SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.6 */}
+      {!isBetaMode && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            id="participationType"
+            label="Тип участия"
+            required
           >
-            <SelectTrigger id="participationType">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="free">Бесплатное</SelectItem>
-              <SelectItem value="paid">Платное</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
-
-        {/* Price & Currency - nested grid (only if paid) */}
-        {isPaid ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              id="price"
-              label="Цена"
-              required
-              error={fieldErrors.price}
+            <Select
+              value={isPaid ? "paid" : "free"}
+              onValueChange={(val) => onIsPaidChange(val === "paid")}
+              disabled={disabled}
             >
-              <Input
+              <SelectTrigger id="participationType">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free">Бесплатное</SelectItem>
+                <SelectItem value="paid">Платное</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+
+          {/* Price & Currency - nested grid (only if paid) */}
+          {isPaid ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
                 id="price"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                min={0}
-                step={1}
-                value={price}
-                onChange={(e) => {
-                  const digitsOnly = e.target.value.replace(/\D/g, "");
-                  onPriceChange(digitsOnly);
-                  if (fieldErrors.price) {
-                    clearFieldError("price");
-                  }
-                }}
-                disabled={disabled}
-                placeholder="5000"
-                className={fieldErrors.price ? "border-red-500 focus:border-red-500" : ""}
-              />
-            </FormField>
+                label="Цена"
+                required
+                error={fieldErrors.price}
+              >
+                <Input
+                  id="price"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  min={0}
+                  step={1}
+                  value={price}
+                  onChange={(e) => {
+                    const digitsOnly = e.target.value.replace(/\D/g, "");
+                    onPriceChange(digitsOnly);
+                    if (fieldErrors.price) {
+                      clearFieldError("price");
+                    }
+                  }}
+                  disabled={disabled}
+                  placeholder="5000"
+                  className={fieldErrors.price ? "border-red-500 focus:border-red-500" : ""}
+                />
+              </FormField>
 
-            <FormField
-              id="currency"
-              label="Валюта"
-              required
-              error={fieldErrors.currencyCode}
-            >
-              <CurrencySelect
-                value={currencyCode}
-                onChange={(newCode) => {
-                  onCurrencyChange(newCode);
-                  if (fieldErrors.currencyCode) {
-                    clearFieldError("currencyCode");
-                  }
-                }}
-                disabled={disabled}
-                placeholder="Выберите валюту..."
-              />
-            </FormField>
-          </div>
-        ) : (
-          <div></div>
-        )}
-      </div>
+              <FormField
+                id="currency"
+                label="Валюта"
+                required
+                error={fieldErrors.currencyCode}
+              >
+                <CurrencySelect
+                  value={currencyCode}
+                  onChange={(newCode) => {
+                    onCurrencyChange(newCode);
+                    if (fieldErrors.currencyCode) {
+                      clearFieldError("currencyCode");
+                    }
+                  }}
+                  disabled={disabled}
+                  placeholder="Выберите валюту..."
+                />
+              </FormField>
+            </div>
+          ) : (
+            <div></div>
+          )}
+        </div>
+      )}
       
       {/* Registration Controls */}
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background-subtle)] p-4 space-y-4">
