@@ -58,7 +58,7 @@ export function handleApiErrorCore(
   error: unknown,
   options: HandleApiErrorOptions,
   modalOpener: {
-    openPaywall: (details: NonNullable<ReturnType<typeof extractPaywallDetails>>, context?: { clubId?: string }) => void;
+    openPaywall: (details: NonNullable<ReturnType<typeof extractPaywallDetails>>, context?: { clubId?: string }, onBetaContinue?: () => Promise<void>) => void;
     openCreditConfirmation: (details: CreditConfirmationDetails, onConfirm: (d: CreditConfirmationDetails) => Promise<void>) => void;
   }
 ): HandleApiErrorResult {
@@ -67,7 +67,7 @@ export function handleApiErrorCore(
     const details = extractPaywallDetails(error);
     
     if (details) {
-      modalOpener.openPaywall(details, { clubId: options.clubId });
+      modalOpener.openPaywall(details, { clubId: options.clubId }, options.onBetaContinue);
       return { handled: true, kind: "paywall" };
     }
     

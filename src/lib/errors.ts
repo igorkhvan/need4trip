@@ -97,7 +97,7 @@ export class PaywallError extends AppError {
   requiredPlanId?: string;
   meta?: Record<string, unknown>;
   options?: Array<{
-    type: "ONE_OFF_CREDIT" | "CLUB_ACCESS";
+    type: "ONE_OFF_CREDIT" | "CLUB_ACCESS" | "BETA_CONTINUE";
     [key: string]: unknown;
   }>;
   cta?: {
@@ -112,7 +112,7 @@ export class PaywallError extends AppError {
     requiredPlanId?: string;
     meta?: Record<string, unknown>;
     options?: Array<{
-      type: "ONE_OFF_CREDIT" | "CLUB_ACCESS";
+      type: "ONE_OFF_CREDIT" | "CLUB_ACCESS" | "BETA_CONTINUE";
       [key: string]: unknown;
     }>;
   }) {

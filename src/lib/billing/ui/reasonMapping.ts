@@ -55,14 +55,14 @@ export interface NormalizedPaywallUi {
   /** Primary CTA configuration */
   primaryCta: {
     label: string;
-    action: "pricing" | "purchase" | "club_create";
+    action: "pricing" | "purchase" | "club_create" | "beta_continue";
     href?: string;
   };
   
   /** Secondary CTA configuration (optional) */
   secondaryCta?: {
     label: string;
-    action: "pricing" | "purchase" | "club_create";
+    action: "pricing" | "purchase" | "club_create" | "beta_continue";
     href?: string;
   };
   
@@ -71,6 +71,9 @@ export interface NormalizedPaywallUi {
   
   /** Parsed options from payload (may be empty) */
   options: PaywallOptionParsed[];
+  
+  /** Whether this is a beta continuation paywall (SOFT_BETA_STRICT) */
+  isBetaContinue: boolean;
   
   /** Additional context for rendering */
   meta: {
@@ -187,6 +190,28 @@ const DEFAULT_CONFIG: ReasonUiConfig = {
 };
 
 // ============================================================================
+// Beta Paywall Copy (SOFT_BETA_STRICT)
+// Source: SSOT_UI_COPY.md canonical patterns
+// ============================================================================
+
+const BETA_PAYWALL_COPY: {
+  title: string;
+  message: string;
+  primaryCta: string;
+  cancelLabel: string;
+  errorTitle: string;
+  errorMessage: string;
+} = {
+  title: "Платная функция",
+  message: "Создание события на {N} участников требует оплаты. В бета-версии действие доступно без оплаты.",
+  primaryCta: "Продолжить",
+  cancelLabel: "Отмена",
+  /** Error state copy for loop protection (SSOT_UI_COPY §4.2) */
+  errorTitle: "Действие не выполнено",
+  errorMessage: "Не удалось выполнить действие. Повторная попытка невозможна.",
+};
+
+// ============================================================================
 // Plan Labels (Subset - Full list in SSOT_BILLING)
 // ============================================================================
 
@@ -223,6 +248,41 @@ export function getPaywallUiConfig(
 ): NormalizedPaywallUi {
   const config = REASON_CONFIG[details.reason] || DEFAULT_CONFIG;
   
+  // Check if this is a BETA_CONTINUE paywall
+  const hasBetaContinue = details.options?.some(o => o.type === "BETA_CONTINUE") ?? false;
+  
+  // If beta continue, use beta-specific copy
+  if (hasBetaContinue) {
+    const metaObj = details.meta || {};
+    const requestedParticipants =
+      (metaObj.requestedParticipants as number) ||
+      (metaObj.requested as number) ||
+      undefined;
+
+    let betaMessage = BETA_PAYWALL_COPY.message;
+    if (requestedParticipants !== undefined) {
+      betaMessage = betaMessage.replace("{N}", String(requestedParticipants));
+    } else {
+      betaMessage = betaMessage.replace(" на {N} участников", "");
+    }
+
+    return {
+      title: BETA_PAYWALL_COPY.title,
+      message: betaMessage,
+      primaryCta: {
+        label: BETA_PAYWALL_COPY.primaryCta,
+        action: "beta_continue",
+      },
+      uiPattern: "modal",
+      options: details.options || [],
+      isBetaContinue: true,
+      meta: {
+        requestedParticipants,
+        limit: metaObj.freeLimit as number | undefined,
+      },
+    };
+  }
+
   // Determine club context from payload or provided context
   const clubId = details.context?.clubId || context?.clubId;
   const isClubContext = !!clubId || !!details.currentPlanId;
@@ -287,6 +347,7 @@ export function getPaywallUiConfig(
     secondaryCta,
     uiPattern: config.uiPattern,
     options,
+    isBetaContinue: false,
     meta,
   };
 }
@@ -408,4 +469,4 @@ export function getCreditConfirmationUiConfig(
 // Exports
 // ============================================================================
 
-export { REASON_CONFIG, DEFAULT_CONFIG, PLAN_LABELS };
+export { REASON_CONFIG, DEFAULT_CONFIG, PLAN_LABELS, BETA_PAYWALL_COPY };

@@ -32,6 +32,15 @@ interface BillingModalState {
   /** Callback for credit confirmation */
   onConfirmCredit: ((details: CreditConfirmationDetails) => Promise<void>) | null;
   
+  /**
+   * Callback for beta continuation (SOFT_BETA_STRICT).
+   * Called by PaywallModal after auto-grant succeeds.
+   * Resubmits the action with confirm_credit=true.
+   *
+   * UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md §7.1
+   */
+  onBetaContinue: (() => Promise<void>) | null;
+  
   /** Context for pricing navigation */
   context: { clubId?: string } | null;
 }
@@ -42,8 +51,9 @@ interface BillingModalContextValue extends BillingModalState {
    * 
    * @param details - PaywallDetails from API error
    * @param context - Additional context (clubId for pricing navigation)
+   * @param onBetaContinue - Callback for beta continuation (SOFT_BETA_STRICT)
    */
-  openPaywall: (details: PaywallDetails, context?: { clubId?: string }) => void;
+  openPaywall: (details: PaywallDetails, context?: { clubId?: string }, onBetaContinue?: () => Promise<void>) => void;
   
   /**
    * Open Credit Confirmation modal.
@@ -83,18 +93,21 @@ export function BillingModalProvider({ children }: BillingModalProviderProps) {
     paywallDetails: null,
     creditDetails: null,
     onConfirmCredit: null,
+    onBetaContinue: null,
     context: null,
   });
   
   const openPaywall = React.useCallback((
     details: PaywallDetails,
-    context?: { clubId?: string }
+    context?: { clubId?: string },
+    onBetaContinue?: () => Promise<void>
   ) => {
     setState({
       modalType: "paywall",
       paywallDetails: details,
       creditDetails: null,
       onConfirmCredit: null,
+      onBetaContinue: onBetaContinue || null,
       context: context || null,
     });
   }, []);
@@ -108,6 +121,7 @@ export function BillingModalProvider({ children }: BillingModalProviderProps) {
       paywallDetails: null,
       creditDetails: details,
       onConfirmCredit: onConfirm,
+      onBetaContinue: null,
       context: null,
     });
   }, []);
@@ -119,6 +133,7 @@ export function BillingModalProvider({ children }: BillingModalProviderProps) {
       paywallDetails: null,
       creditDetails: null,
       onConfirmCredit: null,
+      onBetaContinue: null,
       context: null,
     });
   }, []);

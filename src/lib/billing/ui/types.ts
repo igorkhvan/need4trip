@@ -75,7 +75,7 @@ export interface PaywallDetails {
  * Handles both ONE_OFF_CREDIT and CLUB_ACCESS option types.
  */
 export interface PaywallOptionParsed {
-  type: "ONE_OFF_CREDIT" | "CLUB_ACCESS";
+  type: "ONE_OFF_CREDIT" | "CLUB_ACCESS" | "BETA_CONTINUE";
   
   // ONE_OFF_CREDIT fields
   productCode?: string;
@@ -173,6 +173,15 @@ export interface HandleApiErrorOptions {
    * If not provided and 409 is received, will throw dev error.
    */
   onConfirmCredit?: (details: CreditConfirmationDetails) => Promise<void>;
+  
+  /**
+   * Callback for beta continuation (SOFT_BETA_STRICT mode).
+   * Called by PaywallModal after system auto-grant succeeds.
+   * Resubmits the same action with confirm_credit=true.
+   *
+   * UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md §7.1
+   */
+  onBetaContinue?: () => Promise<void>;
   
   /**
    * Fallback handler for errors not handled by billing UI.

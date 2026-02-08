@@ -18,6 +18,7 @@ import {
 } from "@/lib/db/planRepo";
 import { isActionAllowed } from "@/lib/db/billingPolicyRepo";
 import { hasAvailableCredit } from "@/lib/db/billingCreditsRepo";
+import { isSoftBetaStrict } from "@/lib/config/paywall";
 import type { 
   BillingActionCode, 
   ClubSubscription, 
@@ -498,6 +499,30 @@ export async function enforceEventPublish(params: {
 
   if (!creditAvailable) {
     // Decision 3: No credit available
+
+    // Build options based on paywall mode
+    // SOFT_BETA_STRICT: add BETA_CONTINUE option (user can continue without payment)
+    // HARD: standard payment options only
+    const betaStrict = isSoftBetaStrict();
+
+    const options: Array<{ type: "ONE_OFF_CREDIT" | "CLUB_ACCESS" | "BETA_CONTINUE"; [key: string]: unknown }> = betaStrict
+      ? [
+          { type: "BETA_CONTINUE" },
+        ]
+      : [
+          {
+            type: "ONE_OFF_CREDIT",
+            productCode: "EVENT_UPGRADE_500",
+            price: oneOffPrice,
+            currencyCode: oneOffCurrency,
+            provider: "kaspi",
+          },
+          {
+            type: "CLUB_ACCESS",
+            recommendedPlanId: "club_50",
+          },
+        ];
+
     throw new PaywallError({
       message: `Событие на ${maxParticipants} участников требует оплаты`,
       reason: "PUBLISH_REQUIRES_PAYMENT",
@@ -505,20 +530,9 @@ export async function enforceEventPublish(params: {
       meta: {
         requestedParticipants: maxParticipants,
         freeLimit: entitlements.maxEventParticipants,
+        ...(betaStrict ? { paywallMode: 'soft_beta_strict' } : {}),
       },
-      options: [
-        {
-          type: "ONE_OFF_CREDIT",
-          productCode: "EVENT_UPGRADE_500",
-          price: oneOffPrice,
-          currencyCode: oneOffCurrency,
-          provider: "kaspi",
-        },
-        {
-          type: "CLUB_ACCESS",
-          recommendedPlanId: "club_50",
-        },
-      ],
+      options,
     });
   }
 

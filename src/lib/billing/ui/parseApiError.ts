@@ -222,6 +222,12 @@ function parsePaywallOption(raw: unknown): PaywallOptionParsed | null {
     };
   }
   
+  if (type === "BETA_CONTINUE") {
+    return {
+      type: "BETA_CONTINUE",
+    };
+  }
+  
   return null;
 }
 

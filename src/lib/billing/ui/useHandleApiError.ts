@@ -42,6 +42,12 @@ interface UseHandleApiErrorOptions extends Omit<HandleApiErrorOptions, "onFallba
    * Called for 401/403/404/422/500 etc.
    */
   onFallback?: (error: unknown) => void;
+
+  /**
+   * Callback for beta continuation (SOFT_BETA_STRICT mode).
+   * Called by PaywallModal after system auto-grant succeeds.
+   */
+  onBetaContinue?: () => Promise<void>;
 }
 
 interface UseHandleApiErrorReturn {
@@ -79,6 +85,7 @@ export function useHandleApiError(
       {
         clubId: currentOptions.clubId,
         onConfirmCredit: currentOptions.onConfirmCredit,
+        onBetaContinue: currentOptions.onBetaContinue,
         onFallback: currentOptions.onFallback,
       },
       {

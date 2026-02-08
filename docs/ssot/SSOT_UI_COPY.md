@@ -237,6 +237,22 @@ CTA:
 
 ---
 
+## 7.3 Beta Paywall (SOFT_BETA_STRICT)
+
+| Context | Copy |
+|------|------|
+| Beta paywall title | `Платная функция` |
+| Beta paywall message | `Создание события на {N} участников требует оплаты. В бета-версии действие доступно без оплаты.` |
+| Beta primary CTA | `Продолжить` |
+| Beta cancel | `Отмена` |
+| Beta error (loop) title | `Действие не выполнено` |
+| Beta error (loop) message | `Не удалось выполнить действие. Повторная попытка невозможна.` |
+| Beta pending | `Сохранение…` |
+
+Source: `src/lib/billing/ui/reasonMapping.ts` (BETA_PAYWALL_COPY)
+
+---
+
 ## 8. Language & Localization Rules
 
 - RU is **source of truth**

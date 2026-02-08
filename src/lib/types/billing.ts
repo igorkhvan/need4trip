@@ -270,8 +270,12 @@ export const PAYWALL_REASONS = [
 export type PaywallReason = typeof PAYWALL_REASONS[number];
 
 // Paywall option types
-export const PAYWALL_OPTION_TYPES = ["ONE_OFF_CREDIT", "CLUB_ACCESS"] as const;
+export const PAYWALL_OPTION_TYPES = ["ONE_OFF_CREDIT", "CLUB_ACCESS", "BETA_CONTINUE"] as const;
 export type PaywallOptionType = typeof PAYWALL_OPTION_TYPES[number];
+
+export interface PaywallOptionBetaContinue {
+  type: "BETA_CONTINUE";
+}
 
 export interface PaywallOptionOneOff {
   type: "ONE_OFF_CREDIT";
@@ -286,7 +290,7 @@ export interface PaywallOptionClub {
   recommendedPlanId: PlanId;
 }
 
-export type PaywallOption = PaywallOptionOneOff | PaywallOptionClub;
+export type PaywallOption = PaywallOptionOneOff | PaywallOptionClub | PaywallOptionBetaContinue;
 
 export interface PaywallError {
   code: "PAYWALL";

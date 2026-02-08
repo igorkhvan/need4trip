@@ -8,7 +8,7 @@
  */
 
 import { getAdminDb } from "@/lib/db/client";
-import type { BillingCredit, CreditCode, CreditStatus } from "@/lib/types/billing";
+import type { BillingCredit, CreditCode, CreditStatus, CreditSource } from "@/lib/types/billing";
 import { logger } from "@/lib/utils/logger";
 import { PaywallError } from "@/lib/errors";
 
@@ -27,6 +27,7 @@ export async function createBillingCredit(data: {
   userId: string;
   creditCode: CreditCode;
   sourceTransactionId: string;
+  source?: CreditSource;
 }): Promise<BillingCredit> {
   const db = getAdminDb();
 
@@ -37,6 +38,7 @@ export async function createBillingCredit(data: {
       credit_code: data.creditCode,
       status: "available" as CreditStatus,
       source_transaction_id: data.sourceTransactionId,
+      ...(data.source ? { source: data.source } : {}),
     })
     .select("*")
     .single();

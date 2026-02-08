@@ -171,11 +171,18 @@ export function CreateEventPageClient() {
     router.refresh();
   }, [controller, router]);
   
-  // B5.1: Initialize useHandleApiError with onConfirmCredit callback
+  // B5.1: Initialize useHandleApiError with onConfirmCredit + onBetaContinue callbacks
   const { handleError } = useHandleApiError({
     clubId: currentClubIdRef.current ?? undefined,
     onConfirmCredit: async () => {
       // Re-submit with confirm_credit=1 using stored payload
+      if (lastSubmitPayloadRef.current) {
+        await submitEvent(lastSubmitPayloadRef.current, { confirmCredit: true });
+      }
+    },
+    // SOFT_BETA_STRICT: resubmit after system auto-grant
+    // UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md §7.1
+    onBetaContinue: async () => {
       if (lastSubmitPayloadRef.current) {
         await submitEvent(lastSubmitPayloadRef.current, { confirmCredit: true });
       }

@@ -25,10 +25,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Users, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { CreditCard, Users, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import type { PaywallError as PaywallErrorType, PaywallOption } from "@/lib/types/billing";
 import type { PaywallDetails, PaywallOptionParsed } from "@/lib/billing/ui/types";
-import { getPaywallUiConfig } from "@/lib/billing/ui/reasonMapping";
+import { getPaywallUiConfig, BETA_PAYWALL_COPY } from "@/lib/billing/ui/reasonMapping";
 import { getClubPlanLabel } from "@/lib/types/club";
 
 // ============================================================================
@@ -52,6 +52,12 @@ interface PaywallModalPropsNew {
   onClose: () => void;
   details: PaywallDetails;
   context?: { clubId?: string };
+  /**
+   * Beta continuation callback (SOFT_BETA_STRICT).
+   * Called after system auto-grant succeeds to resubmit with confirm_credit=true.
+   * UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md §7.1
+   */
+  onBetaContinue?: () => Promise<void>;
 }
 
 type PaywallModalProps = PaywallModalPropsLegacy | PaywallModalPropsNew;
@@ -67,6 +73,9 @@ export function PaywallModal(props: PaywallModalProps) {
   const [paymentStatus, setPaymentStatus] = React.useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
   const [transactionId, setTransactionId] = React.useState<string | null>(null);
   
+  // Beta state (SOFT_BETA_STRICT)
+  const [betaState, setBetaState] = React.useState<'idle' | 'pending' | 'error'>('idle');
+  
   // Normalize props to PaywallDetails
   const details: PaywallDetails = isNewProps(props) 
     ? props.details 
@@ -76,20 +85,21 @@ export function PaywallModal(props: PaywallModalProps) {
         requiredPlanId: props.error.requiredPlanId,
         meta: props.error.meta,
         options: props.error.options?.map(o => ({
-          type: o.type,
+          type: o.type as "ONE_OFF_CREDIT" | "CLUB_ACCESS" | "BETA_CONTINUE",
           ...(o.type === 'ONE_OFF_CREDIT' ? {
             productCode: (o as PaywallOption & { productCode?: string }).productCode,
             price: (o as PaywallOption & { price?: number }).price,
             currencyCode: (o as PaywallOption & { currencyCode?: string }).currencyCode,
             provider: (o as PaywallOption & { provider?: string }).provider,
-          } : {
+          } : o.type === 'CLUB_ACCESS' ? {
             recommendedPlanId: (o as PaywallOption & { recommendedPlanId?: string }).recommendedPlanId,
-          }),
+          } : {}),
         })) as PaywallOptionParsed[] | undefined,
         cta: props.error.cta,
       };
   
   const context = isNewProps(props) ? props.context : undefined;
+  const onBetaContinue = isNewProps(props) ? props.onBetaContinue : undefined;
   
   // Get normalized UI config using B3-3 mapping
   const uiConfig = getPaywallUiConfig(details, context);
@@ -177,9 +187,118 @@ export function PaywallModal(props: PaywallModalProps) {
     router.push(href);
   };
 
+  /**
+   * Beta continuation handler (SOFT_BETA_STRICT).
+   *
+   * Flow:
+   * 1. Enter PENDING state (block repeated actions)
+   * 2. Call POST /api/billing/beta-grant (system auto-grant)
+   * 3. On success: call onBetaContinue() (resubmit with confirm_credit=1)
+   * 4. On failure: enter ERROR state (loop protection)
+   *
+   * UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md §7.1, §8
+   */
+  const handleBetaContinue = async () => {
+    if (!onBetaContinue) return;
+
+    setBetaState('pending');
+
+    try {
+      // Step 1: Auto-grant system credit
+      const grantRes = await fetch('/api/billing/beta-grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!grantRes.ok) {
+        // Auto-grant failed — enter error state
+        setBetaState('error');
+        return;
+      }
+
+      // Step 2: Resubmit via callback (confirm_credit=true)
+      await onBetaContinue();
+
+      // If we reach here, success — page will redirect, modal unmounts
+    } catch {
+      // Loop protection: resubmit triggered another 402 or other error
+      // Enter stable ERROR state per SSOT_UI_STATES.md §4
+      setBetaState('error');
+    }
+  };
+
   // Use uiConfig.options (already filtered and normalized)
   const hasOptions = uiConfig.options.length > 0;
 
+  // ============================================================================
+  // BETA CONTINUE branch (SOFT_BETA_STRICT)
+  // UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md
+  // ============================================================================
+  if (uiConfig.isBetaContinue) {
+    return (
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="heading-h3">
+              {betaState === 'error' ? BETA_PAYWALL_COPY.errorTitle : uiConfig.title}
+            </DialogTitle>
+            <DialogDescription className="text-body-small">
+              {betaState === 'error' ? BETA_PAYWALL_COPY.errorMessage : uiConfig.message}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="space-y-4">
+            {/* PENDING state: spinner during auto-grant + resubmit */}
+            {betaState === 'pending' && (
+              <div className="flex flex-col items-center justify-center p-6 bg-blue-50 rounded-lg">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+                <p className="text-sm font-medium text-blue-900">Сохранение…</p>
+              </div>
+            )}
+
+            {/* ERROR state: loop protection (SSOT_UI_STATES §4) */}
+            {betaState === 'error' && (
+              <div className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg">
+                <AlertTriangle className="w-8 h-8 text-red-600 mb-3" />
+                <p className="text-sm font-medium text-red-900">{BETA_PAYWALL_COPY.errorTitle}</p>
+              </div>
+            )}
+          </DialogBody>
+
+          <DialogFooter>
+            {betaState === 'idle' && (
+              <>
+                <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+                  {BETA_PAYWALL_COPY.cancelLabel}
+                </Button>
+                <Button
+                  onClick={handleBetaContinue}
+                  className="w-full sm:w-auto"
+                >
+                  {uiConfig.primaryCta.label}
+                </Button>
+              </>
+            )}
+            {betaState === 'pending' && (
+              <Button disabled className="w-full sm:w-auto">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                {uiConfig.primaryCta.label}
+              </Button>
+            )}
+            {betaState === 'error' && (
+              <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+                {BETA_PAYWALL_COPY.cancelLabel}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // ============================================================================
+  // STANDARD paywall (HARD mode)
+  // ============================================================================
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -221,7 +340,7 @@ export function PaywallModal(props: PaywallModalProps) {
                 <>
                   <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
                   <div className="space-y-3">
-                    {uiConfig.options.map((option, idx) => (
+                    {uiConfig.options.filter(o => o.type !== 'BETA_CONTINUE').map((option, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleOptionClick(option)}

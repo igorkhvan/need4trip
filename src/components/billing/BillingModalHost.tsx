@@ -39,6 +39,7 @@ function BillingModalsRenderer() {
     paywallDetails,
     creditDetails,
     onConfirmCredit,
+    onBetaContinue,
     context,
     closeModal,
   } = useBillingModals();
@@ -52,6 +53,7 @@ function BillingModalsRenderer() {
           onClose={closeModal}
           details={paywallDetails}
           context={context ?? undefined}
+          onBetaContinue={onBetaContinue ?? undefined}
         />
       )}
       

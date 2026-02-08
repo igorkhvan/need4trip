@@ -3,14 +3,17 @@ import { Car, Menu } from "lucide-react";
 
 import { HeaderUserSection } from "@/components/layout/header-user-section";
 import { MobileNav } from "@/components/layout/mobile-nav";
-
-const navItems = [
-  { href: "/events", label: "События" },
-  { href: "/clubs", label: "Клубы" },
-  { href: "/pricing", label: "Тарифы" },
-];
+import { isSoftBetaStrict } from "@/lib/config/paywall";
 
 export function MainHeader() {
+  // Feature gating: hide Clubs and Pricing during beta (UI only, backend preserved)
+  // UX Contract: TASK 6 — SOFT_BETA_STRICT feature gating
+  const betaStrict = isSoftBetaStrict();
+  const navItems = [
+    { href: "/events", label: "События" },
+    ...(!betaStrict ? [{ href: "/clubs", label: "Клубы" }] : []),
+    ...(!betaStrict ? [{ href: "/pricing", label: "Тарифы" }] : []),
+  ];
   // ⚡ PERFORMANCE: Components use AuthContext (no props needed)
   // User loaded once in root layout via SSR (getCurrentUser)
   // HeaderUserSection and MobileNav read from context (0 API calls)
