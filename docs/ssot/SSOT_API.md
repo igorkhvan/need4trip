@@ -1374,10 +1374,10 @@ List all clubs with optional search/filter by city, pagination.
 **Runtime:** Node.js  
 **Auth:** Required (JWT)  
 **Auth mechanism:** JWT via middleware  
-**Authorization:** Any authenticated user can create club  
+**Authorization:** Authenticated user with an active, unconsumed club subscription entitlement  
 
 **Purpose:**  
-Create new club (user becomes owner).
+Create new club (user becomes owner). Requires pre-purchased subscription entitlement (ADR-002).
 
 **Request:**
 
@@ -1405,8 +1405,11 @@ Create new club (user becomes owner).
   }
   ```
 - **Side effects:** 
+  - Atomically claims and consumes one active entitlement from `club_subscription_entitlements`
   - Inserts into `clubs` table
   - Inserts owner into `club_members` table
+  - Creates `club_subscriptions` record (status='active') from consumed entitlement
+- **Semantics:** Each entitlement allows creation of exactly one club. Entitlement is consumed permanently at successful club creation (ADR-002).
 
 **Errors:**
 
@@ -1414,21 +1417,23 @@ Create new club (user becomes owner).
 |--------|-----------|-------|
 | 400 | Validation error | Zod schema violation |
 | 401 | Not authenticated | Middleware blocks |
+| 402 | Payment Required | PaywallError: No active entitlement, entitlement expired, or entitlement already consumed. Reason: `CLUB_CREATION_REQUIRES_PLAN`. Error envelope follows §5.2 format. |
 
 **Security & Abuse:**
 
 - **Rate limit:** write tier (30 req/min)
-- **Spam / Cost abuse risk:** Medium (DB insert, no limit on club count per user)
+- **Spam / Cost abuse risk:** Medium (DB insert, entitlement consumption enforced)
 - **Sensitive data exposure:** No
 
 **Dependencies:**
 
-- Supabase (clubs, club_members tables)
+- Supabase (clubs, club_members, club_subscription_entitlements, club_subscriptions tables)
+- RPC: `create_club_consuming_entitlement()` (atomic entitlement consumption)
 
 **Code pointers:**
 
 - Route handler: `/src/app/api/clubs/route.ts`
-- Key functions: `createClub()`
+- Key functions: `createClub()`, `createClubConsumingEntitlement()`
 
 ---
 
