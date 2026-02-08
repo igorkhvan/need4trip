@@ -237,13 +237,26 @@ graph TB
 
 **File:** `src/lib/services/accessControl.ts`
 
-**Signature:**
+**Signatures:**
 ```typescript
+// Club events enforcement
 enforceClubAction(params: {
   clubId: string;
   action: BillingActionCode;
   context?: { eventParticipantsCount?, clubMembersCount?, isPaidEvent? };
 }): Promise<void>  // throws PaywallError on violation
+
+// Event publish enforcement (personal + club)
+enforceEventPublish(params: {
+  userId: string;
+  clubId: string | null;
+  maxParticipants: number | null;
+  isPaid: boolean;
+  eventId?: string;
+}, confirmCredit?: boolean): Promise<EnforcementResult>
+// Returns { requiresCredit: boolean }
+// Callers use requiresCredit to wrap operation in credit transaction
+// throws PaywallError (402) or CreditConfirmationRequiredError (409)
 ```
 
 ### Алгоритм проверки (Decision Tree)
@@ -341,22 +354,24 @@ Shown when 409 `CREDIT_CONFIRMATION_REQUIRED` is received. User must explicitly 
 - **Бессрочный** - не привязан к событию при покупке
 - **Расходуется ровно один раз** - при save с `confirm_credit=1`
 - **Только для личных событий** - club events используют club billing
-- **Не заменяет клуб** - при превышении лимитов (>500) требуется клуб
+- **Не заменяет клуб** - при превышении лимита апгрейда требуется клуб
 
 ### Продукт: EVENT_UPGRADE_500
 
-| Field | Value |
-|-------|-------|
-| `code` | `EVENT_UPGRADE_500` |
-| `title` | Event Upgrade (до 500 участников) |
-| `price` | 1000 KZT |
-| `constraints.scope` | `personal` |
-| `constraints.max_participants` | 500 |
+| Field | Value | Source |
+|-------|-------|--------|
+| `code` | `EVENT_UPGRADE_500` | `billing_products.code` |
+| `title` | Event Upgrade | `billing_products.title` |
+| `price` | 1000 KZT | `billing_products.price` + `currency_code` |
+| `constraints.scope` | `personal` | `billing_products.constraints` (JSONB) |
+| `constraints.max_participants` | 500 (current) | `billing_products.constraints` (JSONB) |
 
-**Лимиты:**
-- Free plan: ~15 participants
-- One-off credit: до 500 participants
-- Больше 500: требуется club
+**Все лимиты читаются из БД (динамические):**
+- Free plan limit: `club_plans.max_event_participants` (where id='free')
+- One-off credit limit: `billing_products.constraints.max_participants` (where code='EVENT_UPGRADE_500')
+- Свыше лимита апгрейда: требуется club subscription
+
+**Кеширование:** Оба значения кешируются через StaticCache (TTL 5 мин). При изменении в БД новые значения применяются автоматически.
 
 ### Credit Lifecycle (v5+)
 
@@ -456,10 +471,14 @@ Shown when 409 `CREDIT_CONFIRMATION_REQUIRED` is received. User must explicitly 
 
 **Personal Events (clubId == null):**
 ```
+Limits read from DB:
+  freeLimit = club_plans.free.max_event_participants (e.g. 15)
+  upgradeLimit = billing_products.EVENT_UPGRADE_500.constraints.max_participants (e.g. 500)
+
 1. Check maxParticipants
-   ├─> ≤ free (15) → ALLOW (no credit)
-   ├─> > oneoff (500) → 402 PAYWALL (CLUB_ACCESS only)
-   └─> 16-500 → check credit
+   ├─> ≤ freeLimit → ALLOW, return { requiresCredit: false }
+   ├─> > upgradeLimit → 402 PAYWALL (CLUB_ACCESS only)
+   └─> freeLimit < count ≤ upgradeLimit → check credit
 
 2. Has available credit?
    ├─> NO → 402 PAYWALL (ONE_OFF + CLUB_ACCESS)
@@ -467,7 +486,7 @@ Shown when 409 `CREDIT_CONFIRMATION_REQUIRED` is received. User must explicitly 
 
 3. confirm_credit=1?
    ├─> NO → 409 CREDIT_CONFIRMATION
-   └─> YES → consume credit + ALLOW (save event)
+   └─> YES → return { requiresCredit: true } (caller wraps in credit transaction)
 ```
 
 ### Credit Consumption (v5.1 - SSOT-compliant)
@@ -611,21 +630,26 @@ This section provides billing-specific clarifications. For full behavior rules, 
 
 ## ⚡ Кэширование
 
-### StaticCache для планов
+### StaticCache для планов и продуктов
 
-**File:** `src/lib/cache/staticCache.ts`  
-**Usage:** `src/lib/db/planRepo.ts`
+**File:** `src/lib/cache/staticCache.ts`
+
+| Repository | Key | TTL | Table |
+|---|---|---|---|
+| `src/lib/db/planRepo.ts` | `planId` | 5 min | `club_plans` |
+| `src/lib/db/billingProductsRepo.ts` | `code` | 5 min | `billing_products` |
 
 **Behavior:**
 - TTL: 5 minutes
-- Key: planId
+- O(1) access by key
 - Auto-invalidation on TTL expiry
-- All plan queries use cache
+- All plan and product queries use cache
+- При изменении лимитов в БД кеш обновится максимум через 5 минут
 
 **Benefits:**
 - O(1) access by key
-- Single DB query per 5 minutes
-- FREE план теперь в кэше
+- Single DB query per 5 minutes per cache
+- FREE план и продукты (EVENT_UPGRADE_500) в кэше
 
 ---
 

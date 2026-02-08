@@ -2863,6 +2863,14 @@ Get full event details with hydrated relations (city, category, organizer, parti
 - Used by UI for read-only enforcement when club is archived
 - Personal events (clubId=null): `club` field is `null`
 
+**Owner-only fields (v1.8+):**
+- `effectiveMaxParticipants`: number (only present when requester is the event owner)
+  - Computed from `getEffectiveEventEntitlements()` — accounts for consumed credits and club subscription
+  - Free personal event: equals `club_plans.free.max_event_participants` (e.g. 15)
+  - Upgraded personal event (credit consumed): equals `billing_products.constraints.max_participants` (e.g. 500)
+  - Club event: equals club plan's `max_event_participants` (or unlimited)
+  - Used by edit form for "Ваш лимит: N" validation hint
+
 - **Side effects:** 
   - Auto-grant access for restricted events (first view by authenticated user)
 

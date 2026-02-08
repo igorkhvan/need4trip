@@ -111,10 +111,21 @@ Maintain an Ownership Map table (append-only; deprecations via archive):
 - Error mapping
 - Caching primitives
 - Billing enforcement entrypoints
+- Effective event entitlements (limits)
 - Idempotency wrapper(s)
 - Async UI action controller
 - Hydration/batch loaders
 - Permissions/visibility enforcement utilities
+
+**Key ownership entries:**
+
+| Concern | Canonical Module |
+|---|---|
+| Billing enforcement (club) | `lib/services/accessControl.ts` → `enforceClubAction()` |
+| Billing enforcement (event publish) | `lib/services/accessControl.ts` → `enforceEventPublish()` |
+| Effective event limits (SSOT) | `lib/services/eventEntitlements.ts` → `getEffectiveEventEntitlements()` |
+| Plan data (cached) | `lib/db/planRepo.ts` (StaticCache, TTL 5 min) |
+| Product data (cached) | `lib/db/billingProductsRepo.ts` (StaticCache, TTL 5 min) |
 
 ---
 
@@ -216,7 +227,12 @@ Rules:
 ## 7. Caching Strategy
 
 ### 7.1 Reference Data (StaticCache Only)
-Reference data (currencies, cities, categories, vehicle types, plans, etc.) MUST use the canonical StaticCache mechanism.
+Reference data (currencies, cities, categories, vehicle types, plans, billing products, etc.) MUST use the canonical StaticCache mechanism.
+
+**Currently cached repositories:**
+- `planRepo.ts` — `club_plans` (TTL 5 min, key: planId)
+- `billingProductsRepo.ts` — `billing_products` (TTL 5 min, key: code)
+- Other reference data repos (cities, currencies, categories, vehicle types, car brands)
 
 Rules:
 - TTL-based, bounded, race-safe
