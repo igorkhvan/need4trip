@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { NavigationChooser } from "./navigation-chooser";
 import { MapPreviewModal } from "./map-preview-modal";
-import { parseCoordinates, normalizeCoordinates, isShortGoogleMapsLink } from "@/lib/utils/coordinates";
+import { parseCoordinates, normalizeCoordinates, isShortMapLink } from "@/lib/utils/coordinates";
 import type { EventLocationInput } from "@/lib/types/eventLocation";
 
 interface LocationItemProps {
@@ -78,10 +78,10 @@ export function LocationItem({
       return;
     }
 
-    // Check for short Google Maps links
-    if (isShortGoogleMapsLink(coordinatesInput)) {
+    // Check for short/unsupported map links (Google goo.gl, Yandex /maps/-/)
+    if (isShortMapLink(coordinatesInput)) {
       setCoordinatesError(
-        "Короткие ссылки Google Maps не поддерживаются. Откройте ссылку в браузере, скопируйте координаты или полный URL из адресной строки."
+        "Короткие ссылки не поддерживаются. Откройте ссылку в браузере и скопируйте полный URL из адресной строки."
       );
       onUpdate({
         latitude: null,
@@ -107,7 +107,7 @@ export function LocationItem({
     } else {
       // Invalid format
       setCoordinatesError(
-        "Неверный формат координат. Используйте формат: 43.238949, 76.889709 или полную ссылку Google Maps."
+        "Неверный формат координат. Используйте формат: 43.238949, 76.889709 или полную ссылку Google Maps, Яндекс Карт, 2ГИС."
       );
       onUpdate({
         latitude: null,
@@ -161,7 +161,7 @@ export function LocationItem({
         id={`location-coords-${location.sortOrder}`}
         label="Координаты"
         error={coordinatesError}
-        hint="Decimal Degrees, Google Maps URL, или DMS"
+        hint="Координаты или ссылка: Google Maps, Яндекс Карты, 2ГИС"
       >
         <div className="flex gap-2">
           <Input
@@ -170,7 +170,7 @@ export function LocationItem({
             onChange={(e) => handleCoordinatesChange(e.target.value)}
             onBlur={handleCoordinatesBlur}
             disabled={disabled}
-            placeholder="43.238949, 76.889709 или https://maps.google.com/..."
+            placeholder="43.238949, 76.889709 или ссылка с карты"
             className={coordinatesError ? "border-red-500 focus:border-red-500" : ""}
           />
 

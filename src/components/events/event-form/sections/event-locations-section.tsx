@@ -106,8 +106,8 @@ export function EventLocationsSection({
       <div className="rounded-lg bg-[#F0F9FF] p-4 text-sm text-[#1E40AF]">
         <p className="font-medium">💡 Как вводить координаты:</p>
         <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
-          <li>Decimal Degrees: <code className="rounded bg-white px-1">43.238949, 76.889709</code></li>
-          <li>Google Maps URL: вставьте ссылку с карты</li>
+          <li>Координаты: <code className="rounded bg-white px-1">43.238949, 76.889709</code></li>
+          <li>Ссылка с карты: Google Maps, Яндекс Карты, 2ГИС</li>
           <li>Можно оставить пустым и заполнить позже</li>
         </ul>
       </div>

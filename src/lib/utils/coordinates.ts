@@ -7,6 +7,8 @@ export type CoordinateFormat =
   | 'DD'           // Decimal Degrees: "43.238949, 76.889709"
   | 'DMS'          // Degrees/Minutes/Seconds: 43°14'20.2"N 76°53'23.0"E
   | 'GOOGLE_MAPS'  // Google Maps URL: https://maps.google.com/?q=43.238949,76.889709
+  | 'YANDEX_MAPS'  // Yandex Maps URL: https://yandex.ru/maps/?pt=76.889709,43.238949
+  | 'TWOGIS'       // 2GIS URL: https://2gis.ru/moscow/geo/76.889709,43.238949
   | 'UNKNOWN';
 
 export interface ParsedCoordinates {
@@ -17,17 +19,37 @@ export interface ParsedCoordinates {
 }
 
 /**
- * Check if input is a short Google Maps link (goo.gl)
- * These links require redirect resolution which we don't support
+ * Check if input is a short/unsupported map link that we can't parse client-side
+ * These links require redirect resolution which we don't support.
+ *
+ * Covers:
+ *   - Google: goo.gl, maps.app.goo.gl
+ *   - Yandex: yandex.ru/maps/-/... (short encoded links)
  */
-export function isShortGoogleMapsLink(input: string): boolean {
+export function isShortMapLink(input: string): boolean {
   try {
     const url = new URL(input);
-    return url.hostname.includes('goo.gl');
+
+    // Google short links
+    if (url.hostname.includes('goo.gl')) {
+      return true;
+    }
+
+    // Yandex short links: yandex.ru/maps/-/CCUkr2Hj3A
+    if (url.hostname.includes('yandex.') && url.pathname.includes('/maps/-/')) {
+      return true;
+    }
+
+    return false;
   } catch {
     return false;
   }
 }
+
+/**
+ * @deprecated Use isShortMapLink instead. Kept for backward compatibility.
+ */
+export const isShortGoogleMapsLink = isShortMapLink;
 
 /**
  * Parse coordinates from various input formats
@@ -44,9 +66,12 @@ export function parseCoordinates(input: string): ParsedCoordinates | null {
   }
 
   // Try parsing in order of likelihood
+  // Each parser is gated on its own hostname/format check — no cross-interference
   const parsers = [
     parseDecimalDegrees,
     parseGoogleMapsUrl,
+    parseYandexMapsUrl,
+    parse2gisUrl,
     parseDMS,
   ];
 
@@ -173,6 +198,164 @@ function parseGoogleMapsUrl(input: string): ParsedCoordinates | null {
       }
     }
   } catch (error) {
+    // Invalid URL, continue
+  }
+
+  return null;
+}
+
+/**
+ * Parse Yandex Maps URLs
+ * IMPORTANT: Yandex uses longitude,latitude order (lng,lat) for most params,
+ * EXCEPT rtext which uses latitude,longitude (lat,lng).
+ *
+ * Examples:
+ *   - https://yandex.ru/maps/?pt=76.889709,43.238949&z=15&l=map
+ *   - https://yandex.ru/maps/?ll=76.889709,43.238949&z=12
+ *   - https://yandex.ru/maps/?whatshere[point]=76.889709,43.238949&whatshere[zoom]=17
+ *   - https://yandex.ru/maps/?rtext=43.238949,76.889709~43.25,76.95
+ *   - https://yandex.ru/maps/-/CCUkr2Hj3A (short links - NOT supported)
+ */
+function parseYandexMapsUrl(input: string): ParsedCoordinates | null {
+  if (!input.includes('://')) {
+    return null;
+  }
+
+  try {
+    const url = new URL(input);
+
+    // Hostname gate: yandex.ru, yandex.com, yandex.kz, maps.yandex.ru, etc.
+    if (!url.hostname.includes('yandex.')) {
+      return null;
+    }
+
+    // Must contain /maps in pathname (filter out non-map Yandex pages)
+    if (!url.pathname.includes('/maps')) {
+      return null;
+    }
+
+    // Reject short links: /maps/-/... (require redirect resolution)
+    if (url.pathname.includes('/maps/-/')) {
+      return null;
+    }
+
+    // Helper: parse "lng,lat" string (Yandex default order) -> { lat, lng }
+    const parseLngLat = (value: string): ParsedCoordinates | null => {
+      const parts = value.split(',');
+      if (parts.length < 2) return null;
+
+      const lng = parseFloat(parts[0]);
+      const lat = parseFloat(parts[1]);
+
+      if (!validateCoordinates(lat, lng)) return null;
+
+      return {
+        lat,
+        lng,
+        format: 'YANDEX_MAPS',
+        normalized: normalizeCoordinates(lat, lng),
+      };
+    };
+
+    // Helper: parse "lat,lng" string (used only for rtext) -> { lat, lng }
+    const parseLatLng = (value: string): ParsedCoordinates | null => {
+      const parts = value.split(',');
+      if (parts.length < 2) return null;
+
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
+
+      if (!validateCoordinates(lat, lng)) return null;
+
+      return {
+        lat,
+        lng,
+        format: 'YANDEX_MAPS',
+        normalized: normalizeCoordinates(lat, lng),
+      };
+    };
+
+    // Priority 1: pt (placemark) — most specific, uses lng,lat
+    const ptParam = url.searchParams.get('pt');
+    if (ptParam) {
+      // pt can contain multiple points: "lng,lat~lng,lat" — take first
+      const firstPoint = ptParam.split('~')[0];
+      const result = parseLngLat(firstPoint);
+      if (result) return result;
+    }
+
+    // Priority 2: whatshere[point] — "What's here?", uses lng,lat
+    const whatshereParam = url.searchParams.get('whatshere[point]');
+    if (whatshereParam) {
+      const result = parseLngLat(whatshereParam);
+      if (result) return result;
+    }
+
+    // Priority 3: ll (map center) — uses lng,lat
+    const llParam = url.searchParams.get('ll');
+    if (llParam) {
+      const result = parseLngLat(llParam);
+      if (result) return result;
+    }
+
+    // Priority 4: rtext (route) — uses lat,lng (!) — take first waypoint
+    const rtextParam = url.searchParams.get('rtext');
+    if (rtextParam) {
+      // rtext format: "lat,lng~lat,lng" or "~lat,lng" (empty start)
+      const waypoints = rtextParam.split('~').filter(Boolean);
+      if (waypoints.length > 0) {
+        const result = parseLatLng(waypoints[0]);
+        if (result) return result;
+      }
+    }
+  } catch {
+    // Invalid URL, continue
+  }
+
+  return null;
+}
+
+/**
+ * Parse 2GIS URLs
+ * IMPORTANT: 2GIS uses longitude,latitude order (lng,lat) in /geo/ paths.
+ *
+ * Examples:
+ *   - https://2gis.ru/moscow/geo/37.618423,55.751244
+ *   - https://2gis.kz/almaty/geo/76.889709,43.238949
+ *   - https://2gis.ru/geo/37.618423,55.751244
+ *   - https://2gis.com/moscow/geo/37.618423,55.751244
+ *   - https://2gis.kz/almaty/firm/9429940000848693 (firm - no coordinates, NOT supported)
+ */
+function parse2gisUrl(input: string): ParsedCoordinates | null {
+  if (!input.includes('://')) {
+    return null;
+  }
+
+  try {
+    const url = new URL(input);
+
+    // Hostname gate: 2gis.ru, 2gis.kz, 2gis.com (incl. m.2gis.ru etc.)
+    if (!url.hostname.includes('2gis.')) {
+      return null;
+    }
+
+    // Try to extract coordinates from /geo/lng,lat path segment
+    const geoMatch = url.pathname.match(/\/geo\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (geoMatch) {
+      // 2GIS uses lng,lat order — swap to lat,lng
+      const lng = parseFloat(geoMatch[1]);
+      const lat = parseFloat(geoMatch[2]);
+
+      if (validateCoordinates(lat, lng)) {
+        return {
+          lat,
+          lng,
+          format: 'TWOGIS',
+          normalized: normalizeCoordinates(lat, lng),
+        };
+      }
+    }
+  } catch {
     // Invalid URL, continue
   }
 
