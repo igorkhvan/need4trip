@@ -14,7 +14,9 @@ import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { 
   getPlanById,
   getRequiredPlanForParticipants,
-  getRequiredPlanForMembers 
+  getRequiredPlanForMembers,
+  getMinPlanForPaidEvents,
+  getMinPlanForCsvExport,
 } from "@/lib/db/planRepo";
 import { isActionAllowed } from "@/lib/db/billingPolicyRepo";
 import { hasAvailableCredit } from "@/lib/db/billingCreditsRepo";
@@ -56,8 +58,9 @@ export async function enforceClubAction(params: {
   const subscription = await getClubSubscription(clubId);
 
   if (!subscription) {
-    // FREE PLAN
-    await enforceFreeLimit(action, context);
+    // FREE PLAN — use unified enforcePlanLimits with free plan from DB
+    const freePlan = await getPlanById("free");
+    await enforcePlanLimits(freePlan, action, context);
     return;
   }
 
@@ -76,10 +79,16 @@ export async function enforceClubAction(params: {
   
   if (!isAllowed) {
     throw new PaywallError({
-      message: `Action "${action}" not allowed for subscription status "${subscription.status}"`,
+      message: `Действие недоступно при статусе подписки "${subscription.status}"`,
       reason: "SUBSCRIPTION_NOT_ACTIVE",
       currentPlanId: subscription.planId,
       meta: { status: subscription.status },
+      options: [
+        {
+          type: "CLUB_ACCESS",
+          recommendedPlanId: subscription.planId,
+        },
+      ],
     });
   }
 
@@ -88,65 +97,7 @@ export async function enforceClubAction(params: {
 }
 
 // ============================================================================
-// Free Plan Enforcement
-// ============================================================================
-
-async function enforceFreeLimit(
-  action: BillingActionCode,
-  context?: {
-    eventParticipantsCount?: number;
-    isPaidEvent?: boolean;
-  }
-): Promise<void> {
-  // Load FREE plan from database (cached)
-  const freePlan = await getPlanById("free");
-
-  // Check paid events
-  if (action === "CLUB_CREATE_PAID_EVENT" || context?.isPaidEvent) {
-    if (!freePlan.allowPaidEvents) {
-      throw new PaywallError({
-        message: "Paid events require Club 50 plan or higher",
-        reason: "PAID_EVENTS_NOT_ALLOWED",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-      });
-    }
-  }
-
-  // Check CSV export
-  if (action === "CLUB_EXPORT_PARTICIPANTS_CSV") {
-    if (!freePlan.allowCsvExport) {
-      throw new PaywallError({
-        message: "CSV export requires Club 50 plan or higher",
-        reason: "CSV_EXPORT_NOT_ALLOWED",
-        currentPlanId: "free",
-        requiredPlanId: "club_50",
-      });
-    }
-  }
-
-  // Check event participants limit
-  if (action === "CLUB_CREATE_EVENT" && context?.eventParticipantsCount) {
-    if (freePlan.maxEventParticipants !== null && 
-        context.eventParticipantsCount > freePlan.maxEventParticipants) {
-      const requiredPlan = await getRequiredPlanForParticipants(context.eventParticipantsCount);
-      
-      throw new PaywallError({
-        message: `Event with ${context.eventParticipantsCount} participants requires ${requiredPlan} plan`,
-        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
-        currentPlanId: "free",
-        requiredPlanId: requiredPlan === "free" ? undefined : requiredPlan as PlanId,
-        meta: {
-          requested: context.eventParticipantsCount,
-          limit: freePlan.maxEventParticipants,
-        },
-      });
-    }
-  }
-}
-
-// ============================================================================
-// Paid Plan Limits Enforcement
+// Unified Plan Limits Enforcement (covers Free + Paid plans)
 // ============================================================================
 
 async function enforcePlanLimits(
@@ -161,11 +112,15 @@ async function enforcePlanLimits(
   // Check paid events feature
   if (action === "CLUB_CREATE_PAID_EVENT" || context?.isPaidEvent) {
     if (!plan.allowPaidEvents) {
+      const minPlan = await getMinPlanForPaidEvents();
       throw new PaywallError({
-        message: "Paid events not allowed on your plan",
+        message: "Платные события недоступны на текущем тарифе",
         reason: "PAID_EVENTS_NOT_ALLOWED",
         currentPlanId: plan.id,
-        requiredPlanId: "club_50", // Minimum plan that supports paid events
+        requiredPlanId: minPlan,
+        options: [
+          { type: "CLUB_ACCESS", recommendedPlanId: minPlan },
+        ],
       });
     }
   }
@@ -173,11 +128,15 @@ async function enforcePlanLimits(
   // Check CSV export feature
   if (action === "CLUB_EXPORT_PARTICIPANTS_CSV") {
     if (!plan.allowCsvExport) {
+      const minPlan = await getMinPlanForCsvExport();
       throw new PaywallError({
-        message: "CSV export not allowed on your plan",
+        message: "Экспорт CSV недоступен на текущем тарифе",
         reason: "CSV_EXPORT_NOT_ALLOWED",
         currentPlanId: plan.id,
-        requiredPlanId: "club_50", // Minimum plan that supports CSV
+        requiredPlanId: minPlan,
+        options: [
+          { type: "CLUB_ACCESS", recommendedPlanId: minPlan },
+        ],
       });
     }
   }
@@ -188,7 +147,7 @@ async function enforcePlanLimits(
       const requiredPlan = await getRequiredPlanForParticipants(context.eventParticipantsCount);
       
       throw new PaywallError({
-        message: `Event with ${context.eventParticipantsCount} participants exceeds your plan limit of ${plan.maxEventParticipants}`,
+        message: `Событие на ${context.eventParticipantsCount} участников превышает лимит тарифа (${plan.maxEventParticipants})`,
         reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
         currentPlanId: plan.id,
         requiredPlanId: requiredPlan === "free" ? undefined : requiredPlan as PlanId,
@@ -196,6 +155,9 @@ async function enforcePlanLimits(
           requested: context.eventParticipantsCount,
           limit: plan.maxEventParticipants,
         },
+        options: [
+          { type: "CLUB_ACCESS", recommendedPlanId: requiredPlan as PlanId },
+        ],
       });
     }
   }
@@ -206,7 +168,7 @@ async function enforcePlanLimits(
       const requiredPlan = await getRequiredPlanForMembers(context.clubMembersCount + 1);
       
       throw new PaywallError({
-        message: `Club has reached maximum members limit (${plan.maxMembers})`,
+        message: `Превышен лимит участников клуба (${plan.maxMembers})`,
         reason: "MAX_CLUB_MEMBERS_EXCEEDED",
         currentPlanId: plan.id,
         requiredPlanId: requiredPlan,
@@ -214,41 +176,12 @@ async function enforcePlanLimits(
           current: context.clubMembersCount,
           limit: plan.maxMembers,
         },
+        options: [
+          { type: "CLUB_ACCESS", recommendedPlanId: requiredPlan },
+        ],
       });
     }
   }
-}
-
-// ============================================================================
-// Club Creation Check (special case - no existing subscription)
-// ============================================================================
-
-/**
- * Check if user can create a club
- * 
- * Per spec: User must have active subscription or be on Free plan.
- * If creating first club - Free is allowed.
- * If user already has clubs - must have paid plan.
- */
-export async function enforceClubCreation(params: {
-  userId: string;
-  existingClubsCount: number;
-}): Promise<void> {
-  const { existingClubsCount } = params;
-
-  // First club - always allowed (Free plan)
-  if (existingClubsCount === 0) {
-    return;
-  }
-
-  // Additional clubs require paid plan
-  // Note: This is simplified logic. Full implementation would:
-  // 1. Check user's subscription to ANY club
-  // 2. Verify they have organizer role
-  // 3. Check if that club's plan allows multiple clubs
-  
-  // For MVP: Allow multiple clubs (enforce limits at event level)
-  log.warn("Club creation enforcement: MVP allows multiple clubs", { userId: params.userId });
 }
 
 // ============================================================================
@@ -303,6 +236,8 @@ export async function enforceEventPublish(params: {
 
   // ============================================================================
   // CLUB EVENTS BRANCH
+  // Delegates subscription + plan limit checks to enforceClubAction (SSOT),
+  // then applies event-publish-specific rules (credit rejection, owner-only).
   // ============================================================================
   if (clubId !== null) {
     // ⚡ SSOT Appendix A4.2: Reject credit params for club events
@@ -313,46 +248,16 @@ export async function enforceEventPublish(params: {
       );
     }
     
-    // Get subscription status
-    const subscription = await getClubSubscription(clubId);
-    const plan = subscription ? await getPlanById(subscription.planId) : await getPlanById("free");
-
-    // Check 1: Subscription status and policy
-    if (subscription && subscription.status !== "active") {
-      const isAllowed = await isActionAllowed(subscription.status, "CLUB_CREATE_EVENT");
-      
-      if (!isAllowed) {
-        throw new PaywallError({
-          message: `Действие недоступно при статусе подписки "${subscription.status}"`,
-          reason: "SUBSCRIPTION_NOT_ACTIVE",
-          currentPlanId: subscription.planId,
-          meta: { status: subscription.status },
-          options: [
-            {
-              type: "CLUB_ACCESS",
-              recommendedPlanId: subscription.planId, // Renew current plan
-            },
-          ],
-        });
-      }
-    }
-
-    // Check 2: Plan limits for club events
-    // Check paid events feature
-    if (isPaid && !plan.allowPaidEvents) {
-      throw new PaywallError({
-        message: "Платные события недоступны на вашем тарифе",
-        reason: "PAID_EVENTS_NOT_ALLOWED",
-        currentPlanId: plan.id,
-        requiredPlanId: "club_50",
-        options: [
-          {
-            type: "CLUB_ACCESS",
-            recommendedPlanId: "club_50",
-          },
-        ],
-      });
-    }
+    // Delegate ALL subscription status + plan limit checks to enforceClubAction
+    // This covers: subscription status, paid events feature, participants limit
+    await enforceClubAction({
+      clubId,
+      action: "CLUB_CREATE_EVENT",
+      context: {
+        eventParticipantsCount: maxParticipants ?? undefined,
+        isPaidEvent: isPaid,
+      },
+    });
     
     // ⚡ SSOT §5.4 + Appendix A4.3: Paid club event publish is OWNER-ONLY
     // admin may publish club FREE events, but NOT paid events
@@ -367,28 +272,6 @@ export async function enforceEventPublish(params: {
           403
         );
       }
-    }
-
-    // Check participants limit
-    if (maxParticipants !== null && plan.maxEventParticipants !== null && maxParticipants > plan.maxEventParticipants) {
-      const requiredPlan = await getRequiredPlanForParticipants(maxParticipants);
-      
-      throw new PaywallError({
-        message: `Событие на ${maxParticipants} участников превышает лимит вашего плана (${plan.maxEventParticipants})`,
-        reason: "MAX_EVENT_PARTICIPANTS_EXCEEDED",
-        currentPlanId: plan.id,
-        requiredPlanId: requiredPlan === "free" ? undefined : requiredPlan as PlanId,
-        meta: {
-          requested: maxParticipants,
-          limit: plan.maxEventParticipants,
-        },
-        options: [
-          {
-            type: "CLUB_ACCESS",
-            recommendedPlanId: requiredPlan as PlanId,
-          },
-        ],
-      });
     }
 
     // All checks passed for club event (clubs never use personal credits)
@@ -424,15 +307,16 @@ export async function enforceEventPublish(params: {
 
   // Check paid events (personal events cannot be paid)
   if (isPaid && !freePlan.allowPaidEvents) {
+    const minPlan = await getMinPlanForPaidEvents();
     throw new PaywallError({
       message: "Платные события доступны только на платных тарифах",
       reason: "PAID_EVENTS_NOT_ALLOWED",
       currentPlanId: "free",
-      requiredPlanId: "club_50",
+      requiredPlanId: minPlan,
       options: [
         {
           type: "CLUB_ACCESS",
-          recommendedPlanId: "club_50",
+          recommendedPlanId: minPlan,
         },
       ],
     });
@@ -530,7 +414,7 @@ export async function enforceEventPublish(params: {
           },
           {
             type: "CLUB_ACCESS",
-            recommendedPlanId: "club_50",
+            recommendedPlanId: await getMinPlanForPaidEvents(),
           },
         ];
 
@@ -589,10 +473,6 @@ export async function enforceEventPublish(params: {
   // in createEvent()/updateEvent() to ensure atomicity
   return { requiresCredit: true };
 }
-
-// CreditConfirmationRequiredError is now imported from @/lib/errors
-// Re-export for backwards compatibility with existing imports
-export { CreditConfirmationRequiredError } from "@/lib/errors";
 
 // ============================================================================
 // Helper: Get Current Plan for Club

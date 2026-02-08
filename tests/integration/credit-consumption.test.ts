@@ -15,7 +15,8 @@ import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
 import { createBillingCredit, consumeCredit, hasAvailableCredit, getAvailableCredits } from '@/lib/db/billingCreditsRepo';
 import { executeWithCreditTransaction } from '@/lib/services/creditTransaction';
-import { enforceEventPublish, CreditConfirmationRequiredError } from '@/lib/services/accessControl';
+import { enforceEventPublish } from '@/lib/services/accessControl';
+import { CreditConfirmationRequiredError } from '@/lib/errors';
 import { PaywallError } from '@/lib/errors';
 import { randomUUID } from 'crypto';
 
@@ -363,8 +364,8 @@ describe('Enforce Event Publish: Error Semantics', () => {
       isPaid: false,
     }, false);
     
-    // Then: no error
-    await expect(enforcePromise).resolves.toBeUndefined();
+    // Then: no error, no credit needed
+    await expect(enforcePromise).resolves.toEqual({ requiresCredit: false });
   });
 
   /**
@@ -382,8 +383,8 @@ describe('Enforce Event Publish: Error Semantics', () => {
       isPaid: false,
     }, true); // confirmCredit = true
     
-    // Then: no error (consumption happens in transaction wrapper)
-    await expect(enforcePromise).resolves.toBeUndefined();
+    // Then: requiresCredit=true (consumption happens in transaction wrapper)
+    await expect(enforcePromise).resolves.toEqual({ requiresCredit: true });
   });
 });
 

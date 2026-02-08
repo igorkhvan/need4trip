@@ -94,7 +94,7 @@ describe('Boundary Tests: Free Limit (15 participants)', () => {
         clubId: null,
         isPaid: false,
       }, false)
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: false });
     
     // Verify: credit still available
     const db = getAdminDb();
@@ -184,7 +184,7 @@ describe('Boundary Tests: One-off Limit (500 participants)', () => {
         clubId: null,
         isPaid: false,
       }, true) // Confirmed
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: true });
   });
 
   /**
@@ -272,7 +272,7 @@ describe('Negative Tests: Invalid Values', () => {
         clubId: null,
         isPaid: false,
       }, false)
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: false });
   });
 
   /**
@@ -291,7 +291,7 @@ describe('Negative Tests: Invalid Values', () => {
         clubId: null,
         isPaid: false,
       }, false)
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: false });
   });
 
   /**
@@ -451,6 +451,6 @@ describe('Null/Undefined Handling', () => {
         clubId: null,
         isPaid: false,
       }, false)
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: false });
   });
 });

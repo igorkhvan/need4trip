@@ -167,6 +167,30 @@ export async function getRequiredPlanForMembers(
 }
 
 /**
+ * Get minimum plan that supports paid events (dynamic from DB, cached)
+ * Finds the cheapest non-free plan where allowPaidEvents=true
+ */
+export async function getMinPlanForPaidEvents(): Promise<PlanId> {
+  const allPlans = await plansCache.getAll();
+  const candidates = allPlans
+    .filter(p => p.allowPaidEvents && p.id !== 'free')
+    .sort((a, b) => a.priceMonthly - b.priceMonthly);
+  return candidates[0]?.id ?? 'club_50'; // last-resort fallback
+}
+
+/**
+ * Get minimum plan that supports CSV export (dynamic from DB, cached)
+ * Finds the cheapest non-free plan where allowCsvExport=true
+ */
+export async function getMinPlanForCsvExport(): Promise<PlanId> {
+  const allPlans = await plansCache.getAll();
+  const candidates = allPlans
+    .filter(p => p.allowCsvExport && p.id !== 'free')
+    .sort((a, b) => a.priceMonthly - b.priceMonthly);
+  return candidates[0]?.id ?? 'club_50'; // last-resort fallback
+}
+
+/**
  * Invalidate cache (for admin operations)
  * Call this after updating plans
  */

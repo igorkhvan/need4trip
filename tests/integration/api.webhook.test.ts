@@ -394,7 +394,7 @@ describe('Webhook → Credit → Event Save flow (end-to-end, v5)', () => {
         clubId: null,
         isPaid: false,
       }, true) // confirm_credit=1
-    ).resolves.toBeUndefined(); // Success
+    ).resolves.toEqual({ requiresCredit: true }); // Credit will be consumed
     
     // Actually consume the credit (this is what event service does atomically)
     await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);

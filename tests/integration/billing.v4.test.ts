@@ -13,7 +13,8 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { getAdminDb } from '@/lib/db/client';
-import { enforceEventPublish, CreditConfirmationRequiredError } from '@/lib/services/accessControl';
+import { enforceEventPublish } from '@/lib/services/accessControl';
+import { CreditConfirmationRequiredError } from '@/lib/errors';
 import { createBillingCredit, consumeCredit } from '@/lib/db/billingCreditsRepo';
 import { getProductByCode } from '@/lib/db/billingProductsRepo';
 import { PaywallError } from '@/lib/errors';
@@ -116,7 +117,7 @@ describe('Billing v5: Save-time Enforcement', () => {
         clubId: null,
         isPaid: false,
       }, false)
-    ).resolves.toBeUndefined(); // Success = no error
+    ).resolves.toEqual({ requiresCredit: false }); // Success = no credit needed
 
     // Verify: credit still available
     const db = getAdminDb();
@@ -160,7 +161,7 @@ describe('Billing v5: Save-time Enforcement', () => {
         clubId: null,
         isPaid: false,
       }, true) // confirm_credit=1
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: true });
 
     // **Actually consume the credit** (emulate API route behavior)
     await consumeCredit(testUserId, 'EVENT_UPGRADE_500', testEventId);
@@ -312,7 +313,7 @@ describe('Billing v5: Save-time Enforcement', () => {
         clubId: null,
         isPaid: false,
       }, false) // No confirmation needed - credit already applied
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ requiresCredit: false });
 
     // Verify: still only one consumed credit
     const { data: credits2 } = await db

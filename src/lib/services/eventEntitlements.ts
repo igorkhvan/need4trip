@@ -18,6 +18,9 @@ import { getConsumedCreditsForEvent } from "@/lib/db/billingCreditsRepo";
 import { getProductByCode } from "@/lib/db/billingProductsRepo";
 import { log } from "@/lib/utils/logger";
 
+/** Sentinel value representing "unlimited" participants (null in DB → this in code) */
+const UNLIMITED_PARTICIPANTS = Number.MAX_SAFE_INTEGER;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -90,7 +93,7 @@ export async function getEffectiveEventEntitlements(params: {
     });
     
     return {
-      maxEventParticipants: plan.maxEventParticipants ?? 999999, // null = unlimited
+      maxEventParticipants: plan.maxEventParticipants ?? UNLIMITED_PARTICIPANTS,
       paidMode: 'club_subscription',
       clubPlan: {
         planId: plan.id,

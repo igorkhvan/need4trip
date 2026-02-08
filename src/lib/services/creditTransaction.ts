@@ -162,32 +162,4 @@ async function deleteEventForRollback(eventId: string): Promise<void> {
   log.info("[CreditTransaction] Event deleted for rollback", { eventId });
 }
 
-/**
- * Check if credit is available before starting transaction
- * (Optional pre-check to avoid consuming credit if operation will likely fail)
- * 
- * @param userId User ID
- * @param creditCode Credit code
- * @returns true if credit available
- */
-export async function isCreditAvailable(
-  userId: string,
-  creditCode: "EVENT_UPGRADE_500"
-): Promise<boolean> {
-  const db = getAdminDb();
-  
-  const { count, error } = await db
-    .from("billing_credits")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("credit_code", creditCode)
-    .eq("status", "available");
-  
-  if (error) {
-    log.error("Failed to check credit availability", { error, userId, creditCode });
-    return false;
-  }
-  
-  return (count ?? 0) > 0;
-}
 

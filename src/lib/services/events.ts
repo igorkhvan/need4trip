@@ -418,6 +418,7 @@ export async function createEvent(
     throw new AuthError("Авторизация обязательна для создания события", undefined, 401);
   }
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod superRefine loses type info; fields are extracted safely below
   const parsed = eventCreateSchema.parse(input) as any;
   
   // Apply defaults explicitly (Zod .default() doesn't infer correctly)
@@ -673,6 +674,7 @@ export async function updateEvent(
   if (!currentUser) {
     throw new AuthError("Авторизация обязательна для изменения события", undefined, 401);
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod superRefine loses type info; fields are extracted safely below
   const parsed = eventUpdateSchema.parse(input) as any;
   
   // Apply defaults explicitly for EventUpdateInput

@@ -188,6 +188,11 @@ export async function consumeCredit(
       eventId,
       lockError 
     });
+    
+    // Load product info dynamically for accurate paywall options (cached, O(1))
+    const { getProductByCode } = await import("@/lib/db/billingProductsRepo");
+    const product = await getProductByCode(creditCode);
+    
     throw new PaywallError({
       message: `Нет доступных кредитов для события`,
       reason: "NO_CREDIT_AVAILABLE",
@@ -197,8 +202,8 @@ export async function consumeCredit(
         {
           type: "ONE_OFF_CREDIT",
           productCode: creditCode,
-          price: 5000, // TODO: Load from DB
-          currencyCode: "KZT",
+          price: product?.price ?? 5000,           // dynamic from DB, last-resort fallback
+          currencyCode: product?.currencyCode ?? "KZT",
           provider: "kaspi",
         },
       ],
