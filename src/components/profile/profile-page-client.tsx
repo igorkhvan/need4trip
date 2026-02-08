@@ -265,14 +265,10 @@ export function ProfilePageClient() {
         })
       });
 
-      if (!res.ok) {
-        throw new Error('Failed to save profile');
-      }
-
-      const data = await res.json();
+      const responseData = await parseApiResponse<{ user: any }>(res);
       
       // Update local state with saved data
-      const user = data.user;
+      const user = responseData.user;
       const cityName = user.city ? `${user.city.name}, ${user.city.region}` : '';
       
       setUserData({
