@@ -227,14 +227,10 @@ export function RichTextEditor({
   });
 
   // Sync external value → editor (e.g. when AI generates rules)
-  const isInternalUpdate = useRef(false);
-
+  // Safe because setContent({ emitUpdate: false }) prevents update → onChange → setValue loop.
+  // Direct HTML comparison prevents unnecessary setContent calls when values already match.
   useEffect(() => {
     if (!editor) return;
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
     const currentHtml = editor.getHTML();
     const normalizedCurrent = currentHtml === "<p></p>" ? "" : currentHtml;
     const normalizedValue = value || "";
@@ -242,18 +238,6 @@ export function RichTextEditor({
       editor.commands.setContent(normalizedValue || "<p></p>", { emitUpdate: false });
     }
   }, [value, editor]);
-
-  // Track internal updates to avoid loop
-  useEffect(() => {
-    if (!editor) return;
-    const handler = () => {
-      isInternalUpdate.current = true;
-    };
-    editor.on("update", handler);
-    return () => {
-      editor.off("update", handler);
-    };
-  }, [editor]);
 
   // Sync disabled state
   useEffect(() => {
