@@ -28,6 +28,8 @@ import { ClientError } from "@/lib/types/errors";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
 import { useClubPlan, type ClubPlanLimits } from "@/hooks/use-club-plan";
+import { shouldShowBetaParticipantLimitModal } from "@/lib/config/betaParticipantLimit";
+import { BetaParticipantLimitModal } from "@/components/modals/BetaParticipantLimitModal";
 import type { Event } from "@/lib/types/event";
 
 // Type for manageable clubs
@@ -39,6 +41,8 @@ interface ManageableClub {
 
 interface EditEventPageClientProps {
   eventId: string;
+  /** Whether app is in SOFT_BETA_STRICT mode (participant limit enforcement) */
+  isBetaMode?: boolean;
 }
 
 /**
@@ -46,8 +50,9 @@ interface EditEventPageClientProps {
  * 
  * B5.1: Uses useHandleApiError() for 402/409 handling via B5.0 infrastructure
  * B5.D1: BillingModalHost now provided globally via root layout
+ * Beta: isBetaMode enables UI-level participant limit enforcement (max 500)
  */
-export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
+export function EditEventPageClient({ eventId, isBetaMode = false }: EditEventPageClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
@@ -62,6 +67,10 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   
   // B5.1: Store last submitted payload for credit confirmation retry
   const lastSubmitPayloadRef = useRef<Record<string, unknown> | null>(null);
+  
+  // Beta participant limit modal state
+  // SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.5
+  const [showBetaLimitModal, setShowBetaLimitModal] = useState(false);
   
   // SSOT_UI_ASYNC_PATTERNS — client-side data loading states
   const [event, setEvent] = useState<Event | null>(null);
@@ -312,6 +321,14 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   const isFormDisabled = isEventLoading || !event || !isOwner;
   
   const handleSubmit = async (payload: Record<string, unknown>) => {
+    // Beta participant limit enforcement (UI-level, BEFORE backend submission)
+    // SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.5
+    // In beta mode, >500 participants triggers a beta limit modal instead of paywall
+    if (shouldShowBetaParticipantLimitModal(isBetaMode, payload.maxParticipants as number | null)) {
+      setShowBetaLimitModal(true);
+      return; // Block submission — no PaywallError, no billing UI
+    }
+    
     // B5.1: Store payload for potential credit confirmation retry
     lastSubmitPayloadRef.current = payload;
     
@@ -410,6 +427,12 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
       />
       
       {/* B5.D1: Modals rendered by global BillingModalHost in root layout */}
+      
+      {/* Beta participant limit modal (SOFT_BETA_STRICT only) */}
+      <BetaParticipantLimitModal
+        open={showBetaLimitModal}
+        onClose={() => setShowBetaLimitModal(false)}
+      />
     </div>
   );
 }

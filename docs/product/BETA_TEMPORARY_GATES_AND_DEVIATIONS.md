@@ -157,6 +157,50 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 ---
 
+### 3.5 Event Participant Hard Cap (UI Modal)
+
+**Status:** ACTIVE
+
+**Area:**
+- UI
+- Event Form (create & edit)
+
+**What changed:**
+- In `SOFT_BETA_STRICT` mode, a UI-level hard cap of 500 participants per event is enforced.
+- When user attempts to save/publish an event with >500 participants, a system-level modal appears explaining the beta limitation.
+- The modal blocks event submission. Closing the modal returns user to the form. User must reduce participant count to ≤500.
+- No PaywallError is raised. No billing UI (PaywallModal) is opened.
+- The enforcement is entirely on the frontend — backend logic is not touched.
+
+**Original behavior:**
+- >500 participants triggers `CLUB_REQUIRED_FOR_LARGE_EVENT` paywall, requiring a club subscription.
+- No UI-level cap on participant count (enforcement happens on backend).
+
+**Reason for beta gate:**
+- Clubs and club subscriptions are intentionally hidden during beta (§3.3).
+- The club subscription paywall for >500 participants would be confusing since clubs are not visible.
+- A temporary UI modal explaining the beta limit is a cleaner UX.
+
+**Modal copy (SSOT_UI_COPY §7.4):**
+- Title: "Ограничение бета-версии"
+- Message: "В бета-версии максимальное количество участников события — 500."
+- Primary action: "Понятно"
+
+**Restoration condition:**
+- Post-beta: club subscriptions re-enabled, clubs visible in navigation.
+- Remove `isBetaMode` prop and `shouldShowBetaParticipantLimitModal()` calls from create/edit event client components.
+- Remove `BetaParticipantLimitModal` component.
+- Remove copy from `SSOT_UI_COPY.md §7.4`.
+
+**Post-beta action:**
+- Set `PAYWALL_MODE=hard` to restore standard paywall behavior.
+- Standard `CLUB_REQUIRED_FOR_LARGE_EVENT` paywall resumes for >500 participants.
+
+**Covered by automated tests:**
+- `tests/unit/beta-participant-limit.test.ts` (4 test groups, ~20 assertions)
+
+---
+
 ## 4. Temporary Behavior Deviations
 
 ### 4.1 Billing Enforcement Runs But Does Not Block
@@ -326,7 +370,7 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 ## 8. Review Checklist (Post-Beta)
 
-- [ ] All feature gates reviewed (§3.1–3.4)
+- [ ] All feature gates reviewed (§3.1–3.5)
 - [ ] All behavior deviations reviewed (§4.1–4.2)
 - [ ] All UX/copy changes reviewed (§5.1)
 - [ ] All relaxed limits reviewed (§6.1)

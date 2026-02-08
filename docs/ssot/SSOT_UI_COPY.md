@@ -253,6 +253,24 @@ Source: `src/lib/billing/ui/reasonMapping.ts` (BETA_PAYWALL_COPY)
 
 ---
 
+## 7.4 Beta Participant Limit Modal
+
+| Context | Copy |
+|------|------|
+| Beta participant limit title | `Ограничение бета-версии` |
+| Beta participant limit message | `В бета-версии максимальное количество участников события — 500.` |
+| Beta participant limit primary action | `Понятно` |
+
+Source: `src/lib/config/betaParticipantLimit.ts` (BETA_PARTICIPANT_LIMIT_COPY)
+
+Rules:
+- This modal is NOT a paywall. No billing, pricing, upgrade, or club references.
+- Shown only when `PAYWALL_MODE=soft_beta_strict` AND participant count > 500.
+- Single primary action only (acknowledge). No secondary action.
+- Copy must NOT reference payment, subscription, club, or upgrade.
+
+---
+
 ## 8. Language & Localization Rules
 
 - RU is **source of truth**
