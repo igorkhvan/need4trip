@@ -1908,9 +1908,10 @@ export default function Loading() {
 ### RichTextContent
 
 - Принимает `html: string`
-- Санитизирует через лёгкий allowlist-based санитайзер (без DOM-зависимостей, работает на Vercel)
+- Санитизирует через `sanitize-html` (battle-tested, pure Node.js, без jsdom, работает на Vercel serverless)
 - **Обратная совместимость**: plain text (без HTML тегов) автоматически конвертируется в `<p>` теги
 - Разрешенные HTML теги: `p, br, strong, b, em, i, ul, ol, li, a, span`
+- Ссылки: автоматически `target="_blank"` + `rel="noopener noreferrer nofollow"`
 
 ```tsx
 <RichTextContent html={event.description} />
@@ -1920,12 +1921,12 @@ export default function Loading() {
 
 - Формат: **HTML** в TEXT колонках БД (description, rules)
 - Без миграции (TEXT уже поддерживает HTML)
-- AI-генерация: plain text конвертируется в HTML при вставке
+- AI-генерация правил: возвращает готовый HTML с эмодзи и форматированием (maxTokens=1200)
 
 ### Зависимости
 
 - `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-placeholder`, `@tiptap/pm`
-- Санитизация: встроенный lightweight sanitizer (без внешних зависимостей, без jsdom)
+- `sanitize-html` + `@types/sanitize-html` — серверная HTML-санитизация (без DOM/jsdom)
 
 ---
 

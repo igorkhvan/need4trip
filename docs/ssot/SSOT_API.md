@@ -4062,7 +4062,8 @@ List active vehicle types (SUV, sedan, etc) for forms.
 **Authorization:** Any authenticated user  
 
 **Purpose:**  
-Generate event rules text using OpenAI GPT (based on event data).
+Generate event rules as **formatted HTML** using OpenAI GPT (based on event data).  
+Output includes emoji headers, `<strong>` for key terms, `<ul>/<li>` lists, `<em>` for recommendations.
 
 **Request:**
 
@@ -4090,12 +4091,13 @@ Generate event rules text using OpenAI GPT (based on event data).
   {
     "success": true,
     "data": {
-      "rulesText": "Правила участия:\n1. ...\n2. ..."
+      "rulesText": "<p><strong>ℹ️ Общая информация</strong></p><ul><li>...</li></ul>..."
     }
   }
   ```
+  **Note:** `rulesText` is HTML (allowed tags: `p, strong, em, ul, ol, li, br`). Contains emojis.
 - **Side effects:** 
-  - OpenAI API call (costs money per token)
+  - OpenAI API call (costs money per token, maxTokens=1200)
   - Logs usage
 
 **Errors:**
