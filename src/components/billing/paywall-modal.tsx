@@ -219,7 +219,8 @@ export function PaywallModal(props: PaywallModalProps) {
       // Step 2: Resubmit via callback (confirm_credit=true)
       await onBetaContinue();
 
-      // If we reach here, success — page will redirect, modal unmounts
+      // Step 3: Close modal — layout tree persists across client-side navigation
+      onClose();
     } catch {
       // Loop protection: resubmit triggered another 402 or other error
       // Enter stable ERROR state per SSOT_UI_STATES.md §4
