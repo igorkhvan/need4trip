@@ -435,18 +435,8 @@ export function EventForm({
       const result = data.data || data;
 
       if (result.rulesText) {
-        // Convert AI plain text to simple HTML for the rich text editor
-        const htmlRules = result.rulesText
-          .split(/\n\n+/)
-          .map((paragraph: string) => {
-            const lines = paragraph
-              .split("\n")
-              .map((line: string) => line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"))
-              .join("<br>");
-            return `<p>${lines}</p>`;
-          })
-          .join("");
-        setRules(htmlRules);
+        // AI returns ready-to-use HTML (sanitized on display by RichTextContent)
+        setRules(result.rulesText);
         // Show success feedback
         const event = new CustomEvent("toast", {
           detail: {
