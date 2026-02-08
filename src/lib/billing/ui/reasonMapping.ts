@@ -252,6 +252,9 @@ export function getPaywallUiConfig(
   const hasBetaContinue = details.options?.some(o => o.type === "BETA_CONTINUE") ?? false;
   
   // If beta continue, use beta-specific copy
+  // STRICT SUPPRESSION (UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT §12.2):
+  // When BETA_CONTINUE is present, ALL HARD options (ONE_OFF_CREDIT, CLUB_ACCESS)
+  // MUST be excluded from the returned data model — not just hidden in UI.
   if (hasBetaContinue) {
     const metaObj = details.meta || {};
     const requestedParticipants =
@@ -266,6 +269,11 @@ export function getPaywallUiConfig(
       betaMessage = betaMessage.replace(" на {N} участников", "");
     }
 
+    // STRICT: Only BETA_CONTINUE options survive — pricing/subscription suppressed
+    const betaOnlyOptions = (details.options || []).filter(
+      (o) => o.type === "BETA_CONTINUE"
+    );
+
     return {
       title: BETA_PAYWALL_COPY.title,
       message: betaMessage,
@@ -273,8 +281,9 @@ export function getPaywallUiConfig(
         label: BETA_PAYWALL_COPY.primaryCta,
         action: "beta_continue",
       },
+      // No secondaryCta — no pricing navigation in beta
       uiPattern: "modal",
-      options: details.options || [],
+      options: betaOnlyOptions,
       isBetaContinue: true,
       meta: {
         requestedParticipants,

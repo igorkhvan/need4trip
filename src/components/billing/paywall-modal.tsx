@@ -227,8 +227,14 @@ export function PaywallModal(props: PaywallModalProps) {
     }
   };
 
-  // Use uiConfig.options (already filtered and normalized)
-  const hasOptions = uiConfig.options.length > 0;
+  // STRICT SUPPRESSION (UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT §12.2):
+  // Defensive filtering at component level — HARD options (ONE_OFF_CREDIT, CLUB_ACCESS)
+  // MUST NOT exist in the render tree when isBetaContinue is true.
+  // This is a safety net on top of reasonMapping.ts suppression.
+  const filteredOptions: PaywallOptionParsed[] = uiConfig.isBetaContinue
+    ? uiConfig.options.filter((o) => o.type === "BETA_CONTINUE")
+    : uiConfig.options;
+  const hasOptions = filteredOptions.length > 0;
 
   // ============================================================================
   // BETA CONTINUE branch (SOFT_BETA_STRICT)
@@ -340,7 +346,7 @@ export function PaywallModal(props: PaywallModalProps) {
                 <>
                   <p className="text-sm font-medium text-gray-700">Выберите удобный вариант:</p>
                   <div className="space-y-3">
-                    {uiConfig.options.filter(o => o.type !== 'BETA_CONTINUE').map((option, idx) => (
+                    {filteredOptions.filter(o => o.type !== 'BETA_CONTINUE').map((option, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleOptionClick(option)}

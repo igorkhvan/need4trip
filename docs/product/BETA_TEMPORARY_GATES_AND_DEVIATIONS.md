@@ -59,6 +59,13 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 **Restoration condition:**
 - Post-beta decision to proceed to monetization (BETA_SCOPE §8).
 
+**UI suppression (STRICT):**
+- In SOFT_BETA_STRICT, legacy HARD pricing options (ONE_OFF_CREDIT, CLUB_ACCESS) are fully
+  suppressed at UI render level. They are excluded from the normalized data model
+  (`getPaywallUiConfig`) and defensively filtered in the `PaywallModal` component.
+  This is covered by automated tests: `tests/unit/paywall-ui-suppression.test.ts`
+  (26 test cases: suppression, HARD regression, semantic validation, structure assertions).
+
 **Post-beta action:**
 - Remove BETA_CONTINUE option injection in `accessControl.ts`.
 - Remove beta-grant API endpoint.
