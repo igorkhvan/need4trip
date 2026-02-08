@@ -33,6 +33,19 @@ export async function GET(request: Request, { params }: Params) {
       enforceVisibility: true,
     });
     const hydrated = await hydrateEvent(event);
+    
+    // For event owner: include effective entitlements for edit form hints
+    // This avoids the need for a separate /entitlements endpoint
+    if (currentUser && event.createdByUserId === currentUser.id) {
+      const { getEffectiveEventEntitlements } = await import("@/lib/services/eventEntitlements");
+      const entitlements = await getEffectiveEventEntitlements({
+        userId: currentUser.id,
+        eventId: id,
+        clubId: event.clubId ?? undefined,
+      });
+      hydrated.effectiveMaxParticipants = entitlements.maxEventParticipants;
+    }
+    
     return respondJSON({ event: hydrated });
   } catch (err) {
     return respondError(err);

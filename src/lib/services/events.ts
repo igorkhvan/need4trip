@@ -467,7 +467,7 @@ export async function createEvent(
   // Throws PaywallError (402) or CreditConfirmationRequiredError (409)
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
-  await enforceEventPublish({
+  const { requiresCredit } = await enforceEventPublish({
     userId: currentUser.id,
     clubId: validated.clubId ?? null,
     maxParticipants: validated.maxParticipants,
@@ -475,13 +475,9 @@ export async function createEvent(
     eventId: undefined, // No eventId yet (will be set after creation)
   }, confirmCredit);
   
-  // If confirmCredit=true and enforcement passed, wrap in credit transaction
-  const shouldUseCredit = confirmCredit && validated.clubId === null && 
-    validated.maxParticipants && validated.maxParticipants > 15 && validated.maxParticipants <= 500;
-  
   let event: Event;
   
-  if (shouldUseCredit) {
+  if (requiresCredit) {
     // Wrap in compensating transaction (consume credit + save event, rollback on failure)
     const { executeWithCreditTransaction } = await import("@/lib/services/creditTransaction");
     
@@ -791,17 +787,13 @@ export async function updateEvent(
   // Use unified enforcement (same as create)
   const { enforceEventPublish } = await import("@/lib/services/accessControl");
   
-  await enforceEventPublish({
+  const { requiresCredit } = await enforceEventPublish({
     userId: currentUser.id,
     clubId: existing.club_id,
     maxParticipants: finalMaxParticipants,
     isPaid: finalIsPaid,
     eventId: id, // Existing event ID for credit tracking
   }, confirmCredit);
-
-  // If confirmCredit=true and enforcement passed, wrap update in credit transaction
-  const shouldUseCredit = confirmCredit && existing.club_id === null && 
-    finalMaxParticipants && finalMaxParticipants > 15 && finalMaxParticipants <= 500;
 
   // Prepare patch for database update
   const patch: EventUpdateInput = {
@@ -816,7 +808,7 @@ export async function updateEvent(
 
   let event: Event;
 
-  if (shouldUseCredit) {
+  if (requiresCredit) {
     // Wrap in compensating transaction
     const { executeWithCreditTransaction } = await import("@/lib/services/creditTransaction");
     

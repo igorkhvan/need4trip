@@ -15,6 +15,7 @@
 import { getPlanById } from "@/lib/db/planRepo";
 import { getClubSubscription } from "@/lib/db/clubSubscriptionRepo";
 import { getConsumedCreditsForEvent } from "@/lib/db/billingCreditsRepo";
+import { getProductByCode } from "@/lib/db/billingProductsRepo";
 import type { ClubPlan } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
 
@@ -23,8 +24,8 @@ import { log } from "@/lib/utils/logger";
 // ============================================================================
 
 export type PaidMode = 
-  | 'free'               // Free plan (15 participants)
-  | 'personal_credit'    // One-off credit applied (500 participants)
+  | 'free'               // Free plan (limit from club_plans.free)
+  | 'personal_credit'    // One-off credit applied (limit from billing_products)
   | 'club_subscription'; // Club subscription (plan-dependent)
 
 export interface EventEntitlements {
@@ -58,9 +59,9 @@ export interface EventEntitlements {
  * 1. If clubId exists → derive from club subscription/plan
  * 2. If clubId null + eventId exists:
  *    - Check if consumed credit bound to eventId
- *    - If yes → 500 participants (personal_credit mode)
- *    - If no → 15 participants (free mode)
- * 3. If clubId null + no eventId (new personal event) → 15 participants (free mode)
+ *    - If yes → limit from billing_products.constraints (personal_credit mode)
+ *    - If no → limit from club_plans.free (free mode)
+ * 3. If clubId null + no eventId (new personal event) → limit from club_plans.free (free mode)
  * 
  * @param params Context for computing entitlements
  * @returns EventEntitlements with effective limits
@@ -109,15 +110,19 @@ export async function getEffectiveEventEntitlements(params: {
     const upgradeCredit = consumedCredits.find(c => c.creditCode === 'EVENT_UPGRADE_500');
     
     if (upgradeCredit) {
+      // Read upgrade limit from billing_products (SSOT for product constraints)
+      const product = await getProductByCode('EVENT_UPGRADE_500');
+      const upgradeLimit = product?.constraints?.max_participants ?? 500; // LAST_RESORT_FALLBACK
+      
       log.debug('Effective entitlements: personal event with credit', {
         userId,
         eventId,
         creditId: upgradeCredit.id,
-        maxParticipants: 500,
+        maxParticipants: upgradeLimit,
       });
       
       return {
-        maxEventParticipants: 500,
+        maxEventParticipants: upgradeLimit,
         paidMode: 'personal_credit',
         creditApplied: {
           creditCode: 'EVENT_UPGRADE_500',
@@ -168,7 +173,7 @@ export function describeEntitlements(entitlements: EventEntitlements): string {
       return `Клубная подписка ${entitlements.clubPlan?.planTitle} (до ${entitlements.maxEventParticipants} участников)`;
     
     case 'personal_credit':
-      return `Апгрейд до 500 участников применён`;
+      return `Апгрейд до ${entitlements.maxEventParticipants} участников применён`;
     
     case 'free':
       return `Бесплатный план (до ${entitlements.maxEventParticipants} участников)`;

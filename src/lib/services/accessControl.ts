@@ -256,6 +256,16 @@ export async function enforceClubCreation(params: {
 // ============================================================================
 
 /**
+ * Result of enforcement check.
+ * Callers use `requiresCredit` to determine if the operation
+ * should be wrapped in a credit transaction.
+ */
+export interface EnforcementResult {
+  /** true if caller must wrap the operation in executeWithCreditTransaction */
+  requiresCredit: boolean;
+}
+
+/**
  * Enforce event publish rules for CREATE and UPDATE operations
  * 
  * Unified enforcement for both create and update - checks limits and handles:
@@ -278,6 +288,7 @@ export async function enforceClubCreation(params: {
  * 
  * @param params Event parameters
  * @param confirmCredit User explicitly confirmed credit consumption
+ * @returns EnforcementResult with requiresCredit flag
  * @throws PaywallError (402) if payment required
  * @throws CreditConfirmationError (409) if credit confirmation required
  */
@@ -287,7 +298,7 @@ export async function enforceEventPublish(params: {
   maxParticipants: number | null;
   isPaid: boolean;
   eventId?: string; // For credit consumption tracking (optional for create)
-}, confirmCredit: boolean = false): Promise<void> {
+}, confirmCredit: boolean = false): Promise<EnforcementResult> {
   const { userId, clubId, maxParticipants, isPaid, eventId } = params;
 
   // ============================================================================
@@ -380,8 +391,8 @@ export async function enforceEventPublish(params: {
       });
     }
 
-    // All checks passed for club event
-    return;
+    // All checks passed for club event (clubs never use personal credits)
+    return { requiresCredit: false };
   }
 
   // ============================================================================
@@ -439,7 +450,7 @@ export async function enforceEventPublish(params: {
         maxParticipants,
         effectiveLimit: entitlements.maxEventParticipants,
       });
-      return; // ✅ Allow edit without new credit
+      return { requiresCredit: false }; // ✅ Allow edit without new credit
     }
     
     // Exceeds even the upgraded limit
@@ -472,7 +483,7 @@ export async function enforceEventPublish(params: {
   // Decision 1: Within free limits
   if (maxParticipants === null || maxParticipants <= entitlements.maxEventParticipants) {
     // Allow without credit consumption
-    return;
+    return { requiresCredit: false };
   }
 
   // Decision 2: Exceeds one-off limit (> 500)
@@ -576,6 +587,7 @@ export async function enforceEventPublish(params: {
   // NOTE: Do NOT consume credit here!
   // Credit consumption is handled by executeWithCreditTransaction() wrapper
   // in createEvent()/updateEvent() to ensure atomicity
+  return { requiresCredit: true };
 }
 
 // CreditConfirmationRequiredError is now imported from @/lib/errors

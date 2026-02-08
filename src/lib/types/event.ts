@@ -134,6 +134,7 @@ export interface Event {
   ownerHandle?: string | null;
   allowAnonymousRegistration: boolean; // NEW: Allow guests to register
   registrationManuallyClosed: boolean; // NEW: Owner manually closed registration
+  effectiveMaxParticipants?: number; // Effective limit (from entitlements, only for owner)
 }
 
 export type DomainEvent = Event;
@@ -259,7 +260,7 @@ const eventUpdateBaseSchema = z.object({
   dateTime: eventDateSchema.optional(),
   cityId: z.string().uuid().optional(),
   locations: eventLocationsArraySchema.optional(),
-  maxParticipants: z.number().int().min(1).max(500).nullable().optional(),
+  maxParticipants: z.number().int().min(1).nullable().optional(), // Backend enforces plan/product limits dynamically
   customFieldsSchema: eventCustomFieldsSchema.optional(),
   createdByUserId: z.string().uuid().optional().nullable(),
   visibility: visibilitySchema.optional(),

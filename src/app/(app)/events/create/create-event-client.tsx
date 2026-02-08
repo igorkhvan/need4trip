@@ -85,10 +85,29 @@ export function CreateEventPageClient() {
   // Default plan limits (optimistic fallback while loading)
   const defaultPlanLimits: ClubPlanLimits = freePlanLimits ?? {
     maxMembers: null,
-    maxEventParticipants: 15, // Safe fallback
+    maxEventParticipants: 15, // LAST_RESORT_FALLBACK: used only when DB unavailable
     allowPaidEvents: false,
     allowCsvExport: false,
   };
+  
+  // Load upgrade product limit for banner text (dynamic, not hardcoded)
+  const [upgradeLimit, setUpgradeLimit] = useState<number | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/billing/products")
+      .then(res => res.ok ? res.json() : null)
+      .then(json => {
+        if (!mounted) return;
+        // API returns { success: true, data: { products: [...] } }
+        const products = json?.data?.products as Array<{ code: string; constraints?: Record<string, unknown> }> | undefined;
+        const upgrade = products?.find(p => p.code === "EVENT_UPGRADE_500");
+        if (upgrade?.constraints?.max_participants) {
+          setUpgradeLimit(Number(upgrade.constraints.max_participants));
+        }
+      })
+      .catch(() => { /* non-critical, banner will use fallback */ });
+    return () => { mounted = false; };
+  }, []);
   
   // B5.1: Submit with optional confirm_credit flag
   const submitEvent = useCallback(async (
@@ -320,7 +339,7 @@ export function CreateEventPageClient() {
                 У вас есть {user.availableCreditsCount || 0} апгрейд{(user.availableCreditsCount || 0) === 1 ? '' : (user.availableCreditsCount || 0) < 5 ? 'а' : 'ов'}!
               </h4>
               <p className="text-sm text-muted-foreground">
-                Используйте для создания личного события до 500 участников. Апгрейд может быть использован при публикации с вашим подтверждением.
+                Используйте для создания личного события до {upgradeLimit ?? 500} участников. Апгрейд может быть использован при публикации с вашим подтверждением.
               </p>
             </div>
           </div>

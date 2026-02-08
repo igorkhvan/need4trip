@@ -292,12 +292,21 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   const hasParticipants = (event?.participantsCount ?? 0) > 0;
   
   // Plan limits: use loaded club plan or free defaults
-  const defaultPlanLimits: ClubPlanLimits = clubPlanLimits ?? {
+  const basePlanLimits: ClubPlanLimits = clubPlanLimits ?? {
     maxMembers: null,
-    maxEventParticipants: 15, // Safe fallback
+    maxEventParticipants: 15, // LAST_RESORT_FALLBACK: used only when DB unavailable
     allowPaidEvents: false,
     allowCsvExport: false,
   };
+  
+  // For edit mode: use effective entitlements from API (accounts for consumed credits)
+  // This fixes "Ваш лимит: 15" for upgraded events (should show upgrade limit)
+  const effectivePlanLimits: ClubPlanLimits = event?.effectiveMaxParticipants
+    ? {
+        ...basePlanLimits,
+        maxEventParticipants: event.effectiveMaxParticipants,
+      }
+    : basePlanLimits;
   
   // Form is disabled while event data is loading
   const isFormDisabled = isEventLoading || !event || !isOwner;
@@ -384,7 +393,7 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
         headerTitle="Редактирование события"
         headerDescription="Обновите параметры события. Изменения сразу будут видны участникам."
         manageableClubs={manageableClubs}
-        planLimits={defaultPlanLimits}
+        planLimits={effectivePlanLimits}
         lockedFieldIds={
           hasParticipants && event?.customFieldsSchema
             ? event.customFieldsSchema.map((f) => f.id).filter(Boolean)

@@ -2,6 +2,9 @@
  * Repository: billing_products
  * Purpose: CRUD for purchasable products (one-off credits)
  * Spec: Billing v4 - single source of truth for pricing
+ * 
+ * Caching: All products cached via StaticCache (TTL 5 min)
+ * Same pattern as planRepo.ts for consistency
  */
 
 import { getAdminDb } from "./client";
@@ -9,6 +12,7 @@ import type { BillingProduct } from "@/lib/types/billing";
 import type { Database } from "./types";
 import { InternalError } from "@/lib/errors";
 import { logger } from "@/lib/utils/logger";
+import { StaticCache } from "@/lib/cache/staticCache";
 
 type DbBillingProduct = Database["public"]["Tables"]["billing_products"]["Row"];
 
@@ -31,55 +35,66 @@ function mapDbToProduct(db: DbBillingProduct): BillingProduct {
 }
 
 // ============================================================================
+// Cache Configuration
+// ============================================================================
+
+const productsCache = new StaticCache<BillingProduct>(
+  {
+    ttl: 5 * 60 * 1000, // 5 minutes - products may change when pricing updates
+    name: 'billing_products',
+  },
+  async () => {
+    const db = getAdminDb();
+
+    const { data, error } = await db
+      .from("billing_products")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      logger.error("Failed to load billing products for cache", { error });
+      throw new InternalError("Failed to load billing products", error);
+    }
+
+    return (data as DbBillingProduct[]).map(mapDbToProduct);
+  },
+  (product) => product.code // Key extractor
+);
+
+// ============================================================================
 // Read Operations
 // ============================================================================
 
 /**
- * Get all active products (public API)
+ * Get all active products (public API, cached)
  */
 export async function getActiveProducts(): Promise<BillingProduct[]> {
-  const db = getAdminDb();
-
-  const { data, error } = await db
-    .from("billing_products")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    logger.error("Failed to fetch active products", { error });
-    throw new InternalError("Failed to fetch products", error);
-  }
-
-  return data.map(mapDbToProduct);
+  const allProducts = await productsCache.getAll();
+  return allProducts.filter(p => p.isActive);
 }
 
 /**
- * Get product by code
+ * Get product by code (cached, O(1) lookup)
  */
 export async function getProductByCode(code: string): Promise<BillingProduct | null> {
-  const db = getAdminDb();
-
-  const { data, error } = await db
-    .from("billing_products")
-    .select("*")
-    .eq("code", code)
-    .maybeSingle();
-
-  if (error) {
-    logger.error("Failed to fetch product", { code, error });
-    throw new InternalError("Failed to fetch product", error);
-  }
-
-  return data ? mapDbToProduct(data) : null;
+  return await productsCache.getByKey(code) ?? null;
 }
 
 /**
- * Check if product is active
+ * Check if product is active (cached)
  */
 export async function isProductActive(code: string): Promise<boolean> {
   const product = await getProductByCode(code);
   return product?.isActive ?? false;
+}
+
+/**
+ * Invalidate cache (for admin operations)
+ * Call this after updating products
+ */
+export async function invalidateProductsCache(): Promise<void> {
+  productsCache.clear();
+  logger.info("Billing products cache invalidated");
 }
 
 // ============================================================================
