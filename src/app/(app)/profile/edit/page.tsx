@@ -95,6 +95,7 @@ export default function ProfileEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return; // guard от double-submit через Enter
     
     // Clear previous errors
     setError(null);
@@ -292,9 +293,9 @@ export default function ProfileEditPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button type="submit" size="lg" className="sm:flex-1">
+          <Button type="submit" size="lg" className="sm:flex-1" disabled={saving}>
             <Save className="w-4 h-4" />
-            Сохранить изменения
+            {saving ? 'Сохранение…' : 'Сохранить изменения'}
           </Button>
           <Button
             type="button"

@@ -531,7 +531,8 @@ export function EventForm({
           trigger={
             <button
               type="button"
-              className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
+              disabled={isSubmitting || isGeneratingRules}
+              className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)] disabled:opacity-50 disabled:pointer-events-none"
             >
               <ArrowLeft className="h-5 w-5" />
               <span>Назад</span>
@@ -809,7 +810,7 @@ export function EventForm({
           <div className="mr-auto min-h-[20px] text-sm text-red-600">{errorMessage ?? ""}</div>
           <ConfirmDialog
             trigger={
-              <Button variant="ghost" type="button" className="px-4">
+              <Button variant="ghost" type="button" className="px-4" disabled={isSubmitting || isGeneratingRules}>
                 Отмена
               </Button>
             }

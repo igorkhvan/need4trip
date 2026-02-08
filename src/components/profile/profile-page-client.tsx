@@ -121,6 +121,7 @@ export function ProfilePageClient() {
     color: ''
   });
   const [savingCar, setSavingCar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [carFieldErrors, setCarFieldErrors] = useState<Record<string, string>>({});
   const [profileFieldErrors, setProfileFieldErrors] = useState<Record<string, string>>({});
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ 
@@ -217,6 +218,8 @@ export function ProfilePageClient() {
   };
 
   const handleSave = async () => {
+    if (savingProfile) return; // guard от double-submit
+
     // Validate fields
     const errors: Record<string, string> = {};
     
@@ -247,6 +250,7 @@ export function ProfilePageClient() {
     }
 
     setProfileFieldErrors({});
+    setSavingProfile(true);
 
     try {
       const res = await fetch('/api/profile', {
@@ -286,6 +290,8 @@ export function ProfilePageClient() {
         open: true, 
         message: 'Не удалось сохранить профиль' 
       });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -767,13 +773,15 @@ export function ProfilePageClient() {
                       <Button 
                         variant="ghost"
                         onClick={handleCancel}
+                        disabled={savingProfile}
                       >
                         Отмена
                       </Button>
                       <Button 
                         onClick={handleSave}
+                        disabled={savingProfile}
                       >
-                        Сохранить
+                        {savingProfile ? 'Сохранение…' : 'Сохранить'}
                       </Button>
                     </div>
                   </div>
@@ -931,6 +939,7 @@ export function ProfilePageClient() {
                           setNewCar({ carBrandId: '', type: '', plate: '', color: '' });
                           setCarFieldErrors({});
                         }}
+                        disabled={savingCar}
                       >
                         Отмена
                       </Button>
