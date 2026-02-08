@@ -69,6 +69,7 @@ const PROTECTED_ROUTES = [
   // Billing endpoints (all require auth)
   '/api/billing/purchase-intent',
   '/api/billing/transactions/status',
+  '/api/billing/beta-grant',
   
   // NOTE: Participants routes (/api/events/[id]/participants) are NOT protected
   // They allow guest registrations and guest management
