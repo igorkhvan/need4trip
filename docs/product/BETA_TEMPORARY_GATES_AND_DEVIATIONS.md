@@ -187,7 +187,7 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 **Status:** MODIFIED
 
 **Affected flow:**
-- Personal event creation with 16–500 participants.
+- Personal event creation with participants above free plan limit (limits from DB: `club_plans.free.max_event_participants` to `billing_products.constraints.max_participants`).
 
 **Beta behavior:**
 - Credits created with `source='system'`, `amount=0` transaction. Consumed via standard production path.
@@ -240,12 +240,14 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 - Capacity
 
 **Beta behavior:**
-- Free limit (15) is ENFORCED — paywall fires.
+- Free limit (from `club_plans.free.max_event_participants`, currently 15) is ENFORCED — paywall fires.
 - But user can bypass via "Продолжить" CTA (system auto-grant).
-- Effective limit becomes 500 (EVENT_UPGRADE_500 credit).
+- Effective limit becomes upgrade product limit (from `billing_products.constraints.max_participants`, currently 500).
 
 **Original behavior:**
-- Free limit (15) is enforced and blocks creation without payment.
+- Free limit is enforced and blocks creation without payment.
+
+**Note:** All limits are now dynamic from DB (not hardcoded). See SSOT_BILLING_SYSTEM_ANALYSIS.md §Кэширование.
 
 **Reason:**
 - Beta must show the paywall to test pricing perception, but must not prevent trip creation.
