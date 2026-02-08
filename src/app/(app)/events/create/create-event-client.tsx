@@ -25,6 +25,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ClientError } from "@/lib/types/errors";
 import { useProtectedAction } from "@/lib/hooks/use-protected-action";
 import { useHandleApiError } from "@/components/billing/BillingModalHost";
+import { useBillingModalState } from "@/lib/billing/ui/BillingModalContext";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
 import { useClubPlan, type ClubPlanLimits } from "@/hooks/use-club-plan";
@@ -57,6 +58,10 @@ export function CreateEventPageClient() {
   const controller = useActionController<{
     payload: Record<string, unknown>;
   }>();
+  
+  // Track billing modal state — disable form while modal is open
+  const billingState = useBillingModalState();
+  const isBillingModalOpen = billingState?.modalType != null;
   
   // B5.1: Store last submitted payload for credit confirmation retry
   const lastSubmitPayloadRef = useRef<Record<string, unknown> | null>(null);
@@ -334,8 +339,8 @@ export function CreateEventPageClient() {
         initialValues={{
           cityId: initialCityId || "",
         }}
-        // Pass ActionController state
-        isBusy={controller.isBusy}
+        // Pass ActionController state + billing modal state
+        isBusy={controller.isBusy || isBillingModalOpen}
         busyLabel={controller.busyLabel}
         actionPhase={controller.phase}
         externalError={controller.state.lastError}

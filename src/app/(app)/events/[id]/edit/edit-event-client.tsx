@@ -23,6 +23,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
 import { useHandleApiError } from "@/components/billing/BillingModalHost";
+import { useBillingModalState } from "@/lib/billing/ui/BillingModalContext";
 import { ClientError } from "@/lib/types/errors";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useActionController } from "@/lib/ui/actionController";
@@ -54,6 +55,10 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
   const controller = useActionController<{
     payload: Record<string, unknown>;
   }>();
+  
+  // Track billing modal state — disable form while modal is open
+  const billingState = useBillingModalState();
+  const isBillingModalOpen = billingState?.modalType != null;
   
   // B5.1: Store last submitted payload for credit confirmation retry
   const lastSubmitPayloadRef = useRef<Record<string, unknown> | null>(null);
@@ -388,8 +393,8 @@ export function EditEventPageClient({ eventId }: EditEventPageClientProps) {
         disabled={isFormDisabled}
         initialValues={initialValues}
         onSubmit={handleSubmit}
-        // Pass ActionController state
-        isBusy={controller.isBusy}
+        // Pass ActionController state + billing modal state
+        isBusy={controller.isBusy || isBillingModalOpen}
         busyLabel={controller.busyLabel}
         actionPhase={controller.phase}
         externalError={controller.state.lastError}

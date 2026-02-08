@@ -242,9 +242,19 @@ export function PaywallModal(props: PaywallModalProps) {
   // UX Contract: UX_CONTRACT_PAYWALL_SOFT_BETA_STRICT.md
   // ============================================================================
   if (uiConfig.isBetaContinue) {
+    // Block modal close during pending state to prevent race conditions:
+    // - betaState='pending': auto-grant + resubmit in progress, closing would
+    //   leave a background operation running with no way to track completion.
+    // - betaState='idle'/'error': safe to close.
+    const canClose = betaState !== 'pending';
+
     return (
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && canClose && onClose()}>
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => { if (!canClose) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (!canClose) e.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle className="heading-h3">
               {betaState === 'error' ? BETA_PAYWALL_COPY.errorTitle : uiConfig.title}
