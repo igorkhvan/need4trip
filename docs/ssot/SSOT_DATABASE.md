@@ -166,7 +166,7 @@ CREATE TABLE public.users (
 CREATE TABLE public.events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL CHECK (char_length(title) >= 3),
-  description TEXT NOT NULL,
+  description TEXT NOT NULL,  -- ⚡ May contain HTML (rich text from Tiptap editor)
   category_id UUID REFERENCES public.event_categories(id) ON DELETE SET NULL,
   category TEXT,  -- ⚠️ DEPRECATED: Use category_id. Will be removed in future.
   date_time TIMESTAMPTZ NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE public.events (
   created_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'unlisted', 'restricted')),
   vehicle_type_requirement TEXT NOT NULL DEFAULT 'any',
-  rules TEXT,
+  rules TEXT,  -- ⚡ May contain HTML (rich text from Tiptap editor)
   is_paid BOOLEAN NOT NULL DEFAULT false,
   price NUMERIC(10,2),
   currency_code TEXT REFERENCES public.currencies(code) ON DELETE SET NULL,

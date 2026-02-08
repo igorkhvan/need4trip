@@ -300,6 +300,8 @@ export function EventForm({
   const validate = () => {
     const issues: Record<string, string> = {};
     const trimmedTitle = title.trim();
+    // Strip HTML tags for validation (rich text editor stores HTML)
+    const strippedDescription = description.replace(/<[^>]*>/g, "").trim();
     const trimmedDescription = description.trim();
     const parsedDate = dateTime ? new Date(dateTime) : null;
     const participantsCount = maxParticipants ?? null;
@@ -308,7 +310,7 @@ export function EventForm({
     if (trimmedTitle.length < 3) {
       issues.title = "Название должно быть от 3 символов.";
     }
-    if (trimmedDescription.length < 1) {
+    if (strippedDescription.length < 1) {
       issues.description = "Описание не может быть пустым.";
     }
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
@@ -433,7 +435,18 @@ export function EventForm({
       const result = data.data || data;
 
       if (result.rulesText) {
-        setRules(result.rulesText);
+        // Convert AI plain text to simple HTML for the rich text editor
+        const htmlRules = result.rulesText
+          .split(/\n\n+/)
+          .map((paragraph: string) => {
+            const lines = paragraph
+              .split("\n")
+              .map((line: string) => line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+              .join("<br>");
+            return `<p>${lines}</p>`;
+          })
+          .join("");
+        setRules(htmlRules);
         // Show success feedback
         const event = new CustomEvent("toast", {
           detail: {

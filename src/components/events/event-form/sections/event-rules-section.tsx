@@ -5,10 +5,10 @@
  * Extracted from monolithic event-form.tsx
  * 
  * Responsibilities:
- * - Rules textarea only (header moved to parent)
+ * - Rules rich text editor (header moved to parent)
  */
 
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface EventRulesSectionProps {
   // Form value
@@ -31,13 +31,12 @@ export function EventRulesSection({
   disabled,
 }: EventRulesSectionProps) {
   return (
-    <Textarea
-      id="rules"
-      rows={8}
+    <RichTextEditor
       value={rules}
-      onChange={(e) => onRulesChange(e.target.value)}
+      onChange={onRulesChange}
       placeholder="Опишите условия: порядок движения, скорость, рация, запреты... Или используйте кнопку генерации с помощью ИИ в заголовке секции"
-      disabled={disabled}
+      disabled={disabled || isGeneratingRules}
+      minHeight="192px"
       className={isGeneratingRules ? "opacity-50" : ""}
     />
   );

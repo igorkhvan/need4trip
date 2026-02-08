@@ -1874,6 +1874,61 @@ export default function Loading() {
 
 ---
 
+---
+
+## 17. Rich Text Editor & Renderer
+
+**Added:** 8 февраля 2026
+
+### Компоненты
+
+| Компонент | Файл | Назначение |
+|---|---|---|
+| `RichTextEditor` | `src/components/ui/rich-text-editor.tsx` | WYSIWYG-редактор (Tiptap) |
+| `RichTextContent` | `src/components/ui/rich-text-content.tsx` | Санитизированный HTML-рендерер |
+
+### RichTextEditor
+
+- Базируется на **Tiptap** (ProseMirror)
+- `'use client'` компонент
+- Расширения: StarterKit (bold, italic, lists), Link, Placeholder
+- Тулбар: Bold, Italic, BulletList, OrderedList, Link, Emoji
+- Стилизация: rounded-xl border, соответствует дизайну `Textarea`
+- Props: `value`, `onChange`, `placeholder`, `minHeight`, `disabled`, `error`, `className`
+
+```tsx
+<RichTextEditor
+  value={description}
+  onChange={(html) => setDescription(html)}
+  placeholder="Расскажите о маршруте..."
+  error={!!fieldErrors.description}
+/>
+```
+
+### RichTextContent
+
+- Принимает `html: string`
+- Санитизирует через `DOMPurify` (XSS защита)
+- **Обратная совместимость**: plain text (без HTML тегов) автоматически конвертируется в `<p>` теги
+- Разрешенные HTML теги: `p, br, strong, b, em, i, ul, ol, li, a, span`
+
+```tsx
+<RichTextContent html={event.description} />
+```
+
+### Хранение
+
+- Формат: **HTML** в TEXT колонках БД (description, rules)
+- Без миграции (TEXT уже поддерживает HTML)
+- AI-генерация: plain text конвертируется в HTML при вставке
+
+### Зависимости
+
+- `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-placeholder`, `@tiptap/pm`
+- `isomorphic-dompurify`
+
+---
+
 **Помни:** Дизайн-система существует чтобы ускорить разработку и обеспечить консистентность UI, а не усложнить жизнь.
 
 **Single Source of Truth = Меньше решений = Быстрее разработка.**

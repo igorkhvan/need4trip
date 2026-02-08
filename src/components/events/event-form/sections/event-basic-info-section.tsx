@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
@@ -165,19 +165,17 @@ export function EventBasicInfoSection({
         required
         error={fieldErrors.description}
       >
-        <Textarea
-          id="description"
-          rows={4}
+        <RichTextEditor
           value={description}
-          onChange={(e) => {
-            onDescriptionChange(e.target.value);
+          onChange={(html) => {
+            onDescriptionChange(html);
             if (fieldErrors.description) {
               clearFieldError("description");
             }
           }}
           disabled={disabled}
           placeholder="Расскажите о маршруте, программе и особенностях поездки..."
-          className={fieldErrors.description ? "border-red-500 focus:border-red-500" : ""}
+          error={!!fieldErrors.description}
         />
       </FormField>
 

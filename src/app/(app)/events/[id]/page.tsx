@@ -19,6 +19,7 @@ import { EventDangerZone } from "@/components/events/event-danger-zone";
 import { EventAccessBadge } from "@/components/events/event-access-badge";
 import { LockedIndicator } from "@/components/ui/locked-indicator";
 import { ScrollRestorationWrapper } from "@/components/scroll-restoration-wrapper";
+import { RichTextContent } from "@/components/ui/rich-text-content";
 import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
@@ -256,9 +257,7 @@ export default async function EventDetails({
                 <CardTitle>Описание</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-line text-base leading-relaxed text-[var(--color-text)]">
-                  {event.description}
-                </p>
+                <RichTextContent html={event.description} />
               </CardContent>
             </Card>
 
@@ -269,9 +268,7 @@ export default async function EventDetails({
                   <CardTitle>Правила участия</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line text-base leading-relaxed text-[var(--color-text)]">
-                    {event.rules}
-                  </p>
+                  <RichTextContent html={event.rules} />
                 </CardContent>
               </Card>
             )}
