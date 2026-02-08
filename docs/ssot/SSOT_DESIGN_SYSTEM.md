@@ -1908,7 +1908,7 @@ export default function Loading() {
 ### RichTextContent
 
 - Принимает `html: string`
-- Санитизирует через `DOMPurify` (XSS защита)
+- Санитизирует через лёгкий allowlist-based санитайзер (без DOM-зависимостей, работает на Vercel)
 - **Обратная совместимость**: plain text (без HTML тегов) автоматически конвертируется в `<p>` теги
 - Разрешенные HTML теги: `p, br, strong, b, em, i, ul, ol, li, a, span`
 
@@ -1925,7 +1925,7 @@ export default function Loading() {
 ### Зависимости
 
 - `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-placeholder`, `@tiptap/pm`
-- `isomorphic-dompurify`
+- Санитизация: встроенный lightweight sanitizer (без внешних зависимостей, без jsdom)
 
 ---
 
