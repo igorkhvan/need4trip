@@ -317,14 +317,15 @@ function parseYandexMapsUrl(input: string): ParsedCoordinates | null {
 
 /**
  * Parse 2GIS URLs
- * IMPORTANT: 2GIS uses longitude,latitude order (lng,lat) in /geo/ paths.
+ * IMPORTANT: 2GIS uses longitude,latitude order (lng,lat) everywhere.
  *
- * Examples:
- *   - https://2gis.ru/moscow/geo/37.618423,55.751244
- *   - https://2gis.kz/almaty/geo/76.889709,43.238949
- *   - https://2gis.ru/geo/37.618423,55.751244
- *   - https://2gis.com/moscow/geo/37.618423,55.751244
- *   - https://2gis.kz/almaty/firm/9429940000848693 (firm - no coordinates, NOT supported)
+ * Supported URL formats (priority order):
+ *   1. /geo/lng,lat — geographic point
+ *      https://2gis.ru/moscow/geo/37.618423,55.751244
+ *   2. /firm/{id}/lng%2Clat — firm with coordinates in path (%2C = encoded comma)
+ *      https://2gis.kz/almaty/firm/70000001082637794/76.872734%2C43.234182
+ *   3. ?m=lng,lat/zoom — map view parameter (universal fallback)
+ *      https://2gis.kz/almaty/firm/70000001082637794?m=76.872672%2C43.233969%2F18.81
  */
 function parse2gisUrl(input: string): ParsedCoordinates | null {
   if (!input.includes('://')) {
@@ -339,20 +340,45 @@ function parse2gisUrl(input: string): ParsedCoordinates | null {
       return null;
     }
 
-    // Try to extract coordinates from /geo/lng,lat path segment
+    // Helper: validate lng,lat pair and return ParsedCoordinates
+    const fromLngLat = (lngStr: string, latStr: string): ParsedCoordinates | null => {
+      const lng = parseFloat(lngStr);
+      const lat = parseFloat(latStr);
+      if (!validateCoordinates(lat, lng)) return null;
+      return {
+        lat,
+        lng,
+        format: 'TWOGIS',
+        normalized: normalizeCoordinates(lat, lng),
+      };
+    };
+
+    // Priority 1: /geo/lng,lat in pathname (most specific)
     const geoMatch = url.pathname.match(/\/geo\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
     if (geoMatch) {
-      // 2GIS uses lng,lat order — swap to lat,lng
-      const lng = parseFloat(geoMatch[1]);
-      const lat = parseFloat(geoMatch[2]);
+      const result = fromLngLat(geoMatch[1], geoMatch[2]);
+      if (result) return result;
+    }
 
-      if (validateCoordinates(lat, lng)) {
-        return {
-          lat,
-          lng,
-          format: 'TWOGIS',
-          normalized: normalizeCoordinates(lat, lng),
-        };
+    // Priority 2: /firm/{id}/lng,lat in decoded pathname
+    // URL-encoded comma (%2C) stays encoded in url.pathname, so we decode first
+    const decodedPath = decodeURIComponent(url.pathname);
+    const firmMatch = decodedPath.match(/\/firm\/\d+\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (firmMatch) {
+      const result = fromLngLat(firmMatch[1], firmMatch[2]);
+      if (result) return result;
+    }
+
+    // Priority 3: ?m=lng,lat/zoom query parameter (universal fallback)
+    // searchParams.get() auto-decodes %2C and %2F
+    const mParam = url.searchParams.get('m');
+    if (mParam) {
+      // Format: "lng,lat/zoom" or "lng,lat"
+      const withoutZoom = mParam.split('/')[0];
+      const parts = withoutZoom.split(',');
+      if (parts.length >= 2) {
+        const result = fromLngLat(parts[0], parts[1]);
+        if (result) return result;
       }
     }
   } catch {

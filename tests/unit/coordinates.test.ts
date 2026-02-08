@@ -412,9 +412,59 @@ describe("parseCoordinates — 2GIS URLs", () => {
     expect(result!.lng).toBeCloseTo(37.618423, 5);
   });
 
+  test("/firm/ link with coordinates in path (URL-encoded comma)", () => {
+    // Real-world URL: firm page with %2C encoded comma
+    const result = parseCoordinates(
+      "https://2gis.kz/almaty/firm/70000001082637794/76.872734%2C43.234182?m=76.872672%2C43.233969%2F18.81"
+    );
+    expect(result).not.toBeNull();
+    // Coordinates from path: lng=76.872734, lat=43.234182 (Almaty)
+    expect(result!.lat).toBeCloseTo(43.234182, 5);
+    expect(result!.lng).toBeCloseTo(76.872734, 5);
+    expect(result!.format).toBe("TWOGIS");
+  });
+
+  test("/firm/ link with only m parameter (no coords in path)", () => {
+    const result = parseCoordinates(
+      "https://2gis.kz/almaty/firm/70000001082637794?m=76.872672%2C43.233969%2F18.81"
+    );
+    expect(result).not.toBeNull();
+    expect(result!.lat).toBeCloseTo(43.233969, 5);
+    expect(result!.lng).toBeCloseTo(76.872672, 5);
+  });
+
+  test("m parameter without zoom", () => {
+    const result = parseCoordinates(
+      "https://2gis.ru/moscow?m=37.618423%2C55.751244"
+    );
+    expect(result).not.toBeNull();
+    expect(result!.lat).toBeCloseTo(55.751244, 5);
+    expect(result!.lng).toBeCloseTo(37.618423, 5);
+  });
+
+  test("search page with m parameter", () => {
+    const result = parseCoordinates(
+      "https://2gis.kz/almaty/search/cafe?m=76.872672%2C43.233969%2F15"
+    );
+    expect(result).not.toBeNull();
+    expect(result!.lat).toBeCloseTo(43.233969, 5);
+    expect(result!.lng).toBeCloseTo(76.872672, 5);
+  });
+
+  test("priority: /geo/ over m parameter", () => {
+    // /geo/ is more specific than m
+    const result = parseCoordinates(
+      "https://2gis.ru/moscow/geo/37.618423,55.751244?m=37.999%2C55.999%2F16"
+    );
+    expect(result).not.toBeNull();
+    // Should use /geo/ coordinates, not m
+    expect(result!.lat).toBeCloseTo(55.751244, 5);
+    expect(result!.lng).toBeCloseTo(37.618423, 5);
+  });
+
   // --- Negative cases ---
 
-  test("rejects /firm/ link (no coordinates)", () => {
+  test("rejects /firm/ link without any coordinates", () => {
     expect(
       parseCoordinates("https://2gis.kz/almaty/firm/9429940000848693")
     ).toBeNull();
@@ -473,6 +523,20 @@ describe("parseCoordinates — lng/lat swap safety", () => {
     expect(result!.lat).toBeLessThan(65);
     expect(result!.lng).toBeGreaterThan(25);
     expect(result!.lng).toBeLessThan(35);
+  });
+
+  test("2GIS /firm/ — Almaty coordinates not swapped", () => {
+    // Almaty: lat=43.234, lng=76.873
+    const result = parseCoordinates(
+      "https://2gis.kz/almaty/firm/70000001082637794/76.872734%2C43.234182?m=76.872672%2C43.233969%2F18.81"
+    );
+    expect(result).not.toBeNull();
+    // lat should be ~43 (Almaty), NOT ~76
+    expect(result!.lat).toBeGreaterThan(40);
+    expect(result!.lat).toBeLessThan(50);
+    // lng should be ~76 (Almaty), NOT ~43
+    expect(result!.lng).toBeGreaterThan(70);
+    expect(result!.lng).toBeLessThan(80);
   });
 
   test("2GIS /geo/ — Moscow coordinates not swapped", () => {
