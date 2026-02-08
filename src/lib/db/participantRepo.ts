@@ -10,6 +10,18 @@ const table = "event_participants";
 // Based on DbParticipant interface: id, event_id, user_id, guest_session_id, display_name, role, custom_field_values, created_at
 const PARTICIPANT_COLUMNS = "id, event_id, user_id, guest_session_id, display_name, role, custom_field_values, created_at" as const;
 
+/** Sort weight by role: leader first (0), regular participants middle (1), tail last (2). */
+const ROLE_SORT_WEIGHT: Record<string, number> = { leader: 0, participant: 1, tail: 2 };
+
+/**
+ * Sort participants so that leader is always first and tail is always last.
+ * Participants with the same weight preserve their original (created_at) order (stable sort).
+ */
+function sortByRole(participants: DbParticipant[]): DbParticipant[] {
+  return [...participants].sort(
+    (a, b) => (ROLE_SORT_WEIGHT[a.role] ?? 1) - (ROLE_SORT_WEIGHT[b.role] ?? 1)
+  );
+}
 
 export async function listParticipants(
   eventId: string
@@ -26,7 +38,7 @@ export async function listParticipants(
     throw new InternalError("Failed to list participants", error);
   }
 
-  return (data ?? []) as DbParticipant[];
+  return sortByRole((data ?? []) as DbParticipant[]);
 }
 
 export async function createParticipant(
