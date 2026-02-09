@@ -5,6 +5,7 @@ import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
 import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
+import { trackWriteAction } from "@/lib/telemetry/abuseTelemetry";
 import { NextRequest } from "next/server";
 
 // ❌ Edge Runtime не совместим с Supabase + revalidatePath
@@ -82,6 +83,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
             
             const payload = await request.json();
             const updated = await updateEvent(id, payload, currentUser, confirmCredit);
+
+            // Fire-and-forget: abuse telemetry
+            trackWriteAction(currentUser.id, 'events.update');
             
             // Revalidate pages that display this event
             revalidatePath(`/events/${id}`);        // Event detail page
@@ -117,6 +121,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
     
     const payload = await request.json();
     const updated = await updateEvent(id, payload, currentUser, confirmCredit);
+
+    // Fire-and-forget: abuse telemetry
+    trackWriteAction(currentUser.id, 'events.update');
     
     // Revalidate pages that display this event
     revalidatePath(`/events/${id}`);        // Event detail page
@@ -155,6 +162,9 @@ export async function DELETE(request: Request, { params }: Params) {
     }
     
     await deleteEvent(id, currentUser);
+
+    // Fire-and-forget: abuse telemetry
+    trackWriteAction(currentUser.id, 'events.delete');
     
     // Revalidate pages that displayed this event
     revalidatePath(`/events/${id}`);   // Event detail page (will show 404)

@@ -4,6 +4,7 @@ import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { createEvent, listVisibleEventsForUserPaginated } from "@/lib/services/events";
 import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
+import { trackWriteAction } from "@/lib/telemetry/abuseTelemetry";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -109,6 +110,9 @@ export async function POST(request: NextRequest) {
             
             const payload = await request.json();
             const event = await createEvent(payload, currentUser, confirmCredit);
+
+            // Fire-and-forget: abuse telemetry
+            trackWriteAction(currentUser.id, 'events.create');
             
             return {
               status: 201,
@@ -140,6 +144,9 @@ export async function POST(request: NextRequest) {
     
     const payload = await request.json();
     const event = await createEvent(payload, currentUser, confirmCredit);
+
+    // Fire-and-forget: abuse telemetry
+    trackWriteAction(currentUser.id, 'events.create');
     
     return respondJSON({ event }, undefined, 201);
   } catch (err: any) {

@@ -15,6 +15,7 @@ import { createClubJoinRequest, listClubJoinRequests } from "@/lib/services/club
 import { getClubById } from "@/lib/db/clubRepo";
 import { getMember } from "@/lib/db/clubMemberRepo";
 import { respondSuccess, respondError } from "@/lib/api/response";
+import { trackWriteAction } from "@/lib/telemetry/abuseTelemetry";
 import { log } from "@/lib/utils/logger";
 import { 
   NotFoundError, 
@@ -102,6 +103,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     
     // Create join request (idempotent per SSOT_CLUBS_DOMAIN.md §10.1)
     const joinRequest = await createClubJoinRequest(clubId, user.id, body.message);
+
+    // Fire-and-forget: abuse telemetry
+    trackWriteAction(user.id, 'join_requests.create');
     
     log.info("Club join request created", { 
       clubId, 

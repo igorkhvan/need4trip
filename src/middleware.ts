@@ -29,6 +29,7 @@ import {
   getClientIp,
   RATE_LIMIT_TIERS,
 } from '@/lib/config/rateLimits';
+import { trackError as trackAbuseError } from '@/lib/telemetry/abuseTelemetry';
 import type { RateLimitHeaders } from '@/types/middleware';
 
 // ============================================================================
@@ -81,6 +82,7 @@ const PROTECTED_ROUTES = [
  */
 const ADMIN_ROUTES = [
   '/api/admin/cache/clear',
+  '/api/admin/abuse',
   // Add more admin routes here
 ] as const;
 
@@ -361,6 +363,9 @@ export async function middleware(request: NextRequest) {
               limit: tierConfig.requests,
               window: tierConfig.window,
             });
+            
+            // Fire-and-forget: track 429 for abuse dashboard
+            trackAbuseError('429');
             
             const response = rateLimitResponse(tierConfig.requests, tierConfig.window);
             // Add rate limit headers

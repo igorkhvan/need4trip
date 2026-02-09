@@ -10,6 +10,7 @@ import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { listClubs, listClubsByCity, searchClubs, createClub } from "@/lib/services/clubs";
 import { respondSuccess, respondError } from "@/lib/api/response";
 import { UnauthorizedError } from "@/lib/errors";
+import { trackWriteAction } from "@/lib/telemetry/abuseTelemetry";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,9 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const club = await createClub(body, user);
+
+    // Fire-and-forget: abuse telemetry
+    trackWriteAction(user.id, 'clubs.create');
 
     return respondSuccess({ club }, undefined, 201);
   } catch (error) {

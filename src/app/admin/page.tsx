@@ -14,7 +14,7 @@
  */
 
 import Link from "next/link";
-import { Users, Building2, ScrollText, ArrowRight } from "lucide-react";
+import { Users, Building2, ScrollText, ArrowRight, ShieldAlert } from "lucide-react";
 
 /**
  * Navigation cards - NO metrics, NO counts
@@ -38,6 +38,12 @@ const SECTIONS = [
     title: "Журнал действий",
     description: "Просмотр admin-операций",
     icon: ScrollText,
+  },
+  {
+    href: "/admin/abuse",
+    title: "Abuse Monitor",
+    description: "Мониторинг аномалий (read-only)",
+    icon: ShieldAlert,
   },
 ];
 

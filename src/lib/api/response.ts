@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAppError, isPaywallError, type AppError, type PaywallError } from "@/lib/errors";
+import { trackError as trackAbuseError } from "@/lib/telemetry/abuseTelemetry";
 
 /**
  * API Response Types
@@ -65,6 +66,9 @@ export function respondError(
 ): NextResponse<ApiErrorResponse> {
   // Special handling for PaywallError (402 Payment Required)
   if (isPaywallError(error)) {
+    // Fire-and-forget: abuse telemetry (system-wide 402 counter)
+    trackAbuseError('402');
+
     return NextResponse.json(
       {
         success: false,
@@ -79,6 +83,11 @@ export function respondError(
   }
 
   if (isAppError(error)) {
+    // Fire-and-forget: abuse telemetry (system-wide 403 counter)
+    if (error.statusCode === 403) {
+      trackAbuseError('403');
+    }
+
     return NextResponse.json(
       {
         success: false,

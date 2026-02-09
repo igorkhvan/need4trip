@@ -4793,6 +4793,165 @@ List admin audit records with optional filtering. Read-only access to audit log.
 
 ---
 
+#### API-066: Abuse Overview (Admin)
+
+**Endpoint ID:** API-066  
+**Method:** GET  
+**Path:** `/api/admin/abuse/overview`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+System-wide abuse/anomaly summary (current-minute rates) plus per-user top list sorted by computed score. Read-only observability endpoint — no mutations, no blocking.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Query params:** None
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "timestamp": "ISO8601",
+      "windowMinutes": 15,
+      "systemMetrics": {
+        "total_writes": 42,
+        "errors.429": 3,
+        "errors.402": 1,
+        "errors.403": 0
+      },
+      "activeUserCount": 5,
+      "topUsers": [
+        {
+          "userId": "uuid",
+          "metrics": {
+            "events.create": 3,
+            "events.update": 1,
+            "events.delete": 0,
+            "clubs.create": 0,
+            "join_requests.create": 1,
+            "club_audit_log.actions": 0,
+            "errors.402": 0,
+            "errors.403": 0,
+            "ai.generate_rules": 2
+          },
+          "createThenDelete": 0,
+          "score": 12,
+          "status": "normal | watch | suspicious"
+        }
+      ]
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 500 | Redis / aggregation error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only, secret-protected at middleware)
+- **Side effects:** None (read-only)
+
+**Dependencies:**
+
+- Upstash Redis (telemetry counters)
+- Service: `getAbuseOverview()` (`/src/lib/services/adminAbuse.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/abuse/overview/route.ts`
+- Service: `/src/lib/services/adminAbuse.ts`
+- Telemetry: `/src/lib/telemetry/abuseTelemetry.ts`
+
+**SSOT Reference:** SSOT_API.md v1.9.0
+
+---
+
+#### API-067: Abuse Users (Admin)
+
+**Endpoint ID:** API-067  
+**Method:** GET  
+**Path:** `/api/admin/abuse/users`  
+**Runtime:** Node.js  
+**Auth:** Admin secret required  
+**Auth mechanism:** `x-admin-secret` header  
+**Authorization:** Admin only  
+
+**Purpose:**  
+Per-user abuse/anomaly summaries sorted by computed score (descending). Read-only — no mutations, no blocking, no suspension.
+
+**Request:**
+
+- **Headers:** `x-admin-secret: <ADMIN_SECRET>`
+- **Query params:** None
+
+**Response:**
+
+- **Success:** 200
+  ```json
+  {
+    "success": true,
+    "data": {
+      "users": [
+        {
+          "userId": "uuid",
+          "metrics": {
+            "events.create": 3,
+            "events.update": 1,
+            "events.delete": 0,
+            "clubs.create": 0,
+            "join_requests.create": 1,
+            "club_audit_log.actions": 0,
+            "errors.402": 0,
+            "errors.403": 0,
+            "ai.generate_rules": 2
+          },
+          "createThenDelete": 0,
+          "score": 12,
+          "status": "normal | watch | suspicious"
+        }
+      ]
+    }
+  }
+  ```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 403 | Invalid/missing admin secret | FORBIDDEN |
+| 500 | Redis / aggregation error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** None (admin-only, secret-protected at middleware)
+- **Side effects:** None (read-only)
+
+**Dependencies:**
+
+- Upstash Redis (telemetry counters)
+- Service: `getAbuseUsers()` (`/src/lib/services/adminAbuse.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/abuse/users/route.ts`
+- Service: `/src/lib/services/adminAbuse.ts`
+- Telemetry: `/src/lib/telemetry/abuseTelemetry.ts`
+
+**SSOT Reference:** SSOT_API.md v1.9.0
+
+---
+
 ### 9.9 Cron
 
 #### API-048: Process Notifications Queue
@@ -4981,14 +5140,17 @@ Total route handlers discovered: **45 files**
 | 37 | `/src/app/api/admin/clubs/[clubId]/route.ts` | GET | API-063 |
 | 38 | `/src/app/api/admin/clubs/[clubId]/extend-subscription/route.ts` | POST | API-064 |
 | 39 | `/src/app/api/admin/audit/route.ts` | GET | API-065 |
-| 40 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
+| 40 | `/src/app/api/admin/abuse/overview/route.ts` | GET | API-066 |
+| 41 | `/src/app/api/admin/abuse/users/route.ts` | GET | API-067 |
+| 42 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 45 (was 37; +8 Admin API routes in v1.8.0)
-- **Total endpoints documented:** 64 (API-001 to API-065, excluding API-050; API-057 removed)
+- **Total route handler files:** 47 (was 45; +2 Abuse Monitor API routes in v1.9.0)
+- **Total endpoints documented:** 66 (API-001 to API-067, excluding API-050; API-057 removed)
 - **Removed endpoints:** 1 (API-057 — removed 2026-01-29)
-- **Admin endpoints (new in v1.8.0):** 9 (API-047, API-058 to API-065)
+- **Admin endpoints:** 11 (API-047, API-058 to API-067)
+- **Abuse Monitor endpoints (new in v1.9.0):** 2 (API-066, API-067) — read-only observability
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -5093,10 +5255,10 @@ Verified: TypeScript ✅, Build ✅
 ## 12. Metadata
 
 **Document Stats:**
-- Total endpoints: 64
-- Total route handlers: 45
-- Lines: ~5100
-- Last audit: 2 February 2026
+- Total endpoints: 66
+- Total route handlers: 47
+- Lines: ~5400
+- Last audit: 9 February 2026
 
 **Maintenance:**
 - Review quarterly (every 3 months)

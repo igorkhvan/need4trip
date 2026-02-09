@@ -25,7 +25,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Users, Building2, ScrollText, Home, Shield } from "lucide-react";
+import { Users, Building2, ScrollText, Home, Shield, ShieldAlert } from "lucide-react";
 
 interface AdminLayoutClientProps {
   children: ReactNode;
@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "Пользователи", icon: Users },
   { href: "/admin/clubs", label: "Клубы", icon: Building2 },
   { href: "/admin/audit", label: "Журнал действий", icon: ScrollText },
+  { href: "/admin/abuse", label: "Abuse Monitor", icon: ShieldAlert },
 ];
 
 /**

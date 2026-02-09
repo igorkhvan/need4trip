@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { respondError, respondJSON } from "@/lib/api/response";
 import { AuthError, ValidationError } from "@/lib/errors";
+import { trackWriteAction } from "@/lib/telemetry/abuseTelemetry";
 import { 
   generateRulesRequestSchema, 
   type GenerateRulesResponse 
@@ -79,6 +80,9 @@ export async function POST(request: NextRequest) {
       eventId: eventData.eventId,
       rulesLength: rulesText.length,
     });
+
+    // Fire-and-forget: abuse telemetry
+    trackWriteAction(currentUser.id, 'ai.generate_rules');
 
     // 6. Return response
     const response: GenerateRulesResponse = {
