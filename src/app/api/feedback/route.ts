@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       case 'rate_limit':
         trackUserMetric(user.id, 'feedback.rejected.rate_limit');
         return respondSuccess(
-          undefined,
+          { rateLimited: true },
           'Too many feedback submissions. Please try again later.',
           200,
         );

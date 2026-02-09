@@ -115,7 +115,13 @@ export function FeedbackWidget() {
         return;
       }
 
-      // Success (201 or 200 for dedup/rate-limit soft rejection)
+      // Rate limit: server returns { data: { rateLimited: true }, message: "..." }
+      if (data.data?.rateLimited) {
+        setError('Вы уже отправляли отзывы сегодня. Попробуйте завтра.');
+        return;
+      }
+
+      // 201 = real insert, 200 = dedup (silent success per spec)
       setSubmitted(true);
     } catch {
       setError('Ошибка сети. Попробуйте позже.');
