@@ -126,6 +126,7 @@ Maintain an Ownership Map table (append-only; deprecations via archive):
 | Effective event limits (SSOT) | `lib/services/eventEntitlements.ts` → `getEffectiveEventEntitlements()` |
 | Plan data (cached) | `lib/db/planRepo.ts` (StaticCache, TTL 5 min) |
 | Product data (cached) | `lib/db/billingProductsRepo.ts` (StaticCache, TTL 5 min) |
+| Feedback submission + admin read | `lib/services/feedbackService.ts` → `submitFeedback()`, `getAdminFeedback()` |
 
 ---
 

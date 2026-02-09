@@ -687,10 +687,11 @@ PWDEBUG=1 npm run test:e2e -- -g "QA-39"
 - ✅ Race conditions & concurrency
 
 **Not covered** (requires manual QA or additional tests):
-- ❌ Frontend components unit tests (PaywallModal, CreditConfirmationModal)
+- ❌ Frontend components unit tests (PaywallModal, CreditConfirmationModal, FeedbackWidget)
 - ⏸️ E2E tests (Playwright) - infrastructure ready, auth TODO
 - ❌ Real payment provider webhooks (Kaspi, ePay)
 - ❌ Load testing (concurrent requests at scale)
+- ❌ Feedback API tests (API-069 submit, API-070 admin read, rate limiting, dedup, validation)
 
 ---
 

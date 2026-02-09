@@ -195,6 +195,49 @@ Admin UI consists of **exactly** the following pages.
 
 ---
 
+### 2.7 Feedback — Admin View
+
+**Route:** `/admin/feedback`
+
+**Purpose:**
+Review user-submitted feedback (ideas, bugs, general feedback).
+
+**Content:**
+- Type filter tabs (All / Idea / Bug / Feedback) with counts
+- Feedback entries table:
+  - Type (badge: Idea/Bug/Feedback)
+  - Message (truncated, expandable)
+  - User ID (truncated UUID)
+  - Page path
+  - Created at (date/time)
+- Total count
+- Refresh button
+
+**Allowed Actions:**
+- View feedback entries
+- Filter by type
+- Expand long messages
+
+**Forbidden:**
+- Editing feedback entries
+- Deleting feedback entries
+- Replying to feedback
+- Exporting feedback
+
+**Architecture:**
+- RSC page → `getAdminFeedback()` service layer (per ADR-001.5)
+- Client component: `FeedbackTableClient` for interactivity (tabs, expand)
+- Auth: admin layout gate (no per-page auth check)
+
+**Data source:**
+- Service: `lib/services/feedbackService.ts` → `getAdminFeedback()`
+- DB table: `feedback` (service-role only RLS)
+
+**API counterpart:**
+- `GET /api/admin/feedback` (API-070) — for external/machine access
+
+---
+
 ## 3. Write Action Surfaces (Canonical)
 
 Admin write actions MUST be exposed **only** via:

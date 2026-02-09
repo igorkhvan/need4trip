@@ -113,11 +113,31 @@ Non-active subscription states (`grace`, `pending`, `expired`) are validated aga
 | Isolation | RLS policy `idempotency_keys_user_isolation` prevents cross-user key access |
 | Key TTL | 7 days (cleanup via `cleanup_old_idempotency_keys()` DB function) |
 
-Idempotency is **not** implemented for: club creation, join requests, participant registration, or any other mutation endpoint.
+Idempotency is **not** implemented for: club creation, join requests, participant registration, feedback, or any other mutation endpoint.
 
 **Code pointer:** `src/lib/services/withIdempotency.ts`
 
-### 2.6 Database-Level Protections
+### 2.6 Feedback Anti-Spam (Handler-Level)
+
+Feedback submission (`POST /api/feedback`, API-069) has a dedicated multi-layer anti-spam system enforced at the handler and service layer (not middleware).
+
+| Layer | Mechanism | Detail |
+|-------|-----------|--------|
+| Rate limiting | Redis INCR + EXPIRE | 3 submissions per user per 24 hours. Key: `feedback:user:{userId}`, TTL: 86400 s. Graceful degradation: if Redis unavailable, allows request. |
+| Deduplication | SHA-256 hash + Redis GET/SET | Hash: `sha256(userId + message)`. Key: `feedback:dedupe:{hash}`, TTL: 86400 s. If exists → silent 200 OK without DB insert. |
+| Content validation | Server-side checks | Message: 20–2000 chars, trimmed, not URL-only, not emoji-only. Type: closed set (`idea`, `bug`, `feedback`). |
+| Auth enforcement | `resolveCurrentUser()` + middleware | Only authenticated, non-suspended users. `assertNotSuspended()` built into auth resolver. |
+
+**UX behavior:**
+- Rate limit exceeded → client shows "Вы уже отправляли отзывы сегодня" (via `rateLimited: true` flag)
+- Dedup → client shows success (user already submitted same message; silent)
+- Validation failure → client shows error text from server
+
+**Code pointers:**
+- `src/lib/services/feedbackService.ts` (rate limit, dedup, validation)
+- `src/app/api/feedback/route.ts` (API handler)
+
+### 2.7 Database-Level Protections
 
 **Row Level Security (RLS):** Enabled on 18+ tables. Key policies prevent anonymous mutations, non-owner modifications, and cross-user data access. The application uses service role for billing operations, which bypasses RLS.
 
@@ -156,6 +176,10 @@ These mechanisms **observe and surface** abuse signals. They do **not** block, s
 | `abuse:u:{userId}:errors.402` | PaywallError count | Infrastructure exists but currently **not populated** — `respondError()` does not have access to userId |
 | `abuse:u:{userId}:errors.403` | ForbiddenError count | Infrastructure exists but currently **not populated** — `respondError()` does not have access to userId |
 | `abuse:u:{userId}:ai.generate_rules` | AI generation count | `POST /api/ai/events/generate-rules` |
+| `abuse:u:{userId}:feedback.submit` | Feedback submission count | `POST /api/feedback` (on successful insert) |
+| `abuse:u:{userId}:feedback.rejected.rate_limit` | Feedback rate limit hits | `POST /api/feedback` (when 3/24h exceeded) |
+| `abuse:u:{userId}:feedback.rejected.validation` | Feedback validation failures | `POST /api/feedback` (invalid message) |
+| `abuse:u:{userId}:feedback.rejected.dedupe` | Feedback dedup hits | `POST /api/feedback` (duplicate within 24h) |
 
 **System-wide metrics** (per-minute bucket, TTL = 120 s):
 
