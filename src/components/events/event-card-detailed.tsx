@@ -5,16 +5,20 @@
  * Используется на странице списка всех событий (/events).
  * 
  * Показывает:
- * - Заголовок и категорию
- * - Статус события (EventStatusBadge)
- * - Дату, место, участников, стоимость
+ * - Заголовок и категорию (с правильной иконкой)
+ * - Статус события (EventStatusBadge) — для всех типов DTO
+ * - Организатор (имя или @handle)
+ * - Дату, город, участников, стоимость
+ * - Клубный бейдж (если клубное событие)
+ * - Превью описания (plain text, 2 строки)
  * - Прогресс-бар заполненности
  * - Клик переход на страницу события
  */
 
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Clock, MapPin, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ProgressBar, calculateEventFillPercentage } from "@/components/ui/progress-bar";
 import { EventStatusBadge } from "@/components/events/event-status-badge";
 import { Event } from "@/lib/types/event";
@@ -28,6 +32,16 @@ export interface EventCardDetailedProps {
   onClick?: () => void;
 }
 
+/**
+ * Strip HTML tags and truncate to plain text preview
+ */
+function getDescriptionPreview(html: string, maxLength = 120): string {
+  // Remove HTML tags
+  const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength).trimEnd() + "...";
+}
+
 export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
   const router = useRouter();
   
@@ -36,11 +50,18 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
     event.maxParticipants
   );
   
-  // Handle category (full Event has EventCategoryDto, lightweight has { id, name, icon })
+  // Detect event type
   const hasFullEvent = 'locations' in event;
-  const CategoryIcon = event.category 
-    ? (hasFullEvent ? getCategoryIcon(event.category as any) : Users)
-    : Users;
+
+  // Category icon — works for both full Event and lightweight DTO
+  const CategoryIcon = event.category
+    ? getCategoryIcon(
+        hasFullEvent
+          ? (event.category as any) // Full Event: EventCategoryDto
+          : (event.category as { icon: string }).icon // Lightweight: use icon string
+      )
+    : getCategoryIcon(null);
+  
   const categoryLabel = event.category 
     ? (hasFullEvent 
         ? getCategoryLabel(event.category as any) 
@@ -56,15 +77,41 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
             : "Платно")
         : "Бесплатно");
 
-  // Extract location text (handle both full Event and lightweight EventListItemHydrated)
-  const locationText = hasFullEvent
-    ? ((event as Event).locations?.[0]?.title || "Не указано")
-    : (event.city?.name || "Не указано"); // Use city name for lightweight DTO
+  // City name (full Event uses locations[0].title, lightweight uses city.name)
+  const cityText = hasFullEvent
+    ? ((event as Event).city?.name || (event as Event).locations?.[0]?.title || "Не указано")
+    : (event.city?.name || "Не указано");
 
-  // Owner info (only available in full Event)
-  const ownerInfo = hasFullEvent && 'ownerHandle' in event
-    ? (event.ownerHandle ? `@${event.ownerHandle}` : event.ownerName ?? "Организатор")
-    : "Организатор";
+  // Owner info — works for both full Event and lightweight DTO
+  const ownerInfo = (() => {
+    if (hasFullEvent && 'ownerHandle' in event) {
+      return event.ownerHandle ? `@${event.ownerHandle}` : event.ownerName ?? "Организатор";
+    }
+    // Lightweight DTO: ownerHandle / ownerName are hydrated fields
+    if ('ownerHandle' in event && event.ownerHandle) {
+      return `@${event.ownerHandle}`;
+    }
+    if ('ownerName' in event && event.ownerName) {
+      return event.ownerName as string;
+    }
+    return "Организатор";
+  })();
+
+  // Club info — works for both full Event and lightweight DTO
+  const clubName = (() => {
+    if (hasFullEvent && 'club' in event && (event as Event).club) {
+      return (event as Event).club!.name;
+    }
+    if ('clubName' in event && event.clubName) {
+      return event.clubName as string;
+    }
+    return null;
+  })();
+
+  // Description preview (plain text, 2 lines)
+  const descriptionPreview = event.description
+    ? getDescriptionPreview(event.description)
+    : null;
 
   const handleClick = () => {
     if (onClick) {
@@ -95,7 +142,7 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
               <span>{ownerInfo}</span>
             </div>
           </div>
-          {hasFullEvent && <EventStatusBadge event={event as Event} size="md" />}
+          <EventStatusBadge event={event} size="md" />
         </div>
 
         {/* Info Grid */}
@@ -108,10 +155,10 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
             </div>
           </div>
           <div>
-            <div className="mb-1 text-sm text-muted-foreground">Место сбора</div>
+            <div className="mb-1 text-sm text-muted-foreground">Город</div>
             <div className="flex items-center gap-1 text-base text-[var(--color-text)]">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="truncate">{locationText}</span>
+              <span className="truncate">{cityText}</span>
             </div>
           </div>
           <div>
@@ -126,6 +173,23 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
             <div className="text-base text-[var(--color-text)]">{priceLabel}</div>
           </div>
         </div>
+
+        {/* Club badge */}
+        {clubName && (
+          <div className="mb-3">
+            <Badge variant="outline" className="inline-flex items-center gap-1.5 text-xs">
+              <Building2 className="h-3 w-3" />
+              {clubName}
+            </Badge>
+          </div>
+        )}
+
+        {/* Description preview */}
+        {descriptionPreview && (
+          <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+            {descriptionPreview}
+          </p>
+        )}
 
         {/* Progress Bar */}
         {event.maxParticipants && (

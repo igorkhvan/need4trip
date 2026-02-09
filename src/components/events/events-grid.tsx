@@ -277,7 +277,7 @@ export function EventsGrid({
             {events.map((event) => (
               <EventCardDetailed
                 key={event.id}
-                event={event as any}
+                event={event}
                 onClick={() => router.push(`/events/${event.id}`)}
               />
             ))}

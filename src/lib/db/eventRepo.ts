@@ -28,6 +28,7 @@ export interface EventListItem {
   createdByUserId: string | null;
   clubId: string | null;
   isClubEvent: boolean;
+  registrationManuallyClosed: boolean;
 }
 
 /**
@@ -39,7 +40,8 @@ export interface EventListItem {
 const EVENT_LIST_COLUMNS = `
   id, title, description, date_time, city_id, category_id,
   max_participants, price, currency_code, visibility,
-  is_paid, created_by_user_id, club_id, is_club_event
+  is_paid, created_by_user_id, club_id, is_club_event,
+  registration_manually_closed
 `.trim();
 
 /**
@@ -63,6 +65,7 @@ export function mapDbRowToListItem(row: any): EventListItem {
     createdByUserId: row.created_by_user_id ?? null,
     clubId: row.club_id ?? null,
     isClubEvent: row.is_club_event ?? false,
+    registrationManuallyClosed: row.registration_manually_closed ?? false,
   };
 }
 

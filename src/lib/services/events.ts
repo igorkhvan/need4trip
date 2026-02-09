@@ -1038,6 +1038,9 @@ export interface EventListItemHydrated extends EventListItem {
   currency?: { code: string; symbol: string };
   category?: { id: string; name: string; icon: string };
   participantsCount?: number;
+  ownerName?: string | null;
+  ownerHandle?: string | null;
+  clubName?: string | null;
 }
 
 export interface ListVisibleEventsResult {
@@ -1246,37 +1249,57 @@ async function hydrateEventListItems(items: EventListItem[]): Promise<EventListI
   const eventIds = items.map(e => e.id);
 
   // Batch load all reference data + counts in parallel
-  const [cityMap, currencyMap, categoryMap, participantCounts] = await Promise.all([
+  const [cityMap, currencyMap, categoryMap, participantCounts, ownerMap, clubMap] = await Promise.all([
     // Load cities
     hydrateCitiesByIds(items).catch(err => {
       log.warn("Failed to hydrate cities for event list", { error: err });
-      return new Map();
+      return new Map<string, { id: string; name: string; countryCode: string }>();
     }),
 
     // Load currencies
     hydrateCurrenciesByIds(items).catch(err => {
       log.warn("Failed to hydrate currencies for event list", { error: err });
-      return new Map();
+      return new Map<string, { code: string; symbol: string }>();
     }),
 
     // Load categories
     hydrateCategoriesByIds(items).catch(err => {
       log.warn("Failed to hydrate categories for event list", { error: err });
-      return new Map();
+      return new Map<string, { id: string; name: string; icon: string }>();
     }),
 
     // Count participants
     getParticipantsCountByEventIds(eventIds),
+
+    // Load owner summaries (name, handle)
+    hydrateOwnersByIds(items).catch(err => {
+      log.warn("Failed to hydrate owners for event list", { error: err });
+      return new Map<string, { name: string | null; telegramHandle: string | null }>();
+    }),
+
+    // Load club names
+    hydrateClubsByIds(items).catch(err => {
+      log.warn("Failed to hydrate clubs for event list", { error: err });
+      return new Map<string, { name: string }>();
+    }),
   ]);
 
   // Merge hydrated data
-  return items.map(event => ({
-    ...event,
-    city: cityMap.get(event.cityId) ?? undefined,
-    currency: event.priceCurrency ? currencyMap.get(event.priceCurrency) ?? undefined : undefined,
-    category: event.categoryId ? categoryMap.get(event.categoryId) ?? undefined : undefined,
-    participantsCount: participantCounts[event.id] ?? 0,
-  }));
+  return items.map(event => {
+    const owner = event.createdByUserId ? ownerMap.get(event.createdByUserId) : undefined;
+    const club = event.clubId ? clubMap.get(event.clubId) : undefined;
+
+    return {
+      ...event,
+      city: cityMap.get(event.cityId) ?? undefined,
+      currency: event.priceCurrency ? currencyMap.get(event.priceCurrency) ?? undefined : undefined,
+      category: event.categoryId ? categoryMap.get(event.categoryId) ?? undefined : undefined,
+      participantsCount: participantCounts[event.id] ?? 0,
+      ownerName: owner?.name ?? null,
+      ownerHandle: owner?.telegramHandle ?? null,
+      clubName: club?.name ?? null,
+    };
+  });
 }
 
 /**
@@ -1329,6 +1352,34 @@ async function hydrateCategoriesByIds(items: EventListItem[]): Promise<Map<strin
   const result = new Map<string, { id: string; name: string; icon: string }>();
   for (const [id, category] of categoriesMap.entries()) {
     result.set(id, { id: category.id, name: category.nameRu, icon: category.icon });
+  }
+  return result;
+}
+
+/**
+ * Hydrate owners by user IDs (batch loading)
+ */
+async function hydrateOwnersByIds(items: EventListItem[]): Promise<Map<string, { name: string | null; telegramHandle: string | null }>> {
+  const userIds = [...new Set(items.map(e => e.createdByUserId).filter((id): id is string => id !== null))];
+  if (userIds.length === 0) return new Map();
+
+  const { batchGetUserSummaries } = await import("@/lib/db/userRepo");
+  return batchGetUserSummaries(userIds);
+}
+
+/**
+ * Hydrate clubs by IDs (batch loading)
+ */
+async function hydrateClubsByIds(items: EventListItem[]): Promise<Map<string, { name: string }>> {
+  const clubIds = [...new Set(items.map(e => e.clubId).filter((id): id is string => id !== null))];
+  if (clubIds.length === 0) return new Map();
+
+  const { getClubsByIds } = await import("@/lib/db/clubRepo");
+  const clubs = await getClubsByIds(clubIds);
+
+  const result = new Map<string, { name: string }>();
+  for (const club of clubs) {
+    result.set(club.id, { name: club.name });
   }
   return result;
 }

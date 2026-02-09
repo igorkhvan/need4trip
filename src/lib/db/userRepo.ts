@@ -261,3 +261,37 @@ export async function batchGetUserStatuses(
 
   return result;
 }
+
+/**
+ * Batch get user names/handles by IDs (for event card hydration)
+ * 
+ * Returns minimal owner info to avoid loading full User objects.
+ * Graceful degradation: returns empty map on error.
+ */
+export async function batchGetUserSummaries(
+  userIds: string[]
+): Promise<Map<string, { name: string | null; telegramHandle: string | null }>> {
+  const result = new Map<string, { name: string | null; telegramHandle: string | null }>();
+  if (userIds.length === 0) return result;
+
+  const db = getAdminDb();
+
+  const { data, error } = await db
+    .from(table)
+    .select("id, name, telegram_handle")
+    .in("id", userIds);
+
+  if (error) {
+    log.error("Failed to batch fetch user summaries", { count: userIds.length, error });
+    return result;
+  }
+
+  for (const row of data ?? []) {
+    result.set(row.id, {
+      name: row.name,
+      telegramHandle: row.telegram_handle,
+    });
+  }
+
+  return result;
+}

@@ -11,6 +11,8 @@
  * 4. Почти заполнено (≥90% участников)
  * 5. Регистрация открыта (по умолчанию)
  * 
+ * Supports both full Event and lightweight EventListItemHydrated.
+ * 
  * Used in:
  * - EventCardDetailed (страница /events)
  * - EventCardCompact (homepage, другие списки)
@@ -18,12 +20,22 @@
 
 import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Event } from "@/lib/types/event";
 import { getDaysUntil } from "@/lib/utils/dates";
 import { calculateEventFillPercentage } from "@/components/ui/progress-bar";
 
+/**
+ * Minimal event data required for status badge rendering.
+ * Works with both full Event and EventListItemHydrated.
+ */
+interface EventStatusData {
+  dateTime: string;
+  maxParticipants: number | null;
+  participantsCount?: number;
+  registrationManuallyClosed: boolean;
+}
+
 export interface EventStatusBadgeProps {
-  event: Event;
+  event: EventStatusData;
   size?: "sm" | "md";
 }
 
