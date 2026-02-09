@@ -113,6 +113,9 @@ export const ROUTE_TIER_MAP: Record<string, RateLimitTier> = {
   // Auth
   '/api/auth/logout:POST': 'write',
   
+  // Feedback
+  '/api/feedback:POST': 'write',
+  
   // =========================================================================
   // READ TIER (60/min) 🟢
   // Default for all other GET requests

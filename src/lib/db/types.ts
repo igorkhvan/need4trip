@@ -1178,6 +1178,44 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          id: string
+          type: string
+          message: string
+          user_id: string
+          page_path: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          type: string
+          message: string
+          user_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          type?: string
+          message?: string
+          user_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           allow_anonymous_registration: boolean

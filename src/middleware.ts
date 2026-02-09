@@ -72,6 +72,9 @@ const PROTECTED_ROUTES = [
   '/api/billing/transactions/status',
   '/api/billing/beta-grant',
   
+  // Feedback (write-only, authenticated)
+  { path: '/api/feedback', methods: ['POST'] },
+  
   // NOTE: Participants routes (/api/events/[id]/participants) are NOT protected
   // They allow guest registrations and guest management
   // Authorization is handled in the route handler via guest_session_id

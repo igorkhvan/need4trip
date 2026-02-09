@@ -41,6 +41,10 @@ export const USER_METRICS = [
   'errors.402',
   'errors.403',
   'ai.generate_rules',
+  'feedback.submit',
+  'feedback.rejected.rate_limit',
+  'feedback.rejected.validation',
+  'feedback.rejected.dedupe',
 ] as const;
 
 export type UserMetricName = (typeof USER_METRICS)[number];

@@ -1,12 +1,20 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2026-02-02
+> Последнее обновление: 2026-02-09
 > PostgreSQL + Supabase
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-02-09 (Feedback Table)
+- **Reason**: Feedback system — authenticated user feedback (ideas, bugs, general).
+- **Added `feedback` table** — Stores user-submitted feedback with type, message, page context.
+- **Added indexes** — `idx_feedback_created_at` (DESC), `idx_feedback_type`.
+- **RLS** — Enabled, service role only (no direct user access).
+- **SSOT Reference**: Feedback Tables section below.
+- **Migration:** `supabase/migrations/20260209_create_feedback.sql`
 
 ### 2026-02-02 (Billing Credits Source Column)
 - **Reason**: Phase A1.1 — Billing Data Invariants (STEP 3, GAP-4).
@@ -83,11 +91,12 @@
 3. [Reference Tables (Справочники)](#reference-tables)
 4. [Club & Billing Tables](#club--billing-tables)
 5. [Notification Tables](#notification-tables)
-6. [Performance Indexes](#performance-indexes)
-7. [RLS Policies Summary](#rls-policies-summary)
-8. [Database Functions & Triggers](#database-functions--triggers)
-9. [Migration History](#migration-history)
-10. [Maintenance Rules](#maintenance-rules)
+6. [Feedback Tables](#feedback-tables)
+7. [Performance Indexes](#performance-indexes)
+8. [RLS Policies Summary](#rls-policies-summary)
+9. [Database Functions & Triggers](#database-functions--triggers)
+10. [Migration History](#migration-history)
+11. [Maintenance Rules](#maintenance-rules)
 
 ---
 
@@ -108,8 +117,9 @@
 - **Reference Tables**: 6 (cities, currencies, event_categories, car_brands, vehicle_types, club_plans) ⚡
 - **Club & Billing**: 9 (clubs, club_members, club_invites, club_join_requests, club_audit_log, club_subscriptions, billing_transactions, billing_products, billing_credits) ⚡
 - **Notifications**: 3 (user_notification_settings, notification_queue, notification_logs)
+- **Feedback**: 1 (feedback) ⚡ NEW
 - **User Extensions**: 1 (user_cars)
-- **Итого**: 26 таблиц ⚡
+- **Итого**: 27 таблиц ⚡
 
 ---
 
@@ -1344,6 +1354,42 @@ CREATE TABLE public.notification_logs (
 
 ---
 
+## 💬 Feedback Tables
+
+### 1. `feedback` ⚡ NEW (2026-02-09)
+
+**Назначение**: Пользовательский фидбэк (идеи, баг-репорты, общий фидбэк). Write-only через API.
+
+```sql
+CREATE TABLE public.feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL CHECK (type IN ('idea', 'bug', 'feedback')),
+  message TEXT NOT NULL,
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  page_path TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+**Indexes**:
+- `feedback_pkey` (PRIMARY KEY on id)
+- `idx_feedback_created_at` (created_at DESC) — admin listing, newest first
+- `idx_feedback_type` (type) — filtering by feedback type
+
+**RLS**: Enabled, service role only (no user-facing policies)
+- All reads/writes go through API → service layer → `getAdminDb()`
+
+**Связи**:
+- → `users` (user_id)
+
+**Anti-abuse (enforced at application layer, NOT in DB)**:
+- Rate limit: 3 submissions per user per 24 hours (Redis)
+- Deduplication: sha256(userId + message) with 24h TTL (Redis)
+- Validation: message 20–2000 chars, not URL-only, not emoji-only
+
+---
+
 ## ⚡ Performance Indexes
 
 **Миграция**: `20241224_performance_indexes.sql`
@@ -1411,6 +1457,7 @@ CREATE INDEX idx_event_participants_user_event
 | `user_notification_settings` | ✅ | 3 | Full access |
 | `notification_queue` | ✅ | 0 | Service only |
 | `notification_logs` | ✅ | 0 | Service only |
+| `feedback` | ✅ | 0 | Service only |
 
 **Reference Tables** (public read):
 - `cities`, `currencies`, `event_categories`, `car_brands`, `vehicle_types`, `club_plans`
@@ -1500,6 +1547,7 @@ This section documents key milestone migrations, not every historical change.
 
 | Date | Migration | Description |
 |------|-----------|-------------|
+| **2026-02-09** | **`create_feedback`** | Feedback table for user-submitted ideas, bugs, and general feedback. Service-role only RLS. Indexes on `created_at DESC` and `type`. |
 | **2026-01-13** | **`invite_idempotency_function`** | Introduction of the DB-level idempotent `create_club_invite()` function. Refreshes `expires_at` for existing pending invites on re-invitation. |
 | **2026-01-13** | **`clubs_domain_foundation`** | Introduction of normative clubs-domain tables (`club_invites`, `club_join_requests`, `club_audit_log`), ENUMs for statuses and roles, and normalization of `clubs` and `club_members` tables. Added partial unique constraints for pending states. |
 
@@ -1560,7 +1608,8 @@ users ─┬─→ cities
        ├─→ events (created_by_user_id)
        ├─→ user_cars
        ├─→ club_members
-       └─→ clubs (created_by)
+       ├─→ clubs (created_by)
+       └─→ feedback (user_id)
 
 events ─┬─→ cities
         ├─→ event_categories
@@ -1622,7 +1671,7 @@ Ad-hoc or undocumented schema changes are forbidden.
 
 ---
 
-Last Updated: 2026-01-13
-Document Version: 1.2
+Last Updated: 2026-02-09
+Document Version: 1.3
 Status: LOCKED SSOT (Database Schema)
 

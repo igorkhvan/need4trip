@@ -1,13 +1,20 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.10.0  
-**Last Updated:** 2 февраля 2026  
+**Version:** 1.11.0  
+**Last Updated:** 9 февраля 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
 ---
 
 ## Change Log (SSOT)
+
+### 1.11.0 (2026-02-09) — Feedback System
+**New endpoints for authenticated user feedback:**
+- **API-069 (POST /api/feedback):** NEW endpoint. Submit feedback (idea, bug, general). Authenticated users only. Rate limited: 3/24h per user (handler-level) + write tier (middleware). Server-side validation (20–2000 chars, no URL-only, no emoji-only). SHA-256 deduplication (24h TTL). Telemetry: feedback.submit, feedback.rejected.*.
+- **API-070 (GET /api/admin/feedback):** NEW endpoint. Admin read-only feedback listing. Filterable by type. Pagination via offset/limit. Admin auth via resolveAdminContext.
+- **Admin UI:** /admin/feedback page (RSC → service layer, per ADR-001.5).
+- **SSOT Reference:** SSOT_DATABASE.md v1.3 (feedback table).
 
 ### 1.8.0 (2026-02-02) — Admin API Surface (Phase A1.1 STEP 5)
 **New Admin API endpoints for Admin V0 scope (READ + GRANT ONLY):**
@@ -5047,7 +5054,171 @@ Suspended users receive `403 USER_SUSPENDED` from all protected API routes via `
 
 ---
 
-### 9.9 Cron
+### 9.9 Feedback
+
+#### API-069: Submit Feedback
+
+**Endpoint ID:** API-069  
+**Method:** POST  
+**Path:** `/api/feedback`  
+**Runtime:** Node.js  
+**Auth:** Authenticated users only (`resolveCurrentUser`)  
+**Auth mechanism:** JWT cookie → middleware `x-user-id` header  
+**Authorization:** Any authenticated, non-suspended user  
+
+**Purpose:**  
+Submit user feedback (idea, bug, or general feedback). Protected against spam via handler-level rate limiting (3/24h per user), content deduplication (SHA-256 hash, 24h TTL), and server-side validation.
+
+**Request Body:**
+
+```json
+{
+  "type": "idea | bug | feedback",
+  "message": "string (20–2000 chars)",
+  "pagePath": "/optional/current/page"
+}
+```
+
+**Success Response (201):**
+
+```json
+{
+  "success": true,
+  "data": { "id": "uuid" },
+  "message": "Feedback submitted"
+}
+```
+
+**Rate Limit Response (200, soft rejection):**
+
+```json
+{
+  "success": true,
+  "message": "Too many feedback submissions. Please try again later."
+}
+```
+
+**Dedup Response (200, silent):**
+
+```json
+{
+  "success": true,
+  "message": "Feedback submitted"
+}
+```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid body / validation | VALIDATION_ERROR |
+| 401 | Not authenticated | UNAUTHORIZED |
+| 403 | User suspended | USER_SUSPENDED (via resolveCurrentUser) |
+
+**Security & Abuse:**
+
+- **Middleware rate limit:** `write` tier (10/min per IP)
+- **Handler rate limit:** 3 submissions per user per 24h (Redis: `feedback:user:{userId}`, TTL 86400s)
+- **Deduplication:** SHA-256(`userId + message`), Redis key `feedback:dedupe:{hash}`, TTL 24h
+- **Validation:** message 20–2000 chars, trimmed, not URL-only, not emoji-only
+- **Telemetry (fire-and-forget):** `feedback.submit`, `feedback.rejected.rate_limit`, `feedback.rejected.validation`, `feedback.rejected.dedupe`
+- **User-agent:** Captured server-side from request headers
+
+**Dependencies:**
+
+- Supabase PostgreSQL (`feedback` table)
+- Upstash Redis (rate limiting, deduplication)
+- `submitFeedback()` (`/src/lib/services/feedbackService.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/feedback/route.ts`
+- Service: `/src/lib/services/feedbackService.ts`
+- Middleware: `PROTECTED_ROUTES` in `/src/middleware.ts`
+- Rate limits: `/src/lib/config/rateLimits.ts`
+
+**SSOT Reference:** SSOT_API.md v1.11.0, SSOT_DATABASE.md v1.3
+
+---
+
+#### API-070: List Feedback (Admin)
+
+**Endpoint ID:** API-070  
+**Method:** GET  
+**Path:** `/api/admin/feedback`  
+**Runtime:** Node.js  
+**Auth:** Admin session (resolveAdminContext)  
+**Auth mechanism:** User session + email allowlist OR `x-admin-secret` header  
+**Authorization:** Admin only (`resolveAdminContext()`)  
+
+**Purpose:**  
+Admin read-only endpoint for listing user feedback. Supports filtering by type and pagination.
+
+**Query Params:**
+
+| Param | Type | Default | Notes |
+|-------|------|---------|-------|
+| `type` | string | — | Filter: `idea`, `bug`, or `feedback` |
+| `limit` | number | 50 | Max 200 |
+| `offset` | number | 0 | Pagination offset |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "type": "idea",
+        "message": "string",
+        "userId": "uuid",
+        "pagePath": "/some/page",
+        "userAgent": "Mozilla/...",
+        "createdAt": "2026-02-09T12:00:00Z"
+      }
+    ],
+    "total": 42,
+    "pagination": {
+      "limit": 50,
+      "offset": 0,
+      "hasMore": false
+    }
+  }
+}
+```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid query params | VALIDATION_ERROR |
+| 403 | Not admin | FORBIDDEN |
+| 500 | DB error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** Disabled (admin routes skip middleware rate limiting)
+- **No mutations:** Read-only endpoint
+- **No cookies required:** Supports `x-admin-secret` header auth
+
+**Dependencies:**
+
+- Supabase PostgreSQL (`feedback` table)
+- `getAdminFeedback()` (`/src/lib/services/feedbackService.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/feedback/route.ts`
+- Service: `/src/lib/services/feedbackService.ts`
+- Admin UI: `/src/app/admin/feedback/page.tsx` (RSC, calls service directly per ADR-001.5)
+
+**SSOT Reference:** SSOT_API.md v1.11.0
+
+---
+
+### 9.10 Cron
 
 #### API-048: Process Notifications Queue
 
@@ -5238,16 +5409,19 @@ Total route handlers discovered: **45 files**
 | 40 | `/src/app/api/admin/abuse/overview/route.ts` | GET | API-066 |
 | 41 | `/src/app/api/admin/abuse/users/route.ts` | GET | API-067 |
 | 42 | `/src/app/api/admin/users/[userId]/status/route.ts` | POST | API-068 |
-| 43 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
+| 43 | `/src/app/api/feedback/route.ts` | POST | API-069 |
+| 44 | `/src/app/api/admin/feedback/route.ts` | GET | API-070 |
+| 45 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 48 (was 47; +1 User Status API route in v1.10.0)
-- **Total endpoints documented:** 67 (API-001 to API-068, excluding API-050; API-057 removed)
+- **Total route handler files:** 50 (was 48; +2 Feedback API routes in v1.11.0)
+- **Total endpoints documented:** 69 (API-001 to API-070, excluding API-050; API-057 removed)
 - **Removed endpoints:** 1 (API-057 — removed 2026-01-29)
-- **Admin endpoints:** 12 (API-047, API-058 to API-068)
+- **Admin endpoints:** 13 (API-047, API-058 to API-068, API-070)
 - **Abuse Monitor endpoints (v1.9.0):** 2 (API-066, API-067) — read-only observability
 - **User Status endpoint (new in v1.10.0):** 1 (API-068) — manual suspend/unsuspend
+- **Feedback endpoints (new in v1.11.0):** 2 (API-069, API-070) — user feedback submission + admin read
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
