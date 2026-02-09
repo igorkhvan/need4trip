@@ -1,6 +1,6 @@
 # Document Governance
 
-**Last Updated:** 2026-01-29  
+**Last Updated:** 2026-02-09  
 **Status:** ACTIVE  
 **Scope:** All documentation in `/docs/` directory
 
@@ -30,6 +30,7 @@ This document establishes governance rules for documentation in the Need4Trip pr
 | **Phase Artifact** | `PHASE_*.md` | Phase-specific analysis, audit, or planning document | **NORMATIVE** (during phase) |
 | **ADR** | `ADR-*.md` | Architecture Decision Record | **NORMATIVE** (if active) |
 | **Audit/Analysis** | `*_AUDIT*.md`, `*_ANALYSIS*.md`, `*_DIAGNOSTICS*.md`, `*_VERIFICATION*.md` | Investigation or validation report | **INFORMATIVE** |
+| **Security / Platform** | `*_CAPABILITIES*.md`, `*_POSTURE*.md` | Current-state inventory of security mechanisms | **INFORMATIVE** |
 | **Guide** | Free-form | How-to documentation | **INFORMATIVE** |
 | **Development Doc** | Free-form | Development-related notes | **INFORMATIVE** |
 | **Generated Working Document** | Any | Cursor-generated interim documents | **DRAFT** |
@@ -59,6 +60,7 @@ docs/
 ├── adr/                      # Architecture Decision Records
 │   ├── active/               # Current active ADRs
 │   └── archive/              # Superseded/deprecated ADRs
+├── security/                 # Security & anti-abuse capability documents
 ├── audits/                   # Audits, analysis, verification reports
 ├── guides/                   # How-to guides
 ├── development/              # Development documentation
@@ -129,7 +131,17 @@ docs/
 | **Archival** | Move to `docs/archive/` after 90 days or when obsolete |
 | **Cursor reference** | ⚠️ Informative only — NOT authoritative |
 
-### 4.7 Guides / Development Docs
+### 4.7 Security / Platform Documents
+
+| Attribute | Rule |
+|-----------|------|
+| **Location** | `docs/security/` |
+| **Who can create** | Cursor or human (with explicit instruction) |
+| **Naming** | `{DOMAIN}_CAPABILITIES.md` or `{DOMAIN}_POSTURE.md` |
+| **Archival** | Move to `docs/archive/` when superseded |
+| **Cursor reference** | ⚠️ Informative — describes current state of security mechanisms |
+
+### 4.8 Guides / Development Docs
 
 | Attribute | Rule |
 |-----------|------|
@@ -138,7 +150,7 @@ docs/
 | **Archival** | Move to `docs/archive/` when obsolete |
 | **Cursor reference** | ⚠️ Informative only |
 
-### 4.8 Archive
+### 4.9 Archive
 
 | Attribute | Rule |
 |-----------|------|
@@ -240,6 +252,7 @@ Before any documentation task:
 | Find current phase work | `docs/phase/{phase-id}/` |
 | Find architecture decisions | `docs/adr/active/` |
 | Find audit/analysis reports | `docs/audits/` |
+| Find security capability inventories | `docs/security/` |
 | Find how-to guides | `docs/guides/` |
 | Find historical/deprecated docs | `docs/archive/` |
 
@@ -250,3 +263,4 @@ Before any documentation task:
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-01-29 | Initial governance document created | Cursor AI |
+| 2026-02-09 | Added `docs/security/` directory, Security/Platform document type (§4.7), registered `ANTI_ABUSE_CAPABILITIES.md` | Cursor AI |
