@@ -253,6 +253,7 @@ These are retrospective audit trails, not real-time detection mechanisms.
 
 | Control | Mechanism | Scope |
 |---------|-----------|-------|
+| **Suspend / unsuspend user** | `POST /api/admin/users/[userId]/status` | Per-user, audit-logged, atomic |
 | Grant billing credit | `POST /api/admin/users/[userId]/grant-credit` | Per-user, audit-logged |
 | Extend subscription | `POST /api/admin/clubs/[clubId]/extend-subscription` | Per-club, audit-logged |
 | Clear static cache | `POST /api/admin/cache/clear` | System-wide |
@@ -266,7 +267,7 @@ The following manual control mechanisms are **not implemented** in the current s
 
 | Missing control | Impact |
 |-----------------|--------|
-| User suspension / ban | No way to disable a specific user account |
+| ~~User suspension / ban~~ | ~~No way to disable a specific user account~~ — **IMPLEMENTED** (API-068, 2026-02-09) |
 | Content moderation (flag/hide/remove events or clubs) | No way to hide or remove user-generated content |
 | IP blocking | No manual IP blocklist beyond rate limiting |
 | Feature flags / kill switches | No per-feature toggles; only `PAYWALL_MODE` env var exists |

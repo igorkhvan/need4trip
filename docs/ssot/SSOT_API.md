@@ -1,7 +1,7 @@
 # Need4Trip API SSOT (Single Source of Truth)
 
 **Status:** 🟢 Production  
-**Version:** 1.8.0  
+**Version:** 1.10.0  
 **Last Updated:** 2 февраля 2026  
 **This document is the ONLY authoritative source for all API endpoints.**
 
@@ -4952,6 +4952,101 @@ Per-user abuse/anomaly summaries sorted by computed score (descending). Read-onl
 
 ---
 
+#### API-068: Change User Account Status (Admin)
+
+**Endpoint ID:** API-068  
+**Method:** POST  
+**Path:** `/api/admin/users/:userId/status`  
+**Runtime:** Node.js  
+**Auth:** Admin session (resolveAdminContext)  
+**Auth mechanism:** User session + email allowlist OR `x-admin-secret` header  
+**Authorization:** Admin only (`resolveAdminContext()`)  
+
+**Purpose:**  
+Change user account status (suspend or unsuspend). Manual admin action with mandatory audit logging via `adminAtomicMutation`.
+
+**Request Body:**
+
+```json
+{
+  "status": "active | suspended",
+  "reason": "string (non-empty, mandatory)"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "previousStatus": "active",
+    "newStatus": "suspended",
+    "changed": true,
+    "auditId": 42
+  },
+  "message": "User status changed from 'active' to 'suspended'"
+}
+```
+
+**Idempotent Response (200, no change):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "previousStatus": "suspended",
+    "newStatus": "suspended",
+    "changed": false
+  },
+  "message": "User status is already 'suspended'"
+}
+```
+
+**Errors:**
+
+| Status | Condition | Notes |
+|--------|-----------|-------|
+| 400 | Invalid body / missing reason | VALIDATION_ERROR |
+| 403 | Not admin | FORBIDDEN |
+| 404 | User not found | NOT_FOUND (+ audit REJECTED) |
+| 500 | DB / audit error | INTERNAL_ERROR |
+
+**Security & Abuse:**
+
+- **Rate limit:** Standard admin rate limiting via resolveAdminContext
+- **Audit:** Every successful change creates `ADMIN_USER_STATUS_CHANGED` audit record
+- **Audit (rejected):** Failed attempts log `ADMIN_USER_STATUS_CHANGE_REJECTED`
+- **Rollback:** Uses `adminAtomicMutation` with compensating action
+- **Idempotent:** Yes — if status already matches, returns 200 without mutation
+
+**Enforcement (backend):**
+
+Suspended users receive `403 USER_SUSPENDED` from all protected API routes via `assertNotSuspended()` in auth resolvers. Admin routes are exempt (admin immunity).
+
+**Frontend integration:**
+
+`403 USER_SUSPENDED` triggers `SuspendedAccountModal` ("Ваш аккаунт приостановлен. Обратитесь в поддержку по указанным контактам.") via `handleApiErrorCore` → `useHandleApiError` hook.
+
+**Dependencies:**
+
+- Supabase PostgreSQL (`users.status` column)
+- `adminAtomicMutation()` (`/src/lib/audit/adminAtomic.ts`)
+- `updateUserStatus()` (`/src/lib/db/userRepo.ts`)
+
+**Code pointers:**
+
+- Route handler: `/src/app/api/admin/users/[userId]/status/route.ts`
+- Error class: `UserSuspendedError` (`/src/lib/errors.ts`)
+- Enforcement: `assertNotSuspended()` (`/src/lib/errors.ts`)
+- Auth resolvers: `/src/lib/auth/resolveCurrentUser.ts`, `/src/lib/auth/currentUser.ts`
+- Client modal: `/src/components/suspended/SuspendedAccountProvider.tsx`
+- Admin UI button: `/src/app/admin/_components/suspend-user-button.tsx`
+
+**SSOT Reference:** SSOT_API.md v1.10.0
+
+---
+
 ### 9.9 Cron
 
 #### API-048: Process Notifications Queue
@@ -5142,15 +5237,17 @@ Total route handlers discovered: **45 files**
 | 39 | `/src/app/api/admin/audit/route.ts` | GET | API-065 |
 | 40 | `/src/app/api/admin/abuse/overview/route.ts` | GET | API-066 |
 | 41 | `/src/app/api/admin/abuse/users/route.ts` | GET | API-067 |
-| 42 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
+| 42 | `/src/app/api/admin/users/[userId]/status/route.ts` | POST | API-068 |
+| 43 | `/src/app/api/cron/process-notifications/route.ts` | POST, GET | API-048, API-049 |
 
 ### 10.2 Coverage Summary
 
-- **Total route handler files:** 47 (was 45; +2 Abuse Monitor API routes in v1.9.0)
-- **Total endpoints documented:** 66 (API-001 to API-067, excluding API-050; API-057 removed)
+- **Total route handler files:** 48 (was 47; +1 User Status API route in v1.10.0)
+- **Total endpoints documented:** 67 (API-001 to API-068, excluding API-050; API-057 removed)
 - **Removed endpoints:** 1 (API-057 — removed 2026-01-29)
-- **Admin endpoints:** 11 (API-047, API-058 to API-067)
-- **Abuse Monitor endpoints (new in v1.9.0):** 2 (API-066, API-067) — read-only observability
+- **Admin endpoints:** 12 (API-047, API-058 to API-068)
+- **Abuse Monitor endpoints (v1.9.0):** 2 (API-066, API-067) — read-only observability
+- **User Status endpoint (new in v1.10.0):** 1 (API-068) — manual suspend/unsuspend
 - **Discrepancy:** Some files contain multiple HTTP methods (e.g. `/profile/cars` has GET, POST, PUT, PATCH, DELETE)
 
 **Verification:**
@@ -5255,9 +5352,9 @@ Verified: TypeScript ✅, Build ✅
 ## 12. Metadata
 
 **Document Stats:**
-- Total endpoints: 66
-- Total route handlers: 47
-- Lines: ~5400
+- Total endpoints: 67
+- Total route handlers: 48
+- Lines: ~5500
 - Last audit: 9 February 2026
 
 **Maintenance:**

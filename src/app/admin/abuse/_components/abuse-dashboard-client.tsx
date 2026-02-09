@@ -18,6 +18,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AbuseSystemOverview, AbuseUserSummary } from '@/lib/services/adminAbuse';
+import type { UserStatus } from '@/lib/types/user';
+import { SuspendUserButton, UserStatusBadge } from '../../_components/suspend-user-button';
 
 // ============================================================================
 // Props
@@ -25,6 +27,8 @@ import type { AbuseSystemOverview, AbuseUserSummary } from '@/lib/services/admin
 
 interface AbuseDashboardClientProps {
   data: AbuseSystemOverview;
+  /** Account status from DB, keyed by userId. Enriched by RSC page. */
+  accountStatusMap: Record<string, UserStatus>;
 }
 
 // ============================================================================
@@ -114,6 +118,7 @@ function SystemPanel({ data }: { data: AbuseSystemOverview }) {
 
 const TABLE_COLUMNS = [
   { key: 'userId', label: 'User ID' },
+  { key: 'account', label: 'Account' },
   { key: 'events.create', label: 'events.create' },
   { key: 'events.update', label: 'events.update' },
   { key: 'clubs.create', label: 'clubs.create' },
@@ -125,9 +130,10 @@ const TABLE_COLUMNS = [
   { key: 'ai.calls', label: 'ai.calls' },
   { key: 'score', label: 'Score' },
   { key: 'status', label: 'Status' },
+  { key: 'action', label: '' },
 ] as const;
 
-function UsersTable({ users }: { users: AbuseUserSummary[] }) {
+function UsersTable({ users, accountStatusMap, onRefresh }: { users: AbuseUserSummary[]; accountStatusMap: Record<string, UserStatus>; onRefresh: () => void }) {
   if (users.length === 0) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
@@ -152,13 +158,19 @@ function UsersTable({ users }: { users: AbuseUserSummary[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {users.map((user) => (
+          {users.map((user) => {
+            const accountStatus = accountStatusMap[user.userId] ?? 'active';
+            return (
             <tr key={user.userId} className="hover:bg-gray-50 transition-colors">
               {/* userId */}
               <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-gray-700">
                 {user.userId.length > 12
                   ? `${user.userId.slice(0, 8)}...${user.userId.slice(-4)}`
                   : user.userId}
+              </td>
+              {/* account status (from DB) */}
+              <td className="whitespace-nowrap px-3 py-2">
+                <UserStatusBadge status={accountStatus} />
               </td>
               {/* events.create */}
               <td className="whitespace-nowrap px-3 py-2 text-center tabular-nums">
@@ -200,12 +212,22 @@ function UsersTable({ users }: { users: AbuseUserSummary[] }) {
               <td className="whitespace-nowrap px-3 py-2 text-center font-semibold tabular-nums">
                 {user.score}
               </td>
-              {/* status */}
+              {/* abuse status (from Redis scoring) */}
               <td className="whitespace-nowrap px-3 py-2">
                 <StatusBadge status={user.status} />
               </td>
+              {/* action */}
+              <td className="whitespace-nowrap px-3 py-2">
+                <SuspendUserButton
+                  userId={user.userId}
+                  currentStatus={accountStatus}
+                  compact
+                  onSuccess={onRefresh}
+                />
+              </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -216,7 +238,7 @@ function UsersTable({ users }: { users: AbuseUserSummary[] }) {
 // Main component
 // ============================================================================
 
-export function AbuseDashboardClient({ data }: AbuseDashboardClientProps) {
+export function AbuseDashboardClient({ data, accountStatusMap }: AbuseDashboardClientProps) {
   const router = useRouter();
   const [lastRefresh, setLastRefresh] = useState<string>(data.timestamp);
 
@@ -271,7 +293,7 @@ export function AbuseDashboardClient({ data }: AbuseDashboardClientProps) {
         <h2 className="mb-3 text-lg font-medium text-gray-900">
           Per-User Activity ({data.topUsers.length})
         </h2>
-        <UsersTable users={data.topUsers} />
+        <UsersTable users={data.topUsers} accountStatusMap={accountStatusMap} onRefresh={() => router.refresh()} />
       </div>
 
       {/* Info Notice */}

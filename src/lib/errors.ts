@@ -75,6 +75,38 @@ export class ClubArchivedError extends AppError {
   }
 }
 
+/**
+ * UserSuspendedError - thrown when a suspended user attempts a protected operation.
+ * 
+ * Returns 403 with code: "USER_SUSPENDED"
+ * 
+ * Enforcement: canonical auth resolvers (resolveCurrentUser, getCurrentUser,
+ * getCurrentUserFromMiddleware) throw this after loading user from DB.
+ * Admin routes (resolveAdminContext) do NOT check suspension — admin immunity.
+ */
+export class UserSuspendedError extends AppError {
+  constructor() {
+    super('Account is suspended', { statusCode: 403, code: 'USER_SUSPENDED' });
+    this.name = 'UserSuspendedError';
+  }
+}
+
+export function isUserSuspendedError(err: unknown): err is UserSuspendedError {
+  return err instanceof UserSuspendedError;
+}
+
+/**
+ * Assert that user account is not suspended.
+ * Throws UserSuspendedError if user.status === 'suspended'.
+ * 
+ * Used by all canonical auth resolvers as a shared enforcement point.
+ */
+export function assertNotSuspended(user: { status?: string }): void {
+  if (user.status === 'suspended') {
+    throw new UserSuspendedError();
+  }
+}
+
 export class InternalError extends AppError {
   constructor(message: string, details?: unknown) {
     super(message, { statusCode: 500, code: "InternalError", details });

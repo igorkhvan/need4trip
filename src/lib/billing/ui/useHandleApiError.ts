@@ -33,6 +33,7 @@
 
 import * as React from "react";
 import { useBillingModals } from "./BillingModalContext";
+import { useSuspendedAccount } from "@/components/suspended/SuspendedAccountProvider";
 import { handleApiErrorCore } from "./handleApiError";
 import type { HandleApiErrorOptions, HandleApiErrorResult } from "./types";
 
@@ -72,6 +73,7 @@ export function useHandleApiError(
   options: UseHandleApiErrorOptions = {}
 ): UseHandleApiErrorReturn {
   const { openPaywall, openCreditConfirmation } = useBillingModals();
+  const { showSuspendedModal } = useSuspendedAccount();
   
   // Memoize options to prevent unnecessary re-renders
   const optionsRef = React.useRef(options);
@@ -91,9 +93,10 @@ export function useHandleApiError(
       {
         openPaywall,
         openCreditConfirmation,
+        onUserSuspended: showSuspendedModal,
       }
     );
-  }, [openPaywall, openCreditConfirmation]);
+  }, [openPaywall, openCreditConfirmation, showSuspendedModal]);
   
   return { handleError };
 }
@@ -107,6 +110,7 @@ export function useHandlePaywallError(
   options: { clubId?: string; onFallback?: (error: unknown) => void } = {}
 ): UseHandleApiErrorReturn {
   const { openPaywall, openCreditConfirmation } = useBillingModals();
+  const { showSuspendedModal } = useSuspendedAccount();
   
   const optionsRef = React.useRef(options);
   optionsRef.current = options;
@@ -124,9 +128,10 @@ export function useHandlePaywallError(
       {
         openPaywall,
         openCreditConfirmation,
+        onUserSuspended: showSuspendedModal,
       }
     );
-  }, [openPaywall, openCreditConfirmation]);
+  }, [openPaywall, openCreditConfirmation, showSuspendedModal]);
   
   return { handleError };
 }

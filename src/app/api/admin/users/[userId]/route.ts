@@ -154,6 +154,7 @@ export async function GET(
           name: user.name,
           email: user.email,
           telegramHandle: user.telegramHandle,
+          status: user.status,
           createdAt: user.createdAt,
         },
         billing: {

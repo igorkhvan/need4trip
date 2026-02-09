@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { listUsers, type AdminUser, type Pagination, type AdminApiError } from "../../_components/admin-api";
+import { SuspendUserButton, UserStatusBadge } from "../../_components/suspend-user-button";
 import { formatDateTime } from "@/lib/utils/dates";
 
 /**
@@ -174,9 +175,12 @@ export function AdminUsersClient() {
                     Telegram
                   </th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 hidden sm:table-cell">
+                    Статус
+                  </th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 hidden lg:table-cell">
                     Регистрация
                   </th>
-                  <th className="w-12"></th>
+                  <th className="w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -198,17 +202,28 @@ export function AdminUsersClient() {
                       </span>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
+                      <UserStatusBadge status={user.status} />
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-sm text-gray-500">
                         {formatDateTime(user.createdAt)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/users/${user.id}`}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <SuspendUserButton
+                          userId={user.id}
+                          currentStatus={user.status}
+                          compact
+                          onSuccess={() => fetchUsers()}
+                        />
+                        <Link
+                          href={`/admin/users/${user.id}`}
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

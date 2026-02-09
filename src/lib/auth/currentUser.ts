@@ -4,6 +4,7 @@ import { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getUserById } from "@/lib/db/userRepo";
 import { ExperienceLevel, UserPlan } from "@/lib/types/user";
 import { log } from "@/lib/utils/logger";
+import { assertNotSuspended, UserSuspendedError } from "@/lib/errors";
 import { 
   verifyJwt, 
   signJwt, 
@@ -64,6 +65,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 
   if (!user) return null;
+
+  // Enforcement: suspended users cannot proceed (outside try-catch — propagates freely)
+  assertNotSuspended(user);
 
   // Get available credits count (non-blocking, fallback to 0 on error)
   let availableCreditsCount = 0;
@@ -136,6 +140,9 @@ export async function getCurrentUserFromMiddleware(request: Request): Promise<Cu
       log.error("User not found after middleware auth", { userId });
       return null;
     }
+
+    // Enforcement: suspended users cannot proceed
+    assertNotSuspended(user);
     
     // Get available credits count (non-blocking, fallback to 0 on error)
     let availableCreditsCount = 0;
@@ -165,6 +172,8 @@ export async function getCurrentUserFromMiddleware(request: Request): Promise<Cu
       updatedAt: user.updatedAt,
     };
   } catch (err) {
+    // Re-throw UserSuspendedError — must not be swallowed
+    if (err instanceof UserSuspendedError) throw err;
     log.errorWithStack("Failed to load user from middleware ID", err, { userId });
     return null;
   }

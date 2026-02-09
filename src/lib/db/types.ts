@@ -1608,6 +1608,7 @@ export type Database = {
           name: string
           phone: string | null
           plan: string
+          status: string
           telegram_handle: string | null
           telegram_id: string | null
           updated_at: string
@@ -1626,6 +1627,7 @@ export type Database = {
           name: string
           phone?: string | null
           plan?: string
+          status?: string
           telegram_handle?: string | null
           telegram_id?: string | null
           updated_at?: string
@@ -1644,6 +1646,7 @@ export type Database = {
           name?: string
           phone?: string | null
           plan?: string
+          status?: string
           telegram_handle?: string | null
           telegram_id?: string | null
           updated_at?: string

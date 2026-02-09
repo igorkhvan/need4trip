@@ -132,6 +132,7 @@ CREATE TABLE public.users (
   bio TEXT,
   plan_id TEXT, -- Legacy, not used in billing
   guest_session_id TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -142,6 +143,7 @@ CREATE TABLE public.users (
 - `users_telegram_id_key` (UNIQUE on telegram_id)
 - `users_guest_session_id_key` (UNIQUE on guest_session_id)
 - `idx_users_city_id` (on city_id)
+- `idx_users_status` (partial on status WHERE status != 'active')
 
 **RLS**: 4 policies
 - `authenticated_users_read_all`

@@ -123,6 +123,31 @@ export function isCreditConfirmationApiError(error: unknown): boolean {
   return false;
 }
 
+/**
+ * Check if error is a User Suspended error (403 USER_SUSPENDED).
+ * 
+ * Works with:
+ * - ClientError instances (code === 'USER_SUSPENDED')
+ * - Raw fetch responses
+ * - Parsed JSON responses (error.code === "USER_SUSPENDED")
+ */
+export function isUserSuspendedApiError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  
+  const obj = error as Record<string, unknown>;
+  
+  // Check ClientError-like shape
+  if (obj.code === "USER_SUSPENDED") return true;
+  
+  // Check parsed JSON response shape
+  if (obj.error && typeof obj.error === "object") {
+    const err = obj.error as Record<string, unknown>;
+    if (err.code === "USER_SUSPENDED") return true;
+  }
+  
+  return false;
+}
+
 // ============================================================================
 // Extraction Helpers
 // ============================================================================

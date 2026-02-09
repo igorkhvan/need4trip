@@ -155,6 +155,7 @@ export interface AdminUser {
   name: string | null;
   email: string | null;
   telegramHandle: string | null;
+  status: 'active' | 'suspended';
   createdAt: string;
 }
 
@@ -293,6 +294,24 @@ export async function grantCredit(
     {
       method: "POST",
       body: JSON.stringify({ creditCode, reason }),
+    }
+  );
+}
+
+/**
+ * Change user account status (suspend / unsuspend)
+ * @see API-068 POST /api/admin/users/:userId/status
+ */
+export async function changeUserStatus(
+  userId: string,
+  status: 'active' | 'suspended',
+  reason: string
+): Promise<AdminApiResult<{ previousStatus: string; newStatus: string; changed: boolean; auditId?: number }>> {
+  return adminFetch<{ previousStatus: string; newStatus: string; changed: boolean; auditId?: number }>(
+    `/api/admin/users/${userId}/status`,
+    {
+      method: "POST",
+      body: JSON.stringify({ status, reason }),
     }
   );
 }

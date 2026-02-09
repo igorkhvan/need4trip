@@ -38,6 +38,7 @@ import {
 } from "../../../_components/admin-api";
 import { formatDateTime } from "@/lib/utils/dates";
 import { GrantCreditModal } from "./grant-credit-modal";
+import { SuspendUserButton, UserStatusBadge } from "../../../_components/suspend-user-button";
 
 /**
  * Page states per SSOT_UI_STATES.md
@@ -148,22 +149,33 @@ export function AdminUserDetailClient({ userId }: AdminUserDetailClientProps) {
           {/* Page Header */}
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {data.user.name || "Пользователь"}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  {data.user.name || "Пользователь"}
+                </h1>
+                <UserStatusBadge status={data.user.status} />
+              </div>
               <p className="text-gray-500 mt-1">
                 {data.user.email || data.user.telegramHandle ? `@${data.user.telegramHandle}` : "—"}
               </p>
             </div>
             
-            {/* 
-              Grant Credit Action 
-              SYSTEM CONTRACT §3.1: explicit CTA button
-            */}
-            <Button onClick={() => setShowGrantModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Выдать кредит
-            </Button>
+            {/* Action buttons */}
+            <div className="flex items-center gap-2">
+              <SuspendUserButton
+                userId={userId}
+                currentStatus={data.user.status}
+                onSuccess={fetchData}
+              />
+              {/* 
+                Grant Credit Action 
+                SYSTEM CONTRACT §3.1: explicit CTA button
+              */}
+              <Button onClick={() => setShowGrantModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Выдать кредит
+              </Button>
+            </div>
           </div>
           
           {/* User Info Card */}

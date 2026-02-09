@@ -155,7 +155,7 @@ export interface HandleApiErrorResult {
   handled: boolean;
   
   /** Type of handling if handled=true */
-  kind?: "paywall" | "credit_confirmation";
+  kind?: "paywall" | "credit_confirmation" | "user_suspended";
 }
 
 /**

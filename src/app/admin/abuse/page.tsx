@@ -19,7 +19,9 @@
  */
 
 import { getAbuseOverview } from '@/lib/services/adminAbuse';
+import { batchGetUserStatuses } from '@/lib/db/userRepo';
 import { AbuseDashboardClient } from './_components/abuse-dashboard-client';
+import type { UserStatus } from '@/lib/types/user';
 
 export default async function AdminAbusePage() {
   // =========================================================================
@@ -28,5 +30,18 @@ export default async function AdminAbusePage() {
   // =========================================================================
   const overview = await getAbuseOverview();
 
-  return <AbuseDashboardClient data={overview} />;
+  // =========================================================================
+  // Enrich with user account statuses from DB (one batch query)
+  // adminAbuse.ts stays pure (Redis only) — enrichment happens here.
+  // =========================================================================
+  const userIds = overview.topUsers.map((u) => u.userId);
+  const statusMap = await batchGetUserStatuses(userIds);
+
+  // Build accountStatusMap as serializable Record for client component
+  const accountStatusMap: Record<string, UserStatus> = {};
+  for (const [userId, status] of statusMap) {
+    accountStatusMap[userId] = status;
+  }
+
+  return <AbuseDashboardClient data={overview} accountStatusMap={accountStatusMap} />;
 }

@@ -107,6 +107,13 @@ export class ClientError extends Error {
   isValidationError(): boolean {
     return this.statusCode === 422;
   }
+
+  /**
+   * Check if error is user suspended (403 USER_SUSPENDED)
+   */
+  isUserSuspendedError(): boolean {
+    return this.statusCode === 403 && this.code === 'USER_SUSPENDED';
+  }
 }
 
 // ============================================================================

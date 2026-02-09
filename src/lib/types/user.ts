@@ -7,6 +7,8 @@ export type ExperienceLevel = "beginner" | "intermediate" | "pro";
 export const userPlanSchema = z.enum(["free", "pro"]);
 export type UserPlan = z.infer<typeof userPlanSchema>;
 
+export type UserStatus = 'active' | 'suspended';
+
 export interface User {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface User {
   carModelText: string | null; // Свободный текст модели (например: "Land Cruiser 200")
   experienceLevel: ExperienceLevel | null;
   plan?: UserPlan; // Personal subscription plan (free by default)
+  status: UserStatus; // Account status (active by default, suspended by admin)
   createdAt: string;
   updatedAt: string;
 }

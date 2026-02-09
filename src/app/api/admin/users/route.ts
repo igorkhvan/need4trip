@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     
     let query = db
       .from("users")
-      .select("id, name, email, telegram_handle, created_at")
+      .select("id, name, email, telegram_handle, status, created_at")
       .order("created_at", { ascending: false })
       .limit(limit + 1); // Fetch one extra to determine hasMore
     
@@ -128,6 +128,7 @@ export async function GET(request: NextRequest) {
       name: user.name,
       email: user.email,
       telegramHandle: user.telegram_handle,
+      status: user.status ?? 'active',
       createdAt: user.created_at,
     }));
     

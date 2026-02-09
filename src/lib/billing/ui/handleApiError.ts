@@ -34,6 +34,7 @@ import type {
 import {
   isPaywallApiError,
   isCreditConfirmationApiError,
+  isUserSuspendedApiError,
   extractPaywallDetails,
   extractCreditConfirmationDetails,
   getErrorStatusCode,
@@ -60,8 +61,19 @@ export function handleApiErrorCore(
   modalOpener: {
     openPaywall: (details: NonNullable<ReturnType<typeof extractPaywallDetails>>, context?: { clubId?: string }, onBetaContinue?: () => Promise<void>) => void;
     openCreditConfirmation: (details: CreditConfirmationDetails, onConfirm: (d: CreditConfirmationDetails) => Promise<void>) => void;
+    onUserSuspended?: () => void;
   }
 ): HandleApiErrorResult {
+  // Check for User Suspended error (403 USER_SUSPENDED) — highest priority
+  if (isUserSuspendedApiError(error)) {
+    if (modalOpener.onUserSuspended) {
+      modalOpener.onUserSuspended();
+      return { handled: true, kind: "user_suspended" as HandleApiErrorResult["kind"] };
+    }
+    // Fallback: not handled if no callback — let caller show generic error
+    return { handled: false };
+  }
+
   // Check for Paywall error (402)
   if (isPaywallApiError(error)) {
     const details = extractPaywallDetails(error);

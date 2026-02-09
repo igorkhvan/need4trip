@@ -5,6 +5,7 @@ import { MainFooter } from "@/components/layout/main-footer";
 import { AuthModalProvider } from "@/components/auth/auth-modal-provider";
 import { AuthModalHost } from "@/components/auth/auth-modal-host";
 import { BillingModalHost } from "@/components/billing/BillingModalHost";
+import { SuspendedAccountProvider } from "@/components/suspended/SuspendedAccountProvider";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ScrollRestorationProvider } from "@/app/scroll-restoration-provider";
 import { getCurrentUser } from "@/lib/auth/currentUser";
@@ -43,15 +44,17 @@ export default async function RootLayout({
         <ScrollRestorationProvider>
           <AuthProvider initialUser={currentUser}>
             <AuthModalProvider>
-              <BillingModalHost>
-                <div className="flex min-h-screen flex-col">
-                  <MainHeader />
-                  <main className="flex-1">{children}</main>
-                  <MainFooter />
-                  <Toaster />
-                  <AuthModalHost />
-                </div>
-              </BillingModalHost>
+              <SuspendedAccountProvider>
+                <BillingModalHost>
+                  <div className="flex min-h-screen flex-col">
+                    <MainHeader />
+                    <main className="flex-1">{children}</main>
+                    <MainFooter />
+                    <Toaster />
+                    <AuthModalHost />
+                  </div>
+                </BillingModalHost>
+              </SuspendedAccountProvider>
             </AuthModalProvider>
           </AuthProvider>
         </ScrollRestorationProvider>

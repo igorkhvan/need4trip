@@ -1,6 +1,6 @@
 import { getAdminDb } from "@/lib/db/client";
 import { InternalError } from "@/lib/errors";
-import { User, ExperienceLevel } from "@/lib/types/user";
+import { User, ExperienceLevel, UserStatus } from "@/lib/types/user";
 import { Database } from "@/lib/db/types";
 import { log } from "@/lib/utils/logger";
 
@@ -23,6 +23,7 @@ function mapRowToUser(data: DbUserRow): User {
     carModelText: data.car_model_text ?? null,
     experienceLevel: data.experience_level as ExperienceLevel | null,
     plan: (data.plan as "free" | "pro") ?? "free",
+    status: (data.status as "active" | "suspended") ?? "active",
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -193,4 +194,70 @@ export async function updateUser(
   }
 
   return mapRowToUser(data as DbUserRow);
+}
+
+// ============================================================================
+// User Status Management (Admin)
+// ============================================================================
+
+/**
+ * Update user account status (active ↔ suspended).
+ * Used exclusively by admin endpoints.
+ * 
+ * @param userId - Target user ID
+ * @param status - New status ('active' | 'suspended')
+ * @returns Updated user
+ */
+export async function updateUserStatus(
+  userId: string,
+  status: UserStatus
+): Promise<User> {
+  const db = getAdminDb();
+
+  const { data, error } = await db
+    .from(table)
+    .update({ status })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) {
+    log.error("Failed to update user status", { userId, status, error });
+    throw new InternalError("Failed to update user status", error);
+  }
+
+  return mapRowToUser(data as DbUserRow);
+}
+
+/**
+ * Batch-fetch user statuses for a list of user IDs.
+ * One query for N users. Used by abuse dashboard RSC page.
+ * 
+ * @param userIds - Array of user IDs
+ * @returns Map of userId → status
+ */
+export async function batchGetUserStatuses(
+  userIds: string[]
+): Promise<Map<string, UserStatus>> {
+  const result = new Map<string, UserStatus>();
+  if (userIds.length === 0) return result;
+
+  const db = getAdminDb();
+
+  const { data, error } = await db
+    .from(table)
+    .select("id, status")
+    .in("id", userIds);
+
+  if (error) {
+    log.error("Failed to batch fetch user statuses", { count: userIds.length, error });
+    // Graceful degradation: return empty map, not throw
+    return result;
+  }
+
+  for (const row of data ?? []) {
+    result.set(row.id, (row.status as UserStatus) ?? "active");
+  }
+
+  return result;
 }

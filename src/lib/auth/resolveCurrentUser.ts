@@ -29,6 +29,7 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getUserById, getAvailableCreditsCount } from "@/lib/db/userRepo";
 import { verifyJwt } from "@/lib/auth/jwt";
 import { log } from "@/lib/utils/logger";
+import { assertNotSuspended, UserSuspendedError } from "@/lib/errors";
 import type { CurrentUser } from "@/lib/auth/currentUser";
 
 /**
@@ -69,6 +70,9 @@ async function loadUserById(userId: string, source: string): Promise<CurrentUser
       return null;
     }
 
+    // Enforcement: suspended users cannot proceed
+    assertNotSuspended(user);
+
     // Get available credits count (non-blocking, fallback to 0 on error)
     let availableCreditsCount = 0;
     try {
@@ -95,6 +99,8 @@ async function loadUserById(userId: string, source: string): Promise<CurrentUser
       updatedAt: user.updatedAt,
     };
   } catch (err) {
+    // Re-throw UserSuspendedError — must not be swallowed
+    if (err instanceof UserSuspendedError) throw err;
     log.errorWithStack("resolveCurrentUser: Failed to load user", err, { userId, source });
     return null;
   }
