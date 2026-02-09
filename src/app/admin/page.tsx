@@ -14,7 +14,7 @@
  */
 
 import Link from "next/link";
-import { Users, Building2, ScrollText, ArrowRight, ShieldAlert } from "lucide-react";
+import { Users, Building2, ScrollText, ArrowRight, ShieldAlert, MessageSquare } from "lucide-react";
 
 /**
  * Navigation cards - NO metrics, NO counts
@@ -44,6 +44,12 @@ const SECTIONS = [
     title: "Abuse Monitor",
     description: "Мониторинг аномалий (read-only)",
     icon: ShieldAlert,
+  },
+  {
+    href: "/admin/feedback",
+    title: "Feedback",
+    description: "Отзывы пользователей (read-only)",
+    icon: MessageSquare,
   },
 ];
 
