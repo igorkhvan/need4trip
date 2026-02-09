@@ -11,6 +11,7 @@ import { ScrollRestorationProvider } from "@/app/scroll-restoration-provider";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { FeedbackWidget } from "@/components/feedback/feedback-widget";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -51,6 +52,7 @@ export default async function RootLayout({
                     <main className="flex-1">{children}</main>
                     <MainFooter />
                     <Toaster />
+                    <FeedbackWidget />
                     <AuthModalHost />
                   </div>
                 </BillingModalHost>
