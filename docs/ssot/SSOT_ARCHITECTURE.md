@@ -1,8 +1,8 @@
 # Need4Trip — SSOT_ARCHITECTURE (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Last Updated:** 2026-02-02  
-**Version:** 5.4  
+**Last Updated:** 2026-02-09  
+**Version:** 5.6  
 **Authority:** This document is the ONLY authoritative source for architectural decisions in Need4Trip.
 
 ---
@@ -127,6 +127,8 @@ Maintain an Ownership Map table (append-only; deprecations via archive):
 | Plan data (cached) | `lib/db/planRepo.ts` (StaticCache, TTL 5 min) |
 | Product data (cached) | `lib/db/billingProductsRepo.ts` (StaticCache, TTL 5 min) |
 | Feedback submission + admin read | `lib/services/feedbackService.ts` → `submitFeedback()`, `getAdminFeedback()` |
+| SEO / OG metadata utilities | `lib/utils/text.ts` → `stripHtml()`, `truncateText()` |
+| SEO / OG metadata (per-page) | Page-level `generateMetadata` exports in `app/**/page.tsx` |
 
 ---
 
@@ -637,6 +639,7 @@ A PR is non-compliant if any item is violated.
 ---
 
 ## 21. Document History (Compressed)
+- v5.6 (2026-02-09): Added §3.2 Ownership Map entries for SEO/OG metadata utilities (`lib/utils/text.ts`) and per-page `generateMetadata` pattern. Blueprint: `OG_SOCIAL_SHARING_BLUEPRINT.md`.
 - v5.5 (2026-02-02): Updated §8.3 Admin Context — Phase 3 (User-based Admin Extension). Added dual-path authentication: user-session (PRIMARY for Admin UI) and shared-secret (FALLBACK for ops). Cross-referenced ADMIN_UI_CONTRACT v1.0.
 - v5.4 (2026-02-02): Updated §8.3 Admin Context — Phase 2 with stable `actorId` and `admin_audit_log` attribution. Cross-referenced SSOT_ADMIN_AUDIT_RULES v1.0.
 - v5.3 (2026-01-29): Added RSC Access Rule reference in §4.2. RSC MUST call service layer directly (ADR-001.5).

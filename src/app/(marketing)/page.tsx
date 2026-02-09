@@ -1,5 +1,12 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+
+export const metadata: Metadata = {
+  title: "Need4Trip — Организация автомобильных событий",
+  description:
+    "Создавайте оффроуд-поездки, собирайте экипажи и управляйте участниками. Простая регистрация по ссылке.",
+};
 
 import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-react";
 

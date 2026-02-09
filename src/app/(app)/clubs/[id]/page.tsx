@@ -23,9 +23,11 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
+import { truncateText } from "@/lib/utils/text";
 
 // Section components
 import { ClubProfileHeader } from "./_components/club-profile-header";
@@ -43,6 +45,83 @@ import {
 } from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
+
+// ---------------------------------------------------------------------------
+// OG / Social Sharing metadata
+// See: docs/blueprint/OG_SOCIAL_SHARING_BLUEPRINT.md
+// ---------------------------------------------------------------------------
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  let club: Awaited<ReturnType<typeof getClubBasicInfo>> | null = null;
+  try {
+    club = await getClubBasicInfo(id);
+  } catch {
+    // NotFoundError → default metadata
+    return { title: "Клуб не найден" };
+  }
+
+  // Private clubs: show name but no details (non-member sees minimal page + CTA)
+  if (club.visibility === "private") {
+    const privateDescription =
+      "Закрытый клуб на Need4Trip. Вступите, чтобы увидеть события и участников.";
+    return {
+      title: club.name,
+      description: privateDescription,
+      openGraph: {
+        title: club.name,
+        description: privateDescription,
+        images: [club.logoUrl || "/og-default.png"],
+        url: `/clubs/${id}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: club.name,
+        description: privateDescription,
+        images: [club.logoUrl || "/og-default.png"],
+      },
+    };
+  }
+
+  // Public clubs: full metadata
+  const description = club.description
+    ? truncateText(club.description, 160)
+    : "Автомобильный клуб на Need4Trip";
+
+  const citiesText = club.cities?.length
+    ? club.cities.map((c) => c.name).join(", ")
+    : null;
+
+  const metaParts: string[] = [];
+  if (citiesText) metaParts.push(citiesText);
+  metaParts.push(`${club.memberCount} участников`);
+  metaParts.push(`${club.upcomingEventCount} событий`);
+  const metaPrefix = metaParts.join(" · ");
+
+  const fullDescription = `${metaPrefix} — ${description}`;
+  const ogImage = club.logoUrl || "/og-default.png";
+
+  return {
+    title: club.name,
+    description: truncateText(fullDescription, 200),
+    openGraph: {
+      title: club.name,
+      description: truncateText(fullDescription, 200),
+      images: [ogImage],
+      url: `/clubs/${id}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: club.name,
+      description: truncateText(fullDescription, 200),
+      images: [ogImage],
+    },
+  };
+}
 
 interface ClubProfilePageProps {
   params: Promise<{ id: string }>;

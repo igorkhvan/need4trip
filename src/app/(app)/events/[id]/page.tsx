@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 import { Users, Calendar as CalendarIcon, Car, PencilLine, Lock, ArrowLeft } from "lucide-react";
 
@@ -26,10 +27,81 @@ import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
 import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
 import { formatDateTime } from "@/lib/utils/dates";
+import { stripHtml, truncateText } from "@/lib/utils/text";
 import { isRegistrationClosed, getRegistrationClosedReason } from "@/lib/utils/eventPermissions";
 import { EventParticipantsAsync } from "./_components/participants-async";
 import { EventParticipantsSkeleton } from "@/components/ui/skeletons";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+
+// ---------------------------------------------------------------------------
+// OG / Social Sharing metadata
+// See: docs/blueprint/OG_SOCIAL_SHARING_BLUEPRINT.md
+// ---------------------------------------------------------------------------
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }> | { id: string };
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  // Load event WITHOUT visibility enforcement (crawlers have no auth)
+  const event = await getEventBasicInfo(id).catch(() => null);
+
+  if (!event) {
+    return { title: "Событие не найдено" };
+  }
+
+  // Restricted events: don't leak content in OG tags
+  if (event.visibility === "restricted") {
+    return {
+      title: "Событие на Need4Trip",
+      description: "Это событие доступно только по приглашению.",
+      openGraph: {
+        title: "Событие на Need4Trip",
+        description: "Это событие доступно только по приглашению.",
+      },
+    };
+  }
+
+  // Public / unlisted events: full OG metadata
+  const plainDescription = truncateText(stripHtml(event.description), 160);
+  const cityName = event.city?.name;
+  const dateFormatted = formatDateTime(event.dateTime);
+
+  const metaParts: string[] = [];
+  if (dateFormatted) metaParts.push(dateFormatted);
+  if (cityName) metaParts.push(cityName);
+  const participantsInfo = event.maxParticipants
+    ? `${event.participantsCount ?? 0}/${event.maxParticipants} участников`
+    : `${event.participantsCount ?? 0} участников`;
+  metaParts.push(participantsInfo);
+
+  const metaPrefix = metaParts.join(" · ");
+  const fullDescription = plainDescription
+    ? `${metaPrefix} — ${plainDescription}`
+    : metaPrefix;
+  const description = truncateText(fullDescription, 200);
+
+  const ogImage = event.club?.logoUrl || "/og-default.png";
+
+  return {
+    title: event.title,
+    description,
+    openGraph: {
+      title: event.title,
+      description,
+      type: "article",
+      images: [ogImage],
+      url: `/events/${id}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
 
 export default async function EventDetails({
   params,

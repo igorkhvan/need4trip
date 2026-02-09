@@ -20,8 +20,33 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Need4Trip",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"),
+  title: {
+    default: "Need4Trip",
+    template: "%s | Need4Trip",
+  },
   description: "Организация оффроуд-событий и регистрация участников",
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    siteName: "Need4Trip",
+    title: "Need4Trip",
+    description: "Организация оффроуд-событий и регистрация участников",
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "Need4Trip — Организация автомобильных событий",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Need4Trip",
+    description: "Организация оффроуд-событий и регистрация участников",
+    images: ["/og-default.png"],
+  },
 };
 
 export const viewport = {
