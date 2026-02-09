@@ -25,7 +25,7 @@ import { getEventBasicInfo } from "@/lib/services/events";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
-import { getCategoryLabel, getCategoryBadgeVariant } from "@/lib/utils/eventCategories";
+import { getCategoryLabel, getCategoryBadgeVariant, getCategoryIcon } from "@/lib/utils/eventCategories";
 import { formatDateTime } from "@/lib/utils/dates";
 import { stripHtml, truncateText } from "@/lib/utils/text";
 import { isRegistrationClosed, getRegistrationClosedReason } from "@/lib/utils/eventPermissions";
@@ -158,6 +158,7 @@ export default async function EventDetails({
 
   const categoryLabel = event.category ? getCategoryLabel(event.category) : null;
   const categoryBadgeVariant = event.category ? getCategoryBadgeVariant(event.category) : "solid-gray";
+  const CategoryIcon = event.category ? getCategoryIcon(event.category) : null;
   const formattedDateTime = formatDateTime(event.dateTime);
   
   // Use hydrated vehicle type data
@@ -231,7 +232,8 @@ export default async function EventDetails({
             <EventAccessBadge event={event} variant="full" size="md" />
             
             {categoryLabel && event.category ? (
-              <Badge variant={categoryBadgeVariant} size="md">
+              <Badge variant={categoryBadgeVariant} size="md" className="flex items-center gap-1.5">
+                {CategoryIcon && <CategoryIcon className="h-3.5 w-3.5" />}
                 {categoryLabel}
               </Badge>
             ) : null}
