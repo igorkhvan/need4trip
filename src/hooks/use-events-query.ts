@@ -4,9 +4,14 @@
  * Fetches events list from /api/events with abort control and race condition guard.
  * Supports server-provided initial data for SSR (SSOT_SEO.md §4.1).
  * 
+ * Pattern: Stale-While-Revalidate
+ * - initialData from SSR → shown immediately (no skeleton)
+ * - useEffect fires on mount → fetches fresh data in background (refetching indicator)
+ * - Auth users get personalized data on first client fetch automatically
+ * 
  * @param searchParams - URL search params (ReadonlyURLSearchParams)
  * @param initialData - Optional server-fetched initial data
- * @returns { events, meta, loading, error }
+ * @returns { events, meta, loading, refetching, error }
  */
 
 "use client";
@@ -42,43 +47,25 @@ export function useEventsQuery(
   searchParams: ReadonlyURLSearchParams,
   initialData?: EventsInitialData
 ): EventsQueryResult {
-  const hasInitialData = !!initialData?.events?.length;
-
   const [events, setEvents] = useState<EventListItemHydrated[]>(
     initialData?.events ?? []
   );
   const [meta, setMeta] = useState<EventsMeta | null>(initialData?.meta ?? null);
-  const [loading, setLoading] = useState(!hasInitialData);
+  const [loading, setLoading] = useState(!initialData?.events?.length);
   const [refetching, setRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Request ID для защиты от race conditions
   const requestIdRef = useRef(0);
-  // Track if this is the very first render with default params
-  const isFirstRenderRef = useRef(true);
 
   useEffect(() => {
-    // Skip first fetch if we have server-provided initial data
-    // and search params match defaults (tab=upcoming, no filters)
-    if (isFirstRenderRef.current && hasInitialData) {
-      const tab = searchParams.get("tab") || "upcoming";
-      const hasFilters = searchParams.get("search") ||
-        searchParams.get("cityId") ||
-        searchParams.get("categoryId") ||
-        searchParams.get("page");
-      
-      if (tab === "upcoming" && !hasFilters) {
-        isFirstRenderRef.current = false;
-        return;
-      }
-    }
-    isFirstRenderRef.current = false;
-
     const currentRequestId = ++requestIdRef.current;
     const abortController = new AbortController();
 
     async function fetchEvents() {
-      // Stale-while-revalidate: loading=true только на initial load
+      // Stale-while-revalidate:
+      // - No data yet → loading=true (full skeleton)
+      // - Has data (from SSR or previous fetch) → refetching=true (subtle indicator)
       if (events.length === 0 && meta === null) {
         setLoading(true);
       } else {

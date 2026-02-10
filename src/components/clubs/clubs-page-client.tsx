@@ -3,7 +3,11 @@
  *
  * Renders club listing with search, city filter, and pagination.
  * Receives initial data from server (SSR) for SEO.
- * Subsequent filter/search/pagination is client-side.
+ *
+ * Pattern: Stale-While-Revalidate
+ * - initialClubs from SSR → shown immediately (no skeleton)
+ * - useEffect fires on mount → fetches fresh data (DelayedSpinner, not skeleton)
+ * - Filter/search/pagination changes → client-side fetch
  *
  * Per SSOT_SEO.md §4.1: indexable pages MUST be server-rendered
  */
@@ -32,8 +36,6 @@ interface ClubsPageClientProps {
 }
 
 export function ClubsPageClient({ initialClubs, initialTotal }: ClubsPageClientProps) {
-  const hasInitialData = !!initialClubs?.length;
-
   // ⚡ PERFORMANCE: Use auth context instead of fetching /api/auth/me
   const { isAuthenticated } = useAuth();
   const [clubs, setClubs] = useState<(Club & { memberCount?: number; eventCount?: number })[]>(
@@ -49,16 +51,13 @@ export function ClubsPageClient({ initialClubs, initialTotal }: ClubsPageClientP
   const itemsPerPage = 12;
   
   // Use loading transition hook for smooth UX
-  const { isPending, showLoading, startTransition } = useLoadingTransition(300);
-  const [initialLoad, setInitialLoad] = useState(!hasInitialData);
+  const { showLoading, startTransition } = useLoadingTransition(300);
+  // SWR: if server provided data, skip skeleton on initial load
+  const [initialLoad, setInitialLoad] = useState(!initialClubs?.length);
 
-  // Load clubs with transition — skip initial load if server data provided
+  // Load clubs when filters change
   useEffect(() => {
-    // Skip first run if we have server data and no filters are active
-    if (hasInitialData && !selectedCityId && !searchQuery && currentPage === 1) {
-      return;
-    }
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
     startTransition(() => {
       loadClubs(1);
     });
