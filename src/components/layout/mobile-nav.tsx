@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 interface NavItem {
   href: string;
   label: string;
+  visible?: boolean;
 }
 
 interface MobileNavProps {
@@ -90,7 +91,7 @@ export function MobileNav({ navItems }: MobileNavProps) {
         
         {/* Navigation Links */}
         <nav className="flex flex-col gap-2 mb-6">
-          {navItems.map((item) => {
+          {navItems.filter((item) => item.visible !== false).map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
             return (
               <Link

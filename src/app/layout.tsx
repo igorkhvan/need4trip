@@ -65,7 +65,7 @@ export default async function RootLayout({
   const currentUser = await getCurrentUser();
   
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="ru-KZ" className={inter.className}>
       <body className="min-h-screen bg-[#F9FAFB] text-foreground antialiased">
         <ScrollRestorationProvider>
           <AuthProvider initialUser={currentUser}>

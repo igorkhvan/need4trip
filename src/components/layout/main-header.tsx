@@ -8,11 +8,13 @@ import { isSoftBetaStrict } from "@/lib/config/paywall";
 export function MainHeader() {
   // Feature gating: hide Clubs and Pricing during beta (UI only, backend preserved)
   // UX Contract: TASK 6 — SOFT_BETA_STRICT feature gating
+  // SEO: SSOT_SEO.md §8 — Hidden UI MUST NOT remove links from DOM
+  // Beta-hidden items stay in DOM (sr-only) for crawlers
   const betaStrict = isSoftBetaStrict();
   const navItems = [
-    { href: "/events", label: "События" },
-    ...(!betaStrict ? [{ href: "/clubs", label: "Клубы" }] : []),
-    ...(!betaStrict ? [{ href: "/pricing", label: "Тарифы" }] : []),
+    { href: "/events", label: "События", visible: true },
+    { href: "/clubs", label: "Клубы", visible: !betaStrict },
+    { href: "/pricing", label: "Тарифы", visible: !betaStrict },
   ];
   // ⚡ PERFORMANCE: Components use AuthContext (no props needed)
   // User loaded once in root layout via SSR (getCurrentUser)
@@ -33,7 +35,7 @@ export function MainHeader() {
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
-              <NavLink key={item.href} href={item.href}>
+              <NavLink key={item.href} href={item.href} hidden={!item.visible}>
                 {item.label}
               </NavLink>
             ))}
@@ -55,11 +57,16 @@ export function MainHeader() {
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({ href, children, hidden }: { href: string; children: React.ReactNode; hidden?: boolean }) {
   return (
     <Link
       href={href}
-      className="rounded-lg px-4 py-2 font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-bg-subtle)]"
+      className={hidden
+        ? "sr-only"
+        : "rounded-lg px-4 py-2 font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-bg-subtle)]"
+      }
+      tabIndex={hidden ? -1 : undefined}
+      aria-hidden={hidden || undefined}
     >
       {children}
     </Link>

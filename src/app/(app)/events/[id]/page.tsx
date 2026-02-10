@@ -237,7 +237,14 @@ export default async function EventDetails({
                 {categoryLabel}
               </Badge>
             ) : null}
-            {event.isClubEvent && <Badge variant="club" size="md">Клубное событие</Badge>}
+            {event.isClubEvent && event.clubId && (
+              <Link href={`/clubs/${event.clubId}`}>
+                <Badge variant="club" size="md" className="cursor-pointer hover:opacity-80 transition-opacity">
+                  Клубное событие
+                </Badge>
+              </Link>
+            )}
+            {event.isClubEvent && !event.clubId && <Badge variant="club" size="md">Клубное событие</Badge>}
             <Badge variant={event.isPaid ? "paid" : "free"} size="md">
               {event.isPaid ? "Платное" : "Бесплатное"}
             </Badge>

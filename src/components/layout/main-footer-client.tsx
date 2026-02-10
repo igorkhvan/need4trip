@@ -36,22 +36,27 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
               </li>
               <li>
                 <Link
+                  href="/clubs"
+                  className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
+                >
+                  Клубы
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/pricing"
+                  className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
+                >
+                  Тарифы
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/#how-it-works"
                   className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
                 >
                   Как это работает
                 </Link>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    // This will be handled by the global modal
-                    // For simplicity, let's keep the link visual
-                  }}
-                  className="text-left text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
-                >
-                  Создать событие
-                </button>
               </li>
             </ul>
           </div>
