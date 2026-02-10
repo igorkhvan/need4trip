@@ -1,14 +1,21 @@
 /**
- * Pricing Page — Server Component wrapper
+ * Pricing Page — Server Component
  *
- * Provides metadata for SEO. Client component handles data fetching and UI.
+ * Fetches plans server-side for SEO (bots see full content).
+ * ISR with 5-minute revalidation (matches planRepo cache TTL).
  *
+ * Per SSOT_SEO.md §4.1: indexable pages MUST be server-rendered
+ * Per SSOT_SEO.md §4.2: ISR recommended for pricing
  * Per SSOT_SEO.md §5.3: noindex during beta
  * Per SSOT_SEO.md §6.1: required metadata fields
  */
 
 import type { Metadata } from "next";
+import { listPublicPlans } from "@/lib/db/planRepo";
 import { PricingPageClient } from "@/components/pricing/pricing-page-client";
+import type { PricingPlan } from "@/lib/types/billing";
+
+export const revalidate = 300; // ISR: 5 minutes (matches planRepo cache TTL)
 
 export const metadata: Metadata = {
   title: "Тарифы Need4Trip",
@@ -19,6 +26,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
-  return <PricingPageClient />;
+export default async function PricingPage() {
+  let plans: PricingPlan[] = [];
+  
+  try {
+    const dbPlans = await listPublicPlans();
+    // Map ClubPlan → PricingPlan (subset of fields)
+    plans = dbPlans.map((p) => ({
+      id: p.id,
+      title: p.title,
+      priceMonthly: p.priceMonthly,
+      currencyCode: p.currencyCode,
+      maxMembers: p.maxMembers,
+      maxEventParticipants: p.maxEventParticipants,
+      allowPaidEvents: p.allowPaidEvents,
+      allowCsvExport: p.allowCsvExport,
+    }));
+  } catch {
+    // Fallback: client component will fetch from API
+  }
+
+  return <PricingPageClient initialPlans={plans} />;
 }

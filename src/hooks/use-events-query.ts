@@ -2,8 +2,10 @@
  * useEventsQuery Hook
  * 
  * Fetches events list from /api/events with abort control and race condition guard.
+ * Supports server-provided initial data for SSR (SSOT_SEO.md §4.1).
  * 
  * @param searchParams - URL search params (ReadonlyURLSearchParams)
+ * @param initialData - Optional server-fetched initial data
  * @returns { events, meta, loading, error }
  */
 
@@ -15,7 +17,7 @@ import { parseApiResponse, ClientError } from "@/lib/types/errors";
 import { EventListItemHydrated } from "@/lib/services/events";
 import { log } from "@/lib/utils/logger";
 
-interface EventsMeta {
+export interface EventsMeta {
   total: number;
   page: number;
   limit: number;
@@ -31,17 +33,47 @@ interface EventsQueryResult {
   error: string | null;
 }
 
-export function useEventsQuery(searchParams: ReadonlyURLSearchParams): EventsQueryResult {
-  const [events, setEvents] = useState<EventListItemHydrated[]>([]);
-  const [meta, setMeta] = useState<EventsMeta | null>(null);
-  const [loading, setLoading] = useState(true);
+export interface EventsInitialData {
+  events: EventListItemHydrated[];
+  meta: EventsMeta;
+}
+
+export function useEventsQuery(
+  searchParams: ReadonlyURLSearchParams,
+  initialData?: EventsInitialData
+): EventsQueryResult {
+  const hasInitialData = !!initialData?.events?.length;
+
+  const [events, setEvents] = useState<EventListItemHydrated[]>(
+    initialData?.events ?? []
+  );
+  const [meta, setMeta] = useState<EventsMeta | null>(initialData?.meta ?? null);
+  const [loading, setLoading] = useState(!hasInitialData);
   const [refetching, setRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Request ID для защиты от race conditions
   const requestIdRef = useRef(0);
+  // Track if this is the very first render with default params
+  const isFirstRenderRef = useRef(true);
 
   useEffect(() => {
+    // Skip first fetch if we have server-provided initial data
+    // and search params match defaults (tab=upcoming, no filters)
+    if (isFirstRenderRef.current && hasInitialData) {
+      const tab = searchParams.get("tab") || "upcoming";
+      const hasFilters = searchParams.get("search") ||
+        searchParams.get("cityId") ||
+        searchParams.get("categoryId") ||
+        searchParams.get("page");
+      
+      if (tab === "upcoming" && !hasFilters) {
+        isFirstRenderRef.current = false;
+        return;
+      }
+    }
+    isFirstRenderRef.current = false;
+
     const currentRequestId = ++requestIdRef.current;
     const abortController = new AbortController();
 
@@ -126,4 +158,3 @@ export function useEventsQuery(searchParams: ReadonlyURLSearchParams): EventsQue
 
   return { events, meta, loading, refetching, error };
 }
-

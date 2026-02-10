@@ -20,16 +20,20 @@ import { CreateEventButton } from "@/components/events/create-event-button";
 import { LoadingBar } from "@/components/ui/loading-bar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthModalContext } from "@/components/auth/auth-modal-provider";
-import { useEventsQuery } from "@/hooks/use-events-query";
+import { useEventsQuery, type EventsInitialData } from "@/hooks/use-events-query";
 
-export function EventsPageClient() {
+interface EventsPageClientProps {
+  initialData?: EventsInitialData;
+}
+
+export function EventsPageClient({ initialData }: EventsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: currentUser, isAuthenticated } = useAuth();
   const { openModal: openAuthModal } = useAuthModalContext();
 
   // Data fetching
-  const { events, meta, loading: listLoading, refetching: listRefetching, error: listError } = useEventsQuery(searchParams);
+  const { events, meta, loading: listLoading, refetching: listRefetching, error: listError } = useEventsQuery(searchParams, initialData);
 
   // Handle 401 on "my" tab
   const currentTab = searchParams.get("tab") || "upcoming";

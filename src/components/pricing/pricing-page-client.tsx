@@ -1,8 +1,10 @@
 /**
  * Pricing Page — Client Component
  *
- * Extracted from src/app/(app)/pricing/page.tsx to allow
- * the page to be a Server Component with metadata export.
+ * Renders pricing plans. Receives initial data from server (SSR/ISR).
+ * Falls back to client-side fetch if no initial data provided.
+ *
+ * Per SSOT_SEO.md §4.1: indexable pages MUST be server-rendered.
  *
  * MVP: Показывает тарифы Free, Club 50, Club 500, Unlimited
  * Source: docs/BILLING_AND_LIMITS.md v2.0
@@ -11,15 +13,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PricingPlan } from "@/lib/types/billing";
+import type { PricingPlan } from "@/lib/types/billing";
 import { log } from "@/lib/utils/logger";
 
-export function PricingPageClient() {
-  const [loading, setLoading] = useState(true);
-  const [plans, setPlans] = useState<PricingPlan[]>([]);
+interface PricingPageClientProps {
+  initialPlans?: PricingPlan[];
+}
+
+export function PricingPageClient({ initialPlans }: PricingPageClientProps) {
+  const [loading, setLoading] = useState(!initialPlans?.length);
+  const [plans, setPlans] = useState<PricingPlan[]>(initialPlans ?? []);
   const [error, setError] = useState<string | null>(null);
 
+  // Only fetch client-side if no initial data from server
   useEffect(() => {
+    if (initialPlans?.length) return;
+
     fetch("/api/plans")
       .then((res) => res.json())
       .then((response) => {
@@ -35,10 +44,9 @@ export function PricingPageClient() {
         setError("Failed to load pricing");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [initialPlans]);
 
   // SSOT: SSOT_UI_COPY §2.2 - Page/Section loading: ❌ No text
-  // FIX: Removed text "Загрузка тарифов...", spinner-only
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
