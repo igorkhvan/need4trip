@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { Car } from "lucide-react";
 import { CreateEventButton } from "@/components/events/create-event-button";
+import { isSoftBetaStrict } from "@/lib/config/paywall";
 
 export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
+  // Feature gating: hide Clubs and Pricing during beta (UI only, links stay in DOM for crawlers)
+  // SEO: SSOT_SEO.md §8 — Hidden UI MUST NOT remove links from DOM
+  const betaStrict = isSoftBetaStrict();
   return (
     <footer className="mt-20 border-t border-[var(--color-border)] bg-white md:mt-24">
       <div className="page-container py-8 md:py-12">
@@ -34,18 +38,22 @@ export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
                   События
                 </Link>
               </li>
-              <li>
+              <li className={betaStrict ? "sr-only" : undefined}>
                 <Link
                   href="/clubs"
                   className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  tabIndex={betaStrict ? -1 : undefined}
+                  aria-hidden={betaStrict || undefined}
                 >
                   Клубы
                 </Link>
               </li>
-              <li>
+              <li className={betaStrict ? "sr-only" : undefined}>
                 <Link
                   href="/pricing"
                   className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  tabIndex={betaStrict ? -1 : undefined}
+                  aria-hidden={betaStrict || undefined}
                 >
                   Тарифы
                 </Link>

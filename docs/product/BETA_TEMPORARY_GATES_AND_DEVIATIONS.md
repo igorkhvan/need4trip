@@ -1,7 +1,7 @@
 ---
 Status: ACTIVE
 Created: 2026-02-08
-Updated: 2026-02-08
+Updated: 2026-02-10
 Owner: Product
 Type: INFORMATIVE
 Scope: Beta Launch
@@ -109,14 +109,16 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 **Area:**
 - UI
-- Navigation
+- Navigation (header + footer)
 
 **What changed:**
-- "Клубы" (Clubs) navigation item hidden from main header when `PAYWALL_MODE=soft_beta_strict`.
+- "Клубы" (Clubs) navigation item hidden from main header and footer when `PAYWALL_MODE=soft_beta_strict`.
+- Header: link stays in DOM with `sr-only` class (SSOT_SEO.md §8 — crawlers can still follow).
+- Footer: link stays in DOM with `sr-only` class, `tabIndex={-1}`, `aria-hidden`.
 - Backend logic, data models, and API endpoints remain unchanged.
 
 **Original behavior:**
-- "Клубы" navigation item always visible.
+- "Клубы" navigation item always visible in header and footer.
 
 **Reason for beta gate:**
 - Clubs are not the primary value proposition for beta (BETA_SCOPE §3.3).
@@ -126,7 +128,8 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 - Post-beta: clubs feature re-evaluation.
 
 **Post-beta action:**
-- Set `PAYWALL_MODE=hard` to restore navigation item.
+- Set `PAYWALL_MODE=hard` to restore navigation items.
+- Remove `sr-only`/`aria-hidden`/`tabIndex` conditionals from `main-header.tsx`, `mobile-nav.tsx`, `main-footer-client.tsx`.
 
 ---
 
@@ -136,14 +139,16 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 **Area:**
 - UI
-- Navigation
+- Navigation (header + footer)
 
 **What changed:**
-- "Тарифы" (Pricing) navigation item hidden from main header when `PAYWALL_MODE=soft_beta_strict`.
+- "Тарифы" (Pricing) navigation item hidden from main header and footer when `PAYWALL_MODE=soft_beta_strict`.
+- Header: link stays in DOM with `sr-only` class (SSOT_SEO.md §8 — crawlers can still follow).
+- Footer: link stays in DOM with `sr-only` class, `tabIndex={-1}`, `aria-hidden`.
 - Pricing page, backend, and billing logic remain unchanged.
 
 **Original behavior:**
-- "Тарифы" navigation item always visible.
+- "Тарифы" navigation item always visible in header and footer.
 
 **Reason for beta gate:**
 - Monetization is explicitly out of scope for beta (BETA_SCOPE §4).
@@ -153,7 +158,8 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 - Post-beta monetization decision.
 
 **Post-beta action:**
-- Set `PAYWALL_MODE=hard` to restore navigation item.
+- Set `PAYWALL_MODE=hard` to restore navigation items.
+- Remove `sr-only`/`aria-hidden`/`tabIndex` conditionals from `main-header.tsx`, `mobile-nav.tsx`, `main-footer-client.tsx`.
 
 ---
 
@@ -412,7 +418,7 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 - [ ] BETA_CONTINUE option removed from `accessControl.ts`
 - [ ] `/api/billing/beta-grant` endpoint removed or disabled
 - [ ] Beta copy removed from `reasonMapping.ts`
-- [ ] Navigation items restored
+- [ ] Navigation items restored (header, footer, mobile nav)
 
 ---
 
