@@ -49,14 +49,15 @@ Wave 4 (Structured Data)   →  зависит от Wave 2 (SSR)
 
 ---
 
-## 4. Wave 1 — Quick Wins
+## 4. Wave 1 — Quick Wins ✅ COMPLETED
 
 **Цель:** Закрыть тривиальные gaps за один PR.  
 **Оценка:** 3-4 часа  
 **Зависимости:** Нет  
-**SSOT-секции:** §5.2, §5.3, §6.1, §6.2, §8
+**SSOT-секции:** §5.2, §5.3, §6.1, §6.2, §8  
+**Реализовано:** 2026-02-10, commit `362ab58`
 
-### TASK 1.1 — Fix `lang` attribute
+### TASK 1.1 — Fix `lang` attribute ✅
 
 **SSOT:** §6.2 — `<html lang>` MUST match actual content language
 
@@ -76,7 +77,7 @@ Wave 4 (Structured Data)   →  зависит от Wave 2 (SSR)
 
 ---
 
-### TASK 1.2 — Создать robots.txt
+### TASK 1.2 — Создать robots.txt ✅
 
 **SSOT:** §5.2 — robots.txt MUST allow entity pages, disallow API/admin/private
 
@@ -113,7 +114,7 @@ export default function robots(): MetadataRoute.Robots {
 
 ---
 
-### TASK 1.3 — Meta robots на listing-страницах (beta)
+### TASK 1.3 — Meta robots на listing-страницах (beta) ✅
 
 **SSOT:** §5.3 — Listing pages MUST declare `index: false, follow: true` during beta
 
@@ -149,7 +150,7 @@ export const metadata: Metadata = {
 
 ---
 
-### TASK 1.4 — Metadata для `/pricing`
+### TASK 1.4 — Metadata для `/pricing` ✅
 
 **SSOT:** §6.1 — All indexable pages MUST define title, description
 
@@ -184,7 +185,7 @@ export default function PricingPage() {
 
 ---
 
-### TASK 1.5 — Event → Club internal link
+### TASK 1.5 — Event → Club internal link ✅
 
 **SSOT:** §8 — Event → Club link MUST use `<a>` elements
 
@@ -200,7 +201,7 @@ export default function PricingPage() {
 
 ---
 
-### TASK 1.6 — Footer: добавить ссылки на /clubs и /pricing
+### TASK 1.6 — Footer: добавить ссылки на /clubs и /pricing ✅
 
 **SSOT:** §8 — Homepage → Events listing (even if noindex)
 
@@ -227,7 +228,7 @@ export default function PricingPage() {
 
 ---
 
-### TASK 1.7 — OG-image asset
+### TASK 1.7 — OG-image asset ✅
 
 **Текущее:** `src/app/layout.tsx:37` ссылается на `/og-default.png`, но файл **отсутствует** в `public/`.
 
@@ -241,7 +242,7 @@ export default function PricingPage() {
 
 ---
 
-### TASK 1.8 — Beta gating: DOM preservation
+### TASK 1.8 — Beta gating: DOM preservation ✅
 
 **SSOT:** §8 — "Hidden UI MUST NOT remove links from DOM"
 
@@ -1036,15 +1037,15 @@ const jsonLd = {
 
 ### Per-Wave Checklist
 
-**Wave 1:**
-- [ ] `<html lang="ru-KZ">` в rendered HTML
-- [ ] `robots.txt` доступен и корректен
-- [ ] Listing pages имеют `<meta name="robots" content="noindex, follow">`
-- [ ] `/pricing` имеет `<title>` и `<meta name="description">`
-- [ ] Event page: club badge — clickable link
-- [ ] Footer: ссылки на `/events`, `/clubs`, `/pricing`
-- [ ] `/og-default.png` доступен (200 OK)
-- [ ] Header: ссылки на `/clubs`, `/pricing` в DOM (даже в beta mode)
+**Wave 1:** ✅ DONE (2026-02-10, commit `362ab58`)
+- [x] `<html lang="ru-KZ">` в rendered HTML
+- [x] `robots.txt` доступен и корректен
+- [x] Listing pages имеют `<meta name="robots" content="noindex, follow">`
+- [x] `/pricing` имеет `<title>` и `<meta name="description">`
+- [x] Event page: club badge — clickable link
+- [x] Footer: ссылки на `/events`, `/clubs`, `/pricing`
+- [x] `/og-default.png` доступен (200 OK)
+- [x] Header: ссылки на `/clubs`, `/pricing` в DOM (даже в beta mode)
 
 **Wave 2:**
 - [ ] `curl -s https://need4trip.kz/pricing | grep "Тарифы"` → найдено (SSR)
@@ -1079,20 +1080,21 @@ npm run build       # Production build ✅
 
 ## 9. Files Affected (Complete Map)
 
-### Wave 1 (7 tasks, ~8 файлов)
+### Wave 1 (8 tasks, ~10 файлов) ✅ DONE
 
-| Task | File | Action |
-|------|------|--------|
-| 1.1 | `src/app/layout.tsx` | Edit (lang) |
-| 1.2 | `src/app/robots.ts` | **Create** |
-| 1.3 | `src/app/(app)/events/page.tsx` | Edit (robots meta) |
-| 1.3 | `src/app/(app)/clubs/layout.tsx` | Edit (robots meta) |
-| 1.4 | `src/app/(app)/pricing/page.tsx` | **Rewrite** (Server Component wrapper) |
-| 1.4 | `src/components/pricing/pricing-page-client.tsx` | **Create** (extracted client) |
-| 1.5 | `src/app/(app)/events/[id]/page.tsx` | Edit (club link) |
-| 1.6 | `src/components/layout/main-footer-client.tsx` | Edit (add links) |
-| 1.7 | `public/og-default.png` | **Create** (asset) |
-| 1.8 | `src/components/layout/main-header.tsx` | Edit (DOM preservation) |
+| Task | File | Action | Status |
+|------|------|--------|--------|
+| 1.1 | `src/app/layout.tsx` | Edit (lang) | ✅ |
+| 1.2 | `src/app/robots.ts` | **Create** | ✅ |
+| 1.3 | `src/app/(app)/events/page.tsx` | Edit (robots meta) | ✅ |
+| 1.3 | `src/app/(app)/clubs/layout.tsx` | Edit (robots meta) | ✅ |
+| 1.4 | `src/app/(app)/pricing/page.tsx` | **Rewrite** (Server Component wrapper) | ✅ |
+| 1.4 | `src/components/pricing/pricing-page-client.tsx` | **Create** (extracted client) | ✅ |
+| 1.5 | `src/app/(app)/events/[id]/page.tsx` | Edit (club link) | ✅ |
+| 1.6 | `src/components/layout/main-footer-client.tsx` | Edit (add links) | ✅ |
+| 1.7 | `public/og-default.png` | **Create** (asset, 1200×630) | ✅ |
+| 1.8 | `src/components/layout/main-header.tsx` | Edit (DOM preservation via sr-only) | ✅ |
+| 1.8 | `src/components/layout/mobile-nav.tsx` | Edit (visible filter) | ✅ |
 
 ### Wave 2 (3 tasks, ~6 файлов)
 
@@ -1177,13 +1179,13 @@ npm run build       # Production build ✅
 
 ## 13. Timeline Estimate
 
-| Wave | Tasks | Estimate | Dependencies |
-|------|-------|----------|--------------|
-| Wave 1 | TASK 1.1–1.8 | 3-4 часа | None |
-| Wave 2 | TASK 2.1–2.3 | 3-5 дней | None |
-| Wave 3 | TASK 3.1–3.7 | 7-10 дней | Blocks canonical + sitemap |
-| Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 |
-| **Total** | **20 tasks** | **~12-17 рабочих дней** | |
+| Wave | Tasks | Estimate | Dependencies | Status |
+|------|-------|----------|--------------|--------|
+| Wave 1 | TASK 1.1–1.8 | 3-4 часа | None | ✅ DONE (2026-02-10) |
+| Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | PENDING |
+| Wave 3 | TASK 3.1–3.7 | 7-10 дней | Blocks canonical + sitemap | PENDING |
+| Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | PENDING |
+| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **Wave 1 done** |
 
 ---
 
