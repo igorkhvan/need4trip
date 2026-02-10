@@ -64,6 +64,12 @@ export function FeedbackWidget() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const resetForm = useCallback(() => {
+    setForm({ type: 'feedback', message: '' });
+    setError(null);
+    setSubmitted(false);
+  }, []);
+
   // Don't render for unauthenticated users
   if (!isAuthenticated) return null;
 
@@ -73,12 +79,6 @@ export function FeedbackWidget() {
   const trimmedMessage = form.message.trim();
   const charCount = trimmedMessage.length;
   const isValid = charCount >= MIN_MESSAGE_LENGTH && charCount <= MAX_MESSAGE_LENGTH;
-
-  const resetForm = useCallback(() => {
-    setForm({ type: 'feedback', message: '' });
-    setError(null);
-    setSubmitted(false);
-  }, []);
 
   const handleOpen = () => {
     resetForm();
