@@ -277,12 +277,13 @@ const navItems = [
 
 ---
 
-## 5. Wave 2 — CSR → SSR/ISR Rendering
+## 5. Wave 2 — CSR → SSR/ISR Rendering ✅ COMPLETED
 
 **Цель:** Все публичные страницы рендерятся на сервере.  
 **SSOT:** §4.1, §4.2  
-**Оценка:** 3-5 дней  
-**Зависимости:** Нет (параллельно с Wave 1)
+**Оценка:** 3-5 дней → **выполнено за 1 сессию**  
+**Зависимости:** Нет (параллельно с Wave 1)  
+**Статус:** DONE (2026-02-10) — commit `ac49afe`
 
 ### Архитектурное решение
 
@@ -1047,9 +1048,12 @@ const jsonLd = {
 - [x] `/og-default.png` доступен (200 OK)
 - [x] Header: ссылки на `/clubs`, `/pricing` в DOM (даже в beta mode)
 
-**Wave 2:**
-- [ ] `curl -s https://need4trip.kz/pricing | grep "Тарифы"` → найдено (SSR)
-- [ ] `curl -s https://need4trip.kz/clubs | grep "club-card"` → найдено (SSR)
+**Wave 2:** ✅
+- [x] `/pricing` — ISR 5min, server-fetches plans via `listPublicPlans()`
+- [x] `/clubs` — ISR 1min, server-fetches clubs via `listClubs()`
+- [x] `/events` — ISR 1min, server-fetches upcoming events via `listVisibleEventsForUserPaginated()`
+- [ ] `curl -s https://need4trip.kz/pricing | grep "Тарифы"` → найдено (SSR) — verify after deploy
+- [ ] `curl -s https://need4trip.kz/clubs | grep "club-card"` → найдено (SSR) — verify after deploy
 - [ ] `curl -s https://need4trip.kz/events | grep "event-card"` → найдено (SSR)
 - [ ] Фильтры/поиск/пагинация работают после hydration
 - [ ] Loading state НЕ показывается при первом рендере (SSR data)
@@ -1096,16 +1100,17 @@ npm run build       # Production build ✅
 | 1.8 | `src/components/layout/main-header.tsx` | Edit (DOM preservation via sr-only) | ✅ |
 | 1.8 | `src/components/layout/mobile-nav.tsx` | Edit (visible filter) | ✅ |
 
-### Wave 2 (3 tasks, ~6 файлов)
+### Wave 2 (3 tasks, ~6 файлов) ✅ DONE
 
 | Task | File | Action |
 |------|------|--------|
-| 2.1 | `src/app/(app)/pricing/page.tsx` | Edit (ISR + server fetch) |
-| 2.1 | `src/components/pricing/pricing-page-client.tsx` | Edit (accept initialPlans) |
-| 2.2 | `src/app/(app)/clubs/page.tsx` | **Rewrite** (Server Component) |
-| 2.2 | `src/components/clubs/clubs-page-client.tsx` | **Create** (extracted client) |
-| 2.3 | `src/app/(app)/events/page.tsx` | Edit (server fetch) |
-| 2.3 | `src/components/events/events-page-client.tsx` | Edit (accept initialData) |
+| 2.1 | `src/app/(app)/pricing/page.tsx` | Edit (ISR + server fetch) | ✅ |
+| 2.1 | `src/components/pricing/pricing-page-client.tsx` | Edit (accept initialPlans) | ✅ |
+| 2.2 | `src/app/(app)/clubs/page.tsx` | **Rewrite** (Server Component) | ✅ |
+| 2.2 | `src/components/clubs/clubs-page-client.tsx` | **Create** (extracted client) | ✅ |
+| 2.3 | `src/app/(app)/events/page.tsx` | Edit (ISR + server fetch) | ✅ |
+| 2.3 | `src/components/events/events-page-client.tsx` | Edit (accept initialData) | ✅ |
+| 2.3 | `src/hooks/use-events-query.ts` | Edit (accept initialData) | ✅ |
 
 ### Wave 3 (7 tasks, ~50+ файлов)
 
@@ -1182,10 +1187,10 @@ npm run build       # Production build ✅
 | Wave | Tasks | Estimate | Dependencies | Status |
 |------|-------|----------|--------------|--------|
 | Wave 1 | TASK 1.1–1.8 | 3-4 часа | None | ✅ DONE (2026-02-10) |
-| Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | PENDING |
+| Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | ✅ DONE (2026-02-10) |
 | Wave 3 | TASK 3.1–3.7 | 7-10 дней | Blocks canonical + sitemap | PENDING |
 | Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | PENDING |
-| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **Wave 1 done** |
+| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **Wave 1+2 done** |
 
 ---
 
