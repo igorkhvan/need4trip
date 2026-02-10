@@ -79,7 +79,7 @@ export function EventCardCompact({ event }: EventCardCompactProps) {
           </div>
         )}
         <Button asChild variant="secondary" size="sm">
-          <Link href={`/events/${event.id}`}>Подробнее</Link>
+          <Link href={`/events/${event.slug}`}>Подробнее</Link>
         </Button>
       </CardFooter>
     </Card>

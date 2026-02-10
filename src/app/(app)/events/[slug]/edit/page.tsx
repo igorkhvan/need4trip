@@ -15,20 +15,25 @@
  * SSOT: docs/product/BETA_TEMPORARY_GATES_AND_DEVIATIONS.md §3.5
  */
 
+import { notFound } from "next/navigation";
 import { EditEventPageClient } from "./edit-event-client";
 import { isSoftBetaStrict } from "@/lib/config/paywall";
+import { getEventBySlug } from "@/lib/db/eventRepo";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function EditEventPage({ params }: PageProps) {
-  // SSOT_UI_STRUCTURE — Only extract eventId, no blocking awaits
-  const { id } = await params;
+  const { slug } = await params;
+
+  // Resolve slug → event id (API needs UUID, not slug)
+  const dbEvent = await getEventBySlug(slug).catch(() => null);
+  if (!dbEvent) return notFound();
   
   // SSOT_UI_ASYNC_PATTERNS — All data fetching moved to client component for instant render
   // Beta: pass mode for UI-level participant limit enforcement
-  return <EditEventPageClient eventId={id} isBetaMode={isSoftBetaStrict()} />;
+  return <EditEventPageClient eventId={dbEvent.id} eventSlug={slug} isBetaMode={isSoftBetaStrict()} />;
 }

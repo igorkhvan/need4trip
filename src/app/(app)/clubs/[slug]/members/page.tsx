@@ -26,6 +26,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
+import { getClubBySlug } from "@/lib/db/clubRepo";
 
 // Section components
 import { ClubMembersHeader } from "./_components/club-members-header";
@@ -39,11 +40,16 @@ import { ClubMembersPageSkeleton } from "@/components/ui/skeletons";
 export const dynamic = "force-dynamic";
 
 interface ClubMembersPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function ClubMembersPage({ params }: ClubMembersPageProps) {
-  const { id } = await params;
+  const { slug } = await params;
+
+  // Resolve slug → id
+  const dbClub = await getClubBySlug(slug).catch(() => null);
+  if (!dbClub) notFound();
+  const id = dbClub.id;
   
   // Load critical data for blocking render (per Visual Contract v4 §9)
   const [user, clubResult] = await Promise.all([
@@ -82,7 +88,7 @@ export default async function ClubMembersPage({ params }: ClubMembersPageProps) 
     <div className="space-y-6 pb-10 pt-12">
       {/* Back button */}
       <Link
-        href={`/clubs/${id}`}
+        href={`/clubs/${slug}`}
         className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeft className="h-5 w-5" />

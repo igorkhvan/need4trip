@@ -26,7 +26,7 @@ interface ClubCardProps {
 export function ClubCard({ club }: ClubCardProps) {
   return (
     <Link
-      href={`/clubs/${club.id}`}
+      href={`/clubs/${club.slug}`}
       className="group block rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition-all duration-200 hover:border-[var(--color-primary)] hover:shadow-md sm:p-5 lg:p-6"
     >
       {/* Логотип и название */}

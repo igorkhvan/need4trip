@@ -278,7 +278,7 @@ export function EventsGrid({
               <EventCardDetailed
                 key={event.id}
                 event={event}
-                onClick={() => router.push(`/events/${event.id}`)}
+                onClick={() => router.push(`/events/${event.slug}`)}
               />
             ))}
           </div>

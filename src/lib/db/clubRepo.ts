@@ -2,6 +2,7 @@ import { getAdminDb } from "@/lib/db/client";
 import { InternalError, NotFoundError } from "@/lib/errors";
 import type { ClubCreateInput, ClubUpdateInput } from "@/lib/types/club";
 import { log } from "@/lib/utils/logger";
+import { generateSlug } from "@/lib/utils/slug";
 
 const table = "clubs";
 
@@ -122,6 +123,33 @@ export async function getClubById(id: string): Promise<DbClub | null> {
 }
 
 /**
+ * Get club by slug (case-insensitive)
+ * Per SSOT_SEO.md §3.1: slug-based URL resolution
+ */
+export async function getClubBySlug(slug: string): Promise<DbClub | null> {
+  const db = getAdminDb();
+
+  if (!slug || slug.length < 2) {
+    log.warn("Invalid club slug provided", { slug });
+    return null;
+  }
+
+  const { data, error } = await db
+    .from(table)
+    .select(CLUB_COLUMNS)
+    .ilike("slug", slug)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (error) {
+    log.error("Failed to get club by slug", { slug, error });
+    throw new InternalError("Failed to get club by slug", error);
+  }
+
+  return data ? (data as DbClub) : null;
+}
+
+/**
  * Get club with owner info
  */
 export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | null> {
@@ -155,9 +183,14 @@ export async function createClub(payload: ClubCreateInput): Promise<DbClub> {
 
   const now = new Date().toISOString();
 
+  // Generate UUID on app side so slug can include short-id
+  // Per SSOT_SEO.md §3.1: slug format = {name}-{short-uuid}
+  const id = crypto.randomUUID();
+
   const insertPayload = {
+    id,
     name: payload.name,
-    slug: payload.name.toLowerCase().replace(/\s+/g, '-'),
+    slug: generateSlug(payload.name, id),
     description: payload.description ?? null,
     logo_url: payload.logoUrl ?? null,
     telegram_url: payload.telegramUrl ?? null,

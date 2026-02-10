@@ -65,6 +65,7 @@ describe('Boundary Tests: Free Limit (15 participants)', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,
@@ -155,6 +156,7 @@ describe('Boundary Tests: One-off Limit (500 participants)', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,
@@ -242,6 +244,7 @@ describe('Negative Tests: Invalid Values', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,
@@ -349,6 +352,7 @@ describe('Club Events: One-off credits must NEVER apply', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Club Event',
       description: 'Test',
       created_by_user_id: testUserId,
@@ -423,6 +427,7 @@ describe('Null/Undefined Handling', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,

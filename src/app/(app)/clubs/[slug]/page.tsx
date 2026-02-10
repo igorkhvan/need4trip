@@ -27,6 +27,7 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
+import { getClubBySlug } from "@/lib/db/clubRepo";
 import { truncateText } from "@/lib/utils/text";
 
 // Section components
@@ -53,13 +54,17 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { slug } = await params;
+
+  // Resolve slug → id
+  const dbClub = await getClubBySlug(slug).catch(() => null);
+  if (!dbClub) return { title: "Клуб не найден" };
 
   let club: Awaited<ReturnType<typeof getClubBasicInfo>> | null = null;
   try {
-    club = await getClubBasicInfo(id);
+    club = await getClubBasicInfo(dbClub.id);
   } catch {
     // NotFoundError → default metadata
     return { title: "Клуб не найден" };
@@ -72,11 +77,14 @@ export async function generateMetadata({
     return {
       title: club.name,
       description: privateDescription,
+      alternates: {
+        canonical: `/clubs/${slug}`,
+      },
       openGraph: {
         title: club.name,
         description: privateDescription,
         images: [club.logoUrl || "/og-default.png"],
-        url: `/clubs/${id}`,
+        url: `/clubs/${slug}`,
       },
       twitter: {
         card: "summary_large_image",
@@ -108,11 +116,14 @@ export async function generateMetadata({
   return {
     title: club.name,
     description: truncateText(fullDescription, 200),
+    alternates: {
+      canonical: `/clubs/${slug}`,
+    },
     openGraph: {
       title: club.name,
       description: truncateText(fullDescription, 200),
       images: [ogImage],
-      url: `/clubs/${id}`,
+      url: `/clubs/${slug}`,
     },
     twitter: {
       card: "summary_large_image",
@@ -124,11 +135,16 @@ export async function generateMetadata({
 }
 
 interface ClubProfilePageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
-  const { id } = await params;
+  const { slug } = await params;
+  
+  // Resolve slug → id
+  const dbClubResolved = await getClubBySlug(slug).catch(() => null);
+  if (!dbClubResolved) notFound();
+  const id = dbClubResolved.id;
   
   // Load critical data for blocking render
   // ADR-001: Use resolveCurrentUser for canonical auth resolution in RSC
@@ -174,6 +190,7 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
       <ClubProfileHeader
         club={{
           id: club.id,
+          slug: club.slug,
           name: club.name,
           logoUrl: club.logoUrl,
           visibility: club.visibility ?? "public",

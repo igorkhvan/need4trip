@@ -99,6 +99,7 @@ export type EventCustomFieldValues = Record<string, EventCustomFieldValue>;
 
 export interface Event {
   id: string;
+  slug: string;
   title: string;
   description: string;
   categoryId: string | null; // FK to event_categories
@@ -122,6 +123,7 @@ export interface Event {
   club?: {  // Hydrated club info (опционально)
     id: string;
     name: string;
+    slug: string;
     logoUrl: string | null;
     archivedAt: string | null; // NULL = active, NOT NULL = archived (for UI read-only enforcement)
   } | null;

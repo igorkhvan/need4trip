@@ -1,12 +1,18 @@
 # Need4Trip Database Schema (SSOT)
 
 > **Single Source of Truth для структуры базы данных**  
-> Последнее обновление: 2026-02-09
+> Последнее обновление: 2026-02-10
 > PostgreSQL + Supabase
 
 ---
 
 ## Change Log (SSOT)
+
+### 2026-02-10 (Event Slug)
+- **Reason**: Slug-based URLs for events (SSOT_SEO §3.1).
+- **Added `events.slug` column** — TEXT NOT NULL, unique case-insensitive URL identifier.
+- **Added index** — `events_slug_idx` (UNIQUE on LOWER(slug)).
+- **Migration:** `supabase/migrations/20260210_add_event_slug.sql`
 
 ### 2026-02-09 (Feedback Table)
 - **Reason**: Feedback system — authenticated user feedback (ideas, bugs, general).
@@ -177,6 +183,7 @@ CREATE TABLE public.users (
 ```sql
 CREATE TABLE public.events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL,  -- ⚡ Unique, case-insensitive URL identifier (2026-02-10)
   title TEXT NOT NULL CHECK (char_length(title) >= 3),
   description TEXT NOT NULL,  -- ⚡ May contain HTML (rich text from Tiptap editor)
   category_id UUID REFERENCES public.event_categories(id) ON DELETE SET NULL,
@@ -217,6 +224,7 @@ CREATE TABLE public.events (
 
 **Indexes**:
 - `events_pkey` (PRIMARY KEY on id)
+- `events_slug_idx` (UNIQUE on LOWER(slug))
 - `idx_events_created_by_user_id` (on created_by_user_id)
 - `idx_events_club_id` (on club_id)
 - `idx_events_city_id` (on city_id)
@@ -241,6 +249,8 @@ CREATE TABLE public.events (
 - ⚡ **Registration controls** (добавлены 2024-12-20):
   - `allow_anonymous_registration`: разрешить гостевые регистрации
   - `registration_manually_closed`: ручное закрытие регистрации (приоритет над deadline)
+- ⚡ **`slug`** (добавлено 2026-02-10):
+  - Unique, case-insensitive identifier for URLs. Enforced by `events_slug_idx` on LOWER(slug).
 - ⚡ **Soft delete** (добавлено 2026-02-08):
   - `deleted_at`: NULL = active event, timestamp = soft-deleted
   - Hard delete used ONLY for compensating transaction rollback (credit consumption failure)
@@ -1547,6 +1557,7 @@ This section documents key milestone migrations, not every historical change.
 
 | Date | Migration | Description |
 |------|-----------|-------------|
+| **2026-02-10** | **`add_event_slug`** | Added `slug` column to events table. Unique index `events_slug_idx` on LOWER(slug) for case-insensitive URL lookups. |
 | **2026-02-09** | **`create_feedback`** | Feedback table for user-submitted ideas, bugs, and general feedback. Service-role only RLS. Indexes on `created_at DESC` and `type`. |
 | **2026-01-13** | **`invite_idempotency_function`** | Introduction of the DB-level idempotent `create_club_invite()` function. Refreshes `expires_at` for existing pending invites on re-invitation. |
 | **2026-01-13** | **`clubs_domain_foundation`** | Introduction of normative clubs-domain tables (`club_invites`, `club_join_requests`, `club_audit_log`), ENUMs for statuses and roles, and normalization of `clubs` and `club_members` tables. Added partial unique constraints for pending states. |
@@ -1671,7 +1682,7 @@ Ad-hoc or undocumented schema changes are forbidden.
 
 ---
 
-Last Updated: 2026-02-09
+Last Updated: 2026-02-10
 Document Version: 1.3
 Status: LOCKED SSOT (Database Schema)
 

@@ -7,6 +7,7 @@ import { DomainParticipant, ParticipantRole } from "@/lib/types/participant";
 
 export interface DbEvent {
   id: string;
+  slug: string;
   title: string;
   description: string;
   category_id: string | null; // FK to event_categories
@@ -52,6 +53,7 @@ export interface DbEventWithOwner extends DbEvent {
 export function mapDbEventToDomain(db: DbEvent): DomainEvent {
   return {
     id: db.id,
+    slug: db.slug,
     title: db.title,
     description: db.description,
     categoryId: db.category_id ?? null,

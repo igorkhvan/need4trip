@@ -51,6 +51,7 @@ async function createTestEvent(userId: string, maxParticipants: number = 100): P
   
   const { error } = await db.from('events').insert({
     id: eventId,
+    slug: `test-event-${eventId.slice(0, 8)}`,
     title: 'Test Event',
     description: 'Test Description',
     created_by_user_id: userId,

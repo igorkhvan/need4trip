@@ -3,6 +3,7 @@ import { InternalError, NotFoundError } from "@/lib/errors";
 import { DbEvent, DbEventWithOwner } from "@/lib/mappers";
 import { EventCreateInput, EventUpdateInput, Visibility } from "@/lib/types/event";
 import { log } from "@/lib/utils/logger";
+import { generateSlug } from "@/lib/utils/slug";
 
 const table = "events";
 
@@ -15,6 +16,7 @@ const table = "events";
  */
 export interface EventListItem {
   id: string;
+  slug: string;
   title: string;
   description: string;
   dateTime: string;
@@ -38,7 +40,7 @@ export interface EventListItem {
  * Excludes heavy fields: rules, custom_fields_schema.
  */
 const EVENT_LIST_COLUMNS = `
-  id, title, description, date_time, city_id, category_id,
+  id, slug, title, description, date_time, city_id, category_id,
   max_participants, price, currency_code, visibility,
   is_paid, created_by_user_id, club_id, is_club_event,
   registration_manually_closed
@@ -52,6 +54,7 @@ const EVENT_LIST_COLUMNS = `
 export function mapDbRowToListItem(row: any): EventListItem {
   return {
     id: row.id,
+    slug: row.slug,
     title: row.title,
     description: row.description,
     dateTime: row.date_time,
@@ -171,12 +174,69 @@ export async function getEventById(id: string): Promise<DbEvent | null> {
   } as unknown as DbEvent;
 }
 
+/**
+ * Get event by slug (case-insensitive)
+ * Per SSOT_SEO.md §3.1: slug-based URL resolution
+ */
+export async function getEventBySlug(slug: string): Promise<DbEvent | null> {
+  const db = getAdminDbSafe();
+  if (!db) return null;
+
+  if (!slug || slug.length < 2) {
+    log.warn("Invalid event slug provided", { slug });
+    return null;
+  }
+
+  const { data, error } = await db
+    .from(table)
+    .select("*")
+    .ilike("slug", slug)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) {
+    log.error("Failed to get event by slug", { slug, error });
+    throw new InternalError("Failed to get event by slug", error);
+  }
+
+  if (!data) return null;
+
+  return {
+    ...data,
+    custom_fields_schema: data.custom_fields_schema ?? [],
+  } as unknown as DbEvent;
+}
+
+/**
+ * Get event slug by ID (lightweight, for revalidatePath)
+ */
+export async function getEventSlugById(id: string): Promise<string | null> {
+  const db = getAdminDbSafe();
+  if (!db) return null;
+
+  const { data, error } = await db
+    .from(table)
+    .select("slug")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.slug as string;
+}
+
 export async function createEvent(payload: EventCreateInput): Promise<DbEvent> {
   const db = getAdminDb();
   
   const now = new Date().toISOString();
 
+  // Generate UUID on app side so slug can include short-id
+  // Per SSOT_SEO.md §3.1: slug format = {title}-{short-uuid}
+  const id = crypto.randomUUID();
+
   const insertPayload = {
+    id,
+    slug: generateSlug(payload.title, id),
     title: payload.title,
     description: payload.description,
     category_id: payload.categoryId,

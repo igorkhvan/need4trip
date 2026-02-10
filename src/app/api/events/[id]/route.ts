@@ -4,6 +4,7 @@ import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { UnauthorizedError } from "@/lib/errors";
 import { deleteEvent, getEventWithVisibility, hydrateEvent, updateEvent } from "@/lib/services/events";
+import { getEventSlugById } from "@/lib/db/eventRepo";
 import { withIdempotency, extractIdempotencyKey, isValidIdempotencyKey } from "@/lib/services/withIdempotency";
 import { trackWriteAction } from "@/lib/telemetry/abuseTelemetry";
 import { NextRequest } from "next/server";
@@ -87,9 +88,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
             // Fire-and-forget: abuse telemetry
             trackWriteAction(currentUser.id, 'events.update');
             
-            // Revalidate pages that display this event
-            revalidatePath(`/events/${id}`);        // Event detail page
-            revalidatePath(`/events/${id}/edit`);   // Event edit page
+            // Revalidate pages that display this event (slug-based URLs)
+            const eventSlug = updated.slug || (await getEventSlugById(id));
+            if (eventSlug) {
+              revalidatePath(`/events/${eventSlug}`);        // Event detail page
+              revalidatePath(`/events/${eventSlug}/edit`);   // Event edit page
+            }
             revalidatePath("/events");              // Events list page
             
             return {
@@ -125,9 +129,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     // Fire-and-forget: abuse telemetry
     trackWriteAction(currentUser.id, 'events.update');
     
-    // Revalidate pages that display this event
-    revalidatePath(`/events/${id}`);        // Event detail page
-    revalidatePath(`/events/${id}/edit`);   // Event edit page
+    // Revalidate pages that display this event (slug-based URLs)
+    const slug = updated.slug || (await getEventSlugById(id));
+    if (slug) {
+      revalidatePath(`/events/${slug}`);        // Event detail page
+      revalidatePath(`/events/${slug}/edit`);   // Event edit page
+    }
     revalidatePath("/events");              // Events list page
     
     return respondJSON({ event: updated });
@@ -166,8 +173,11 @@ export async function DELETE(request: Request, { params }: Params) {
     // Fire-and-forget: abuse telemetry
     trackWriteAction(currentUser.id, 'events.delete');
     
-    // Revalidate pages that displayed this event
-    revalidatePath(`/events/${id}`);   // Event detail page (will show 404)
+    // Revalidate pages that displayed this event (slug-based URLs)
+    const slug = await getEventSlugById(id);
+    if (slug) {
+      revalidatePath(`/events/${slug}`);   // Event detail page (will show 404)
+    }
     revalidatePath("/events");         // Events list page
     
     return respondJSON({ ok: true });

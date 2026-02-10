@@ -155,6 +155,7 @@ export async function createTestEvent(params: {
   
   const { error } = await db.from('events').insert({
     id: eventId,
+    slug: `test-event-${eventId.slice(0, 8)}`,
     title: `Test Event ${eventId.slice(0, 8)}`,
     description: 'Auto-generated test event',
     created_by_user_id: params.userId,

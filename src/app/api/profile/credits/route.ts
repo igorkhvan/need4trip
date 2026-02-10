@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
         *,
         consumed_event:events!consumed_event_id(
           id,
+          slug,
           title,
           start_date,
           max_participants

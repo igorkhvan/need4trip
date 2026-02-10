@@ -23,6 +23,7 @@ export interface ClubSettings {
 
 export interface Club {
   id: string;
+  slug: string;
   name: string;
   description: string | null;
   cityIds?: string[]; // FK array на cities table (from club_cities)

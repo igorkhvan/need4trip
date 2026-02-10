@@ -8,7 +8,7 @@
 import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
 import { getCurrentUserFromMiddleware } from "@/lib/auth/currentUser";
-import { getEventById, updateEvent as updateEventRecord } from "@/lib/db/eventRepo";
+import { getEventById, getEventSlugById, updateEvent as updateEventRecord } from "@/lib/db/eventRepo";
 import { UnauthorizedError, AuthError, NotFoundError } from "@/lib/errors";
 import { z } from "zod";
 
@@ -61,8 +61,9 @@ export async function PATCH(request: Request, { params }: Params) {
       throw new NotFoundError("Event not found");
     }
     
-    // Revalidate pages that display this event
-    revalidatePath(`/events/${id}`);  // Event details page
+    // Revalidate pages that display this event (slug-based URLs)
+    const eventSlug = await getEventSlugById(id);
+    if (eventSlug) revalidatePath(`/events/${eventSlug}`);
     revalidatePath("/events");         // Events list page
     
     return respondJSON({ 

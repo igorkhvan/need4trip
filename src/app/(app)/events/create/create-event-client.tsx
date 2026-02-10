@@ -193,10 +193,14 @@ export function CreateEventPageClient({ isBetaMode = false }: { isBetaMode?: boo
     
     controller.setRedirecting();
     
-    if (createdEvent?.id) {
+    if (createdEvent?.slug) {
+      router.push(`/events/${createdEvent.slug}`);
+    } else if (createdEvent?.id) {
+      // Fallback to id if slug not returned
+      console.warn('[CreateEvent] No event.slug in response, using id:', json);
       router.push(`/events/${createdEvent.id}`);
     } else {
-      console.error('[CreateEvent] No event.id in response:', json);
+      console.error('[CreateEvent] No event.slug or event.id in response:', json);
       router.push('/events');
     }
     router.refresh();

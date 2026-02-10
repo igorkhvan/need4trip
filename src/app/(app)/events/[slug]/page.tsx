@@ -22,6 +22,7 @@ import { LockedIndicator } from "@/components/ui/locked-indicator";
 import { ScrollRestorationWrapper } from "@/components/scroll-restoration-wrapper";
 import { RichTextContent } from "@/components/ui/rich-text-content";
 import { getEventBasicInfo } from "@/lib/services/events";
+import { getEventBySlug } from "@/lib/db/eventRepo";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
@@ -40,12 +41,13 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ slug: string }> | { slug: string };
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { slug } = await params;
 
-  // Load event WITHOUT visibility enforcement (crawlers have no auth)
-  const event = await getEventBasicInfo(id).catch(() => null);
+  // Resolve slug → id, then load event WITHOUT visibility enforcement (crawlers have no auth)
+  const dbEvent = await getEventBySlug(slug).catch(() => null);
+  const event = dbEvent ? await getEventBasicInfo(dbEvent.id).catch(() => null) : null;
 
   if (!event) {
     return { title: "Событие не найдено" };
@@ -87,12 +89,15 @@ export async function generateMetadata({
   return {
     title: event.title,
     description,
+    alternates: {
+      canonical: `/events/${slug}`,
+    },
     openGraph: {
       title: event.title,
       description,
       type: "article",
       images: [ogImage],
-      url: `/events/${id}`,
+      url: `/events/${slug}`,
     },
     twitter: {
       card: "summary_large_image",
@@ -106,9 +111,16 @@ export async function generateMetadata({
 export default async function EventDetails({
   params,
 }: {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ slug: string }> | { slug: string };
 }) {
-  const { id } = await params;
+  const { slug } = await params;
+
+  // 0. Resolve slug → DB event
+  const dbEvent = await getEventBySlug(slug).catch(() => null);
+  if (!dbEvent) {
+    return notFound();
+  }
+  const id = dbEvent.id;
   
   // 1. Загружаем currentUser и guestSessionId параллельно
   const [currentUser, guestSessionId] = await Promise.all([
@@ -200,7 +212,7 @@ export default async function EventDetails({
   const closedReason = getRegistrationClosedReason(event, currentUser, event.participantsCount);
 
   return (
-    <ScrollRestorationWrapper storageKey={`event-${id}`}>
+    <ScrollRestorationWrapper storageKey={`event-${slug}`}>
       {/* Back button */}
       <Link
         href="/events"
@@ -237,14 +249,14 @@ export default async function EventDetails({
                 {categoryLabel}
               </Badge>
             ) : null}
-            {event.isClubEvent && event.clubId && (
-              <Link href={`/clubs/${event.clubId}`}>
+            {event.isClubEvent && event.club && (
+              <Link href={`/clubs/${event.club.slug}`}>
                 <Badge variant="club" size="md" className="cursor-pointer hover:opacity-80 transition-opacity">
                   Клубное событие
                 </Badge>
               </Link>
             )}
-            {event.isClubEvent && !event.clubId && <Badge variant="club" size="md">Клубное событие</Badge>}
+            {event.isClubEvent && !event.club && <Badge variant="club" size="md">Клубное событие</Badge>}
             <Badge variant={event.isPaid ? "paid" : "free"} size="md">
               {event.isPaid ? "Платное" : "Бесплатное"}
             </Badge>
@@ -312,7 +324,7 @@ export default async function EventDetails({
           )}
           {isOwner && (
             <Button variant="secondary" asChild className="w-full sm:w-auto">
-              <Link href={`/events/${event.id}/edit`}>
+              <Link href={`/events/${event.slug}/edit`}>
                 <PencilLine className="mr-2 h-4 w-4" />
                 Редактировать
               </Link>

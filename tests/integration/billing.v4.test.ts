@@ -84,6 +84,7 @@ describe('Billing v5: Save-time Enforcement', () => {
       .from('events')
       .insert({
         id: testEventId,
+        slug: `test-event-${testEventId.slice(0, 8)}`,
         title: 'Test Event',
         description: 'Test Description',
         created_by_user_id: testUserId,
@@ -390,6 +391,7 @@ describe('Billing v5: billing_products SSOT', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,

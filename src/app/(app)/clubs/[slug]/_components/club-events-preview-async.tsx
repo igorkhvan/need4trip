@@ -23,6 +23,7 @@ import { log } from "@/lib/utils/logger";
 
 interface EventPreview {
   id: string;
+  slug: string;
   title: string;
   dateTime: string;
   city?: { id: string; name: string; countryCode: string } | null;
@@ -56,6 +57,7 @@ async function getClubEvents(
     // Map to EventPreview format with safe defaults
     return result.events.map(event => ({
       id: event.id,
+      slug: event.slug,
       title: event.title,
       dateTime: event.dateTime,
       city: event.city ?? null,
@@ -104,7 +106,7 @@ export async function ClubEventsPreviewAsync({ clubId, currentUser }: ClubEvents
           {events.map((event) => (
             <Link
               key={event.id}
-              href={`/events/${event.id}`}
+              href={`/events/${event.slug}`}
               className="flex gap-4 p-4 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-subtle)] transition-colors"
             >
               {/* Date block */}

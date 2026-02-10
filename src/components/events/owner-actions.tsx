@@ -10,11 +10,12 @@ import { toast, showError, TOAST } from "@/lib/utils/toastHelpers";
 
 interface OwnerActionsProps {
   eventId: string;
+  eventSlug: string;
   isOwner: boolean;
   authMissing: boolean;
 }
 
-export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProps) {
+export function OwnerActions({ eventId, eventSlug, isOwner, authMissing }: OwnerActionsProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export function OwnerActions({ eventId, isOwner, authMissing }: OwnerActionsProp
         asChild
         variant="secondary"
       >
-        <Link href={`/events/${eventId}/edit`}>Редактировать</Link>
+        <Link href={`/events/${eventSlug}/edit`}>Редактировать</Link>
       </Button>
       <ConfirmDialog
         trigger={

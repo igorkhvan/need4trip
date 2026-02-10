@@ -1059,9 +1059,11 @@ const jsonLd = {
 - [ ] Loading state НЕ показывается при первом рендере (SSR data)
 
 **Wave 3:**
-- [ ] `/events/{slug}` → 200 с контентом
-- [ ] `/events/{uuid}` → 301/308 redirect на slug URL
-- [ ] `/clubs/{slug}` → 200 с контентом
+- [x] `/events/{slug}` → 200 с контентом
+- [x] `/clubs/{slug}` → 200 с контентом
+- [x] `sitemap.xml` генерируется с slug URLs
+- [x] Canonical URLs в generateMetadata
+- Note: Clean slate approach — нет legacy UUID URLs, redirect не нужен
 - [ ] `/clubs/{uuid}` → 301/308 redirect на slug URL
 - [ ] `<link rel="canonical">` на всех indexable pages
 - [ ] Sitemap содержит slug URLs
@@ -1188,9 +1190,9 @@ npm run build       # Production build ✅
 |------|-------|----------|--------------|--------|
 | Wave 1 | TASK 1.1–1.8 | 3-4 часа | None | ✅ DONE (2026-02-10) |
 | Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | ✅ DONE (2026-02-10) |
-| Wave 3 | TASK 3.1–3.7 | 7-10 дней | Blocks canonical + sitemap | PENDING |
+| Wave 3 | TASK 3.1–3.10 | 7-10 дней | Blocks canonical + sitemap | ✅ DONE (2026-02-10) |
 | Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | PENDING |
-| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **Wave 1+2 done** |
+| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **Wave 1+2+3 done** |
 
 ---
 

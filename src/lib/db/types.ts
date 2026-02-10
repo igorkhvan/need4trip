@@ -1200,6 +1200,7 @@ export type Database = {
           price: number | null
           registration_manually_closed: boolean
           rules: string | null
+          slug: string
           title: string
           updated_at: string
           vehicle_type_requirement: string
@@ -1227,6 +1228,7 @@ export type Database = {
           price?: number | null
           registration_manually_closed?: boolean
           rules?: string | null
+          slug: string
           title: string
           updated_at?: string
           vehicle_type_requirement?: string
@@ -1254,6 +1256,7 @@ export type Database = {
           price?: number | null
           registration_manually_closed?: boolean
           rules?: string | null
+          slug?: string
           title?: string
           updated_at?: string
           vehicle_type_requirement?: string

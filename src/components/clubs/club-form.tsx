@@ -133,7 +133,7 @@ export function ClubForm({ mode, club, onSuccess, onCancel }: ClubFormProps) {
         // ✅ Mark as redirecting BEFORE navigation (keeps button disabled)
         // Pattern: SSOT_ARCHITECTURE § ActionController - prevents race condition
         setIsRedirecting(true);
-        router.push(`/clubs/${savedClub.id}`);
+        router.push(`/clubs/${savedClub.slug}`);
         // Note: loading stays true, isRedirecting keeps button disabled until unmount
       }
     } catch (err) {

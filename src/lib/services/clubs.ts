@@ -104,6 +104,7 @@ function mapDbClubToDomain(db: DbClub): Club {
 
   return {
     id: db.id,
+    slug: db.slug,
     name: db.name,
     description: db.description,
     logoUrl: db.logo_url,

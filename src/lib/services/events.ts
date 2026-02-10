@@ -234,6 +234,7 @@ export async function hydrateEvent(event: Event): Promise<Event> {
       return {
         id: club.id,
         name: club.name,
+        slug: club.slug,
         logoUrl: club.logo_url,
         archivedAt: club.archived_at,
       };

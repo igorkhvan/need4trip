@@ -17,6 +17,7 @@ import type { CityHydrated } from "@/lib/types/city";
 interface ClubProfileHeaderProps {
   club: {
     id: string;
+    slug: string;
     name: string;
     logoUrl: string | null;
     visibility?: "public" | "private";
@@ -129,14 +130,14 @@ export function ClubProfileHeader({ club, isOwnerOrAdmin = false, isArchived: is
           {isOwnerOrAdmin && !isArchived && (
             <div className="mt-4 flex flex-wrap gap-4 border-t border-[var(--color-border)] pt-4">
               <Link
-                href={`/clubs/${club.id}/members`}
+                href={`/clubs/${club.slug}/members`}
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
               >
                 <Users className="h-4 w-4" />
                 <span>Управление участниками</span>
               </Link>
               <Link
-                href={`/clubs/${club.id}/settings`}
+                href={`/clubs/${club.slug}/settings`}
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--color-text)]"
               >
                 <Settings className="h-4 w-4" />

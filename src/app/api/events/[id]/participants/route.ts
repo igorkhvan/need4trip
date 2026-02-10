@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { respondError, respondJSON } from "@/lib/api/response";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getEventSlugById } from "@/lib/db/eventRepo";
 import { getOrCreateGuestSessionId } from "@/lib/auth/guestSession";
 import { getEventWithVisibility } from "@/lib/services/events";
 import { registerParticipant } from "@/lib/services/participants";
@@ -69,8 +70,9 @@ export async function POST(request: Request, context: Params) {
     const payload = await request.json();
     const participant = await registerParticipant(id, payload, currentUser, guestSessionId);
     
-    // Revalidate event page to show updated participants list
-    revalidatePath(`/events/${id}`);
+    // Revalidate event page to show updated participants list (slug-based URLs)
+    const eventSlug = await getEventSlugById(id);
+    if (eventSlug) revalidatePath(`/events/${eventSlug}`);
     
     return respondJSON({ participant }, undefined, 201);
   } catch (err: unknown) {

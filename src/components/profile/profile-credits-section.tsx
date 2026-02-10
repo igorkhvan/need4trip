@@ -36,6 +36,7 @@ interface CreditData {
     consumedAt: string;
     consumedEvent?: {
       id: string;
+      slug: string;
       title: string;
       startDate: string;
       maxParticipants: number | null;
@@ -215,7 +216,7 @@ export function ProfileCreditsSection() {
                         {credit.consumedEvent && (
                           <div className="mt-2 rounded-lg bg-[var(--color-bg-subtle)] p-3">
                             <Link
-                              href={`/events/${credit.consumedEvent.id}`}
+                              href={`/events/${credit.consumedEvent.slug}`}
                               className="flex items-start gap-2 group"
                             >
                               <div className="flex-1">

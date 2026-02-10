@@ -29,6 +29,7 @@ import Link from "next/link";
 import { ArrowLeft, Settings, CreditCard, AlertTriangle, Archive, Crown, CheckCircle, Users, Calendar, Zap, Clock, Eye } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
+import { getClubBySlug } from "@/lib/db/clubRepo";
 import { getClubCurrentPlan } from "@/lib/services/accessControl";
 import { ClubArchivedBanner } from "../_components/club-archived-banner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,11 +42,16 @@ import { VisibilityPrivacySection } from "./_components/visibility-privacy-secti
 export const dynamic = "force-dynamic";
 
 interface ClubSettingsPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function ClubSettingsPage({ params }: ClubSettingsPageProps) {
-  const { id } = await params;
+  const { slug } = await params;
+
+  // Resolve slug → id
+  const dbClub = await getClubBySlug(slug).catch(() => null);
+  if (!dbClub) notFound();
+  const id = dbClub.id;
 
   // Load critical data
   const [user, clubResult] = await Promise.all([
@@ -62,7 +68,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
 
   // Auth check: must be authenticated
   if (!user) {
-    redirect(`/clubs/${id}`);
+    redirect(`/clubs/${slug}`);
   }
 
   // Role check: owner-only per SSOT_CLUBS_DOMAIN.md §3.2
@@ -70,7 +76,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
   const isOwner = userRole === "owner";
 
   if (!isOwner) {
-    redirect(`/clubs/${id}`);
+    redirect(`/clubs/${slug}`);
   }
 
   // Check archived state
@@ -89,7 +95,7 @@ export default async function ClubSettingsPage({ params }: ClubSettingsPageProps
     <div className="space-y-6">
       {/* Back button */}
       <Link
-        href={`/clubs/${id}`}
+        href={`/clubs/${slug}`}
         className="inline-flex items-center gap-2 text-base text-muted-foreground transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeft className="h-5 w-5" />

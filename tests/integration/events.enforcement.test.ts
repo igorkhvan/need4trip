@@ -203,6 +203,7 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
       .from('events')
       .insert({
         id: eventId,
+        slug: `test-event-${eventId.slice(0, 8)}`,
         title: 'Original Event',
         description: 'Test',
         created_by_user_id: testUserId,
@@ -235,6 +236,7 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
     const eventId = randomUUID();
     await db.from('events').insert({
       id: eventId,
+      slug: `test-event-${eventId.slice(0, 8)}`,
       title: 'Original Event',
       description: 'Test',
       created_by_user_id: testUserId,
@@ -260,6 +262,7 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
     const eventId = randomUUID();
     await db.from('events').insert({
       id: eventId,
+      slug: `test-event-${eventId.slice(0, 8)}`,
       title: 'Original Event',
       description: 'Test',
       created_by_user_id: testUserId,
@@ -299,6 +302,7 @@ describe('Event Create/Update Enforcement (Personal Events)', () => {
     const eventId = randomUUID();
     await db.from('events').insert({
       id: eventId,
+      slug: `test-event-${eventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,

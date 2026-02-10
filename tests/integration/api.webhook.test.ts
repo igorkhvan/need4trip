@@ -304,6 +304,7 @@ describe('Webhook → Credit → Event Save flow (end-to-end, v5)', () => {
     testEventId = randomUUID();
     await db.from('events').insert({
       id: testEventId,
+      slug: `test-event-${testEventId.slice(0, 8)}`,
       title: 'Test Event',
       description: 'Test',
       created_by_user_id: testUserId,

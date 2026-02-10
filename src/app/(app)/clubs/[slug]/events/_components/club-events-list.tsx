@@ -70,7 +70,7 @@ export function ClubEventsList({ events }: ClubEventsListProps) {
         {events.map((event) => (
           <Link
             key={event.id}
-            href={`/events/${event.id}`}
+            href={`/events/${event.slug}`}
             className="flex gap-4 p-4 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-subtle)] transition-colors"
           >
             {/* Date block */}

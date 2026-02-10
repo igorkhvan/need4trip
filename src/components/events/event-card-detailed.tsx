@@ -117,7 +117,7 @@ export function EventCardDetailed({ event, onClick }: EventCardDetailedProps) {
     if (onClick) {
       onClick();
     } else {
-      router.push(`/events/${event.id}`);
+      router.push(`/events/${event.slug}`);
     }
   };
 

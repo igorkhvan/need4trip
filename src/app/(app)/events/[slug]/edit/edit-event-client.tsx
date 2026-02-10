@@ -41,6 +41,7 @@ interface ManageableClub {
 
 interface EditEventPageClientProps {
   eventId: string;
+  eventSlug: string;
   /** Whether app is in SOFT_BETA_STRICT mode (participant limit enforcement) */
   isBetaMode?: boolean;
 }
@@ -52,7 +53,7 @@ interface EditEventPageClientProps {
  * B5.D1: BillingModalHost now provided globally via root layout
  * Beta: isBetaMode enables UI-level participant limit enforcement (max 500)
  */
-export function EditEventPageClient({ eventId, isBetaMode = false }: EditEventPageClientProps) {
+export function EditEventPageClient({ eventId, eventSlug, isBetaMode = false }: EditEventPageClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
@@ -148,9 +149,9 @@ export function EditEventPageClient({ eventId, isBetaMode = false }: EditEventPa
     
     // ✅ Success - mark as redirecting BEFORE navigation
     controller.setRedirecting();
-    router.push(`/events/${eventId}`);
+    router.push(`/events/${eventSlug}`);
     router.refresh();
-  }, [controller, router, eventId]);
+  }, [controller, router, eventId, eventSlug]);
   
   // B5.1: Initialize useHandleApiError with onConfirmCredit + onBetaContinue callbacks
   const { handleError } = useHandleApiError({
@@ -281,7 +282,7 @@ export function EditEventPageClient({ eventId, isBetaMode = false }: EditEventPa
     
     // Not authenticated - redirect to event page (auth modal will show there)
     if (!isAuthenticated || !user) {
-      router.replace(`/events/${eventId}`);
+      router.replace(`/events/${eventSlug}`);
       return;
     }
     
@@ -291,10 +292,10 @@ export function EditEventPageClient({ eventId, isBetaMode = false }: EditEventPa
       
       if (!isOwner) {
         // Not owner - redirect to event detail page
-        router.replace(`/events/${eventId}`);
+        router.replace(`/events/${eventSlug}`);
       }
     }
-  }, [authLoading, isEventLoading, isAuthenticated, user, event, eventId, router]);
+  }, [authLoading, isEventLoading, isAuthenticated, user, event, eventId, eventSlug, router]);
   
   // Compute derived values
   const isOwner = user?.id === event?.createdByUserId;
@@ -405,7 +406,7 @@ export function EditEventPageClient({ eventId, isBetaMode = false }: EditEventPa
       <EventForm
         key={event ? `event-${event.id}` : "loading"}
         mode="edit"
-        backHref={event ? `/events/${event.id}` : "/events"}
+        backHref={event ? `/events/${eventSlug}` : "/events"}
         submitLabel="Сохранить изменения"
         headerTitle="Редактирование события"
         headerDescription="Обновите параметры события. Изменения сразу будут видны участникам."
