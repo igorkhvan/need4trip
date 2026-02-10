@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { Car } from "lucide-react";
 import { CreateEventButton } from "@/components/events/create-event-button";
-import { isSoftBetaStrict } from "@/lib/config/paywall";
 
-export function MainFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
+export function MainFooter({ isAuthenticated, betaStrict }: { isAuthenticated: boolean; betaStrict: boolean }) {
   // Feature gating: hide Clubs and Pricing during beta (UI only, links stay in DOM for crawlers)
   // SEO: SSOT_SEO.md §8 — Hidden UI MUST NOT remove links from DOM
-  const betaStrict = isSoftBetaStrict();
   return (
     <footer className="mt-20 border-t border-[var(--color-border)] bg-white md:mt-24">
       <div className="page-container py-8 md:py-12">
