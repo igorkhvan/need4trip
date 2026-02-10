@@ -211,8 +211,78 @@ export default async function EventDetails({
   const registrationClosedToUser = isRegistrationClosed(event, currentUser, event.participantsCount);
   const closedReason = getRegistrationClosedReason(event, currentUser, event.participantsCount);
 
+  // ---------------------------------------------------------------------------
+  // Structured Data (JSON-LD) — schema.org/Event
+  // Per SSOT_SEO.md §7.1, SEO_IMPLEMENTATION_BLUEPRINT Wave 4
+  // Restricted events: no JSON-LD (same policy as OG metadata)
+  // ---------------------------------------------------------------------------
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+  const eventJsonLd = event.visibility !== "restricted" ? {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    description: truncateText(stripHtml(event.description), 300),
+    startDate: event.dateTime,
+    eventStatus: isPastEvent
+      ? "https://schema.org/EventScheduled"
+      : "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    ...(event.locations?.[0] && {
+      location: {
+        "@type": "Place",
+        name: event.locations[0].title,
+        ...(event.city && {
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: event.city.name,
+            ...(event.city.region && { addressRegion: event.city.region }),
+            addressCountry: "KZ",
+          },
+        }),
+        ...(event.locations[0].latitude && event.locations[0].longitude && {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: event.locations[0].latitude,
+            longitude: event.locations[0].longitude,
+          },
+        }),
+      },
+    }),
+    ...(ownerUser && {
+      organizer: {
+        "@type": "Person",
+        name: ownerUser.name || ownerUser.telegramHandle || "Организатор",
+      },
+    }),
+    image: event.club?.logoUrl
+      ? `${baseUrl}${event.club.logoUrl}`
+      : `${baseUrl}/og-default.png`,
+    url: `${baseUrl}/events/${event.slug}`,
+    ...(event.isPaid && event.price != null && {
+      offers: {
+        "@type": "Offer",
+        price: event.price,
+        priceCurrency: event.currencyCode || "KZT",
+        availability: isFull
+          ? "https://schema.org/SoldOut"
+          : "https://schema.org/InStock",
+        url: `${baseUrl}/events/${event.slug}`,
+      },
+    }),
+    ...(!event.isPaid && {
+      isAccessibleForFree: true,
+    }),
+  } : null;
+
   return (
-    <ScrollRestorationWrapper storageKey={`event-${slug}`}>
+    <>
+      {eventJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        />
+      )}
+      <ScrollRestorationWrapper storageKey={`event-${slug}`}>
       {/* Back button */}
       <Link
         href="/events"
@@ -477,5 +547,6 @@ export default async function EventDetails({
       {/* Mobile Section Progress */}
       <MobileSectionProgress sections={mobileSections} />
     </ScrollRestorationWrapper>
+    </>
   );
 }

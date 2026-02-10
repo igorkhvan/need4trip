@@ -1069,11 +1069,11 @@ const jsonLd = {
 - [ ] Sitemap содержит slug URLs
 - [ ] Telegram ссылки (старые UUID) корректно редиректят
 
-**Wave 4:**
-- [ ] `<script type="application/ld+json">` на event pages
-- [ ] `<script type="application/ld+json">` на club pages
-- [ ] Google Rich Results Test: Event — valid
-- [ ] Google Rich Results Test: Organization — valid
+**Wave 4:** ✅
+- [x] `<script type="application/ld+json">` на event pages (schema.org/Event)
+- [x] `<script type="application/ld+json">` на club pages (schema.org/Organization)
+- [ ] Google Rich Results Test: Event — valid (TODO: verify after deploy)
+- [ ] Google Rich Results Test: Organization — valid (TODO: verify after deploy)
 
 ### Build Verification (MANDATORY per SSOT)
 
@@ -1191,8 +1191,8 @@ npm run build       # Production build ✅
 | Wave 1 | TASK 1.1–1.8 | 3-4 часа | None | ✅ DONE (2026-02-10) |
 | Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | ✅ DONE (2026-02-10) |
 | Wave 3 | TASK 3.1–3.10 | 7-10 дней | Blocks canonical + sitemap | ✅ DONE (2026-02-10) |
-| Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | PENDING |
-| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **Wave 1+2+3 done** |
+| Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | ✅ DONE (2026-02-10) |
+| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **ALL WAVES DONE** |
 
 ---
 

@@ -28,7 +28,7 @@ import { ArrowLeft } from "lucide-react";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
 import { getClubBySlug } from "@/lib/db/clubRepo";
-import { truncateText } from "@/lib/utils/text";
+import { stripHtml, truncateText } from "@/lib/utils/text";
 
 // Section components
 import { ClubProfileHeader } from "./_components/club-profile-header";
@@ -171,8 +171,51 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
   const isOwnerOrAdmin = userRole === "owner" || userRole === "admin";
   const openJoinEnabled = club.settings?.openJoinEnabled ?? false;
 
+  // ---------------------------------------------------------------------------
+  // Structured Data (JSON-LD) — schema.org/Organization
+  // Per SSOT_SEO.md §7.1, SEO_IMPLEMENTATION_BLUEPRINT Wave 4
+  // Private clubs: minimal JSON-LD (name + url only)
+  // ---------------------------------------------------------------------------
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+  const isPrivate = club.visibility === "private";
+
+  const clubJsonLd = isPrivate
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        name: club.name,
+        url: `${baseUrl}/clubs/${club.slug}`,
+      }
+    : {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        name: club.name,
+        ...(club.description && {
+          description: truncateText(stripHtml(club.description), 300),
+        }),
+        ...(club.logoUrl && {
+          logo: club.logoUrl.startsWith("http")
+            ? club.logoUrl
+            : `${baseUrl}${club.logoUrl}`,
+        }),
+        url: `${baseUrl}/clubs/${club.slug}`,
+        ...(club.cities && club.cities.length > 0 && {
+          address: club.cities.map((city) => ({
+            "@type": "PostalAddress",
+            addressLocality: city.name,
+            addressCountry: "KZ",
+          })),
+        }),
+        sameAs: [club.telegramUrl, club.websiteUrl].filter(Boolean),
+      };
+
   return (
-    <div className="space-y-6 pb-10 pt-12">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(clubJsonLd) }}
+      />
+      <div className="space-y-6 pb-10 pt-12">
       {/* Back button */}
       <Link
         href="/clubs"
@@ -239,5 +282,6 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
         </Suspense>
       )}
     </div>
+    </>
   );
 }
