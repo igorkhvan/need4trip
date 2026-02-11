@@ -596,7 +596,7 @@ Rules:
 
 ### 20.1 Production Base URL
 
-The production base URL (`https://need4trip.kz`) MUST be owned by a **single canonical runtime configuration module**.
+The production base URL (`https://need4trip.app`) MUST be owned by a **single canonical runtime configuration module**.
 
 Rules:
 - Root layout (`src/app/layout.tsx`) MUST define `metadataBase` using the canonical production base URL
@@ -607,8 +607,10 @@ Rules:
 ### 20.2 Resolution Order
 
 1. `process.env.NEXT_PUBLIC_APP_URL` (environment variable — deployment-specific)
-2. Fallback: `https://need4trip.kz` (hardcoded production default)
+2. Fallback: `https://need4trip.app` (hardcoded production default)
 
-This two-step resolution MUST be implemented exactly once in the canonical configuration module, not scattered across files.
+This two-step resolution MUST be implemented exactly once in the canonical configuration module (`lib/config/runtimeConfig.ts` → `getPublicBaseUrl()`), not scattered across files.
+
+Hardcoded domain fallbacks in any file other than the canonical configuration module are FORBIDDEN.
 
 ---

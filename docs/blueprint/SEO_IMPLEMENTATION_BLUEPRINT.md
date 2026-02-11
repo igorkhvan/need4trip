@@ -87,9 +87,10 @@ Wave 5 (Metadata & Schema       →  зависит от Wave 3 + Wave 4        
 
 ```typescript
 import type { MetadataRoute } from "next";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+  const baseUrl = getPublicBaseUrl();
 
   return {
     rules: [
@@ -112,7 +113,7 @@ export default function robots(): MetadataRoute.Robots {
 
 **Конфликты:** Middleware matcher `/api/:path*` — не конфликтует (robots.txt обслуживается по `/robots.txt`).
 
-**Проверка:** `curl https://need4trip.kz/robots.txt` возвращает корректный robots.txt.
+**Проверка:** `curl https://need4trip.app/robots.txt` возвращает корректный robots.txt.
 
 ---
 
@@ -240,7 +241,7 @@ export default function PricingPage() {
 
 **Примечание:** Это дизайнерская задача. Если дизайн недоступен — создать минимальный placeholder (solid color + text).
 
-**Проверка:** `curl -I https://need4trip.kz/og-default.png` → 200 OK.
+**Проверка:** `curl -I https://need4trip.app/og-default.png` → 200 OK.
 
 ---
 
@@ -815,7 +816,7 @@ alternates: { canonical: "/clubs" },
 alternates: { canonical: "/pricing" },
 ```
 
-**Проверка:** `<link rel="canonical" href="https://need4trip.kz/events/slug-here">` в HTML.
+**Проверка:** `<link rel="canonical" href="https://need4trip.app/events/slug-here">` в HTML.
 
 ---
 
@@ -829,11 +830,12 @@ alternates: { canonical: "/pricing" },
 
 ```typescript
 import type { MetadataRoute } from "next";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
 import { listPublicEvents } from "@/lib/db/eventRepo";
 import { listClubs } from "@/lib/db/clubRepo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+  const baseUrl = getPublicBaseUrl();
 
   // Static pages (indexable during beta: only homepage)
   const staticPages: MetadataRoute.Sitemap = [
@@ -845,23 +847,57 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Events (public, non-deleted)
-  const eventsResult = await listPublicEvents(1, 10000);
-  const eventPages: MetadataRoute.Sitemap = eventsResult.data.map((event) => ({
-    url: `${baseUrl}/events/${event.slug}`,
-    lastModified: event.updated_at ? new Date(event.updated_at) : new Date(event.date_time),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+  // ---------------------------------------------------------------
+  // Events (public, non-deleted) — batched pagination per §16.4
+  // Unbounded dataset loading is FORBIDDEN.
+  // Sitemap MUST use batched pagination or cursor iteration.
+  // Mandatory before entity count exceeds 5,000.
+  // ---------------------------------------------------------------
+  const PAGE_SIZE = 500;
+  const eventPages: MetadataRoute.Sitemap = [];
+  let eventsPage = 1;
+  let hasMoreEvents = true;
 
-  // Clubs (public, non-archived)
-  const clubsResult = await listClubs(1, 10000);
-  const clubPages: MetadataRoute.Sitemap = clubsResult.data.map((club) => ({
-    url: `${baseUrl}/clubs/${club.slug}`,
-    lastModified: new Date(club.updated_at),
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
+  while (hasMoreEvents) {
+    const batch = await listPublicEvents(eventsPage, PAGE_SIZE);
+    if (!batch.data || batch.data.length === 0) {
+      hasMoreEvents = false;
+    } else {
+      for (const event of batch.data) {
+        eventPages.push({
+          url: `${baseUrl}/events/${event.slug}`,
+          lastModified: event.updated_at
+            ? new Date(event.updated_at)
+            : new Date(event.date_time),
+          changeFrequency: "weekly" as const,
+          priority: 0.8,
+        });
+      }
+      eventsPage++;
+    }
+  }
+
+  // Clubs (public, non-archived) — batched pagination per §16.4
+  const clubPages: MetadataRoute.Sitemap = [];
+  let clubsPage = 1;
+  let hasMoreClubs = true;
+
+  while (hasMoreClubs) {
+    const batch = await listClubs(clubsPage, PAGE_SIZE);
+    if (!batch.data || batch.data.length === 0) {
+      hasMoreClubs = false;
+    } else {
+      for (const club of batch.data) {
+        clubPages.push({
+          url: `${baseUrl}/clubs/${club.slug}`,
+          lastModified: new Date(club.updated_at),
+          changeFrequency: "monthly" as const,
+          priority: 0.7,
+        });
+      }
+      clubsPage++;
+    }
+  }
 
   // Note: listing pages (/events, /clubs, /pricing) excluded during beta per SSOT §5.1
   return [...staticPages, ...eventPages, ...clubPages];
@@ -874,12 +910,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 **Scalability Requirement (NORMATIVE per SSOT_SEO.md §16.4):**
 - Sitemap implementation MUST use batched pagination or cursor-based iteration
-- Loading entire dataset in memory via unbounded `LIMIT` is FORBIDDEN
-- Current implementation uses `LIMIT 1000` / `LIMIT 500` — acceptable for current scale
+- Unbounded dataset loading is FORBIDDEN
 - When entity count exceeds 5,000: MUST switch to `generateSitemaps()` (sitemap index pattern)
 - This scalability gate is mandatory before production exceeds 5k entities
 
-**Проверка:** `curl https://need4trip.kz/sitemap.xml` → корректный XML.
+**Проверка:** `curl https://need4trip.app/sitemap.xml` → корректный XML.
 
 ---
 
@@ -1175,7 +1210,7 @@ const jsonLd = {
    };
    ```
 
-**Проверка:** `<link rel="canonical" href="https://need4trip.kz/...">` на всех 6 indexable страницах.
+**Проверка:** `<link rel="canonical" href="https://need4trip.app/...">` на всех 6 indexable страницах.
 
 ---
 
@@ -1243,7 +1278,7 @@ const jsonLd = {
 5. **Добавить** `maximumAttendeeCapacity` и `remainingAttendeeCapacity` к Event schema (P1.5).
 
 **Дополнительно — JSON-LD bug fix:**
-- Event `image` field: `event.club?.logoUrl` может быть external URL (Supabase storage). Текущий код делает `${baseUrl}${club.logoUrl}` — если `logoUrl` уже absolute, получится `https://need4trip.kzhttps://...`. Нужна проверка `startsWith("http")` как в Club JSON-LD.
+- Event `image` field: `event.club?.logoUrl` может быть external URL (Supabase storage). Текущий код делает `${baseUrl}${club.logoUrl}` — если `logoUrl` уже absolute, получится двойной домен. Нужна проверка `startsWith("http")` как в Club JSON-LD.
 
 **Проверка:** Rich Results Test = 0 errors на всех entity pages.
 
@@ -1269,7 +1304,7 @@ const staticPages: MetadataRoute.Sitemap = [
 ];
 ```
 
-**Проверка:** `curl https://need4trip.kz/sitemap.xml` — не содержит `/events`, `/clubs`, `/pricing`.
+**Проверка:** `curl https://need4trip.app/sitemap.xml` — не содержит `/events`, `/clubs`, `/pricing`.
 
 ---
 
@@ -1347,7 +1382,7 @@ export const metadata: Metadata = {
 2. For `/events?page=1` or `/events` (no page param) → canonical: `/events`
 3. Non-SEO params (`tab`, `sort`, `search`, `cityId`, `categoryId`) MUST be stripped from canonical
 
-**Проверка:** `/events?page=2` → `<link rel="canonical" href="https://need4trip.kz/events?page=2">`.
+**Проверка:** `/events?page=2` → `<link rel="canonical" href="https://need4trip.app/events?page=2">`.
 
 ---
 
@@ -1401,7 +1436,7 @@ export const metadata: Metadata = {
 
 **SSOT:** SSOT_ARCHITECTURE.md §4.6, SSOT_SEO.md §20
 
-**Текущее состояние:** `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"` is repeated in:
+**Текущее состояние:** `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.app"` is repeated in:
 - `src/app/layout.tsx` (metadataBase)
 - `src/app/sitemap.ts` (BASE_URL)
 - `src/app/robots.ts` (baseUrl)
@@ -1411,12 +1446,24 @@ export const metadata: Metadata = {
 
 **Действие:** Create `lib/config/runtimeConfig.ts`:
 ```typescript
-export const PRODUCTION_BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+/**
+ * Canonical production base URL.
+ * Per SSOT_SEO.md §20 and SSOT_ARCHITECTURE.md §4.6:
+ * This is the ONLY place where the base URL is resolved.
+ * Hardcoded domain fallbacks elsewhere are FORBIDDEN.
+ */
+export function getPublicBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.app";
+}
 ```
-Replace all scattered `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"` with import from this module.
 
-**Проверка:** `rg 'process\.env\.NEXT_PUBLIC_APP_URL.*need4trip' src/` → only `lib/config/runtimeConfig.ts`.
+Base URL MUST be resolved via `getPublicBaseUrl()` from `lib/config/runtimeConfig.ts`.
+Hardcoded domain fallbacks scattered across files are FORBIDDEN.
+The canonical production domain is: `https://need4trip.app`.
+
+Replace all scattered `process.env.NEXT_PUBLIC_APP_URL` references with import from this module.
+
+**Проверка:** `rg 'process\.env\.NEXT_PUBLIC_APP_URL' src/ --glob '!lib/config/*'` → 0 results.
 
 ---
 
@@ -1443,6 +1490,12 @@ Replace all scattered `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"
 **Blocking:** Phase 2 Implementation — MUST be completed first  
 **Note:** Tasks 5.9–5.14 added during SEO ↔ Architecture consolidation (2026-02-11)
 
+**P0 Gate — Canonical Coverage:**
+- Canonical coverage MUST be **100%** before Phase 2 implementation begins.
+- Missing canonical on any indexable page is a **P0 defect** and blocks Phase 2.
+- This includes: homepage, events listing, clubs listing, pricing, all event detail, all club detail pages.
+- Verification: `<link rel="canonical">` present on every indexable page with correct absolute URL.
+
 ---
 
 ## 9. Testing & Verification
@@ -1463,9 +1516,9 @@ Replace all scattered `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"
 - [x] `/pricing` — ISR 5min, server-fetches plans via `listPublicPlans()`
 - [x] `/clubs` — ISR 1min, server-fetches clubs via `listClubs()`
 - [x] `/events` — ISR 1min, server-fetches upcoming events via `listVisibleEventsForUserPaginated()`
-- [ ] `curl -s https://need4trip.kz/pricing | grep "Тарифы"` → найдено (SSR) — verify after deploy
-- [ ] `curl -s https://need4trip.kz/clubs | grep "club-card"` → найдено (SSR) — verify after deploy
-- [ ] `curl -s https://need4trip.kz/events | grep "event-card"` → найдено (SSR)
+- [ ] `curl -s https://need4trip.app/pricing | grep "Тарифы"` → найдено (SSR) — verify after deploy
+- [ ] `curl -s https://need4trip.app/clubs | grep "club-card"` → найдено (SSR) — verify after deploy
+- [ ] `curl -s https://need4trip.app/events | grep "event-card"` → найдено (SSR)
 - [ ] Фильтры/поиск/пагинация работают после hydration
 - [ ] Loading state НЕ показывается при первом рендере (SSR data)
 
@@ -1589,7 +1642,7 @@ npm run build       # Production build ✅
 | 5.12 | `src/lib/seo/metadataBuilder.ts` | **Create** (centralized metadata builder) |
 | 5.13 | `src/lib/seo/schemaBuilder.ts` | **Create** (centralized JSON-LD builder) |
 | 5.14 | `src/lib/config/runtimeConfig.ts` | **Create** (centralized base URL) |
-| 5.14 | 6+ files with `process.env.NEXT_PUBLIC_APP_URL` | Edit (replace with import) |
+| 5.14 | 6+ files with `process.env.NEXT_PUBLIC_APP_URL` | Edit (replace with `getPublicBaseUrl()` import) |
 
 ---
 
