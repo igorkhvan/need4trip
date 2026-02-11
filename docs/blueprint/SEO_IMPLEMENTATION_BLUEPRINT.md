@@ -117,9 +117,9 @@ export default function robots(): MetadataRoute.Robots {
 
 ---
 
-### TASK 1.3 — Meta robots на listing-страницах (beta) ✅
+### TASK 1.3 — Meta robots на listing-страницах (beta) ✅ → UPDATED
 
-**SSOT:** §5.3 — Listing pages MUST declare `index: false, follow: true` during beta
+**SSOT:** §5.3 — `/events` is indexable; `/clubs` and `/pricing` MUST declare `noindex, follow`
 
 **Файлы и изменения:**
 
@@ -128,10 +128,8 @@ export default function robots(): MetadataRoute.Robots {
 export const metadata: Metadata = {
   title: "События",
   description: "Ближайшие автомобильные события и оффроуд-поездки",
-  robots: {
-    index: false,
-    follow: true,
-  },
+  // NOTE: /events is indexable (production-ready per §5.1).
+  // Do NOT add robots: { index: false }.
 };
 ```
 
@@ -147,9 +145,22 @@ export const metadata: Metadata = {
 };
 ```
 
-**`src/app/(app)/pricing/page.tsx`** — добавить metadata (будет рефакторен в Wave 2, но metadata нужен сейчас). Поскольку файл `"use client"`, metadata нужно вынести — см. TASK 1.4.
+**`src/app/(app)/pricing/page.tsx`:**
+```typescript
+export const metadata: Metadata = {
+  title: "Тарифы Need4Trip",
+  description: "...",
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
+```
 
-**Проверка:** `<meta name="robots" content="noindex, follow">` в HTML.
+**Проверка:**
+- `/events` → NO `noindex` meta tag (indexable)
+- `/clubs` → `<meta name="robots" content="noindex, follow">`
+- `/pricing` → `<meta name="robots" content="noindex, follow">`
 
 ---
 
@@ -206,7 +217,7 @@ export default function PricingPage() {
 
 ### TASK 1.6 — Footer: добавить ссылки на /clubs и /pricing ✅
 
-**SSOT:** §8 — Homepage → Events listing (even if noindex)
+**SSOT:** §8 — Homepage → Events listing
 
 **Файл:** `src/components/layout/main-footer-client.tsx`
 
@@ -837,7 +848,7 @@ import { listClubs } from "@/lib/db/clubRepo";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getPublicBaseUrl();
 
-  // Static pages (indexable during beta: only homepage)
+  // Static indexable pages per SSOT §5.1 and §5.4
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -845,6 +856,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 1.0,
     },
+    {
+      url: `${baseUrl}/events`,
+      lastModified: new Date(),
+      changeFrequency: "hourly",
+      priority: 0.9,
+    },
+    // /clubs and /pricing — NOT included (noindex during beta per §5.1)
   ];
 
   // ---------------------------------------------------------------
@@ -899,7 +917,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // Note: listing pages (/events, /clubs, /pricing) excluded during beta per SSOT §5.1
+  // /clubs and /pricing excluded (noindex during beta per SSOT §5.1)
+  // /events is included in staticPages (indexable, production-ready)
   return [...staticPages, ...eventPages, ...clubPages];
 }
 ```
@@ -1286,25 +1305,34 @@ const jsonLd = {
 
 ### TASK 5.6 — Fix sitemap beta compliance
 
-**SSOT:** §16.1, §16.2 — Sitemap MUST NOT include listing pages during beta
+**SSOT:** §5.4, §16.1, §16.2 — Sitemap content must match indexing policy
 
 **Текущее состояние:**
-- ❌ Sitemap включает `/events`, `/clubs`, `/pricing` — нарушение §5.1 и §16.1
+- ❌ Sitemap включает `/clubs`, `/pricing` — нарушение §5.1 и §16.1 (noindex pages)
+- ❌ Sitemap НЕ включает `/events` как static page — нарушение §5.4 (indexable page)
 
-**Действие:** Удалить listing pages из sitemap static pages array. Оставить только:
+**Действие:** Update sitemap static pages:
 ```typescript
 const staticPages: MetadataRoute.Sitemap = [
   {
-    url: BASE_URL,        // Homepage — indexable during beta
+    url: BASE_URL,                  // Homepage — indexable
     lastModified: new Date(),
     changeFrequency: "daily",
     priority: 1.0,
   },
-  // /events, /clubs, /pricing — EXCLUDED during beta per SSOT §5.1
+  {
+    url: `${BASE_URL}/events`,      // Events listing — indexable (production-ready per §5.1)
+    lastModified: new Date(),
+    changeFrequency: "hourly",
+    priority: 0.9,
+  },
+  // /clubs, /pricing — NOT included (noindex during beta per §5.1)
 ];
 ```
 
-**Проверка:** `curl https://need4trip.app/sitemap.xml` — не содержит `/events`, `/clubs`, `/pricing`.
+**Проверка:**
+- `curl https://need4trip.app/sitemap.xml` — содержит `/events`
+- `curl https://need4trip.app/sitemap.xml` — НЕ содержит `/clubs`, `/pricing`
 
 ---
 
@@ -1493,8 +1521,15 @@ Replace all scattered `process.env.NEXT_PUBLIC_APP_URL` references with import f
 **P0 Gate — Canonical Coverage:**
 - Canonical coverage MUST be **100%** before Phase 2 implementation begins.
 - Missing canonical on any indexable page is a **P0 defect** and blocks Phase 2.
-- This includes: homepage, events listing, clubs listing, pricing, all event detail, all club detail pages.
+- This includes: homepage, `/events`, all event detail, all club detail pages, `/clubs`, `/pricing`.
+- `/events` canonical is **P0 critical** — it is an indexable production page.
 - Verification: `<link rel="canonical">` present on every indexable page with correct absolute URL.
+
+**P0 Gate — /events Indexing Readiness:**
+- `/events` MUST NOT have `noindex` meta robots.
+- `/events` MUST have full metadata (title, description, OG, twitter, canonical).
+- `/events` MUST appear in `sitemap.xml`.
+- Missing any of the above is a **P0 defect**.
 
 ---
 
@@ -1505,7 +1540,8 @@ Replace all scattered `process.env.NEXT_PUBLIC_APP_URL` references with import f
 **Wave 1:** ✅ DONE (2026-02-10, commit `362ab58`)
 - [x] `<html lang="ru-KZ">` в rendered HTML
 - [x] `robots.txt` доступен и корректен
-- [x] Listing pages имеют `<meta name="robots" content="noindex, follow">`
+- [x] `/clubs` и `/pricing` имеют `<meta name="robots" content="noindex, follow">`
+- [ ] `/events` НЕ имеет `noindex` (indexable, production-ready)
 - [x] `/pricing` имеет `<title>` и `<meta name="description">`
 - [x] Event page: club badge — clickable link
 - [x] Footer: ссылки на `/events`, `/clubs`, `/pricing`
@@ -1681,10 +1717,10 @@ npm run build       # Production build ✅
 | §3.2 Canonical URLs | Absolute canonical on all pages | 3.6, **5.3** | ❌ Gap (4 static pages missing → 5.3) |
 | §4.1 SSR/ISR | No CSR for indexable content | 2.1, 2.2, 2.3 | ✅ Done |
 | §4.2 Strategy | ISR for listings, SSR for detail | 2.1–2.3 | ✅ Done |
-| §5.1 Beta indexing | Only homepage + entity detail | 1.3, 3.7, **5.6** | ❌ Gap (sitemap includes listing pages → 5.6) |
+| §5.1 Beta indexing | Homepage + /events + entity detail indexable; /clubs, /pricing noindex | 1.3, 3.7, **5.6** | ❌ Gap (/events noindex must be removed; sitemap must add /events → 5.6) |
 | §5.2 robots.txt | Allow entities, disallow API/admin | 1.2 | ✅ Done |
-| §5.3 Meta robots | noindex+follow on listings (beta) | 1.3 | ✅ Done |
-| §5.4 Sitemap | Dynamic, slug-based, canonical only | 3.7, **5.6** | ❌ Gap (listing pages in sitemap → 5.6) |
+| §5.3 Meta robots | /events indexable; /clubs, /pricing noindex+follow | 1.3 | ❌ Gap (/events currently noindex → must be updated) |
+| §5.4 Sitemap | Dynamic, slug-based; includes /events; excludes /clubs, /pricing | 3.7, **5.6** | ❌ Gap (/events not in static pages; /clubs, /pricing still included → 5.6) |
 | §6.1 Metadata | title+desc+OG+twitter on all pages | 1.4, **5.2, 5.4, 5.8** | ❌ Gap (clubs listing missing OG/Twitter → 5.8) |
 | §6.2 Language | `lang="ru-KZ"` | 1.1 | ✅ Done |
 | §7.1 Event JSON-LD | Event schema.org | 4.1 | ✅ Done (validation pending → 5.5) |

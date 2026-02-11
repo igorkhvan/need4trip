@@ -48,7 +48,9 @@ The following entities are SEO-relevant and MUST follow this SSOT:
 | Club | `/clubs/{slug}` | ACTIVE |
 | City | `/cities/{slug}` | DEFERRED |
 | Homepage | `/` | ACTIVE |
-| Listing pages | `/events`, `/clubs`, `/pricing` | ACTIVE (restricted in beta) |
+| Events listing | `/events` | ACTIVE (indexable) |
+| Clubs listing | `/clubs` | ACTIVE (noindex during beta) |
+| Pricing | `/pricing` | ACTIVE (noindex during beta) |
 
 ---
 
@@ -137,17 +139,17 @@ During beta, SEO exposure is **intentionally limited but reversible**.
 #### Indexing rules during beta:
 - **Indexable:**
   - Homepage (`/`)
+  - Events listing (`/events`) — **production-ready**
   - Event detail pages (`/events/{slug}`)
   - Club detail pages (`/clubs/{slug}`)
-- **Not indexable:**
-  - `/events`
-  - `/clubs`
-  - `/pricing`
+- **Crawlable but NOT indexable** (`noindex, follow`):
+  - `/clubs` — beta-restricted until feature maturity
+  - `/pricing` — beta-restricted until feature maturity
 
-This ensures:
-- Early SEO signals for UGC
-- No premature catalog exposure
-- Zero URL or content debt when beta ends
+**Rationale:**
+- `/events` is considered production-ready: SSR content, full metadata, stable URL. It serves as the primary SEO entry point for event discovery.
+- `/clubs` and `/pricing` remain restricted until their feature sets are mature and content quality is verified.
+- Entity detail pages (`/events/{slug}`, `/clubs/{slug}`) remain indexable regardless of listing page status.
 
 ---
 
@@ -174,23 +176,45 @@ robots.txt MUST:
 ### 5.3 Meta Robots (Page-Level)
 
 During beta:
-- Listing pages MUST declare:
-index: false
-follow: true
+- `/events` MUST NOT declare `noindex` — it is indexable (production-ready)
+- `/clubs` MUST declare `noindex, follow`
+- `/pricing` MUST declare `noindex, follow`
 
 Entity pages MUST NOT declare `noindex` unless explicitly private.
+
+### 5.3.1 Events Listing Indexing Policy
+
+`/events` is a first-class indexable page. The following rules apply:
+
+Rules:
+- `/events` MUST NOT declare `noindex`
+- `/events` MUST self-canonicalize (see §17 for pagination)
+- `/events` MUST define full metadata: `title`, `description`, `openGraph`, `twitter`, `canonical`
+- `/events` MUST comply with pagination canonical policy (§17):
+  - `/events?page=1` → canonical: `/events`
+  - `/events?page=2` → canonical: `/events?page=2`
+- `/events` MUST appear in `sitemap.xml`
 
 ---
 
 ### 5.4 Sitemap Policy
 
-Sitemap MUST:
-- Include only canonical, indexable URLs
-- Exclude listing pages during beta
-- Exclude private or restricted entities
-- Use slug-based URLs only
+Sitemap MUST include:
+- Homepage (`/`)
+- Events listing (`/events`) — production-ready, indexable
+- All public event entity pages (`/events/{slug}`)
+- All public club entity pages (`/clubs/{slug}`)
 
-Dynamic sitemap generation is REQUIRED once events/clubs exceed trivial counts.
+Sitemap MUST NOT include:
+- `/clubs` — `noindex` during beta
+- `/pricing` — `noindex` during beta
+- Private or restricted entities
+- Any URL that declares `noindex`
+
+Additional rules:
+- Use slug-based URLs only
+- Use canonical URL form for every entry
+- Dynamic sitemap generation is REQUIRED once events/clubs exceed trivial counts
 
 ---
 
@@ -260,7 +284,7 @@ Required links:
 - Event → Club
 - Event → City (when city pages exist)
 - Club → Events
-- Homepage → Events listing (even if noindex)
+- Homepage → Events listing
 
 Rules:
 - Links MUST use `<a>` elements (not badges-only)
@@ -483,7 +507,7 @@ Rules:
 | Page | Canonical Defined | Status |
 |------|------------------|--------|
 | Homepage (`/`) | **NO** | ❌ GAP — MUST add `alternates.canonical: "/"` |
-| Events listing (`/events`) | **NO** | ❌ GAP — MUST add `alternates.canonical: "/events"` |
+| Events listing (`/events`) | **NO** | ❌ **P0** GAP — indexable page, MUST add `alternates.canonical: "/events"` |
 | Clubs listing (`/clubs`) | **NO** | ❌ GAP — MUST add via layout or page metadata |
 | Pricing (`/pricing`) | **NO** | ❌ GAP — MUST add `alternates.canonical: "/pricing"` |
 | Event detail (`/events/{slug}`) | YES | ✅ OK |
@@ -496,7 +520,8 @@ Rules:
 ### 16.1 Sitemap Content Rules
 
 Rules:
-- Sitemap MUST NOT include listing pages during beta (per §5.1 beta indexing policy)
+- Sitemap MUST include `/events` (indexable, production-ready per §5.1)
+- Sitemap MUST NOT include `noindex` listing pages (`/clubs`, `/pricing`) during beta
 - Sitemap MUST NOT include private or restricted entities
 - Sitemap MUST use slug-based URLs only (no UUIDs)
 - Sitemap MUST use the canonical URL form for every entry
@@ -506,7 +531,8 @@ Rules:
 
 | Rule | Status |
 |------|--------|
-| No listing pages during beta | ❌ GAP — `/events`, `/clubs`, `/pricing` are currently included |
+| `/events` in sitemap | ❌ GAP — MUST be added (indexable per §5.1) |
+| `/clubs`, `/pricing` NOT in sitemap | ❌ GAP — currently included, MUST be removed |
 | No private entities | ✅ OK — filtered by `visibility: "public"` |
 | Slug-based URLs | ✅ OK — uses `event.slug` and `club.slug` |
 | Canonical URL form | ✅ OK — uses absolute URLs with `BASE_URL` |
@@ -542,7 +568,7 @@ Rules:
 
 **Rationale:** Each paginated page has unique content. Canonicalizing to page 1 would signal to search engines that pages 2+ are duplicates, causing content loss.
 
-**Beta exception:** During beta, listing pages are `noindex, follow` (§5.3). Pagination canonical rules still apply to ensure correct behavior when beta ends.
+**Beta note:** `/events` is indexable (§5.1) — pagination canonical rules are **active and enforced**. For `/clubs` (noindex during beta), pagination canonical rules still apply to ensure correct behavior when beta ends.
 
 ---
 
