@@ -67,8 +67,8 @@ export function MainFooter({ isAuthenticated, betaStrict }: { isAuthenticated: b
             </ul>
           </div>
 
-          {/* Links - Contact */}
-          <div>
+          {/* Links - Contact — hidden during beta (§3.7), links stay in DOM for crawlers */}
+          <div className={betaStrict ? "sr-only" : undefined} aria-hidden={betaStrict || undefined}>
             <h4 className="mb-3 text-lg font-semibold text-[var(--color-text)] md:mb-4">Контакты</h4>
             <ul className="space-y-2">
               <li>
@@ -77,6 +77,7 @@ export function MainFooter({ isAuthenticated, betaStrict }: { isAuthenticated: b
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  tabIndex={betaStrict ? -1 : undefined}
                 >
                   Telegram
                 </a>
@@ -85,6 +86,7 @@ export function MainFooter({ isAuthenticated, betaStrict }: { isAuthenticated: b
                 <a
                   href="mailto:support@need4trip.app"
                   className="text-sm text-muted-foreground transition-colors hover:text-[var(--color-primary)] md:text-base"
+                  tabIndex={betaStrict ? -1 : undefined}
                 >
                   Поддержка
                 </a>

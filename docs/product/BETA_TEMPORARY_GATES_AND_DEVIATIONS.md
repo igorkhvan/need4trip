@@ -1,7 +1,7 @@
 ---
 Status: ACTIVE
 Created: 2026-02-08
-Updated: 2026-02-10
+Updated: 2026-02-11
 Owner: Product
 Type: INFORMATIVE
 Scope: Beta Launch
@@ -240,6 +240,35 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 ---
 
+### 3.7 Footer Contacts Hidden (UI)
+
+**Status:** HIDDEN
+
+**Area:**
+- UI
+- Footer
+
+**What changed:**
+- "Контакты" section (Telegram link, Поддержка email) hidden from footer when `PAYWALL_MODE=soft_beta_strict`.
+- Entire contacts `<div>` stays in DOM with `sr-only` class, `aria-hidden` (SSOT_SEO.md §8 — crawlers can still follow links).
+- Individual links get `tabIndex={-1}` so keyboard navigation skips them.
+- No backend or data changes.
+
+**Original behavior:**
+- "Контакты" section always visible in footer with Telegram and support email links.
+
+**Reason for beta gate:**
+- Contact details are not finalized for beta; hiding reduces noise and avoids premature support expectations.
+
+**Restoration condition:**
+- Post-beta: contacts finalized and ready for public display.
+
+**Post-beta action:**
+- Set `PAYWALL_MODE=hard` to restore contacts section visibility.
+- Remove `betaStrict` conditionals (`sr-only`/`aria-hidden`/`tabIndex`) from `main-footer-client.tsx` contacts block.
+
+---
+
 ## 4. Temporary Behavior Deviations
 
 ### 4.1 Billing Enforcement Runs But Does Not Block
@@ -409,7 +438,7 @@ Every entry must specify **what changed**, **why**, and **how to restore**.
 
 ## 8. Review Checklist (Post-Beta)
 
-- [ ] All feature gates reviewed (§3.1–3.6)
+- [ ] All feature gates reviewed (§3.1–3.7)
 - [ ] All behavior deviations reviewed (§4.1–4.2)
 - [ ] All UX/copy changes reviewed (§5.1)
 - [ ] All relaxed limits reviewed (§6.1)
