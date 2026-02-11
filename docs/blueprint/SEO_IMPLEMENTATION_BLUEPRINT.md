@@ -47,6 +47,8 @@ Wave 4 (Structured Data)        →  зависит от Wave 2 (SSR)           
                                     зависит от Wave 3 (slug URLs в JSON-LD)
 Wave 5 (Metadata & Schema       →  зависит от Wave 3 + Wave 4               ⏳ PENDING
          Hardening)                  БЛОКИРУЕТ Phase 2 Implementation
+Wave 6 (Search Console &        →  зависит от Wave 5                        ⏳ PENDING
+         Monitoring)                 БЛОКИРУЕТ declaring SEO production-ready
 ```
 
 ---
@@ -509,6 +511,37 @@ export default async function EventsPage({
 - View source → HTML содержит event cards
 - `tab=my` без auth → пустое состояние (не ошибка)
 - Фильтры работают после hydration
+
+---
+
+### Events Listing Non-Auth Safety Rule
+
+**Контекст:** Search engine crawlers access `/events` without authentication (`userId = null`). The page MUST render useful content for anonymous users.
+
+**Rules:**
+- When `userId` is `null`, the default filter MUST be `"upcoming"` (not `"my"` or any user-specific tab)
+- The listing MUST render public, upcoming events — search crawlers MUST see meaningful content
+- Empty state MUST NOT occur solely due to lack of authentication
+- If no upcoming events exist, a graceful empty state is acceptable (this is a data issue, not a rendering issue)
+
+**Rationale:** Prevents accidental empty rendering for Googlebot/Yandexbot. An empty page with only filter controls and no content will be interpreted as low-quality or doorway page by search engines.
+
+**Проверка:** `curl https://need4trip.app/events` (no auth cookie) → HTML contains event cards.
+
+---
+
+### `force-dynamic` Usage Policy for SEO Pages
+
+**Context:** TASK 2.3 uses `export const dynamic = "force-dynamic"` because `listVisibleEventsForUserPaginated()` accepts `userId` for visibility filtering.
+
+**Rule:**
+- `force-dynamic` is allowed **only if** content genuinely differs per user (e.g., visibility-restricted events)
+- If listing content is **identical** for anonymous users (which it is for `/events` with `tab=upcoming`), ISR is **preferred** over `force-dynamic` for SEO stability
+- `force-dynamic` prevents caching and increases TTFB — negatively impacting Core Web Vitals
+
+**Recommendation:** Consider refactoring `/events` to ISR with `revalidate = 60` for the default `tab=upcoming` view. Pass `userId = null` for the server-rendered initial load. Client-side refetch with actual `userId` after hydration.
+
+**Decision:** Deferred to implementation phase — document trade-off and measure TTFB before/after.
 
 ---
 
@@ -1531,9 +1564,78 @@ Replace all scattered `process.env.NEXT_PUBLIC_APP_URL` references with import f
 - `/events` MUST appear in `sitemap.xml`.
 - Missing any of the above is a **P0 defect**.
 
+**Performance Gate — /events Rendering Quality:**
+- `/events` MUST render meaningful HTML before hydration (server-rendered event cards).
+- No loading spinner as primary content on initial page load.
+- Largest Contentful Paint (LCP) element MUST be server-rendered (event list, not a skeleton).
+- Avoid layout shift caused by client-only filters replacing server-rendered content.
+- `curl https://need4trip.app/events` MUST return HTML containing event data (not an empty shell).
+- Violation is a **P1 defect** — degrades crawlability and user experience.
+
 ---
 
-## 9. Testing & Verification
+## 9. Wave 6 — Search Engine Verification & Monitoring (Operational)
+
+**Цель:** Подтвердить корректность SEO-имплементации через Search Console и установить мониторинг.  
+**Зависимости:** Wave 5 (все indexable pages должны быть production-ready)  
+**Статус:** PENDING  
+**Blocking:** Declaring SEO production-ready
+
+---
+
+### TASK 6.1 — Google Search Console Setup
+
+**Mandatory** before declaring SEO production-ready:
+
+1. **Domain property verification** for `need4trip.app`
+2. **Submit sitemap:** `https://need4trip.app/sitemap.xml`
+3. **URL Inspection** — verify indexability for:
+   - `/` (homepage)
+   - `/events` (events listing)
+   - 2 event entity pages (`/events/{slug}`)
+   - 2 club entity pages (`/clubs/{slug}`)
+4. **Confirm** that each inspected URL:
+   - Returns valid HTML with correct metadata
+   - JSON-LD (where applicable) is detected
+   - Canonical URL matches expectations
+   - No unexpected `noindex` directives
+
+**Проверка:** All 6 URLs pass URL Inspection without errors.
+
+---
+
+### TASK 6.2 — Coverage Expectations (Beta)
+
+Expected statuses in Google Search Console during beta:
+
+| Page | Expected Coverage Status |
+|------|------------------------|
+| `/` | Indexed |
+| `/events` | Indexed |
+| `/events/{slug}` | Indexed |
+| `/clubs/{slug}` | Indexed |
+| `/clubs` | Excluded by `noindex` tag |
+| `/pricing` | Excluded by `noindex` tag |
+
+**Rules:**
+- Any deviation from expected status MUST be investigated within 48 hours
+- `/events` appearing as "Excluded by noindex" is a **P0 incident** (means noindex was not removed)
+- `/clubs` or `/pricing` appearing as "Indexed" is a **P1 incident** (means noindex is missing)
+- Entity pages appearing as "Excluded" may indicate rendering or canonical issues
+
+---
+
+### TASK 6.3 — Ongoing Monitoring
+
+After initial verification:
+- Check Search Console **weekly** during first month post-launch
+- Review "Coverage" report for new errors/warnings
+- Monitor "Core Web Vitals" for `/events` (production-ready page)
+- Track "Sitemaps" report — ensure sitemap is successfully parsed
+
+---
+
+## 10. Testing & Verification
 
 ### Per-Wave Checklist
 
@@ -1608,7 +1710,7 @@ npm run build       # Production build ✅
 
 ---
 
-## 10. Files Affected (Complete Map)
+## 11. Files Affected (Complete Map)
 
 ### Wave 1 (8 tasks, ~10 файлов) ✅ DONE
 
@@ -1682,7 +1784,7 @@ npm run build       # Production build ✅
 
 ---
 
-## 11. Risks & Mitigations
+## 12. Risks & Mitigations
 
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
@@ -1695,7 +1797,7 @@ npm run build       # Production build ✅
 
 ---
 
-## 11. Open Decisions for Architect
+## 13. Open Decisions for Architect
 
 | # | Decision | Options | Recommendation |
 |---|----------|---------|----------------|
@@ -1707,7 +1809,7 @@ npm run build       # Production build ✅
 
 ---
 
-## 13. SSOT Compliance Matrix
+## 14. SSOT Compliance Matrix
 
 | SSOT Section | Requirement | Covered by Task(s) | Status |
 |-------------|-------------|---------------------|--------|
@@ -1746,7 +1848,7 @@ npm run build       # Production build ✅
 
 ---
 
-## 14. Timeline Estimate
+## 15. Timeline Estimate
 
 | Wave | Tasks | Estimate | Dependencies | Status |
 |------|-------|----------|--------------|--------|
@@ -1755,8 +1857,42 @@ npm run build       # Production build ✅
 | Wave 3 | TASK 3.1–3.10 | 7-10 дней | Blocks canonical + sitemap | ✅ DONE (2026-02-10) |
 | Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | ✅ DONE (2026-02-10) |
 | Wave 5 | TASK 5.1–5.14 | 4-5 дней | Wave 3 + Wave 4 + doc consolidation | ⏳ PENDING |
-| **Total** | **34 tasks** | **~16-22 рабочих дней** | | **Waves 1-4 DONE, Wave 5 PENDING** |
+| Wave 6 | TASK 6.1–6.3 | 1-2 дня | Wave 5 (all pages production-ready) | ⏳ PENDING |
+| **Total** | **37 tasks** | **~17-24 рабочих дней** | | **Waves 1-4 DONE, Waves 5-6 PENDING** |
 
 ---
 
-*Этот blueprint является NORMATIVE на время реализации. После завершения Wave 5 — перевести в ACCEPTED и архивировать при необходимости.*
+## 16. SEO Regression Guard Checklist (NORMATIVE)
+
+**Purpose:** Pre-deployment verification to prevent SEO regressions.
+
+**Before every deployment that touches SEO-relevant pages, run:**
+
+```bash
+# 1. Homepage — canonical present
+curl -s https://need4trip.app/ | grep -q 'rel="canonical"' && echo "✅ / canonical" || echo "❌ / canonical MISSING"
+
+# 2. /events — canonical present, NO noindex
+curl -s https://need4trip.app/events | grep -q 'rel="canonical"' && echo "✅ /events canonical" || echo "❌ /events canonical MISSING"
+curl -s https://need4trip.app/events | grep -q 'noindex' && echo "❌ /events has noindex!" || echo "✅ /events no noindex"
+
+# 3. /clubs — has noindex, follow
+curl -s https://need4trip.app/clubs | grep -q 'noindex' && echo "✅ /clubs noindex" || echo "❌ /clubs noindex MISSING"
+
+# 4. Event entity — JSON-LD present
+curl -s https://need4trip.app/events/{slug} | grep -q 'application/ld+json' && echo "✅ event JSON-LD" || echo "❌ event JSON-LD MISSING"
+
+# 5. Sitemap — contains /events, does NOT contain /clubs or /pricing
+curl -s https://need4trip.app/sitemap.xml | grep -q '/events<' && echo "✅ sitemap has /events" || echo "❌ sitemap MISSING /events"
+curl -s https://need4trip.app/sitemap.xml | grep -q '/clubs<' && echo "❌ sitemap has /clubs!" || echo "✅ sitemap no /clubs"
+curl -s https://need4trip.app/sitemap.xml | grep -q '/pricing<' && echo "❌ sitemap has /pricing!" || echo "✅ sitemap no /pricing"
+```
+
+**Rules:**
+- Failure in **any** item = **P0 defect** — deployment MUST be rolled back or fixed immediately
+- This checklist SHOULD be automated as part of CI/CD post-deploy smoke tests
+- Manual execution is acceptable during Wave 5; automation is a Wave 6 goal
+
+---
+
+*Этот blueprint является NORMATIVE на время реализации. После завершения Wave 6 — перевести в ACCEPTED и архивировать при необходимости.*
