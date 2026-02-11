@@ -1,8 +1,8 @@
 # Need4Trip — SSOT_ARCHITECTURE (Single Source of Truth)
 
 **Status:** 🟢 Production Ready  
-**Last Updated:** 2026-02-09  
-**Version:** 5.6  
+**Last Updated:** 2026-02-11  
+**Version:** 5.7  
 **Authority:** This document is the ONLY authoritative source for architectural decisions in Need4Trip.
 
 ---
@@ -129,6 +129,9 @@ Maintain an Ownership Map table (append-only; deprecations via archive):
 | Feedback submission + admin read | `lib/services/feedbackService.ts` → `submitFeedback()`, `getAdminFeedback()` |
 | SEO / OG metadata utilities | `lib/utils/text.ts` → `stripHtml()`, `truncateText()` |
 | SEO / OG metadata (per-page) | Page-level `generateMetadata` exports in `app/**/page.tsx` |
+| SEO metadata builder | `lib/seo/metadataBuilder.ts` (planned — centralizes title/description/OG generation) |
+| SEO schema builder (JSON-LD) | `lib/seo/schemaBuilder.ts` (planned — centralizes Event/Organization schema.org) |
+| Production base URL | `lib/config/runtimeConfig.ts` (planned — single source for `metadataBase`, sitemap, JSON-LD URLs) |
 
 ---
 
@@ -169,6 +172,33 @@ Allowed Edge use-cases (rare):
 All Edge usage must include:
 - explicit `runtime = 'edge'`
 - a justification note + dependency audit reference
+
+### 4.5 Middleware Runtime Constraints (NORMATIVE)
+
+Middleware (`src/middleware.ts`) runs on Edge Runtime by default in Next.js.
+
+**Hard constraints:**
+- Middleware MUST NOT import or call server-only modules (`lib/db/*`, `lib/services/*`, `lib/auth/*`)
+- Middleware MUST NOT perform database lookups (Supabase, PostgreSQL, or any persistent store)
+- Middleware MUST NOT import modules that transitively depend on Node.js-only APIs
+
+**Allowed operations:**
+- Pattern-based URL redirects (regex matching on pathname, no DB lookup)
+- Lightweight header manipulation (e.g., `X-Robots-Tag`, CORS preflight)
+- Cookie reading for auth token extraction (already implemented)
+- Rate limiting via in-memory or Edge-compatible stores only
+
+**Implication for SEO:** UUID → slug redirects that require slug lookup MUST be implemented at the **page level** (Server Component), not in middleware. Middleware MAY only perform pattern-based redirects (e.g., UUID format detection → generic redirect) without DB access.
+
+### 4.6 metadataBase Runtime Boundary
+
+The production base URL used for `metadataBase`, sitemap generation, JSON-LD `url` fields, and OG image absolute URLs MUST be owned by a canonical runtime configuration module.
+
+Rules:
+- The base URL MUST be resolved exactly once via a canonical configuration module (`lib/config/runtimeConfig.ts`)
+- Direct usage of `process.env.NEXT_PUBLIC_APP_URL` scattered across page files is DISCOURAGED
+- All URL construction that produces absolute public URLs MUST use the same canonical source
+- See SSOT_SEO.md §20 for the SEO-specific ownership rule
 
 ---
 
@@ -639,6 +669,7 @@ A PR is non-compliant if any item is violated.
 ---
 
 ## 21. Document History (Compressed)
+- v5.7 (2026-02-11): SEO ↔ Architecture consolidation. Added §3.2 SEO ownership modules (metadataBuilder, schemaBuilder, runtimeConfig). Added §4.5 Middleware Runtime Constraints (NORMATIVE) — DB lookups in middleware forbidden. Added §4.6 metadataBase Runtime Boundary. Cross-ref: SSOT_SEO.md §20, SEO_IMPLEMENTATION_BLUEPRINT Wave 5.
 - v5.6 (2026-02-09): Added §3.2 Ownership Map entries for SEO/OG metadata utilities (`lib/utils/text.ts`) and per-page `generateMetadata` pattern. Blueprint: `OG_SOCIAL_SHARING_BLUEPRINT.md`.
 - v5.5 (2026-02-02): Updated §8.3 Admin Context — Phase 3 (User-based Admin Extension). Added dual-path authentication: user-session (PRIMARY for Admin UI) and shared-secret (FALLBACK for ops). Cross-referenced ADMIN_UI_CONTRACT v1.0.
 - v5.4 (2026-02-02): Updated §8.3 Admin Context — Phase 2 with stable `actorId` and `admin_audit_log` attribution. Cross-referenced SSOT_ADMIN_AUDIT_RULES v1.0.

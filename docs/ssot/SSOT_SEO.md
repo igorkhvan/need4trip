@@ -3,6 +3,7 @@
 ---
 Status: ACCEPTED  
 Created: 2026-02-10  
+Updated: 2026-02-11  
 Author: Human Architect  
 Authority: NORMATIVE  
 Scope: SEO architecture, indexing policy, URL contracts, rendering rules  
@@ -69,7 +70,12 @@ Rules:
 
 Legacy UUID-based URLs MUST:
 - Be preserved temporarily
-- Issue permanent redirects (`301`) to canonical slug URLs
+- Issue permanent redirects (`301` or `308`) to canonical slug URLs
+
+Both `301 Moved Permanently` and `308 Permanent Redirect` are acceptable permanent redirect codes.
+- `301`: traditional permanent redirect; safe for GET requests
+- `308`: preserves HTTP method; used by Next.js `permanentRedirect()`
+- Implementation MAY use either, depending on runtime constraints (see SSOT_ARCHITECTURE.md §4.4)
 
 ---
 
@@ -147,15 +153,21 @@ This ensures:
 
 ### 5.2 robots.txt Policy
 
+During beta, listing pages MUST remain **crawlable** but MUST declare `noindex, follow` via meta robots (§5.3).
+
+robots.txt MUST NOT block listing pages that are intentionally marked `noindex, follow`. Blocking via robots.txt would prevent crawlers from seeing the `noindex` directive itself, and would also block PageRank flow through internal links on those pages.
+
 robots.txt MUST:
-- Allow crawling of public entity pages
-- Disallow listing pages during beta
+- Allow crawling of all public pages (entity pages AND listing pages)
 - Always disallow:
   - `/api/*`
   - `/admin/*`
-  - Auth-only or private routes
+  - Auth-only or private routes (e.g., `/profile/`, `/events/create`, `/clubs/create`)
 
-robots.txt changes are the **primary mechanism** for opening SEO after beta.
+**Rationale:**
+- Crawlability is required for PageRank flow and `noindex` directive discovery
+- Indexing is controlled exclusively via meta robots (§5.3), NOT via robots.txt Disallow
+- When beta ends, removing `noindex` from listing pages is the only change needed (no robots.txt modification required)
 
 ---
 
@@ -295,5 +307,308 @@ This SSOT:
 - May only be modified by a human architect
 - Requires explicit rationale for any change
 - MUST be updated in the same commit as SEO-affecting code changes
+
+---
+
+## 13. Metadata Patterns (NORMATIVE)
+
+### 13.1 Title Patterns
+
+All indexable pages MUST follow canonical title patterns:
+
+| Page Type | Pattern | Example |
+|-----------|---------|---------|
+| Homepage | `{Brand} — {Value Proposition}` | `Need4Trip — Автомобильные события и клубы Казахстана` |
+| Event detail | `{Event Title} — {City} \| Need4Trip` | `Оффроуд-выезд — Алматы \| Need4Trip` |
+| Club detail | `{Club Name} — Автоклуб в {City} \| Need4Trip` | `Nomad Offroad — Автоклуб в Алматы \| Need4Trip` |
+| Events listing | `События \| Need4Trip` | `События \| Need4Trip` |
+| Clubs listing | `Клубы \| Need4Trip` | `Клубы \| Need4Trip` |
+| Pricing | `Тарифы Need4Trip \| Need4Trip` | `Тарифы Need4Trip \| Need4Trip` |
+
+Rules:
+- Root layout `title.template` (`%s | Need4Trip`) is the canonical suffix mechanism
+- Homepage MAY override the template with a custom full title
+- Entity pages MUST include the entity name as the primary component
+- City MUST be included in title for event pages (when city is available)
+- If city is unavailable, omit the city segment (do NOT use placeholder)
+
+### 13.2 Description Rules
+
+All indexable pages MUST define a `description` meta tag.
+
+Rules:
+- Length: **120–160 characters** (MANDATORY range)
+- MUST include the primary keyword relevant to the page
+- MUST include city name for event detail pages (when available)
+- MUST NOT be generic or placeholder text on entity pages
+- MUST NOT exceed 200 characters (hard limit; truncation applied before render)
+- Entity pages MUST generate description dynamically from entity data
+- Static pages MAY use hardcoded descriptions but MUST meet length requirements
+
+Enforcement:
+- Description shorter than 120 characters is a **warning** (acceptable for edge cases)
+- Description longer than 200 characters is an **architectural defect**
+- Empty or missing description on an indexable page is an **architectural defect**
+
+### 13.3 OG & Social Preview Alignment Rule
+
+All indexable pages MUST maintain strict alignment between metadata and OG/Twitter tags:
+
+| Constraint | Rule |
+|------------|------|
+| OG title | MUST equal page `<title>` (without template suffix) |
+| OG description | MUST equal `<meta name="description">` content |
+| OG image | MUST be an absolute URL (resolved via `metadataBase`) |
+| Twitter title | MUST equal OG title |
+| Twitter description | MUST equal OG description |
+
+Rules:
+- No mismatch between `<title>`, `og:title`, and `twitter:title` is allowed
+- No mismatch between `<meta description>`, `og:description`, and `twitter:description` is allowed
+- Deviation is considered an **architectural defect**
+- OG images MUST specify `width` (1200), `height` (630), and `alt` text when possible
+- Entity pages MUST use entity-specific image if available (e.g., club logo)
+- Fallback image: `/og-default.png` (MUST exist in `public/`)
+
+### 13.4 H1 Enforcement Rule
+
+All indexable entity pages MUST follow H1 rules:
+
+Rules:
+- Exactly **one `<h1>`** per page (no more, no less)
+- H1 MUST match the entity title (for entity pages: event title, club name)
+- H1 MUST NOT contain marketing variations, taglines, or decorative text
+- Homepage H1 MAY be a marketing headline (exception: homepage is not an entity page)
+- Listing pages MUST have exactly one H1 describing the collection (e.g., "Все события", "Все клубы")
+
+Enforcement:
+- Multiple H1 tags on a single page is an **architectural defect**
+- H1 that does not match the entity title on an entity page is an **architectural defect**
+
+---
+
+## 14. Structured Data Validation (NORMATIVE)
+
+### 14.1 Rich Results Validation Requirement
+
+All JSON-LD structured data MUST pass the [Google Rich Results Test](https://search.google.com/test/rich-results).
+
+Rules:
+- JSON-LD that produces errors in the Rich Results Test is an **architectural defect**
+- JSON-LD that produces warnings SHOULD be resolved as P1.5 improvements
+- Validation MUST be performed after any change to structured data logic
+- Validation results SHOULD be documented in the PR description
+
+### 14.2 Mandatory Field Completeness
+
+#### Event Schema (`schema.org/Event`)
+
+| Field | Source | Required | Status |
+|-------|--------|----------|--------|
+| `@type` | `"Event"` | MANDATORY | ✅ Implemented |
+| `name` | `event.title` | MANDATORY | ✅ Implemented |
+| `description` | `stripHtml(event.description)` | MANDATORY | ✅ Implemented |
+| `startDate` | `event.dateTime` (ISO 8601) | MANDATORY | ✅ Implemented |
+| `eventStatus` | `EventScheduled` | MANDATORY | ✅ Implemented |
+| `eventAttendanceMode` | `OfflineEventAttendanceMode` | MANDATORY | ✅ Implemented |
+| `location` | Place with address/geo | MANDATORY (when available) | ✅ Implemented |
+| `organizer` | Person (owner name) | RECOMMENDED | ✅ Implemented |
+| `image` | club logo or default | MANDATORY | ✅ Implemented |
+| `url` | absolute slug URL | MANDATORY | ✅ Implemented |
+| `offers` | price + currency (paid events) | MANDATORY (when paid) | ✅ Implemented |
+| `isAccessibleForFree` | `true` (free events) | RECOMMENDED | ✅ Implemented |
+
+P1.5 Improvements (not yet implemented):
+- `endDate` — not available in DB schema; add when event end time is supported
+- `performer` — not applicable currently
+- `maximumAttendeeCapacity` — available as `maxParticipants`; add to schema
+- `remainingAttendeeCapacity` — derivable; add to schema
+
+#### Organization Schema (`schema.org/Organization`)
+
+| Field | Source | Required | Status |
+|-------|--------|----------|--------|
+| `@type` | `"Organization"` | MANDATORY | ✅ Implemented |
+| `name` | `club.name` | MANDATORY | ✅ Implemented |
+| `description` | `club.description` | RECOMMENDED | ✅ Implemented |
+| `logo` | `club.logoUrl` (absolute) | RECOMMENDED | ✅ Implemented |
+| `url` | absolute slug URL | MANDATORY | ✅ Implemented |
+| `address` | PostalAddress from cities | RECOMMENDED | ✅ Implemented |
+| `sameAs` | telegram, website URLs | RECOMMENDED | ✅ Implemented |
+
+P1.5 Improvements (not yet implemented):
+- `foundingDate` — not available in DB; add when club founding date is supported
+- `numberOfEmployees` → `memberCount` — not standard; consider `member` array
+- `areaServed` — derivable from cities; add for geo relevance
+
+### 14.3 Fallback Handling
+
+Rules:
+- If a MANDATORY field's source data is unavailable, the field MUST be omitted (not set to empty string or null)
+- Restricted events: JSON-LD MUST NOT be rendered (privacy policy)
+- Private clubs: JSON-LD MUST be minimal (name + url only)
+- JSON-LD MUST use absolute URLs for all URL fields (`url`, `image`, `logo`)
+- Relative `logoUrl` MUST be prefixed with `baseUrl` before inclusion in JSON-LD
+
+---
+
+## 15. Canonical Stability Rule (NORMATIVE)
+
+### 15.1 Canonical Persistence
+
+Rules:
+- Canonical URL MUST remain **stable** across the beta phase and beyond
+- Canonical URL MUST NOT change after initial publication of an entity
+- Any canonical URL change after publication is a **P0 incident** requiring redirect management
+
+### 15.2 Canonical–Sitemap Consistency
+
+Rules:
+- Every canonical URL MUST have a corresponding entry in `sitemap.xml`
+- Every `sitemap.xml` entry MUST match its page's canonical URL exactly
+- Mismatch between canonical and sitemap entry is an **architectural defect**
+
+### 15.3 Canonical Enforcement Checklist
+
+| Constraint | Rule |
+|------------|------|
+| Format | MUST be absolute URL (resolved via `metadataBase`) |
+| Uniqueness | Exactly one `<link rel="canonical">` per page |
+| UUID prohibition | Canonical MUST NOT contain UUID path segments |
+| Slug alignment | Canonical MUST use the slug-based URL |
+| Static pages | Static pages MUST define explicit canonical (e.g., `/events`, `/clubs`) |
+
+### 15.4 Current Canonical Coverage
+
+| Page | Canonical Defined | Status |
+|------|------------------|--------|
+| Homepage (`/`) | **NO** | ❌ GAP — MUST add `alternates.canonical: "/"` |
+| Events listing (`/events`) | **NO** | ❌ GAP — MUST add `alternates.canonical: "/events"` |
+| Clubs listing (`/clubs`) | **NO** | ❌ GAP — MUST add via layout or page metadata |
+| Pricing (`/pricing`) | **NO** | ❌ GAP — MUST add `alternates.canonical: "/pricing"` |
+| Event detail (`/events/{slug}`) | YES | ✅ OK |
+| Club detail (`/clubs/{slug}`) | YES | ✅ OK |
+
+---
+
+## 16. Sitemap Integrity Rule (NORMATIVE)
+
+### 16.1 Sitemap Content Rules
+
+Rules:
+- Sitemap MUST NOT include listing pages during beta (per §5.1 beta indexing policy)
+- Sitemap MUST NOT include private or restricted entities
+- Sitemap MUST use slug-based URLs only (no UUIDs)
+- Sitemap MUST use the canonical URL form for every entry
+- Sitemap entries MUST match the page's `<link rel="canonical">` exactly
+
+### 16.2 Current Sitemap Compliance
+
+| Rule | Status |
+|------|--------|
+| No listing pages during beta | ❌ GAP — `/events`, `/clubs`, `/pricing` are currently included |
+| No private entities | ✅ OK — filtered by `visibility: "public"` |
+| Slug-based URLs | ✅ OK — uses `event.slug` and `club.slug` |
+| Canonical URL form | ✅ OK — uses absolute URLs with `BASE_URL` |
+
+### 16.3 Sitemap–Robots Consistency
+
+Rules:
+- Pages disallowed in `robots.txt` SHOULD NOT appear in `sitemap.xml`
+- Pages with `noindex` meta robots SHOULD NOT appear in `sitemap.xml`
+- Inconsistency between robots policy and sitemap is a **warning** (not defect, but SHOULD be resolved)
+
+### 16.4 Sitemap Scalability
+
+Rules:
+- Sitemap implementation MUST use batched pagination or cursor-based iteration for entity queries
+- Loading an entire dataset into memory in a single query is FORBIDDEN
+- When entity count exceeds 5,000, sitemap MUST switch to `generateSitemaps()` (sitemap index) pattern
+- This is a **scalability requirement** — mandatory before entity count exceeds 5k
+
+---
+
+## 17. Pagination Canonical Policy (NORMATIVE)
+
+### 17.1 Pagination Canonicalization
+
+Paginated listing pages MUST **self-canonicalize** — each page is its own canonical.
+
+Rules:
+- `/events?page=2` → canonical: `/events?page=2`
+- `/events?page=1` → canonical: `/events` (page 1 canonicalizes to base URL)
+- Pagination MUST NOT canonicalize all pages to page 1
+- `rel="prev"` / `rel="next"` are DEFERRED (Google deprecated them, but may be useful for accessibility)
+
+**Rationale:** Each paginated page has unique content. Canonicalizing to page 1 would signal to search engines that pages 2+ are duplicates, causing content loss.
+
+**Beta exception:** During beta, listing pages are `noindex, follow` (§5.3). Pagination canonical rules still apply to ensure correct behavior when beta ends.
+
+---
+
+## 18. Query Parameter Normalization (NORMATIVE)
+
+### 18.1 SEO vs Non-SEO Parameters
+
+Query parameters fall into two categories:
+
+| Category | Parameters | Canonical Treatment |
+|----------|-----------|-------------------|
+| SEO-significant | `page` | Included in canonical |
+| Non-SEO (UI state) | `tab`, `sort`, `search`, `cityId`, `categoryId` | Excluded from canonical |
+
+### 18.2 Normalization Rules
+
+Rules:
+- Non-SEO parameters (sorting, UI state, tabs, filters) MUST canonicalize to the **base URL without those parameters**
+- Example: `/events?tab=upcoming` → canonical: `/events`
+- Example: `/events?sort=date&cityId=123` → canonical: `/events`
+- Example: `/events?page=2&sort=date` → canonical: `/events?page=2` (only `page` preserved)
+- Canonical URL MUST NOT include parameters that do not affect indexable content
+- Violation is considered an **architectural defect**
+
+**Rationale:** Non-SEO parameters create duplicate URLs for the same canonical content. Search engines waste crawl budget on parameter variants.
+
+---
+
+## 19. Trailing Slash Policy (NORMATIVE)
+
+### 19.1 Trailing Slash Rules
+
+Rules:
+- Canonical URLs MUST NOT include a trailing slash (except for root `/`)
+- Correct: `/events`, `/events/offroad-almaty-a1b2c3d4`, `/clubs/nomad-offroad`
+- Incorrect: `/events/`, `/events/offroad-almaty-a1b2c3d4/`, `/clubs/nomad-offroad/`
+- Application routing MUST enforce consistent non-trailing-slash policy
+- Next.js `trailingSlash: false` (default) MUST be maintained in `next.config.ts`
+- If a trailing-slash URL is accessed, it SHOULD redirect to the non-trailing-slash variant (Next.js handles this by default)
+
+### 19.2 Enforcement
+
+- Canonical URLs MUST be generated without trailing slash
+- Sitemap entries MUST NOT include trailing slash
+- Internal links MUST NOT include trailing slash
+- Violation is considered a **warning** (auto-corrected by Next.js, but should not appear in source code)
+
+---
+
+## 20. metadataBase Ownership Rule (NORMATIVE)
+
+### 20.1 Production Base URL
+
+The production base URL (`https://need4trip.kz`) MUST be owned by a **single canonical runtime configuration module**.
+
+Rules:
+- Root layout (`src/app/layout.tsx`) MUST define `metadataBase` using the canonical production base URL
+- The base URL MUST be sourced from a single configuration module (see SSOT_ARCHITECTURE.md §3.2)
+- Direct usage of `process.env.NEXT_PUBLIC_APP_URL` in page-level metadata is DISCOURAGED
+- All absolute URL construction (sitemap, JSON-LD, OG images) SHOULD use the same base URL source
+
+### 20.2 Resolution Order
+
+1. `process.env.NEXT_PUBLIC_APP_URL` (environment variable — deployment-specific)
+2. Fallback: `https://need4trip.kz` (hardcoded production default)
+
+This two-step resolution MUST be implemented exactly once in the canonical configuration module, not scattered across files.
 
 ---

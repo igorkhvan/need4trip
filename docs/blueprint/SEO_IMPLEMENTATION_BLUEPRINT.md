@@ -40,11 +40,13 @@ Audit Reference: docs/audits/SEO_AUDIT_REPORT.md
 Реализация разбита на 4 волны с учётом зависимостей между задачами.
 
 ```
-Wave 1 (Quick Wins)        →  нет зависимостей, можно параллельно
-Wave 2 (Rendering)         →  нет зависимостей с Wave 1
-Wave 3 (Slug Migration)    →  БЛОКИРУЕТ canonical URLs и sitemap
-Wave 4 (Structured Data)   →  зависит от Wave 2 (SSR)
-                               зависит от Wave 3 (slug URLs в JSON-LD)
+Wave 1 (Quick Wins)             →  нет зависимостей, можно параллельно       ✅ DONE
+Wave 2 (Rendering)              →  нет зависимостей с Wave 1                 ✅ DONE
+Wave 3 (Slug Migration)         →  БЛОКИРУЕТ canonical URLs и sitemap        ✅ DONE
+Wave 4 (Structured Data)        →  зависит от Wave 2 (SSR)                  ✅ DONE
+                                    зависит от Wave 3 (slug URLs в JSON-LD)
+Wave 5 (Metadata & Schema       →  зависит от Wave 3 + Wave 4               ⏳ PENDING
+         Hardening)                  БЛОКИРУЕТ Phase 2 Implementation
 ```
 
 ---
@@ -687,46 +689,41 @@ export default async function EventPage({
 
 ---
 
-### TASK 3.4 — 301 Redirects: UUID → Slug
+### TASK 3.4 — Permanent Redirects: UUID → Slug
 
-**Предпочтительный подход:** Middleware-level redirect (быстрее, Edge Runtime).
+**SSOT:** §3.1 — Legacy UUID URLs MUST issue permanent redirects (`301` or `308`)  
+**Architecture:** SSOT_ARCHITECTURE.md §4.5 — Middleware MUST NOT perform database lookups
 
-**Файл:** `src/middleware.ts`
+#### Redirect Mechanism (Decided)
 
-**Текущий matcher:** `/api/:path*`
+**Primary mechanism: Page-level redirect (Server Component)**
 
-**Обновлённый matcher:**
+Page-level `permanentRedirect()` in the `[slug]/page.tsx` Server Component is the **primary and recommended** redirect mechanism.
+
 ```typescript
-export const config = {
-  matcher: ['/api/:path*', '/events/:path*', '/clubs/:path*'],
-};
-```
-
-**Логика redirect в middleware:**
-```typescript
-// В middleware() function — ДО обработки API routes:
-const pathname = request.nextUrl.pathname;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Check if /events/{uuid} or /clubs/{uuid}
-const eventsMatch = pathname.match(/^\/events\/([^/]+)/);
-const clubsMatch = pathname.match(/^\/clubs\/([^/]+)/);
-
-if (eventsMatch && uuidPattern.test(eventsMatch[1])) {
-  // Lookup slug by UUID (lightweight DB call or cache)
-  const slug = await lookupEventSlug(eventsMatch[1]);
-  if (slug) {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname.replace(eventsMatch[1], slug);
-    return NextResponse.redirect(url, 301);
+// In events/[slug]/page.tsx — already implemented
+if (isUUID) {
+  const event = await getEventById(slug);
+  if (event?.slug) {
+    permanentRedirect(`/events/${event.slug}`);  // 308
   }
 }
-// Аналогично для clubs
 ```
 
-**Проблема:** Middleware работает на Edge Runtime — DB-запрос может быть дорогим. **Альтернатива:** page-level redirect (TASK 3.3) — проще, но не 301.
+**Why NOT middleware-level redirect:**
+- Middleware runs on Edge Runtime (per SSOT_ARCHITECTURE.md §4.4)
+- Middleware MUST NOT perform database lookups (per SSOT_ARCHITECTURE.md §4.5)
+- UUID → slug resolution requires a DB query to find the slug
+- This violates Edge Runtime constraints
 
-**Рекомендация:** Начать с page-level `permanentRedirect()` (308), добавить middleware 301 как оптимизацию позже.
+**Middleware redirect is allowed ONLY for:**
+- Pattern-based redirects that do NOT require DB lookup
+- Example: redirect trailing-slash URLs (handled by Next.js automatically)
+
+**Status codes:**
+- `permanentRedirect()` in Next.js emits `308 Permanent Redirect`
+- `308` is an acceptable permanent redirect per SSOT_SEO.md §3.1
+- `301` via middleware is NOT used (would require DB lookup, violating §4.5)
 
 ---
 
@@ -873,8 +870,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 **Нюансы:**
 - `listPublicEvents` и `listClubs` нужно проверить — возвращают ли они slug
-- Если > 50,000 URL — потребуется sitemap index (Next.js `generateSitemaps()`)
 - `slug` field должен быть в `EventListItem` и `DbClub` DTO
+
+**Scalability Requirement (NORMATIVE per SSOT_SEO.md §16.4):**
+- Sitemap implementation MUST use batched pagination or cursor-based iteration
+- Loading entire dataset in memory via unbounded `LIMIT` is FORBIDDEN
+- Current implementation uses `LIMIT 1000` / `LIMIT 500` — acceptable for current scale
+- When entity count exceeds 5,000: MUST switch to `generateSitemaps()` (sitemap index pattern)
+- This scalability gate is mandatory before production exceeds 5k entities
 
 **Проверка:** `curl https://need4trip.kz/sitemap.xml` → корректный XML.
 
@@ -1034,7 +1037,415 @@ const jsonLd = {
 
 ---
 
-## 8. Testing & Verification
+## 8. Wave 5 — Metadata & Schema Hardening
+
+**Цель:** Закрыть все gaps выявленные при аудите SSOT_SEO.md (секции 13–16).  
+**SSOT:** §13 (Metadata Patterns), §14 (Structured Data Validation), §15 (Canonical Stability), §16 (Sitemap Integrity)  
+**Оценка:** 2–3 дня  
+**Зависимости:** Wave 3 (slug URLs), Wave 4 (JSON-LD)  
+**Статус:** PENDING  
+**Blocking:** Phase 2 Implementation — Wave 5 MUST be completed before Phase 2
+
+---
+
+### TASK 5.1 — Standardize title pattern
+
+**SSOT:** §13.1 — Title Patterns
+
+**Текущее состояние:**
+
+| Page | Current Title | Expected (per §13.1) | Gap |
+|------|--------------|----------------------|-----|
+| Homepage | `"Need4Trip — Организация автомобильных событий"` | `"Need4Trip — Автомобильные события и клубы Казахстана"` | ❌ Title не отражает полный value proposition |
+| Event detail | `event.title` (без города) | `{Event Title} — {City} \| Need4Trip` | ❌ Город не включён в title |
+| Club detail | `club.name` (без контекста) | `{Club Name} — Автоклуб в {City} \| Need4Trip` | ❌ Тип и город не включены |
+| Events listing | `"События"` | `"События \| Need4Trip"` (via template) | ✅ OK (template добавляет суффикс) |
+| Clubs listing | Наследует от layout: `"Клубы"` | `"Клубы \| Need4Trip"` (via template) | ✅ OK |
+| Pricing | `"Тарифы Need4Trip"` | `"Тарифы Need4Trip \| Need4Trip"` (via template) | ⚠️ Дублирование бренда |
+
+**Действия:**
+
+1. **Homepage:** Обновить title в `src/app/(marketing)/page.tsx`:
+   ```
+   title: "Need4Trip — Автомобильные события и клубы Казахстана"
+   ```
+
+2. **Event detail:** Обновить `generateMetadata` в `src/app/(app)/events/[slug]/page.tsx`:
+   ```
+   title: cityName ? `${event.title} — ${cityName}` : event.title
+   ```
+
+3. **Club detail:** Обновить `generateMetadata` в `src/app/(app)/clubs/[slug]/page.tsx`:
+   ```
+   title: primaryCity ? `${club.name} — Автоклуб в ${primaryCity}` : club.name
+   ```
+
+4. **Pricing:** Оставить `"Тарифы Need4Trip"` — template добавит `| Need4Trip`, но это приемлемо для branding.
+
+**Проверка:** Все страницы соответствуют паттернам §13.1.
+
+---
+
+### TASK 5.2 — Standardize description generation
+
+**SSOT:** §13.2 — Description Rules
+
+**Текущее состояние:**
+
+| Page | Description Length | Contains City | Contains Keyword | Gap |
+|------|-------------------|---------------|------------------|-----|
+| Homepage | ~80 chars | Нет | Частично | ❌ Слишком короткая (<120) |
+| Event detail | Variable (truncated 200) | Да | Да | ⚠️ Max 200 > recommended 160 |
+| Club detail | Variable (truncated 200) | Да | Да | ⚠️ Max 200 > recommended 160 |
+| Events listing | ~52 chars | Нет | Да | ❌ Слишком короткая (<120) |
+| Clubs listing | ~55 chars | Нет | Да | ❌ Слишком короткая (<120) |
+| Pricing | ~55 chars | Нет | Да | ❌ Слишком короткая (<120) |
+
+**Действия:**
+
+1. **Homepage:** Расширить description до 120–160 символов:
+   ```
+   "Need4Trip — платформа для организации автомобильных событий и управления клубами в Казахстане. Создавайте поездки, собирайте экипажи."
+   ```
+
+2. **Events listing:** Расширить:
+   ```
+   "Автомобильные события и оффроуд-поездки в Казахстане. Выбирайте ближайшие мероприятия, регистрируйтесь и присоединяйтесь к экипажам."
+   ```
+
+3. **Clubs listing:** Расширить:
+   ```
+   "Автомобильные клубы Казахстана на Need4Trip. Найдите единомышленников, вступайте в клубы и участвуйте в совместных поездках."
+   ```
+
+4. **Pricing:** Расширить:
+   ```
+   "Тарифы и планы для автомобильных клубов на Need4Trip. Бесплатный старт, расширенные возможности для растущих клубов."
+   ```
+
+5. **Entity pages:** Изменить truncation с 200 → 160 для description meta, оставить 200 для OG description.
+
+**Проверка:** Все descriptions в диапазоне 120–160 символов.
+
+---
+
+### TASK 5.3 — Enforce canonical absolute URLs on all pages
+
+**SSOT:** §15.3 — Canonical Enforcement Checklist, §15.4 — Current Canonical Coverage
+
+**Текущее состояние:**
+- ✅ Event detail — canonical определён
+- ✅ Club detail — canonical определён
+- ❌ Homepage — canonical отсутствует
+- ❌ Events listing — canonical отсутствует
+- ❌ Clubs listing — canonical отсутствует
+- ❌ Pricing — canonical отсутствует
+
+**Действия:**
+
+1. **Homepage** (`src/app/(marketing)/page.tsx`):
+   ```typescript
+   export const metadata: Metadata = {
+     // ... existing fields
+     alternates: { canonical: "/" },
+   };
+   ```
+
+2. **Events listing** (`src/app/(app)/events/page.tsx`):
+   ```typescript
+   export const metadata: Metadata = {
+     // ... existing fields
+     alternates: { canonical: "/events" },
+   };
+   ```
+
+3. **Clubs listing** (`src/app/(app)/clubs/layout.tsx`):
+   ```typescript
+   export const metadata: Metadata = {
+     // ... existing fields
+     alternates: { canonical: "/clubs" },
+   };
+   ```
+
+4. **Pricing** (`src/app/(app)/pricing/page.tsx`):
+   ```typescript
+   export const metadata: Metadata = {
+     // ... existing fields
+     alternates: { canonical: "/pricing" },
+   };
+   ```
+
+**Проверка:** `<link rel="canonical" href="https://need4trip.kz/...">` на всех 6 indexable страницах.
+
+---
+
+### TASK 5.4 — Align OG with metadata
+
+**SSOT:** §13.3 — OG & Social Preview Alignment Rule
+
+**Текущее состояние:**
+
+| Page | OG title = title | OG desc = desc | OG image specs | Gap |
+|------|-----------------|----------------|----------------|-----|
+| Homepage | Inherits root | Inherits root | Root default | ⚠️ Нет явного OG override |
+| Event detail | ✅ | ✅ | No width/height/alt | ❌ Missing image specs |
+| Club detail | ✅ | ✅ | No width/height/alt | ❌ Missing image specs |
+| Events listing | Inherits root | Inherits root | Root default | ⚠️ Нет явного OG override |
+| Clubs listing | Inherits root | Inherits root | Root default | ⚠️ Нет явного OG override |
+| Pricing | Inherits root | Inherits root | Root default | ⚠️ Нет явного OG override |
+
+**Действия:**
+
+1. **Event detail OG image:** Добавить `width`, `height`, `alt` к OG image:
+   ```typescript
+   images: [{
+     url: ogImage,
+     width: 1200,
+     height: 630,
+     alt: event.title,
+   }],
+   ```
+
+2. **Club detail OG image:** Аналогично.
+
+3. **Static pages:** Добавить explicit OG overrides с title/description matching metadata:
+   - Homepage, Events listing, Clubs listing, Pricing
+
+4. **OG image `club.logoUrl` handling:** В event detail, проверить и обеспечить absolute URL:
+   ```typescript
+   const ogImage = event.club?.logoUrl
+     ? (event.club.logoUrl.startsWith("http") ? event.club.logoUrl : event.club.logoUrl)
+     : "/og-default.png";
+   ```
+   (Next.js resolves relative URLs via `metadataBase`, так что текущая реализация корректна)
+
+**Проверка:** OG Debugger (Facebook) / Twitter Card Validator — title/description/image корректны.
+
+---
+
+### TASK 5.5 — Validate JSON-LD against Rich Results Test
+
+**SSOT:** §14.1 — Rich Results Validation Requirement
+
+**Текущее состояние:**
+- ✅ Event JSON-LD реализован (schema.org/Event)
+- ✅ Organization JSON-LD реализован (schema.org/Organization)
+- ❓ Не валидировано через Google Rich Results Test
+
+**Действия:**
+
+1. **Deploy** текущую реализацию на staging/production.
+2. **Валидировать** через [Google Rich Results Test](https://search.google.com/test/rich-results):
+   - Проверить 2–3 event pages
+   - Проверить 2–3 club pages
+3. **Исправить** любые errors.
+4. **Документировать** warnings как P1.5 improvements.
+5. **Добавить** `maximumAttendeeCapacity` и `remainingAttendeeCapacity` к Event schema (P1.5).
+
+**Дополнительно — JSON-LD bug fix:**
+- Event `image` field: `event.club?.logoUrl` может быть external URL (Supabase storage). Текущий код делает `${baseUrl}${club.logoUrl}` — если `logoUrl` уже absolute, получится `https://need4trip.kzhttps://...`. Нужна проверка `startsWith("http")` как в Club JSON-LD.
+
+**Проверка:** Rich Results Test = 0 errors на всех entity pages.
+
+---
+
+### TASK 5.6 — Fix sitemap beta compliance
+
+**SSOT:** §16.1, §16.2 — Sitemap MUST NOT include listing pages during beta
+
+**Текущее состояние:**
+- ❌ Sitemap включает `/events`, `/clubs`, `/pricing` — нарушение §5.1 и §16.1
+
+**Действие:** Удалить listing pages из sitemap static pages array. Оставить только:
+```typescript
+const staticPages: MetadataRoute.Sitemap = [
+  {
+    url: BASE_URL,        // Homepage — indexable during beta
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: 1.0,
+  },
+  // /events, /clubs, /pricing — EXCLUDED during beta per SSOT §5.1
+];
+```
+
+**Проверка:** `curl https://need4trip.kz/sitemap.xml` — не содержит `/events`, `/clubs`, `/pricing`.
+
+---
+
+### TASK 5.7 — Fix notification URLs (UUID → slug)
+
+**SSOT:** §3.1 — All internal references MUST use canonical slug URLs
+
+**Текущее состояние:**
+- ❌ `src/lib/services/notifications.ts` uses `eventId` (UUID) in URLs (lines 75, 157, 265)
+- URLs: `${baseUrl}/events/${eventId}` — these go to slug-based routes and will 404
+
+**Действие:** Update notification URL generation to use event slug:
+- Pass `eventSlug` to notification functions alongside `eventId`
+- Generate URL as `${baseUrl}/events/${eventSlug}`
+
+**Проверка:** Telegram notification URLs use slug format.
+
+---
+
+### TASK 5.8 — Add Clubs listing page metadata
+
+**SSOT:** §6.1 — All indexable pages MUST define title, description, openGraph, twitter
+
+**Текущее состояние:**
+- ❌ `src/app/(app)/clubs/page.tsx` has NO metadata export
+- ⚠️ `src/app/(app)/clubs/layout.tsx` defines title + description + robots — BUT no openGraph/twitter
+- Net effect: Clubs listing inherits OG/twitter from root layout (generic, not page-specific)
+
+**Действие:** Add explicit openGraph and twitter to clubs layout metadata:
+```typescript
+export const metadata: Metadata = {
+  title: "Клубы",
+  description: "Автомобильные клубы Казахстана на Need4Trip...",
+  robots: { index: false, follow: true },
+  alternates: { canonical: "/clubs" },
+  openGraph: {
+    title: "Клубы",
+    description: "Автомобильные клубы Казахстана на Need4Trip...",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Клубы",
+    description: "Автомобильные клубы Казахстана на Need4Trip...",
+  },
+};
+```
+
+**Проверка:** `/clubs` has explicit OG tags in HTML.
+
+---
+
+### TASK 5.9 — Enforce canonical non-trailing slash
+
+**SSOT:** §19 — Trailing Slash Policy
+
+**Текущее состояние:** Next.js `trailingSlash` default is `false` — correct. But must verify:
+- No canonical URL in code includes trailing slash
+- No sitemap URL includes trailing slash
+- No internal `<Link>` includes trailing slash
+
+**Действие:** Audit and fix any trailing-slash URLs in metadata, sitemap, or links.
+
+**Проверка:** `rg 'canonical.*/$' src/` → 0 results (except root `/`).
+
+---
+
+### TASK 5.10 — Enforce pagination canonical rules
+
+**SSOT:** §17 — Pagination Canonical Policy
+
+**Текущее состояние:** Listing pages are ISR/SSR with `searchParams`. No pagination-specific canonical logic exists.
+
+**Действие:**
+1. For `/events?page=N` (N > 1) → canonical: `/events?page=N`
+2. For `/events?page=1` or `/events` (no page param) → canonical: `/events`
+3. Non-SEO params (`tab`, `sort`, `search`, `cityId`, `categoryId`) MUST be stripped from canonical
+
+**Проверка:** `/events?page=2` → `<link rel="canonical" href="https://need4trip.kz/events?page=2">`.
+
+---
+
+### TASK 5.11 — Enforce query normalization rules
+
+**SSOT:** §18 — Query Parameter Normalization
+
+**Текущее состояние:** Static `alternates.canonical` on listing pages does not account for query params.
+
+**Действие:** Convert listing page metadata from static `export const metadata` to dynamic `generateMetadata()` that:
+1. Reads `searchParams`
+2. Preserves only SEO-significant params (currently only `page`)
+3. Constructs canonical from base path + SEO params only
+
+**Проверка:** `/events?tab=upcoming&sort=date` → canonical: `/events`.
+
+---
+
+### TASK 5.12 — Centralize metadata builder
+
+**SSOT:** SSOT_ARCHITECTURE.md §3.2 — Ownership: `lib/seo/metadataBuilder.ts`
+
+**Текущее состояние:** Metadata construction is scattered across 6+ page files with inline string building.
+
+**Действие:** Create `lib/seo/metadataBuilder.ts` with:
+- `buildEventMetadata(event, slug)` → returns `Metadata` object
+- `buildClubMetadata(club, slug)` → returns `Metadata` object
+- `buildStaticPageMetadata(config)` → returns `Metadata` object
+- Enforce title patterns (§13.1), description length (§13.2), OG alignment (§13.3) centrally
+
+**Проверка:** All `generateMetadata` functions delegate to centralized builder.
+
+---
+
+### TASK 5.13 — Centralize schema builder
+
+**SSOT:** SSOT_ARCHITECTURE.md §3.2 — Ownership: `lib/seo/schemaBuilder.ts`
+
+**Текущее состояние:** JSON-LD construction is inline in page components (~60 lines each in event/club pages).
+
+**Действие:** Create `lib/seo/schemaBuilder.ts` with:
+- `buildEventJsonLd(event, ownerUser, baseUrl)` → returns JSON-LD object or null
+- `buildOrganizationJsonLd(club, baseUrl)` → returns JSON-LD object
+- Centralize absolute URL construction, fallback logic, privacy rules
+
+**Проверка:** Page components import and call builder functions instead of inline construction.
+
+---
+
+### TASK 5.14 — Centralize runtime config (production base URL)
+
+**SSOT:** SSOT_ARCHITECTURE.md §4.6, SSOT_SEO.md §20
+
+**Текущее состояние:** `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"` is repeated in:
+- `src/app/layout.tsx` (metadataBase)
+- `src/app/sitemap.ts` (BASE_URL)
+- `src/app/robots.ts` (baseUrl)
+- `src/app/(app)/events/[slug]/page.tsx` (baseUrl for JSON-LD)
+- `src/app/(app)/clubs/[slug]/page.tsx` (baseUrl for JSON-LD)
+- `src/lib/services/notifications.ts` (baseUrl)
+
+**Действие:** Create `lib/config/runtimeConfig.ts`:
+```typescript
+export const PRODUCTION_BASE_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+```
+Replace all scattered `process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"` with import from this module.
+
+**Проверка:** `rg 'process\.env\.NEXT_PUBLIC_APP_URL.*need4trip' src/` → only `lib/config/runtimeConfig.ts`.
+
+---
+
+### Wave 5 Summary
+
+| Task | Description | SSOT Section | Priority | Category |
+|------|-------------|-------------|----------|----------|
+| 5.1 | Standardize title patterns | §13.1 | P1 | Metadata |
+| 5.2 | Standardize description generation | §13.2 | P1 | Metadata |
+| 5.3 | Enforce canonical on all pages | §15.3, §15.4 | P1 | Canonical |
+| 5.4 | Align OG with metadata | §13.3 | P1 | Metadata |
+| 5.5 | Validate JSON-LD (Rich Results Test) | §14.1 | P1 | Schema |
+| 5.6 | Fix sitemap beta compliance | §16.1, §16.2 | P1 | Sitemap |
+| 5.7 | Fix notification URLs (UUID → slug) | §3.1 | P0 | URL |
+| 5.8 | Add Clubs listing metadata | §6.1 | P1 | Metadata |
+| 5.9 | Enforce non-trailing slash | §19 | P1 | Canonical |
+| 5.10 | Enforce pagination canonical | §17 | P1 | Canonical |
+| 5.11 | Enforce query normalization | §18 | P1 | Canonical |
+| 5.12 | Centralize metadata builder | ARCH §3.2 | P1 | Architecture |
+| 5.13 | Centralize schema builder | ARCH §3.2 | P1 | Architecture |
+| 5.14 | Centralize runtime config | ARCH §4.6, SEO §20 | P1 | Architecture |
+
+**Status:** PENDING  
+**Blocking:** Phase 2 Implementation — MUST be completed first  
+**Note:** Tasks 5.9–5.14 added during SEO ↔ Architecture consolidation (2026-02-11)
+
+---
+
+## 9. Testing & Verification
 
 ### Per-Wave Checklist
 
@@ -1075,6 +1486,30 @@ const jsonLd = {
 - [ ] Google Rich Results Test: Event — valid (TODO: verify after deploy)
 - [ ] Google Rich Results Test: Organization — valid (TODO: verify after deploy)
 
+**Wave 5 — Metadata & Schema Hardening:**
+- [ ] Homepage title updated per §13.1
+- [ ] Event detail title includes city per §13.1
+- [ ] Club detail title includes city + type per §13.1
+- [ ] All descriptions 120–160 chars per §13.2
+- [ ] Canonical `<link>` on all 6 indexable pages per §15.3
+- [ ] OG title/description matches metadata per §13.3
+- [ ] OG images include width/height/alt per §13.3
+- [ ] Sitemap excludes listing pages per §16.1
+- [ ] Notification URLs use slugs per §3.1
+- [ ] Clubs listing has explicit OG/Twitter per §6.1
+- [ ] JSON-LD passes Google Rich Results Test per §14.1
+
+**Wave 5 — Architecture Compliance:**
+- [ ] No trailing slash in any canonical URL per §19
+- [ ] Paginated pages self-canonicalize per §17
+- [ ] Non-SEO query params stripped from canonical per §18
+- [ ] `lib/seo/metadataBuilder.ts` created and used per ARCH §3.2
+- [ ] `lib/seo/schemaBuilder.ts` created and used per ARCH §3.2
+- [ ] `lib/config/runtimeConfig.ts` created, all base URL references centralized per ARCH §4.6
+- [ ] Middleware contains NO database imports per ARCH §4.5
+- [ ] `npx tsc --noEmit` ✅
+- [ ] `npm run build` ✅
+
 ### Build Verification (MANDATORY per SSOT)
 
 ```bash
@@ -1084,7 +1519,7 @@ npm run build       # Production build ✅
 
 ---
 
-## 9. Files Affected (Complete Map)
+## 10. Files Affected (Complete Map)
 
 ### Wave 1 (8 tasks, ~10 файлов) ✅ DONE
 
@@ -1122,7 +1557,7 @@ npm run build       # Production build ✅
 | 3.2 | Repository | `eventRepo.ts`, `clubRepo.ts` |
 | 3.3 | Routing | `events/[id]/*` → `events/[slug]/*` (rename 4+ dirs) |
 | 3.3 | Routing | `clubs/[id]/*` → `clubs/[slug]/*` (rename 6+ dirs) |
-| 3.4 | Middleware | `middleware.ts` (edit matcher + redirect logic) |
+| 3.4 | Page-level redirect | `events/[slug]/page.tsx`, `clubs/[slug]/page.tsx` (UUID detection + permanentRedirect) |
 | 3.5 | URL refs | ~45 files with `/events/${id}` or `/clubs/${id}` |
 | 3.6 | Metadata | All page files with `generateMetadata` |
 | 3.7 | Sitemap | `src/app/sitemap.ts` (create) |
@@ -1134,9 +1569,31 @@ npm run build       # Production build ✅
 | 4.1 | `src/app/(app)/events/[slug]/page.tsx` | Edit (add JSON-LD) |
 | 4.2 | `src/app/(app)/clubs/[slug]/page.tsx` | Edit (add JSON-LD) |
 
+### Wave 5 (14 tasks, ~15+ файлов) — PENDING
+
+| Task | File | Action |
+|------|------|--------|
+| 5.1 | `src/app/(marketing)/page.tsx` | Edit (title pattern) |
+| 5.1 | `src/app/(app)/events/[slug]/page.tsx` | Edit (title: add city) |
+| 5.1 | `src/app/(app)/clubs/[slug]/page.tsx` | Edit (title: add city + type) |
+| 5.2 | Multiple pages | Edit (expand descriptions to 120–160 chars) |
+| 5.3 | 4 static pages | Edit (add `alternates.canonical`) |
+| 5.4 | Event/Club detail pages | Edit (OG image specs: width/height/alt) |
+| 5.5 | Event detail page | Edit (JSON-LD image absolute URL fix) |
+| 5.6 | `src/app/sitemap.ts` | Edit (remove listing pages for beta) |
+| 5.7 | `src/lib/services/notifications.ts` | Edit (UUID → slug in URLs) |
+| 5.8 | `src/app/(app)/clubs/layout.tsx` | Edit (add explicit OG/Twitter) |
+| 5.9 | All pages with canonical | Audit (no trailing slash in canonical) |
+| 5.10 | `src/app/(app)/events/page.tsx` | Edit (pagination canonical via generateMetadata) |
+| 5.11 | `src/app/(app)/events/page.tsx` | Edit (query param normalization) |
+| 5.12 | `src/lib/seo/metadataBuilder.ts` | **Create** (centralized metadata builder) |
+| 5.13 | `src/lib/seo/schemaBuilder.ts` | **Create** (centralized JSON-LD builder) |
+| 5.14 | `src/lib/config/runtimeConfig.ts` | **Create** (centralized base URL) |
+| 5.14 | 6+ files with `process.env.NEXT_PUBLIC_APP_URL` | Edit (replace with import) |
+
 ---
 
-## 10. Risks & Mitigations
+## 11. Risks & Mitigations
 
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
@@ -1154,37 +1611,53 @@ npm run build       # Production build ✅
 | # | Decision | Options | Recommendation |
 |---|----------|---------|----------------|
 | D-01 | Кириллица vs transliteration в slugs | A: кириллица, B: transliteration | A (кириллица) — целевая аудитория |
-| D-02 | Redirect code: 301 vs 308 | A: middleware 301, B: page-level 308 | B first, A as optimization |
+| D-02 | Redirect code: 301 vs 308 | A: middleware 301, B: page-level 308 | **DECIDED: B (page-level 308)**. Middleware 301 is prohibited per ARCH §4.5 (requires DB lookup). Both 301/308 are acceptable per SSOT_SEO §3.1. |
 | D-03 | Event slug uniqueness suffix | A: short-UUID, B: date, C: incremental | A (short-UUID) |
 | D-04 | sr-only vs hidden для beta links | A: sr-only, B: CSS hidden, C: aria-hidden | A (sr-only) — лучше для crawlers |
 | D-05 | Slug column: allow NULL initially? | A: NOT NULL + backfill, B: NULL + gradual | A (atomic migration) |
 
 ---
 
-## 12. SSOT Compliance Matrix
+## 13. SSOT Compliance Matrix
 
-| SSOT Section | Requirement | Covered by Task(s) |
-|-------------|-------------|---------------------|
-| §3.1 Slug URLs | Slug-based URLs for events/clubs | 3.1, 3.2, 3.3, 3.5 |
-| §3.1 301 Redirects | UUID → slug permanent redirect | 3.4 |
-| §3.1 Immutable slugs | Slugs never change after creation | 3.2 (generation logic) |
-| §3.2 Canonical URLs | Absolute canonical on all pages | 3.6 |
-| §4.1 SSR/ISR | No CSR for indexable content | 2.1, 2.2, 2.3 |
-| §4.2 Strategy | ISR for listings, SSR for detail | 2.1–2.3 |
-| §5.1 Beta indexing | Only homepage + entity detail | 1.3, 3.7 |
-| §5.2 robots.txt | Allow entities, disallow API/admin | 1.2 |
-| §5.3 Meta robots | noindex+follow on listings (beta) | 1.3 |
-| §5.4 Sitemap | Dynamic, slug-based, canonical only | 3.7 |
-| §6.1 Metadata | title+desc+OG+twitter on all pages | 1.4, existing |
-| §6.2 Language | `lang="ru-KZ"` | 1.1 |
-| §7.1 Event JSON-LD | Event schema.org | 4.1 |
-| §7.1 Org JSON-LD | Organization schema.org | 4.2 |
-| §8 Internal links | Event→Club, crawlable graph | 1.5, 1.6, 1.8 |
-| §8 DOM preservation | Hidden UI keeps links in DOM | 1.8 |
+| SSOT Section | Requirement | Covered by Task(s) | Status |
+|-------------|-------------|---------------------|--------|
+| §3.1 Slug URLs | Slug-based URLs for events/clubs | 3.1, 3.2, 3.3, 3.5 | ✅ Done |
+| §3.1 301 Redirects | UUID → slug permanent redirect | 3.4 | ⚠️ Partial (notifications still use UUID → 5.7) |
+| §3.1 Immutable slugs | Slugs never change after creation | 3.2 (generation logic) | ✅ Done |
+| §3.2 Canonical URLs | Absolute canonical on all pages | 3.6, **5.3** | ❌ Gap (4 static pages missing → 5.3) |
+| §4.1 SSR/ISR | No CSR for indexable content | 2.1, 2.2, 2.3 | ✅ Done |
+| §4.2 Strategy | ISR for listings, SSR for detail | 2.1–2.3 | ✅ Done |
+| §5.1 Beta indexing | Only homepage + entity detail | 1.3, 3.7, **5.6** | ❌ Gap (sitemap includes listing pages → 5.6) |
+| §5.2 robots.txt | Allow entities, disallow API/admin | 1.2 | ✅ Done |
+| §5.3 Meta robots | noindex+follow on listings (beta) | 1.3 | ✅ Done |
+| §5.4 Sitemap | Dynamic, slug-based, canonical only | 3.7, **5.6** | ❌ Gap (listing pages in sitemap → 5.6) |
+| §6.1 Metadata | title+desc+OG+twitter on all pages | 1.4, **5.2, 5.4, 5.8** | ❌ Gap (clubs listing missing OG/Twitter → 5.8) |
+| §6.2 Language | `lang="ru-KZ"` | 1.1 | ✅ Done |
+| §7.1 Event JSON-LD | Event schema.org | 4.1 | ✅ Done (validation pending → 5.5) |
+| §7.1 Org JSON-LD | Organization schema.org | 4.2 | ✅ Done (validation pending → 5.5) |
+| §8 Internal links | Event→Club, crawlable graph | 1.5, 1.6, 1.8 | ✅ Done |
+| §8 DOM preservation | Hidden UI keeps links in DOM | 1.8 | ✅ Done |
+| §13.1 Title patterns | Standardized title patterns | **5.1** | ❌ Gap (city not in entity titles) |
+| §13.2 Description rules | 120–160 char descriptions | **5.2** | ❌ Gap (static pages too short) |
+| §13.3 OG alignment | OG matches metadata | **5.4** | ❌ Gap (missing image specs) |
+| §13.4 H1 enforcement | One H1 matching entity title | — | ✅ OK (verified in audit) |
+| §14.1 Rich Results | JSON-LD passes Rich Results Test | **5.5** | ❓ Pending validation |
+| §14.2 Field completeness | Mandatory fields present | 4.1, 4.2 | ✅ Done |
+| §15 Canonical stability | Canonical stable after publication | **5.3** | ❌ Gap (4 pages missing canonical) |
+| §16 Sitemap integrity | Sitemap matches indexing policy | **5.6** | ❌ Gap (listing pages included) |
+| §16.4 Sitemap scalability | Batched pagination for sitemap | **5.6** | ⚠️ Acceptable now (<5k), gate documented |
+| §17 Pagination canonical | Paginated pages self-canonicalize | **5.10** | ❌ Gap (not implemented) |
+| §18 Query normalization | Non-SEO params stripped from canonical | **5.11** | ❌ Gap (not implemented) |
+| §19 Trailing slash | No trailing slash in canonical | **5.9** | ❓ Needs audit |
+| §20 metadataBase ownership | Centralized base URL config | **5.14** | ❌ Gap (scattered across 6+ files) |
+| ARCH §3.2 metadata builder | Centralized metadata construction | **5.12** | ❌ Gap (inline in page files) |
+| ARCH §3.2 schema builder | Centralized JSON-LD construction | **5.13** | ❌ Gap (inline in page files) |
+| ARCH §4.5 Middleware | No DB lookups in middleware | 3.4 (clarified) | ✅ Done (page-level redirect used) |
 
 ---
 
-## 13. Timeline Estimate
+## 14. Timeline Estimate
 
 | Wave | Tasks | Estimate | Dependencies | Status |
 |------|-------|----------|--------------|--------|
@@ -1192,8 +1665,9 @@ npm run build       # Production build ✅
 | Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | ✅ DONE (2026-02-10) |
 | Wave 3 | TASK 3.1–3.10 | 7-10 дней | Blocks canonical + sitemap | ✅ DONE (2026-02-10) |
 | Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | ✅ DONE (2026-02-10) |
-| **Total** | **20 tasks** | **~12-17 рабочих дней** | | **ALL WAVES DONE** |
+| Wave 5 | TASK 5.1–5.14 | 4-5 дней | Wave 3 + Wave 4 + doc consolidation | ⏳ PENDING |
+| **Total** | **34 tasks** | **~16-22 рабочих дней** | | **Waves 1-4 DONE, Wave 5 PENDING** |
 
 ---
 
-*Этот blueprint является NORMATIVE на время реализации. После завершения — перевести в ACCEPTED и архивировать при необходимости.*
+*Этот blueprint является NORMATIVE на время реализации. После завершения Wave 5 — перевести в ACCEPTED и архивировать при необходимости.*
