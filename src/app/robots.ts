@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
 
 /**
  * Dynamic robots.txt generation
@@ -11,8 +12,7 @@ import type { MetadataRoute } from "next";
  * @see docs/ssot/SSOT_SEO.md §5.2
  */
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
+  const baseUrl = getPublicBaseUrl();
 
   return {
     rules: [

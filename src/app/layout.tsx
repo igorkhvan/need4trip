@@ -9,6 +9,7 @@ import { SuspendedAccountProvider } from "@/components/suspended/SuspendedAccoun
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ScrollRestorationProvider } from "@/app/scroll-restoration-provider";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { FeedbackWidget } from "@/components/feedback/feedback-widget";
@@ -20,7 +21,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz"),
+  metadataBase: new URL(getPublicBaseUrl()),
   title: {
     default: "Need4Trip",
     template: "%s | Need4Trip",

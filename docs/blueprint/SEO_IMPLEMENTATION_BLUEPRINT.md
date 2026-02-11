@@ -9,6 +9,35 @@ SSOT Reference: docs/ssot/SSOT_SEO.md
 Audit Reference: docs/audits/SEO_AUDIT_REPORT.md  
 ---
 
+## 0. Audit Notes (2026-02-11)
+
+> **⚠️ CRITICAL: Domain Discrepancy**
+>
+> SSOT_SEO.md §20 и данный Blueprint указывают canonical production domain как `https://need4trip.app`.
+> Однако **весь код** использует fallback `https://need4trip.kz`:
+> - `src/app/layout.tsx` (metadataBase)
+> - `src/app/robots.ts`
+> - `src/app/sitemap.ts`
+> - `src/app/(app)/events/[slug]/page.tsx` (JSON-LD)
+> - `src/app/(app)/clubs/[slug]/page.tsx` (JSON-LD)
+> - `src/lib/services/notifications.ts`
+> - `src/components/clubs/clubs-page-client.tsx`
+> - `src/lib/http/internalApiFetch.ts`
+>
+> **Требуется решение архитектора:** Какой домен является canonical production URL?
+> Если `need4trip.app` — код должен быть обновлён. Если `need4trip.kz` — SSOT и Blueprint должны быть обновлены.
+> До разрешения: все SEO artifacts (sitemap, canonical, JSON-LD) могут указывать на неверный домен.
+
+> **⚠️ AUDIT SUMMARY:**
+> - **Wave 1:** ⚠️ PARTIAL — Task 1.3 `/events` noindex не убран (P0)
+> - **Wave 2:** ✅ DONE
+> - **Wave 3:** ⚠️ PARTIAL — Task 3.4 UUID→slug redirect не реализован (P0); Task 3.7 sitemap включает noindex-страницы
+> - **Wave 4:** ✅ DONE
+> - **Wave 5–6:** ⏳ PENDING
+> - Подробности — см. аудит-ноты у каждой задачи ниже.
+
+---
+
 ## 1. Цель
 
 Реализовать требования SSOT_SEO.md в кодовой базе Need4Trip.
@@ -40,9 +69,9 @@ Audit Reference: docs/audits/SEO_AUDIT_REPORT.md
 Реализация разбита на 4 волны с учётом зависимостей между задачами.
 
 ```
-Wave 1 (Quick Wins)             →  нет зависимостей, можно параллельно       ✅ DONE
+Wave 1 (Quick Wins)             →  нет зависимостей, можно параллельно       ⚠️ PARTIAL (1.3 /events noindex не убран)
 Wave 2 (Rendering)              →  нет зависимостей с Wave 1                 ✅ DONE
-Wave 3 (Slug Migration)         →  БЛОКИРУЕТ canonical URLs и sitemap        ✅ DONE
+Wave 3 (Slug Migration)         →  БЛОКИРУЕТ canonical URLs и sitemap        ⚠️ PARTIAL (3.4 redirect не реализован, 3.7 sitemap gaps)
 Wave 4 (Structured Data)        →  зависит от Wave 2 (SSR)                  ✅ DONE
                                     зависит от Wave 3 (slug URLs в JSON-LD)
 Wave 5 (Metadata & Schema       →  зависит от Wave 3 + Wave 4               ⏳ PENDING
@@ -53,7 +82,7 @@ Wave 6 (Search Console &        →  зависит от Wave 5                 
 
 ---
 
-## 4. Wave 1 — Quick Wins ✅ COMPLETED
+## 4. Wave 1 — Quick Wins ⚠️ PARTIAL
 
 **Цель:** Закрыть тривиальные gaps за один PR.  
 **Оценка:** 3-4 часа  
@@ -119,19 +148,33 @@ export default function robots(): MetadataRoute.Robots {
 
 ---
 
-### TASK 1.3 — Meta robots на listing-страницах (beta) ✅ → UPDATED
+### TASK 1.3 — Meta robots на listing-страницах (beta) ⚠️ PARTIAL
 
 **SSOT:** §5.3 — `/events` is indexable; `/clubs` and `/pricing` MUST declare `noindex, follow`
 
+> **⚠️ AUDIT 2026-02-11:** Код НЕ соответствует blueprint. `/events` в коде имеет `robots: { index: false, follow: true }` — это **P0 дефект**. Blueprint описывал целевое состояние, но реализация не была завершена. `/events` MUST NOT declare `noindex` per SSOT §5.1.
+
 **Файлы и изменения:**
 
-**`src/app/(app)/events/page.tsx`:**
+**`src/app/(app)/events/page.tsx` — ЦЕЛЕВОЕ (не реализовано):**
 ```typescript
 export const metadata: Metadata = {
   title: "События",
   description: "Ближайшие автомобильные события и оффроуд-поездки",
   // NOTE: /events is indexable (production-ready per §5.1).
   // Do NOT add robots: { index: false }.
+};
+```
+
+**`src/app/(app)/events/page.tsx` — ФАКТИЧЕСКОЕ (P0 BUG):**
+```typescript
+export const metadata: Metadata = {
+  title: "События",
+  description: "Ближайшие автомобильные события и оффроуд-поездки",
+  robots: {
+    index: false,  // ← P0: НАРУШАЕТ SSOT §5.1
+    follow: true,
+  },
 };
 ```
 
@@ -545,12 +588,17 @@ export default async function EventsPage({
 
 ---
 
-## 6. Wave 3 — Slug Migration
+## 6. Wave 3 — Slug Migration ⚠️ PARTIAL
 
 **Цель:** URL-схема на slug вместо UUID.  
 **SSOT:** §3.1, §3.2  
 **Оценка:** 7-10 дней  
 **Зависимости:** БЛОКИРУЕТ canonical URLs (§3.2) и sitemap (§5.4)
+
+> **⚠️ AUDIT 2026-02-11:** Wave 3 помечена DONE, но содержит незавершённые задачи:
+> - **Task 3.4** (UUID→slug redirect) — **НЕ реализован**. UUID в URL → 404.
+> - **Task 3.7** (sitemap) — создан, но включает `/clubs` и `/pricing` (noindex pages), нарушая SSOT §5.4 и §16.1. Также НЕ использует batched pagination (§16.4).
+> - **`create-event-client.tsx:201`** — fallback `router.push(/events/${createdEvent.id})` использует UUID.
 
 ### Архитектурные решения
 
@@ -590,16 +638,22 @@ function generateEventSlug(title: string, id: string): string {
 
 #### 6.2 Кириллица в slug
 
-**Решение:** Разрешить кириллицу в slug.
+**Решение:** ~~Разрешить кириллицу в slug.~~ **DECIDED: Transliteration (ASCII slugs).**
 
-Обоснование:
-- Целевая аудитория — русскоязычные пользователи
-- Google и Yandex корректно индексируют кириллические URL
-- Transliteration (оффроуд → offroad) теряет смысл для целевой аудитории
-- URL encoding: браузеры отображают кириллицу, но передают как `%D0%...` — допустимо
+> **AUDIT 2026-02-11:** При реализации выбран вариант B — transliteration. Реализован модуль `src/lib/utils/slug.ts` с функцией `transliterate()`, которая конвертирует кириллицу в латиницу перед генерацией slug. Все slugs — ASCII-only.
+>
+> Пример: "Оффроуд-выезд Алматы" → `offroad-vyezd-almaty-a1b2c3d4`
 
-**Альтернативный вариант (если архитектор предпочтёт ASCII):**
-Добавить transliteration: `кириллица → latinica` через маппинг символов.
+~~Обоснование:~~
+~~- Целевая аудитория — русскоязычные пользователи~~
+~~- Google и Yandex корректно индексируют кириллические URL~~
+~~- Transliteration (оффроуд → offroad) теряет смысл для целевой аудитории~~
+~~- URL encoding: браузеры отображают кириллицу, но передают как `%D0%...` — допустимо~~
+
+**Фактическое решение (transliteration):**
+- ASCII slugs лучше совместимы с email-клиентами, мессенджерами и копированием URL
+- `src/lib/utils/slug.ts` содержит маппинг кириллица → латиница
+- Функция `generateSlug(title, id)` — единственная точка генерации slug
 
 ---
 
@@ -734,19 +788,24 @@ export default async function EventPage({
 
 ---
 
-### TASK 3.4 — Permanent Redirects: UUID → Slug
+### TASK 3.4 — Permanent Redirects: UUID → Slug ❌ NOT IMPLEMENTED
 
 **SSOT:** §3.1 — Legacy UUID URLs MUST issue permanent redirects (`301` or `308`)  
 **Architecture:** SSOT_ARCHITECTURE.md §4.5 — Middleware MUST NOT perform database lookups
 
-#### Redirect Mechanism (Decided)
+> **⚠️ AUDIT 2026-02-11:** Redirect logic described below **НЕ реализован** в коде.
+> `events/[slug]/page.tsx` и `clubs/[slug]/page.tsx` вызывают `getEventBySlug(slug)` / `getClubBySlug(slug)` напрямую без UUID-детекции. Если параметр является UUID → slug lookup возвращает `null` → **404 ошибка**.
+> Это **P0 дефект**: ссылки из Telegram-уведомлений (которые используют UUID — см. Task 5.7) дают 404.
+> Кроме того, `getEventById()` / `getClubById()` не импортированы и не вызываются в page components.
+
+#### Redirect Mechanism (Decided, but NOT implemented)
 
 **Primary mechanism: Page-level redirect (Server Component)**
 
 Page-level `permanentRedirect()` in the `[slug]/page.tsx` Server Component is the **primary and recommended** redirect mechanism.
 
 ```typescript
-// In events/[slug]/page.tsx — already implemented
+// ЦЕЛЕВОЙ КОД — НЕ реализован в events/[slug]/page.tsx
 if (isUUID) {
   const event = await getEventById(slug);
   if (event?.slug) {
@@ -811,9 +870,15 @@ Clubs:
 
 **API routes:** `/api/events/[id]` и `/api/clubs/[id]` — **НЕ менять**. API использует UUID для internal operations.
 
+> **⚠️ AUDIT 2026-02-11 — Оставшиеся UUID references:**
+> 1. `src/app/(app)/events/create/create-event-client.tsx:201` — `router.push(/events/${createdEvent.id})` — fallback когда API не возвращает slug. Ведёт на 404 т.к. UUID не совпадёт со slug.
+> 2. `src/lib/services/notifications.ts` (строки 75, 157, 265) — всё ещё использует `eventId` (UUID) в URL-ах. **P0** — см. Task 5.7.
+> 3. `src/app/admin/clubs/_components/admin-clubs-client.tsx:250` — `href=/admin/clubs/${club.id}` — admin route, допустимо (admin использует `[clubId]`).
+
 **Проверка:**
 - `rg '/events/\$\{.*\.id\}' src/` → 0 результатов (все заменены на slug)
 - `rg '/clubs/\$\{.*\.id\}' src/` → 0 результатов (кроме API routes)
+- ⚠️ AUDIT: `create-event-client.tsx` использует `createdEvent.id` (не `.slug`) — не ловится grep по `.id}`
 
 ---
 
@@ -1639,11 +1704,11 @@ After initial verification:
 
 ### Per-Wave Checklist
 
-**Wave 1:** ✅ DONE (2026-02-10, commit `362ab58`)
+**Wave 1:** ⚠️ PARTIAL (2026-02-10, commit `362ab58`)
 - [x] `<html lang="ru-KZ">` в rendered HTML
 - [x] `robots.txt` доступен и корректен
 - [x] `/clubs` и `/pricing` имеют `<meta name="robots" content="noindex, follow">`
-- [ ] `/events` НЕ имеет `noindex` (indexable, production-ready)
+- [ ] **P0:** `/events` НЕ имеет `noindex` (indexable, production-ready) — **В КОДЕ ВСЁ ЕЩЁ `noindex: true`**
 - [x] `/pricing` имеет `<title>` и `<meta name="description">`
 - [x] Event page: club badge — clickable link
 - [x] Footer: ссылки на `/events`, `/clubs`, `/pricing`
@@ -1660,16 +1725,19 @@ After initial verification:
 - [ ] Фильтры/поиск/пагинация работают после hydration
 - [ ] Loading state НЕ показывается при первом рендере (SSR data)
 
-**Wave 3:**
+**Wave 3:** ⚠️ PARTIAL
 - [x] `/events/{slug}` → 200 с контентом
 - [x] `/clubs/{slug}` → 200 с контентом
 - [x] `sitemap.xml` генерируется с slug URLs
-- [x] Canonical URLs в generateMetadata
-- Note: Clean slate approach — нет legacy UUID URLs, redirect не нужен
-- [ ] `/clubs/{uuid}` → 301/308 redirect на slug URL
-- [ ] `<link rel="canonical">` на всех indexable pages
-- [ ] Sitemap содержит slug URLs
-- [ ] Telegram ссылки (старые UUID) корректно редиректят
+- [x] Canonical URLs в generateMetadata (только entity detail pages)
+- ~~Note: Clean slate approach — нет legacy UUID URLs, redirect не нужен~~
+- [ ] **P0:** `/events/{uuid}` → 301/308 redirect на slug URL — **НЕ РЕАЛИЗОВАНО, UUID → 404**
+- [ ] **P0:** `/clubs/{uuid}` → 301/308 redirect на slug URL — **НЕ РЕАЛИЗОВАНО, UUID → 404**
+- [ ] `<link rel="canonical">` на всех indexable pages — **4 static pages missing**
+- [x] Sitemap содержит slug URLs
+- [ ] **P0:** Sitemap НЕ должен содержать `/clubs`, `/pricing` — **СОДЕРЖИТ (нарушение §5.4)**
+- [ ] **P0:** Telegram ссылки используют UUID → **404 (notifications.ts не обновлён)**
+- [ ] `create-event-client.tsx` fallback использует UUID → **404**
 
 **Wave 4:** ✅
 - [x] `<script type="application/ld+json">` на event pages (schema.org/Event)
@@ -1712,13 +1780,13 @@ npm run build       # Production build ✅
 
 ## 11. Files Affected (Complete Map)
 
-### Wave 1 (8 tasks, ~10 файлов) ✅ DONE
+### Wave 1 (8 tasks, ~10 файлов) ⚠️ PARTIAL
 
 | Task | File | Action | Status |
 |------|------|--------|--------|
 | 1.1 | `src/app/layout.tsx` | Edit (lang) | ✅ |
 | 1.2 | `src/app/robots.ts` | **Create** | ✅ |
-| 1.3 | `src/app/(app)/events/page.tsx` | Edit (robots meta) | ✅ |
+| 1.3 | `src/app/(app)/events/page.tsx` | Edit (remove noindex) | ❌ **noindex ВСЁ ЕЩЁ В КОДЕ** |
 | 1.3 | `src/app/(app)/clubs/layout.tsx` | Edit (robots meta) | ✅ |
 | 1.4 | `src/app/(app)/pricing/page.tsx` | **Rewrite** (Server Component wrapper) | ✅ |
 | 1.4 | `src/components/pricing/pricing-page-client.tsx` | **Create** (extracted client) | ✅ |
@@ -1760,6 +1828,15 @@ npm run build       # Production build ✅
 | 4.1 | `src/app/(app)/events/[slug]/page.tsx` | Edit (add JSON-LD) |
 | 4.2 | `src/app/(app)/clubs/[slug]/page.tsx` | Edit (add JSON-LD) |
 
+### Hotfixes из Wave 1/3 (P0, должны быть выполнены ДО Wave 5)
+
+| Task | File | Action | Priority |
+|------|------|--------|----------|
+| 1.3 fix | `src/app/(app)/events/page.tsx` | Remove `robots: { index: false }` | **P0** |
+| 3.4 | `src/app/(app)/events/[slug]/page.tsx` | Add UUID detection + `permanentRedirect()` | **P0** |
+| 3.4 | `src/app/(app)/clubs/[slug]/page.tsx` | Add UUID detection + `permanentRedirect()` | **P0** |
+| 3.5 fix | `src/app/(app)/events/create/create-event-client.tsx` | Fix fallback `router.push` to use slug | **P1** |
+
 ### Wave 5 (14 tasks, ~15+ файлов) — PENDING
 
 | Task | File | Action |
@@ -1771,7 +1848,7 @@ npm run build       # Production build ✅
 | 5.3 | 4 static pages | Edit (add `alternates.canonical`) |
 | 5.4 | Event/Club detail pages | Edit (OG image specs: width/height/alt) |
 | 5.5 | Event detail page | Edit (JSON-LD image absolute URL fix) |
-| 5.6 | `src/app/sitemap.ts` | Edit (remove listing pages for beta) |
+| 5.6 | `src/app/sitemap.ts` | Edit (remove `/clubs`, `/pricing` from static pages; add batched pagination) |
 | 5.7 | `src/lib/services/notifications.ts` | Edit (UUID → slug in URLs) |
 | 5.8 | `src/app/(app)/clubs/layout.tsx` | Edit (add explicit OG/Twitter) |
 | 5.9 | All pages with canonical | Audit (no trailing slash in canonical) |
@@ -1780,20 +1857,22 @@ npm run build       # Production build ✅
 | 5.12 | `src/lib/seo/metadataBuilder.ts` | **Create** (centralized metadata builder) |
 | 5.13 | `src/lib/seo/schemaBuilder.ts` | **Create** (centralized JSON-LD builder) |
 | 5.14 | `src/lib/config/runtimeConfig.ts` | **Create** (centralized base URL) |
-| 5.14 | 6+ files with `process.env.NEXT_PUBLIC_APP_URL` | Edit (replace with `getPublicBaseUrl()` import) |
+| 5.14 | 9 files with `process.env.NEXT_PUBLIC_APP_URL` | Edit (replace with `getPublicBaseUrl()` import) |
 
 ---
 
 ## 12. Risks & Mitigations
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Telegram old UUID links break | High | Certain | 301 redirects (TASK 3.4) |
-| Slug collision on events | High | Low | Short-UUID suffix guarantees uniqueness |
-| CSR→SSR breaks client interactivity | Medium | Medium | Hybrid approach: SSR initial + CSR filters |
-| Middleware DB lookups slow (Edge) | Medium | Medium | Start with page-level redirect, optimize later |
-| Cyrillic slug encoding issues | Low | Low | Test with Googlebot, Yandexbot, Telegram |
-| ISR stale content shown | Low | Medium | Appropriate revalidation intervals |
+| Risk | Impact | Probability | Mitigation | Audit Status |
+|------|--------|-------------|------------|------------|
+| Telegram old UUID links break | **Critical** | **Certain** | 301 redirects (TASK 3.4) | ❌ **ACTIVE RISK**: Task 3.4 NOT implemented + notifications.ts sends UUID links → 404 |
+| Domain mismatch (.kz vs .app) | **High** | **Certain** | Resolve canonical domain, update all files | ❌ **ACTIVE RISK**: Code uses `.kz`, SSOT says `.app` |
+| Slug collision on events | High | Low | Short-UUID suffix guarantees uniqueness | ✅ Mitigated |
+| CSR→SSR breaks client interactivity | Medium | Medium | Hybrid approach: SSR initial + CSR filters | ✅ Mitigated |
+| ~~Middleware DB lookups slow (Edge)~~ | ~~Medium~~ | ~~Medium~~ | ~~Start with page-level redirect, optimize later~~ | N/A — page-level redirect chosen (D-02) |
+| ~~Cyrillic slug encoding issues~~ | ~~Low~~ | ~~Low~~ | ~~Test with Googlebot, Yandexbot, Telegram~~ | N/A — transliteration chosen (D-01) |
+| ISR stale content shown | Low | Medium | Appropriate revalidation intervals | ✅ Mitigated |
+| /events noindex blocks SEO entry point | **Critical** | **Certain** | Remove `robots: { index: false }` from /events | ❌ **ACTIVE RISK**: Task 1.3 not completed |
 
 ---
 
@@ -1801,7 +1880,7 @@ npm run build       # Production build ✅
 
 | # | Decision | Options | Recommendation |
 |---|----------|---------|----------------|
-| D-01 | Кириллица vs transliteration в slugs | A: кириллица, B: transliteration | A (кириллица) — целевая аудитория |
+| D-01 | Кириллица vs transliteration в slugs | A: кириллица, B: transliteration | **DECIDED: B (transliteration)**. Реализован `src/lib/utils/slug.ts` с `transliterate()` → ASCII slugs. Пример: `оффроуд-выезд` → `offroad-vyezd-a1b2c3d4`. |
 | D-02 | Redirect code: 301 vs 308 | A: middleware 301, B: page-level 308 | **DECIDED: B (page-level 308)**. Middleware 301 is prohibited per ARCH §4.5 (requires DB lookup). Both 301/308 are acceptable per SSOT_SEO §3.1. |
 | D-03 | Event slug uniqueness suffix | A: short-UUID, B: date, C: incremental | A (short-UUID) |
 | D-04 | sr-only vs hidden для beta links | A: sr-only, B: CSS hidden, C: aria-hidden | A (sr-only) — лучше для crawlers |
@@ -1809,42 +1888,42 @@ npm run build       # Production build ✅
 
 ---
 
-## 14. SSOT Compliance Matrix
+## 14. SSOT Compliance Matrix (Updated 2026-02-11 — post-audit)
 
-| SSOT Section | Requirement | Covered by Task(s) | Status |
-|-------------|-------------|---------------------|--------|
-| §3.1 Slug URLs | Slug-based URLs for events/clubs | 3.1, 3.2, 3.3, 3.5 | ✅ Done |
-| §3.1 301 Redirects | UUID → slug permanent redirect | 3.4 | ⚠️ Partial (notifications still use UUID → 5.7) |
-| §3.1 Immutable slugs | Slugs never change after creation | 3.2 (generation logic) | ✅ Done |
-| §3.2 Canonical URLs | Absolute canonical on all pages | 3.6, **5.3** | ❌ Gap (4 static pages missing → 5.3) |
-| §4.1 SSR/ISR | No CSR for indexable content | 2.1, 2.2, 2.3 | ✅ Done |
-| §4.2 Strategy | ISR for listings, SSR for detail | 2.1–2.3 | ✅ Done |
-| §5.1 Beta indexing | Homepage + /events + entity detail indexable; /clubs, /pricing noindex | 1.3, 3.7, **5.6** | ❌ Gap (/events noindex must be removed; sitemap must add /events → 5.6) |
-| §5.2 robots.txt | Allow entities, disallow API/admin | 1.2 | ✅ Done |
-| §5.3 Meta robots | /events indexable; /clubs, /pricing noindex+follow | 1.3 | ❌ Gap (/events currently noindex → must be updated) |
-| §5.4 Sitemap | Dynamic, slug-based; includes /events; excludes /clubs, /pricing | 3.7, **5.6** | ❌ Gap (/events not in static pages; /clubs, /pricing still included → 5.6) |
-| §6.1 Metadata | title+desc+OG+twitter on all pages | 1.4, **5.2, 5.4, 5.8** | ❌ Gap (clubs listing missing OG/Twitter → 5.8) |
-| §6.2 Language | `lang="ru-KZ"` | 1.1 | ✅ Done |
-| §7.1 Event JSON-LD | Event schema.org | 4.1 | ✅ Done (validation pending → 5.5) |
-| §7.1 Org JSON-LD | Organization schema.org | 4.2 | ✅ Done (validation pending → 5.5) |
-| §8 Internal links | Event→Club, crawlable graph | 1.5, 1.6, 1.8 | ✅ Done |
-| §8 DOM preservation | Hidden UI keeps links in DOM | 1.8 | ✅ Done |
-| §13.1 Title patterns | Standardized title patterns | **5.1** | ❌ Gap (city not in entity titles) |
-| §13.2 Description rules | 120–160 char descriptions | **5.2** | ❌ Gap (static pages too short) |
-| §13.3 OG alignment | OG matches metadata | **5.4** | ❌ Gap (missing image specs) |
-| §13.4 H1 enforcement | One H1 matching entity title | — | ✅ OK (verified in audit) |
-| §14.1 Rich Results | JSON-LD passes Rich Results Test | **5.5** | ❓ Pending validation |
-| §14.2 Field completeness | Mandatory fields present | 4.1, 4.2 | ✅ Done |
-| §15 Canonical stability | Canonical stable after publication | **5.3** | ❌ Gap (4 pages missing canonical) |
-| §16 Sitemap integrity | Sitemap matches indexing policy | **5.6** | ❌ Gap (listing pages included) |
-| §16.4 Sitemap scalability | Batched pagination for sitemap | **5.6** | ⚠️ Acceptable now (<5k), gate documented |
-| §17 Pagination canonical | Paginated pages self-canonicalize | **5.10** | ❌ Gap (not implemented) |
-| §18 Query normalization | Non-SEO params stripped from canonical | **5.11** | ❌ Gap (not implemented) |
-| §19 Trailing slash | No trailing slash in canonical | **5.9** | ❓ Needs audit |
-| §20 metadataBase ownership | Centralized base URL config | **5.14** | ❌ Gap (scattered across 6+ files) |
-| ARCH §3.2 metadata builder | Centralized metadata construction | **5.12** | ❌ Gap (inline in page files) |
-| ARCH §3.2 schema builder | Centralized JSON-LD construction | **5.13** | ❌ Gap (inline in page files) |
-| ARCH §4.5 Middleware | No DB lookups in middleware | 3.4 (clarified) | ✅ Done (page-level redirect used) |
+| SSOT Section | Requirement | Covered by Task(s) | Status | Audit Note |
+|-------------|-------------|---------------------|--------|------------|
+| §3.1 Slug URLs | Slug-based URLs for events/clubs | 3.1, 3.2, 3.3, 3.5 | ✅ Done | ASCII slugs via transliteration |
+| §3.1 301 Redirects | UUID → slug permanent redirect | 3.4 | ❌ **NOT IMPLEMENTED** | Page-level redirect code absent. UUID → 404. notifications.ts sends UUID links. |
+| §3.1 Immutable slugs | Slugs never change after creation | 3.2 (generation logic) | ✅ Done | `generateSlug()` in `slug.ts` |
+| §3.2 Canonical URLs | Absolute canonical on all pages | 3.6, **5.3** | ❌ Gap (4 static pages missing → 5.3) | Entity pages OK; homepage, /events, /clubs, /pricing missing |
+| §4.1 SSR/ISR | No CSR for indexable content | 2.1, 2.2, 2.3 | ✅ Done | |
+| §4.2 Strategy | ISR for listings, SSR for detail | 2.1–2.3 | ✅ Done | Detail pages use `force-dynamic` |
+| §5.1 Beta indexing | Homepage + /events + entity detail indexable; /clubs, /pricing noindex | 1.3, 3.7, **5.6** | ❌ **P0**: /events has `noindex` | Code still has `robots: { index: false }` on /events |
+| §5.2 robots.txt | Allow entities, disallow API/admin | 1.2 | ✅ Done | Domain fallback is `.kz` not `.app` — see §0 |
+| §5.3 Meta robots | /events indexable; /clubs, /pricing noindex+follow | 1.3 | ❌ **P0**: /events currently noindex | Must remove `robots` from /events metadata |
+| §5.4 Sitemap | Dynamic, slug-based; includes /events; excludes /clubs, /pricing | 3.7, **5.6** | ❌ Gap | /clubs and /pricing ARE in sitemap (violation). /events IS in sitemap (OK). |
+| §6.1 Metadata | title+desc+OG+twitter on all pages | 1.4, **5.2, 5.4, 5.8** | ❌ Gap | clubs/events/pricing listings + homepage missing OG/Twitter override |
+| §6.2 Language | `lang="ru-KZ"` | 1.1 | ✅ Done | |
+| §7.1 Event JSON-LD | Event schema.org | 4.1 | ✅ Done (validation pending → 5.5) | |
+| §7.1 Org JSON-LD | Organization schema.org | 4.2 | ✅ Done (validation pending → 5.5) | |
+| §8 Internal links | Event→Club, crawlable graph | 1.5, 1.6, 1.8 | ✅ Done | |
+| §8 DOM preservation | Hidden UI keeps links in DOM | 1.8 | ✅ Done | sr-only pattern |
+| §13.1 Title patterns | Standardized title patterns | **5.1** | ❌ Gap | City not in entity titles; homepage title differs from SSOT |
+| §13.2 Description rules | 120–160 char descriptions | **5.2** | ❌ Gap | All static pages < 120 chars |
+| §13.3 OG alignment | OG matches metadata | **5.4** | ❌ Gap | Missing image specs (width/height/alt) on entity pages; no OG override on static pages |
+| §13.4 H1 enforcement | One H1 matching entity title | — | ✅ OK | |
+| §14.1 Rich Results | JSON-LD passes Rich Results Test | **5.5** | ❓ Pending validation | |
+| §14.2 Field completeness | Mandatory fields present | 4.1, 4.2 | ✅ Done | |
+| §15 Canonical stability | Canonical stable after publication | **5.3** | ❌ Gap | 4 pages missing canonical |
+| §16 Sitemap integrity | Sitemap matches indexing policy | **5.6** | ❌ Gap | /clubs, /pricing in sitemap (noindex pages) |
+| §16.4 Sitemap scalability | Batched pagination for sitemap | **5.6** | ❌ Gap | Single query LIMIT 1000/500, not batched pagination |
+| §17 Pagination canonical | Paginated pages self-canonicalize | **5.10** | ❌ Gap (not implemented) | |
+| §18 Query normalization | Non-SEO params stripped from canonical | **5.11** | ❌ Gap (not implemented) | |
+| §19 Trailing slash | No trailing slash in canonical | **5.9** | ❓ Needs audit | |
+| §20 metadataBase ownership | Centralized base URL config | **5.14** | ❌ Gap | Scattered across 9 files, 12 occurrences. Domain mismatch (.kz vs .app). |
+| ARCH §3.2 metadata builder | Centralized metadata construction | **5.12** | ❌ Gap (inline in page files) | |
+| ARCH §3.2 schema builder | Centralized JSON-LD construction | **5.13** | ❌ Gap (inline in page files) | |
+| ARCH §4.5 Middleware | No DB lookups in middleware | 3.4 (clarified) | ✅ OK | Middleware has no DB imports. But redirect also not implemented (no DB lookup needed if not done). |
 
 ---
 
@@ -1852,13 +1931,13 @@ npm run build       # Production build ✅
 
 | Wave | Tasks | Estimate | Dependencies | Status |
 |------|-------|----------|--------------|--------|
-| Wave 1 | TASK 1.1–1.8 | 3-4 часа | None | ✅ DONE (2026-02-10) |
+| Wave 1 | TASK 1.1–1.8 | 3-4 часа | None | ⚠️ PARTIAL (1.3 /events noindex не убран) |
 | Wave 2 | TASK 2.1–2.3 | 3-5 дней | None | ✅ DONE (2026-02-10) |
-| Wave 3 | TASK 3.1–3.10 | 7-10 дней | Blocks canonical + sitemap | ✅ DONE (2026-02-10) |
+| Wave 3 | TASK 3.1–3.10 | 7-10 дней | Blocks canonical + sitemap | ⚠️ PARTIAL (3.4 redirect, 3.7 sitemap gaps) |
 | Wave 4 | TASK 4.1–4.2 | 3-5 часов | Wave 2 + Wave 3 | ✅ DONE (2026-02-10) |
 | Wave 5 | TASK 5.1–5.14 | 4-5 дней | Wave 3 + Wave 4 + doc consolidation | ⏳ PENDING |
 | Wave 6 | TASK 6.1–6.3 | 1-2 дня | Wave 5 (all pages production-ready) | ⏳ PENDING |
-| **Total** | **37 tasks** | **~17-24 рабочих дней** | | **Waves 1-4 DONE, Waves 5-6 PENDING** |
+| **Total** | **37 tasks** | **~17-24 рабочих дней** | | **Waves 2,4 DONE; Waves 1,3 PARTIAL; Waves 5-6 PENDING** |
 
 ---
 

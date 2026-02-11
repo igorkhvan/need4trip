@@ -1,12 +1,19 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { buildStaticPageMetadata } from "@/lib/seo/metadataBuilder";
 
-export const metadata: Metadata = {
-  title: "Need4Trip — Организация автомобильных событий",
+/**
+ * Per SSOT_SEO.md §13.1: Homepage title pattern: "{Brand} — {Value Proposition}"
+ * Homepage overrides the root layout template with a custom full title.
+ */
+export const metadata: Metadata = buildStaticPageMetadata({
+  title: "Need4Trip — Автомобильные события и клубы Казахстана",
   description:
     "Создавайте оффроуд-поездки, собирайте экипажи и управляйте участниками. Простая регистрация по ссылке.",
-};
+  canonicalPath: "/",
+  ogImageAlt: "Need4Trip — Автомобильные события и клубы Казахстана",
+});
 
 import { Calendar, Car, CheckCircle2, MapPin, Settings, Users } from "lucide-react";
 

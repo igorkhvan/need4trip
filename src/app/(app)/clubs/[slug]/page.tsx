@@ -21,14 +21,17 @@
  */
 
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { resolveCurrentUser } from "@/lib/auth/resolveCurrentUser";
 import { getClubBasicInfo, getUserClubRole } from "@/lib/services/clubs";
-import { getClubBySlug } from "@/lib/db/clubRepo";
+import { getClubBySlug, getClubSlugById } from "@/lib/db/clubRepo";
 import { stripHtml, truncateText } from "@/lib/utils/text";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
+import { buildClubMetadata } from "@/lib/seo/metadataBuilder";
+import { buildClubJsonLd } from "@/lib/seo/schemaBuilder";
 
 // Section components
 import { ClubProfileHeader } from "./_components/club-profile-header";
@@ -47,6 +50,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// UUID regex for legacy URL detection (SSOT_SEO.md §3.1)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ---------------------------------------------------------------------------
 // OG / Social Sharing metadata
 // See: docs/blueprint/OG_SOCIAL_SHARING_BLUEPRINT.md
@@ -57,6 +63,13 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+
+  // UUID detection: permanent redirect to slug URL (SSOT §3.1)
+  if (UUID_RE.test(slug)) {
+    const clubSlug = await getClubSlugById(slug);
+    if (clubSlug) permanentRedirect(`/clubs/${clubSlug}`);
+    return { title: "Клуб не найден" };
+  }
 
   // Resolve slug → id
   const dbClub = await getClubBySlug(slug).catch(() => null);
@@ -70,68 +83,17 @@ export async function generateMetadata({
     return { title: "Клуб не найден" };
   }
 
-  // Private clubs: show name but no details (non-member sees minimal page + CTA)
-  if (club.visibility === "private") {
-    const privateDescription =
-      "Закрытый клуб на Need4Trip. Вступите, чтобы увидеть события и участников.";
-    return {
-      title: club.name,
-      description: privateDescription,
-      alternates: {
-        canonical: `/clubs/${slug}`,
-      },
-      openGraph: {
-        title: club.name,
-        description: privateDescription,
-        images: [club.logoUrl || "/og-default.png"],
-        url: `/clubs/${slug}`,
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: club.name,
-        description: privateDescription,
-        images: [club.logoUrl || "/og-default.png"],
-      },
-    };
-  }
-
-  // Public clubs: full metadata
-  const description = club.description
-    ? truncateText(club.description, 160)
-    : "Автомобильный клуб на Need4Trip";
-
-  const citiesText = club.cities?.length
-    ? club.cities.map((c) => c.name).join(", ")
-    : null;
-
-  const metaParts: string[] = [];
-  if (citiesText) metaParts.push(citiesText);
-  metaParts.push(`${club.memberCount} участников`);
-  metaParts.push(`${club.upcomingEventCount} событий`);
-  const metaPrefix = metaParts.join(" · ");
-
-  const fullDescription = `${metaPrefix} — ${description}`;
-  const ogImage = club.logoUrl || "/og-default.png";
-
-  return {
-    title: club.name,
-    description: truncateText(fullDescription, 200),
-    alternates: {
-      canonical: `/clubs/${slug}`,
-    },
-    openGraph: {
-      title: club.name,
-      description: truncateText(fullDescription, 200),
-      images: [ogImage],
-      url: `/clubs/${slug}`,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: club.name,
-      description: truncateText(fullDescription, 200),
-      images: [ogImage],
-    },
-  };
+  // Delegate to centralized builder (handles private and public)
+  return buildClubMetadata({
+    name: club.name,
+    slug,
+    description: club.description ? stripHtml(club.description) : null,
+    cityNames: club.cities?.map((c) => c.name),
+    memberCount: club.memberCount,
+    upcomingEventCount: club.upcomingEventCount,
+    ogImage: club.logoUrl,
+    visibility: club.visibility as "public" | "private",
+  });
 }
 
 interface ClubProfilePageProps {
@@ -140,6 +102,13 @@ interface ClubProfilePageProps {
 
 export default async function ClubProfilePage({ params }: ClubProfilePageProps) {
   const { slug } = await params;
+
+  // UUID detection: permanent redirect to slug URL (SSOT §3.1) — safety net
+  if (UUID_RE.test(slug)) {
+    const clubSlug = await getClubSlugById(slug);
+    if (clubSlug) permanentRedirect(`/clubs/${clubSlug}`);
+    notFound();
+  }
   
   // Resolve slug → id
   const dbClubResolved = await getClubBySlug(slug).catch(() => null);
@@ -173,41 +142,20 @@ export default async function ClubProfilePage({ params }: ClubProfilePageProps) 
 
   // ---------------------------------------------------------------------------
   // Structured Data (JSON-LD) — schema.org/Organization
-  // Per SSOT_SEO.md §7.1, SEO_IMPLEMENTATION_BLUEPRINT Wave 4
-  // Private clubs: minimal JSON-LD (name + url only)
+  // Per SSOT_SEO.md §7.1 — delegated to centralized schemaBuilder
+  // Private clubs: minimal JSON-LD (name + url only, SSOT §14.3)
   // ---------------------------------------------------------------------------
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
-  const isPrivate = club.visibility === "private";
-
-  const clubJsonLd = isPrivate
-    ? {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        name: club.name,
-        url: `${baseUrl}/clubs/${club.slug}`,
-      }
-    : {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        name: club.name,
-        ...(club.description && {
-          description: truncateText(stripHtml(club.description), 300),
-        }),
-        ...(club.logoUrl && {
-          logo: club.logoUrl.startsWith("http")
-            ? club.logoUrl
-            : `${baseUrl}${club.logoUrl}`,
-        }),
-        url: `${baseUrl}/clubs/${club.slug}`,
-        ...(club.cities && club.cities.length > 0 && {
-          address: club.cities.map((city) => ({
-            "@type": "PostalAddress",
-            addressLocality: city.name,
-            addressCountry: "KZ",
-          })),
-        }),
-        sameAs: [club.telegramUrl, club.websiteUrl].filter(Boolean),
-      };
+  const clubJsonLd = buildClubJsonLd({
+    name: club.name,
+    slug: club.slug,
+    description: club.description
+      ? truncateText(stripHtml(club.description), 300)
+      : null,
+    logoUrl: club.logoUrl,
+    visibility: (club.visibility ?? "public") as "public" | "private",
+    cities: club.cities,
+    sameAs: [club.telegramUrl, club.websiteUrl],
+  });
 
   return (
     <>

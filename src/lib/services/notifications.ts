@@ -20,6 +20,7 @@ import {
   markAsFailed,
   resetStuckNotifications,
 } from "@/lib/db/notificationQueueRepo";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
 import {
   getUsersForNewEventNotification,
   isNotificationEnabled,
@@ -33,6 +34,7 @@ import { formatNotification } from "@/lib/services/telegram/formatters";
 
 export interface QueueNewEventParams {
   eventId: string;
+  eventSlug: string;
   eventTitle: string;
   cityId: string;
   cityName: string;
@@ -51,6 +53,7 @@ export async function queueNewEventNotifications(
 ): Promise<{ queued: number; skipped: number }> {
   const {
     eventId,
+    eventSlug,
     eventTitle,
     cityId,
     cityName,
@@ -71,8 +74,9 @@ export async function queueNewEventNotifications(
 
     console.log(`[Notifications] Queuing new event notifications for ${users.length} users`);
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://need4trip.kz';
-    const eventUrl = `${baseUrl}/events/${eventId}`;
+    const baseUrl = getPublicBaseUrl();
+    // Use slug-based URL per SSOT_SEO.md §3.1
+    const eventUrl = `${baseUrl}/events/${eventSlug}`;
     const settingsUrl = `${baseUrl}/profile/notifications`;
 
     const payload: NewEventPublishedPayload = {
@@ -119,6 +123,7 @@ export async function queueNewEventNotifications(
 
 export interface QueueNewParticipantParams {
   eventId: string;
+  eventSlug: string;
   eventTitle: string;
   organizerId: string;
   organizerTelegramId: string;
@@ -136,6 +141,7 @@ export async function queueNewParticipantNotification(
 ): Promise<{ queued: boolean }> {
   const {
     eventId,
+    eventSlug,
     eventTitle,
     organizerId,
     organizerTelegramId,
@@ -153,8 +159,9 @@ export async function queueNewParticipantNotification(
       return { queued: false };
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://need4trip.kz';
-    const eventUrl = `${baseUrl}/events/${eventId}`;
+    const baseUrl = getPublicBaseUrl();
+    // Use slug-based URL per SSOT_SEO.md §3.1
+    const eventUrl = `${baseUrl}/events/${eventSlug}`;
     const settingsUrl = `${baseUrl}/profile/notifications`;
 
     const payload: NewParticipantJoinedPayload = {
@@ -190,6 +197,7 @@ export async function queueNewParticipantNotification(
 
 export interface QueueEventUpdatedParams {
   eventId: string;
+  eventSlug: string;
   eventTitle: string;
   eventVersion: number;
   changes: {
@@ -209,7 +217,7 @@ export interface QueueEventUpdatedParams {
 export async function queueEventUpdatedNotifications(
   params: QueueEventUpdatedParams
 ): Promise<{ queued: number; skipped: number }> {
-  const { eventId, eventTitle, eventVersion, changes, participantIds } = params;
+  const { eventId, eventSlug, eventTitle, eventVersion, changes, participantIds } = params;
 
   try {
     if (participantIds.length === 0) {
@@ -261,8 +269,9 @@ export async function queueEventUpdatedNotifications(
       return { queued: 0, skipped: 0 };
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://need4trip.kz';
-    const eventUrl = `${baseUrl}/events/${eventId}`;
+    const baseUrl = getPublicBaseUrl();
+    // Use slug-based URL per SSOT_SEO.md §3.1
+    const eventUrl = `${baseUrl}/events/${eventSlug}`;
     const settingsUrl = `${baseUrl}/profile/notifications`;
 
     const payload: EventUpdatedPayload = {

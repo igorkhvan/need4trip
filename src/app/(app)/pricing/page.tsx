@@ -14,17 +14,21 @@ import type { Metadata } from "next";
 import { listPublicPlans } from "@/lib/db/planRepo";
 import { PricingPageClient } from "@/components/pricing/pricing-page-client";
 import type { PricingPlan } from "@/lib/types/billing";
+import { buildStaticPageMetadata } from "@/lib/seo/metadataBuilder";
 
 export const revalidate = 300; // ISR: 5 minutes (matches planRepo cache TTL)
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildStaticPageMetadata({
   title: "Тарифы Need4Trip",
-  description: "Тарифы и планы для автомобильных клубов на Need4Trip — от бесплатного до безлимитного",
+  description:
+    "Тарифы и планы для автомобильных клубов на Need4Trip — от бесплатного до безлимитного. Выберите подходящий тариф.",
+  canonicalPath: "/pricing",
+  ogImageAlt: "Тарифы — Need4Trip",
   robots: {
     index: false,
     follow: true,
   },
-};
+});
 
 export default async function PricingPage() {
   let plans: PricingPlan[] = [];

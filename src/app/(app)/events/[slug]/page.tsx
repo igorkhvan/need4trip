@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { Users, Calendar as CalendarIcon, Car, PencilLine, Lock, ArrowLeft } from "lucide-react";
@@ -22,17 +22,23 @@ import { LockedIndicator } from "@/components/ui/locked-indicator";
 import { ScrollRestorationWrapper } from "@/components/scroll-restoration-wrapper";
 import { RichTextContent } from "@/components/ui/rich-text-content";
 import { getEventBasicInfo } from "@/lib/services/events";
-import { getEventBySlug } from "@/lib/db/eventRepo";
+import { getEventBySlug, getEventSlugById } from "@/lib/db/eventRepo";
 import { getCurrentUserSafe } from "@/lib/auth/currentUser";
 import { getGuestSessionId } from "@/lib/auth/guestSession";
 import { getUserById } from "@/lib/db/userRepo";
 import { getCategoryLabel, getCategoryBadgeVariant, getCategoryIcon } from "@/lib/utils/eventCategories";
 import { formatDateTime } from "@/lib/utils/dates";
 import { stripHtml, truncateText } from "@/lib/utils/text";
+import { getPublicBaseUrl } from "@/lib/config/runtimeConfig";
+import { buildEventMetadata } from "@/lib/seo/metadataBuilder";
+import { buildEventJsonLd } from "@/lib/seo/schemaBuilder";
 import { isRegistrationClosed, getRegistrationClosedReason } from "@/lib/utils/eventPermissions";
 import { EventParticipantsAsync } from "./_components/participants-async";
 import { EventParticipantsSkeleton } from "@/components/ui/skeletons";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+
+// UUID regex for legacy URL detection (SSOT_SEO.md §3.1)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ---------------------------------------------------------------------------
 // OG / Social Sharing metadata
@@ -45,6 +51,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
 
+  // UUID detection: permanent redirect to slug URL (SSOT §3.1)
+  if (UUID_RE.test(slug)) {
+    const eventSlug = await getEventSlugById(slug);
+    if (eventSlug) permanentRedirect(`/events/${eventSlug}`);
+    return { title: "Событие не найдено" };
+  }
+
   // Resolve slug → id, then load event WITHOUT visibility enforcement (crawlers have no auth)
   const dbEvent = await getEventBySlug(slug).catch(() => null);
   const event = dbEvent ? await getEventBasicInfo(dbEvent.id).catch(() => null) : null;
@@ -53,59 +66,18 @@ export async function generateMetadata({
     return { title: "Событие не найдено" };
   }
 
-  // Restricted events: don't leak content in OG tags
-  if (event.visibility === "restricted") {
-    return {
-      title: "Событие на Need4Trip",
-      description: "Это событие доступно только по приглашению.",
-      openGraph: {
-        title: "Событие на Need4Trip",
-        description: "Это событие доступно только по приглашению.",
-      },
-    };
-  }
-
-  // Public / unlisted events: full OG metadata
-  const plainDescription = truncateText(stripHtml(event.description), 160);
-  const cityName = event.city?.name;
-  const dateFormatted = formatDateTime(event.dateTime);
-
-  const metaParts: string[] = [];
-  if (dateFormatted) metaParts.push(dateFormatted);
-  if (cityName) metaParts.push(cityName);
-  const participantsInfo = event.maxParticipants
-    ? `${event.participantsCount ?? 0}/${event.maxParticipants} участников`
-    : `${event.participantsCount ?? 0} участников`;
-  metaParts.push(participantsInfo);
-
-  const metaPrefix = metaParts.join(" · ");
-  const fullDescription = plainDescription
-    ? `${metaPrefix} — ${plainDescription}`
-    : metaPrefix;
-  const description = truncateText(fullDescription, 200);
-
-  const ogImage = event.club?.logoUrl || "/og-default.png";
-
-  return {
+  // Delegate to centralized builder (handles restricted, public, unlisted)
+  return buildEventMetadata({
     title: event.title,
-    description,
-    alternates: {
-      canonical: `/events/${slug}`,
-    },
-    openGraph: {
-      title: event.title,
-      description,
-      type: "article",
-      images: [ogImage],
-      url: `/events/${slug}`,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: event.title,
-      description,
-      images: [ogImage],
-    },
-  };
+    slug,
+    plainDescription: truncateText(stripHtml(event.description), 160),
+    cityName: event.city?.name,
+    dateFormatted: formatDateTime(event.dateTime),
+    participantsCount: event.participantsCount ?? 0,
+    maxParticipants: event.maxParticipants,
+    ogImage: event.club?.logoUrl,
+    visibility: event.visibility as "public" | "unlisted" | "restricted",
+  });
 }
 
 export default async function EventDetails({
@@ -114,6 +86,13 @@ export default async function EventDetails({
   params: Promise<{ slug: string }> | { slug: string };
 }) {
   const { slug } = await params;
+
+  // UUID detection: permanent redirect to slug URL (SSOT §3.1) — safety net
+  if (UUID_RE.test(slug)) {
+    const eventSlug = await getEventSlugById(slug);
+    if (eventSlug) permanentRedirect(`/events/${eventSlug}`);
+    return notFound();
+  }
 
   // 0. Resolve slug → DB event
   const dbEvent = await getEventBySlug(slug).catch(() => null);
@@ -213,66 +192,34 @@ export default async function EventDetails({
 
   // ---------------------------------------------------------------------------
   // Structured Data (JSON-LD) — schema.org/Event
-  // Per SSOT_SEO.md §7.1, SEO_IMPLEMENTATION_BLUEPRINT Wave 4
-  // Restricted events: no JSON-LD (same policy as OG metadata)
+  // Per SSOT_SEO.md §7.1 — delegated to centralized schemaBuilder
+  // Restricted events: returns null (privacy policy, SSOT §14.3)
   // ---------------------------------------------------------------------------
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://need4trip.kz";
-  const eventJsonLd = event.visibility !== "restricted" ? {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    name: event.title,
+  const eventJsonLd = buildEventJsonLd({
+    title: event.title,
+    slug: event.slug,
     description: truncateText(stripHtml(event.description), 300),
-    startDate: event.dateTime,
-    eventStatus: isPastEvent
-      ? "https://schema.org/EventScheduled"
-      : "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    ...(event.locations?.[0] && {
-      location: {
-        "@type": "Place",
-        name: event.locations[0].title,
-        ...(event.city && {
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: event.city.name,
-            ...(event.city.region && { addressRegion: event.city.region }),
-            addressCountry: "KZ",
-          },
-        }),
-        ...(event.locations[0].latitude && event.locations[0].longitude && {
-          geo: {
-            "@type": "GeoCoordinates",
-            latitude: event.locations[0].latitude,
-            longitude: event.locations[0].longitude,
-          },
-        }),
-      },
-    }),
-    ...(ownerUser && {
-      organizer: {
-        "@type": "Person",
-        name: ownerUser.name || ownerUser.telegramHandle || "Организатор",
-      },
-    }),
-    image: event.club?.logoUrl
-      ? `${baseUrl}${event.club.logoUrl}`
-      : `${baseUrl}/og-default.png`,
-    url: `${baseUrl}/events/${event.slug}`,
-    ...(event.isPaid && event.price != null && {
-      offers: {
-        "@type": "Offer",
-        price: event.price,
-        priceCurrency: event.currencyCode || "KZT",
-        availability: isFull
-          ? "https://schema.org/SoldOut"
-          : "https://schema.org/InStock",
-        url: `${baseUrl}/events/${event.slug}`,
-      },
-    }),
-    ...(!event.isPaid && {
-      isAccessibleForFree: true,
-    }),
-  } : null;
+    dateTime: event.dateTime,
+    visibility: event.visibility as "public" | "unlisted" | "restricted",
+    location: event.locations?.[0]
+      ? {
+          title: event.locations[0].title,
+          latitude: event.locations[0].latitude,
+          longitude: event.locations[0].longitude,
+        }
+      : null,
+    city: event.city
+      ? { name: event.city.name, region: event.city.region }
+      : null,
+    organizerName: ownerUser
+      ? ownerUser.name || ownerUser.telegramHandle || "Организатор"
+      : null,
+    imageUrl: event.club?.logoUrl,
+    isPaid: event.isPaid,
+    price: event.price,
+    currencyCode: event.currencyCode,
+    isFull,
+  });
 
   return (
     <>

@@ -271,6 +271,7 @@ async function queueNewParticipantNotificationAsync(
     
     await queueNewParticipantNotification({
       eventId: event.id,
+      eventSlug: event.slug,
       eventTitle: event.title,
       organizerId: organizer.id,
       organizerTelegramId: organizer.telegramId,

@@ -195,12 +195,9 @@ export function CreateEventPageClient({ isBetaMode = false }: { isBetaMode?: boo
     
     if (createdEvent?.slug) {
       router.push(`/events/${createdEvent.slug}`);
-    } else if (createdEvent?.id) {
-      // Fallback to id if slug not returned
-      console.warn('[CreateEvent] No event.slug in response, using id:', json);
-      router.push(`/events/${createdEvent.id}`);
     } else {
-      console.error('[CreateEvent] No event.slug or event.id in response:', json);
+      // Per SSOT_SEO.md §3.1: never navigate to UUID-based URLs
+      console.error('[CreateEvent] No event.slug in response, redirecting to /events:', json);
       router.push('/events');
     }
     router.refresh();

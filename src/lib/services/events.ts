@@ -607,6 +607,7 @@ async function queueNewEventNotificationsAsync(event: Event): Promise<void> {
     
     await queueNewEventNotifications({
       eventId: event.id,
+      eventSlug: event.slug,
       eventTitle: event.title,
       cityId,
       cityName: city.name,
@@ -958,6 +959,7 @@ async function queueEventUpdatedNotificationsAsync(
     
     await queueEventUpdatedNotifications({
       eventId: updated.id,
+      eventSlug: updated.slug,
       eventTitle: updated.title,
       eventVersion,
       changes,

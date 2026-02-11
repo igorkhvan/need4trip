@@ -150,6 +150,26 @@ export async function getClubBySlug(slug: string): Promise<DbClub | null> {
 }
 
 /**
+ * Get club slug by ID (lightweight, for UUID→slug redirect)
+ * Per SSOT_SEO.md §3.1: legacy UUID URLs must redirect to slug URLs
+ */
+export async function getClubSlugById(id: string): Promise<string | null> {
+  const db = getAdminDb();
+
+  if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) return null;
+
+  const { data, error } = await db
+    .from(table)
+    .select("slug")
+    .eq("id", id)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.slug as string;
+}
+
+/**
  * Get club with owner info
  */
 export async function getClubWithOwner(id: string): Promise<DbClubWithOwner | null> {
