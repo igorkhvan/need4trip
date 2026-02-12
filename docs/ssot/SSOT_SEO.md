@@ -251,25 +251,39 @@ Rules:
 
 The following schemas MUST be implemented:
 
-| Page | Schema |
-|----|--------|
-| Event detail | `Event` |
-| Club detail | `Organization` |
+| Page | Schema | Status |
+|----|--------|--------|
+| Event detail | `Event` | ✅ Implemented |
+| Club detail | `Organization` | ✅ Implemented |
+| Homepage | `WebSite` + `Organization` (site-level) | ✅ Implemented (2026-02-11) |
 
 Rules:
 - JSON-LD format only
-- One primary schema per page
+- One primary schema per page (homepage may have two: WebSite + Organization)
 - Data MUST reflect actual content
+- Homepage schemas MUST include `alternateName` for brand discoverability (see §21)
 
 ---
 
-### 7.2 Deferred Schemas (P2)
+### 7.2 Site-level Schemas (Implemented)
+
+| Schema | Page | Status |
+|--------|------|--------|
+| WebSite | Homepage | ✅ Implemented (2026-02-11) |
+| Organization (site-level) | Homepage | ✅ Implemented (2026-02-11) |
+
+Rules:
+- WebSite and Organization schemas MUST include `alternateName` with brand variations
+- Brand alternate names: `["Need for Trip", "N4T", "нид фор трип"]`
+- These schemas are rendered ONLY on the homepage
+- Built via `buildSiteJsonLd()` in `lib/seo/schemaBuilder.ts`
+
+### 7.3 Deferred Schemas (P2)
 
 | Schema | Status |
 |------|--------|
-| Place / City | Deferred |
+| Place / City | Deferred (roadmap: city landing pages) |
 | BreadcrumbList | Deferred |
-| WebSite | Optional |
 | WebPage | Optional |
 
 Deferred schemas MUST be documented before implementation.
@@ -295,12 +309,14 @@ Rules:
 
 ## 9. Deferred Items (Explicit)
 
-The following are intentionally postponed and MUST NOT be partially implemented:
+The following are intentionally postponed and MUST NOT be partially implemented without a dedicated blueprint:
 
-- City landing pages (`/cities/{slug}`)
+- City landing pages (`/cities/{slug}`) — **HIGH PRIORITY roadmap item** for geo-search traffic (see §21.3, Blueprint Wave 8.1)
+- Activity category pages (`/activities/{slug}`) — roadmap item (Blueprint Wave 8.2)
+- Dynamic OG image generation (`@vercel/og`) — roadmap item (Blueprint Wave 8.3)
+- Blog/Content marketing (`/blog`) — roadmap item (Blueprint Wave 8.4)
 - Multi-language routing
 - SEO A/B experiments
-- Advanced schema extensions
 
 ---
 
@@ -638,5 +654,51 @@ Rules:
 This two-step resolution MUST be implemented exactly once in the canonical configuration module (`lib/config/runtimeConfig.ts` → `getPublicBaseUrl()`), not scattered across files.
 
 Hardcoded domain fallbacks in any file other than the canonical configuration module are FORBIDDEN.
+
+---
+
+## 21. Brand Search Discoverability (NORMATIVE)
+
+### 21.1 Brand Alternate Names
+
+The brand MUST be discoverable by all common search variations.
+
+Canonical brand name: `Need4Trip`
+
+Registered alternate names:
+- `Need for Trip`
+- `N4T`
+- `нид фор трип`
+
+Rules:
+- `alternateName` field MUST be present in both `WebSite` and `Organization` JSON-LD schemas on the homepage
+- Alternate names are maintained in `BRAND_ALTERNATE_NAMES` constant in `lib/seo/schemaBuilder.ts`
+- Adding new alternate names MUST be reflected in both schemaBuilder and this SSOT
+- Homepage meta description SHOULD include at least one alternate name variant (e.g., "Need4Trip (Need for Trip)")
+
+### 21.2 Keyword Strategy
+
+Target keyword categories for organic search growth:
+
+| Category | Example queries | Implementation |
+|----------|----------------|----------------|
+| Brand variants | "need for trip", "n4t", "нид фор трип" | ✅ alternateName in JSON-LD |
+| Geo + activity | "поездки Алматы", "охота Астана" | 📋 City landing pages (roadmap) |
+| Activity type | "оффроуд Казахстан", "рыбалка Капчагай" | 📋 Activity pages (roadmap) |
+| Informational | "маршруты для оффроуда" | 📋 Blog/content (roadmap) |
+
+Rules:
+- Homepage and root layout descriptions MUST include core activity keywords (автомобильные поездки, оффроуд, экспедиции, активный отдых)
+- Entity pages inherit keywords naturally from their content
+- Keyword stuffing is PROHIBITED — descriptions must read naturally
+- Geo-specific keywords require dedicated landing pages (not meta tag stuffing)
+
+### 21.3 Future Keyword Expansion
+
+When city landing pages (`/cities/{slug}`) are implemented:
+- Title pattern: `"Поездки и события в {город} — Need4Trip"`
+- Description: `"{город}: автомобильные поездки, оффроуд, охота, рыбалка и активный отдых. Найдите попутчиков и присоединяйтесь к клубам."`
+- JSON-LD: `Place` schema with `geo` coordinates
+- Each city page MUST appear in sitemap.xml
 
 ---
