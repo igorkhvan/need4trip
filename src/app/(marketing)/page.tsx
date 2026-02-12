@@ -2,15 +2,19 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { buildStaticPageMetadata } from "@/lib/seo/metadataBuilder";
+import { buildSiteJsonLd } from "@/lib/seo/schemaBuilder";
 
 /**
  * Per SSOT_SEO.md §13.1: Homepage title pattern: "{Brand} — {Value Proposition}"
  * Homepage overrides the root layout template with a custom full title.
+ *
+ * Description includes brand variant ("Need for Trip") for discoverability
+ * and broader activity keywords for geo + activity search queries.
  */
 export const metadata: Metadata = buildStaticPageMetadata({
   title: "Need4Trip — Автомобильные события и клубы Казахстана",
   description:
-    "Создавайте оффроуд-поездки, собирайте экипажи и управляйте участниками. Простая регистрация по ссылке.",
+    "Need4Trip (Need for Trip) — платформа для организации автомобильных поездок, оффроуд-выездов, экспедиций и активного отдыха. Собирайте экипажи и управляйте участниками.",
   canonicalPath: "/",
   ogImageAlt: "Need4Trip — Автомобильные события и клубы Казахстана",
 });
@@ -153,8 +157,21 @@ export default async function HomePage() {
   const currentUser = await getCurrentUser();
   const isAuthenticated = !!currentUser;
 
+  // Site-level structured data (WebSite + Organization with alternateName)
+  const [webSiteJsonLd, orgJsonLd] = buildSiteJsonLd();
+
   return (
     <>
+      {/* Site-level JSON-LD for brand discoverability */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+
       {/* Критичный контент - показываем сразу */}
       <Hero isAuthenticated={isAuthenticated} />
       <HowItWorksSection />

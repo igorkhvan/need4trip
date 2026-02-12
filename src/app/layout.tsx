@@ -26,13 +26,15 @@ export const metadata: Metadata = {
     default: "Need4Trip",
     template: "%s | Need4Trip",
   },
-  description: "Организация оффроуд-событий и регистрация участников",
+  description:
+    "Организация автомобильных поездок, оффроуд-выездов и активного отдыха. Регистрация участников и управление экипажами.",
   openGraph: {
     type: "website",
     locale: "ru_RU",
     siteName: "Need4Trip",
     title: "Need4Trip",
-    description: "Организация оффроуд-событий и регистрация участников",
+    description:
+      "Организация автомобильных поездок, оффроуд-выездов и активного отдыха. Регистрация участников и управление экипажами.",
     images: [
       {
         url: "/og-default.png",
@@ -45,7 +47,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Need4Trip",
-    description: "Организация оффроуд-событий и регистрация участников",
+    description:
+      "Организация автомобильных поездок, оффроуд-выездов и активного отдыха. Регистрация участников и управление экипажами.",
     images: ["/og-default.png"],
   },
 };

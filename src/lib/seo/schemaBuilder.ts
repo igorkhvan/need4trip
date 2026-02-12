@@ -205,3 +205,56 @@ export function buildClubJsonLd(
 
   return jsonLd;
 }
+
+// ---------------------------------------------------------------------------
+// Site-level JSON-LD (WebSite + Organization) — homepage only
+// ---------------------------------------------------------------------------
+
+/** Brand name variations for search discoverability */
+const BRAND_ALTERNATE_NAMES = ["Need for Trip", "N4T", "нид фор трип"];
+
+/**
+ * Build site-level JSON-LD for the homepage.
+ *
+ * Returns an array of two objects:
+ *   [0] schema.org/WebSite  — brand + search box eligibility
+ *   [1] schema.org/Organization — brand entity + Knowledge Panel
+ *
+ * `alternateName` tells Google to associate brand variations
+ * ("Need for Trip", "N4T", "нид фор трип") with the site.
+ */
+export function buildSiteJsonLd(): [
+  Record<string, unknown>,
+  Record<string, unknown>,
+] {
+  const baseUrl = getPublicBaseUrl();
+  const logo = `${baseUrl}/og-default.png`;
+
+  const webSite: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Need4Trip",
+    alternateName: BRAND_ALTERNATE_NAMES,
+    url: baseUrl,
+    description:
+      "Платформа для организации автомобильных поездок, оффроуд-выездов, " +
+      "экспедиций и активного отдыха. Собирайте экипажи, управляйте " +
+      "участниками и делитесь маршрутами.",
+    inLanguage: "ru",
+  };
+
+  const organization: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Need4Trip",
+    alternateName: BRAND_ALTERNATE_NAMES,
+    url: baseUrl,
+    logo,
+    description:
+      "Need4Trip — сервис для организации автомобильных поездок, " +
+      "оффроуд-мероприятий, автопробегов и выездов на природу в Казахстане. " +
+      "Клубы, события, регистрация участников.",
+  };
+
+  return [webSite, organization];
+}
