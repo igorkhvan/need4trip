@@ -922,7 +922,9 @@ CREATE TABLE public.admin_audit_log (
         'ADMIN_GRANT_CREDIT',
         'ADMIN_EXTEND_SUBSCRIPTION',
         'ADMIN_GRANT_CREDIT_REJECTED',
-        'ADMIN_EXTEND_SUBSCRIPTION_REJECTED'
+        'ADMIN_EXTEND_SUBSCRIPTION_REJECTED',
+        'ADMIN_USER_STATUS_CHANGED',
+        'ADMIN_USER_STATUS_CHANGE_REJECTED'
     )),
     target_type TEXT NOT NULL CHECK (target_type IN ('user', 'club')),
     target_id TEXT NOT NULL,

@@ -1,10 +1,10 @@
 # 📄 SSOT_LEGAL.md
 
-Version: 1.0  
+Version: 1.1  
 Status: LOCKED (Platform-Only Model)  
 Owner: Founder / Product  
 Effective Date: 2026-02-12  
-Supersedes: N/A  
+Supersedes: v1.0  
 
 ---
 
@@ -18,7 +18,7 @@ It establishes:
 - Liability boundaries  
 - Revenue model constraints  
 - Architectural red lines  
-- Required legal documentation  
+- Mandatory legal documentation structure  
 - Risk containment strategy  
 
 This SSOT has governance priority over product decisions that may materially increase regulatory or liability exposure.
@@ -105,7 +105,7 @@ Users acknowledge that off-road and automotive activities involve inherent risks
 - Property damage  
 - Environmental risks  
 
-Participation in any event is voluntary and at the user’s own risk.
+Participation in any event is voluntary and at the user's own risk.
 
 N4T bears no responsibility for physical, material, or financial harm resulting from participation in user-organized activities.
 
@@ -238,20 +238,188 @@ Adding any of the above requires:
 
 ---
 
-# 10. Required Legal Documents
+# 10. Legal Documentation Architecture
 
-The platform MUST maintain:
+This section defines the mandatory legal document stack for N4T.
 
-- Terms of Service  
-- Privacy Policy  
-- Acceptable Use Policy  
-- Advertising Terms (when enabled)  
+All legal documents must be:
 
-Checkbox consent must be implemented at registration.
+- Publicly accessible
+- Versioned
+- Linked in footer
+- Referenced inside Terms of Service
+- Stored in repository under `/docs/legal/`
 
 ---
 
-# 11. Change Control
+## 10.1 Core Public Legal Documents (Mandatory)
+
+### 1️⃣ Terms of Service  
+File: `/docs/legal/terms-of-service.md`  
+Route: `/legal/terms`
+
+Purpose:
+- Defines platform status
+- Defines liability limitations
+- Defines user obligations
+- Defines governing law
+- Incorporates all other policies by reference
+
+Priority: Highest  
+Owner: Founder  
+
+---
+
+### 2️⃣ Privacy Policy  
+File: `/docs/legal/privacy-policy.md`  
+Route: `/legal/privacy`
+
+Purpose:
+- Data categories processed
+- Legal basis
+- Data retention
+- Third-party processors
+- Cross-border transfer
+- User rights
+
+Must reflect actual technical architecture (Telegram login, Supabase, analytics).
+
+---
+
+### 3️⃣ Acceptable Use Policy  
+File: `/docs/legal/acceptable-use-policy.md`  
+Route: `/legal/acceptable-use`
+
+Purpose:
+- Prohibited activities
+- Illegal content restrictions
+- Unsafe event prohibitions
+- Enforcement rights
+
+Referenced by Terms of Service.
+
+---
+
+### 4️⃣ Advertising Terms (Conditional)  
+File: `/docs/legal/advertising-terms.md`  
+Route: `/legal/advertising`
+
+Required when paid advertising is enabled.
+
+Purpose:
+- Defines advertising service scope
+- Disclaims performance guarantees
+- Assigns responsibility to advertiser
+- Defines payment terms for ad placements
+
+---
+
+## 10.2 Internal Legal Governance Documents (Non-Public)
+
+These documents are not public but must exist internally.
+
+---
+
+### 5️⃣ SSOT_LEGAL.md  
+File: `/docs/ssot/SSOT_LEGAL.md`
+
+Purpose:
+- Locks legal model
+- Defines architectural boundaries
+- Prevents accidental regulatory shift
+
+Governance-level document.
+
+---
+
+### 6️⃣ Incident Response & Legal Escalation Policy  
+File: `/docs/legal/internal/incident-response.md`
+
+Purpose:
+- Defines process for:
+  - Injury claims
+  - Legal threats
+  - Government requests
+  - Data breach
+- Defines response timeline
+- Defines communication authority
+
+---
+
+### 7️⃣ Moderation & Suspension Framework  
+File: `/docs/legal/internal/moderation-framework.md`
+
+Purpose:
+- Defines moderation thresholds
+- Defines suspension process
+- Defines appeal process
+- Protects against arbitrary enforcement claims
+
+---
+
+# 11. Document Hierarchy
+
+Legal document precedence:
+
+1. SSOT_LEGAL.md (architecture-level)
+2. Terms of Service
+3. Privacy Policy
+4. Acceptable Use Policy
+5. Advertising Terms
+
+In case of conflict:
+Terms of Service prevails over subordinate policies.
+
+---
+
+# 12. Required UX Integration
+
+The following UI integrations are mandatory:
+
+## 12.1 Registration
+
+Checkbox:
+
+☐ I agree to the Terms of Service and Privacy Policy
+
+Must link to:
+- `/legal/terms`
+- `/legal/privacy`
+
+Consent must be logged in database with:
+- timestamp
+- IP
+- version hash of document
+
+---
+
+## 12.2 Footer
+
+Footer must include:
+
+- Terms
+- Privacy
+- Acceptable Use
+- Advertising (when active)
+
+---
+
+## 12.3 Versioning
+
+Each legal document must contain:
+
+- Version number
+- Effective date
+- Change summary (when updated)
+
+Document updates must trigger:
+
+- Version increment
+- Optional user notification (if material changes)
+
+---
+
+# 13. Change Control
 
 Any product feature that:
 
@@ -262,6 +430,16 @@ Any product feature that:
 
 Triggers mandatory legal review.
 
+The following actions require legal document updates:
+
+- Adding new monetization method
+- Introducing payment processing
+- Adding verification/KYC
+- Introducing in-app transaction features
+- Introducing reputation scoring impacting visibility
+
+Failure to update legal documentation before release is a governance violation.
+
 Amendments to this SSOT require:
 
 - Version increment  
@@ -270,11 +448,19 @@ Amendments to this SSOT require:
 
 ---
 
-# 12. Model Stability Statement
+# 14. Model Stability Statement
 
 N4T is permanently structured as a technology infrastructure platform.
 
-Any evolution toward marketplace, tour operator, or payment intermediary status constitutes a fundamental change in legal architecture and is outside the scope of this SSOT version 1.0.
+Any evolution toward marketplace, tour operator, or payment intermediary status constitutes a fundamental change in legal architecture and is outside the scope of this SSOT.
+
+Any expansion beyond the boundaries defined in SSOT_LEGAL.md requires:
+
+1. Legal reclassification review  
+2. Risk matrix update  
+3. SSOT version increment  
+4. Terms of Service revision  
 
 ---
+
 END OF DOCUMENT
